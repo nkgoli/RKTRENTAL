@@ -4,6 +4,7 @@ import type { AuthSession } from '@/lib/auth/session';
 import { actorFromSession } from '@/lib/storage/http';
 import { createPrismaFileService } from '@/lib/storage/service';
 import { MAX_FILE_BYTES } from '@/lib/storage/types';
+import { publishRepairStatusEvent } from '@/lib/notifications/service';
 
 export class MaintenanceError extends Error {
   constructor(message: string) {
@@ -22,6 +23,15 @@ const required = (value: string, label: string, max: number) => {
     throw new MaintenanceError(`${label} is required (up to ${max} characters)`);
   return trimmed;
 };
+
+async function publishStatusWithoutBlocking(organizationId: string, eventId: string) {
+  try {
+    await publishRepairStatusEvent(organizationId, eventId);
+  } catch (error) {
+    // The status event remains in the database for the notification sweep to replay.
+    console.error('Repair email delivery deferred', error);
+  }
+}
 
 export async function listMaintenanceBoard(organizationId: string) {
   return db.maintenanceRequest.findMany({
@@ -153,7 +163,7 @@ export async function assignVendor(session: AuthSession, requestId: string, vend
     where: { id: vendorId, organizationId: session.organizationId },
   });
   if (!vendor) throw new MaintenanceError('Vendor not found in your portfolio');
-  return db.$transaction(async (tx) => {
+  const { updated, statusEventId } = await db.$transaction(async (tx) => {
     const updated = await tx.maintenanceRequest.update({
       where: { id: request.id },
       data: {
@@ -171,8 +181,9 @@ export async function assignVendor(session: AuthSession, requestId: string, vend
         body: vendor.name,
       },
     });
+    let statusEventId: string | null = null;
     if (request.status === 'NEW') {
-      await tx.maintenanceEvent.create({
+      const event = await tx.maintenanceEvent.create({
         data: {
           organizationId: session.organizationId,
           maintenanceRequestId: request.id,
@@ -182,9 +193,12 @@ export async function assignVendor(session: AuthSession, requestId: string, vend
           toStatus: 'ASSIGNED',
         },
       });
+      statusEventId = event.id;
     }
-    return updated;
+    return { updated, statusEventId };
   });
+  if (statusEventId) await publishStatusWithoutBlocking(session.organizationId, statusEventId);
+  return updated;
 }
 
 /** Status-change event is persisted and returned for the later notification publisher. */
@@ -198,7 +212,7 @@ export async function changeRequestStatus(
     throw new MaintenanceError('Invalid status');
   const request = await ownedRequest(session, requestId);
   if (request.status === status) return null;
-  return db.$transaction(async (tx) => {
+  const event = await db.$transaction(async (tx) => {
     await tx.maintenanceRequest.update({
       where: { id: request.id },
       data: {
@@ -217,6 +231,8 @@ export async function changeRequestStatus(
       },
     });
   });
+  await publishStatusWithoutBlocking(session.organizationId, event.id);
+  return event;
 }
 
 /** Ordered status events for a notification worker; consumers deduplicate by event ID. */

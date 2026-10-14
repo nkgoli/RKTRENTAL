@@ -7,8 +7,6 @@ import {
   assessLateFee,
   centsToDecimal,
   computeBalance,
-  decodePayoutStatus,
-  encodePayoutStatus,
   manualPaymentRef,
   monthKey,
   monthStart,
@@ -361,7 +359,9 @@ async function payoutPlans(organizationId: string, month: string, client: Client
     client.payout.findMany({ where: { organizationId } }),
   ]);
   const decoded = payouts.map((p) => ({
-    ...decodePayoutStatus(p.status),
+    status: p.status,
+    propertyId: p.propertyId,
+    month: p.month,
     cents: toCents(p.amount),
   }));
   return properties.map((property): OwnerPayoutRow => {
@@ -406,14 +406,12 @@ export async function runOwnerPayouts(
       await client.payout.create({
         data: {
           organizationId,
+          propertyId: plan.propertyId,
+          month,
           provider: provider.name,
           providerReference: result.id,
           amount: centsToDecimal(plan.readyCents),
-          status: encodePayoutStatus(
-            result.status === 'succeeded' ? 'paid' : result.status,
-            plan.propertyId,
-            month,
-          ),
+          status: result.status === 'succeeded' ? 'paid' : result.status,
         },
       });
       sent += 1;
@@ -573,7 +571,7 @@ export async function loadPaymentsOverview(
     recentPayouts: recent.map((p) => ({
       id: p.id,
       amountCents: toCents(p.amount),
-      status: decodePayoutStatus(p.status).status,
+      status: p.status,
       createdAt: p.createdAt,
     })),
   };

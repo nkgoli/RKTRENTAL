@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
-import { decodePayoutStatus, encodePayoutStatus, type PaymentStatusName } from './core';
+import type { PaymentStatusName } from './core';
 
 export type LedgerWebhookEvent = {
   provider: 'mock' | 'stripe';
@@ -98,17 +98,11 @@ export async function applyPaymentWebhook(
       where: { organizationId, providerReference: reference },
     });
     if (!payout) return { kind: 'payout', status: payoutStatus, updated: 0 };
-    const current = decodePayoutStatus(payout.status);
-    if (current.status === 'paid' || current.status === 'failed')
-      return { kind: 'payout', status: current.status, updated: 0 };
+    if (payout.status === 'paid' || payout.status === 'failed')
+      return { kind: 'payout', status: payout.status, updated: 0 };
     await client.payout.update({
       where: { id: payout.id },
-      data: {
-        status:
-          current.propertyId && current.month
-            ? encodePayoutStatus(payoutStatus, current.propertyId, current.month)
-            : payoutStatus,
-      },
+      data: { status: payoutStatus },
     });
     return { kind: 'payout', status: payoutStatus, updated: 1 };
   }

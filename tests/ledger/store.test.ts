@@ -227,6 +227,7 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')('ledger store (PostgreSQ
     });
     const sent = await prisma.payout.findMany({ where: { organizationId: org } });
     expect(sent.map((p) => p.amount.toString())).toEqual(['1000']);
+    expect(sent[0]).toMatchObject({ propertyId: `${org}-p`, month: '2026-10', status: 'pending' });
     expect(await runOwnerPayouts(org, '2026-10', { client: prisma, provider })).toEqual({
       sent: 0,
       totalCents: 0,
@@ -346,7 +347,7 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')('ledger store (PostgreSQ
     const payout = await prisma.payout.findFirstOrThrow({ where: { organizationId: org } });
     await prisma.payout.update({
       where: { id: payout.id },
-      data: { status: `pending|property:${org}-p|period:2026-10` },
+      data: { status: 'pending' },
     });
     const outcome = await applyPaymentWebhook(
       { provider: 'mock', organizationId: org, eventType: 'payout.paid' },
@@ -354,8 +355,10 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')('ledger store (PostgreSQ
       prisma,
     );
     expect(outcome).toEqual({ kind: 'payout', status: 'paid', updated: 1 });
-    expect((await prisma.payout.findUniqueOrThrow({ where: { id: payout.id } })).status).toBe(
-      `paid|property:${org}-p|period:2026-10`,
-    );
+    expect(await prisma.payout.findUniqueOrThrow({ where: { id: payout.id } })).toMatchObject({
+      status: 'paid',
+      propertyId: `${org}-p`,
+      month: '2026-10',
+    });
   });
 });

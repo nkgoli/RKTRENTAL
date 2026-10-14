@@ -14,19 +14,31 @@ async function signIn(page: Page) {
   await expect(page).toHaveURL(/\/dashboard$/);
 }
 
+async function openApplications(page: Page, applicationId: string) {
+  const url = `/applications?applicant=${applicationId}`;
+  try {
+    await page.goto(url);
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes('net::ERR_ABORTED')) throw error;
+    await page.goto(url);
+  }
+}
+
 test.afterAll(async () => {
   await prisma.$disconnect();
 });
 
-test('manager runs screening and approves Olivia Reed with a written reason', async ({ page }, testInfo) => {
+test('manager runs screening and approves Olivia Reed with a written reason', async ({
+  page,
+}, testInfo) => {
   const reset = await prisma.application.updateMany({
     where: { id: oliviaId },
-    data: { status: 'REVIEW' },
+    data: { status: 'REVIEW', decisionReason: null, decidedBy: null, decidedAt: null },
   });
   expect(reset.count).toBe(1);
 
   await signIn(page);
-  await page.goto(`/applications?applicant=${oliviaId}`);
+  await openApplications(page, oliviaId);
   await expect(page.getByRole('heading', { name: 'Olivia Reed' })).toBeVisible();
   await expect(page.getByText('FCRA consent recorded')).toBeVisible();
 
@@ -48,6 +60,12 @@ test('manager runs screening and approves Olivia Reed with a written reason', as
     'href',
     `/leases/new?unit=seed-unit-maple-7&applicant=${oliviaId}`,
   );
+  expect(await prisma.application.findUniqueOrThrow({ where: { id: oliviaId } })).toMatchObject({
+    status: 'APPROVED',
+    decisionReason: 'criteria-met',
+    decidedBy: 'seed-jordan-mills',
+    decidedAt: expect.any(Date),
+  });
   await page.screenshot({
     path: testInfo.outputPath('olivia-approved.png'),
     fullPage: true,
@@ -56,7 +74,7 @@ test('manager runs screening and approves Olivia Reed with a written reason', as
 
 test('screening stays blocked until the applicant records FCRA consent', async ({ page }) => {
   await signIn(page);
-  await page.goto('/applications?applicant=seed-application-rohan');
+  await openApplications(page, 'seed-application-rohan');
   await expect(page.getByRole('heading', { name: 'Rohan Das' })).toBeVisible();
   await expect(page.getByText('FCRA consent required')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Run screening' })).toBeDisabled();

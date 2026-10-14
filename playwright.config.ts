@@ -15,6 +15,7 @@ const suites: { dir: string; viewport?: { width: number; height: number } }[] = 
   { dir: 'documents' },
   { dir: 'portfolio' },
   { dir: 'integrations' },
+  { dir: 'providers' },
   { dir: 'ledger' },
   { dir: 'screening', viewport: { width: 1280, height: 1000 } },
   { dir: 'tenant-pay', viewport: { width: 390, height: 844 } },
@@ -38,5 +39,6 @@ export default defineConfig({
         url: `${baseURL}/sign-in`,
         reuseExistingServer: false,
         timeout: 120_000,
+        env: { MOCK_WEBHOOK_SECRET: process.env.MOCK_WEBHOOK_SECRET ?? 'dev-webhook-secret' },
       },
 });

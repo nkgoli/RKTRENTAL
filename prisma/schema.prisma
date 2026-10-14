@@ -176,6 +176,7 @@ model Property {
   units               Unit[]
   documents           Document[]
   maintenanceRequests MaintenanceRequest[]
+  payouts             Payout[]
 
   @@unique([id, organizationId])
   @@index([organizationId, archivedAt])
@@ -476,6 +477,9 @@ model Payout {
   id                String       @id @default(cuid())
   organizationId    String
   organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  propertyId        String?
+  property          Property?    @relation(fields: [propertyId, organizationId], references: [id, organizationId])
+  month             String?      @db.VarChar(7)
   provider          String
   providerReference String?      @unique
   amount            Decimal      @db.Decimal(12, 2)
@@ -485,6 +489,7 @@ model Payout {
   createdAt         DateTime     @default(now())
 
   @@index([organizationId, createdAt])
+  @@index([organizationId, propertyId, month])
 }
 
 model Application {
@@ -496,6 +501,9 @@ model Application {
   applicantName  String
   applicantEmail String
   status         ApplicationStatus  @default(SUBMITTED)
+  decisionReason String?
+  decidedBy      String?
+  decidedAt      DateTime?
   appliedAt      DateTime           @default(now())
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt

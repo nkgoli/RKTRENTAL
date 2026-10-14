@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth/server-session';
 import { db } from '@/lib/db/client';
 import { screeningProvider } from '@/lib/providers';
-import { MockScreeningProvider } from '@/lib/providers/mock';
+import { recordDecision as recordScreeningDecisionAudit } from '@/lib/screening/decision-audit';
 import {
   applicationStatusForReport,
   hasCurrentConsent,
@@ -49,23 +49,28 @@ export async function requestScreening(formData: FormData) {
       organizationId: session.organizationId,
     },
   });
-  const consent = consents.find((item) =>
-    hasCurrentConsent(item) && connections.some((connection) =>
-      connection.provider === item.provider &&
-      (process.env.NODE_ENV !== 'production' || connection.status === 'CONNECTED'),
-    ),
-  ) ?? consents.find((item) => item.provider === 'mock' && hasCurrentConsent(item));
+  const consent =
+    consents.find(
+      (item) =>
+        hasCurrentConsent(item) &&
+        connections.some(
+          (connection) =>
+            connection.provider === item.provider &&
+            (process.env.NODE_ENV !== 'production' || connection.status === 'CONNECTED'),
+        ),
+    ) ?? consents.find((item) => item.provider === 'mock' && hasCurrentConsent(item));
   requireCurrentConsent(consent);
   const providerKey = consent.provider;
-  if (process.env.NODE_ENV === 'production' &&
-    !connections.some((connection) => connection.provider === providerKey && connection.status === 'CONNECTED')) {
+  if (
+    process.env.NODE_ENV === 'production' &&
+    !connections.some(
+      (connection) => connection.provider === providerKey && connection.status === 'CONNECTED',
+    )
+  ) {
     throw new Error('Screening provider is not connected');
   }
 
-  const provider =
-    process.env.NODE_ENV === 'development'
-      ? new MockScreeningProvider()
-      : await screeningProvider(session.organizationId);
+  const provider = await screeningProvider(session.organizationId);
   const requested = await provider.request({
     applicationId,
     applicantName: application.applicantName,
@@ -139,7 +144,8 @@ export async function recordDecision(formData: FormData) {
   if (!applicationId || !decision || !decisionReasons.has(reason)) {
     throw new Error('Application, decision and written screening reason are required');
   }
-  if (decision !== 'APPROVED' && decision !== 'DECLINED') throw new Error('Invalid application decision');
+  if (decision !== 'APPROVED' && decision !== 'DECLINED')
+    throw new Error('Invalid application decision');
   if ((decision === 'APPROVED') !== (reason === 'criteria-met')) {
     throw new Error('Choose a reason that matches the application decision');
   }
@@ -158,31 +164,31 @@ export async function recordDecision(formData: FormData) {
       kind: 'SCREENING',
     },
   });
-  const consent = application.consents.find((item) =>
-    hasCurrentConsent(item) && connections.some((connection) => connection.provider === item.provider),
-  ) ?? application.consents.find((item) => item.provider === 'mock' && hasCurrentConsent(item));
+  const consent =
+    application.consents.find(
+      (item) =>
+        hasCurrentConsent(item) &&
+        connections.some((connection) => connection.provider === item.provider),
+    ) ?? application.consents.find((item) => item.provider === 'mock' && hasCurrentConsent(item));
   requireCurrentConsent(consent);
   if (application.status !== 'REVIEW' || application.reports[0]?.status !== 'complete') {
     throw new Error('A completed screening report is required before a decision');
   }
   requireApplicationTransition(application.status, decision as ApplicationStatus);
 
-  await db.application.update({
-    where: { id: applicationId },
-    data: { status: decision as ApplicationStatus },
-  });
-
-  // Emit a structured audit event with a fixed reason code and the authenticated actor.
-  console.info(JSON.stringify({
-    event: 'application.screening.decision',
+  await recordScreeningDecisionAudit({
     applicationId,
     organizationId: session.organizationId,
     actorId: session.subjectId,
-    decision,
+    decision: decision as 'APPROVED' | 'DECLINED',
     reason,
-    occurredAt: new Date().toISOString(),
-  }));
+  });
 
   revalidatePath('/applications');
-  redirect('/applications?applicant=' + encodeURIComponent(applicationId) + '&notice=' + decision.toLowerCase());
+  redirect(
+    '/applications?applicant=' +
+      encodeURIComponent(applicationId) +
+      '&notice=' +
+      decision.toLowerCase(),
+  );
 }

@@ -393,7 +393,7 @@ async function main() {
     {
       kind: 'SCREENING' as const,
       provider: 'transunion',
-      status: 'DISCONNECTED' as const,
+      status: 'CONNECTED' as const,
       settings: { product: 'SmartMove' },
     },
     {
@@ -542,9 +542,114 @@ async function main() {
       },
     });
   }
+  // Keep the rent roll useful on first load: prior months are settled, three
+  // current tenants are late, and five have an upcoming automatic collection.
+  const leases = await prisma.lease.findMany({
+    where: { organizationId, status: LeaseStatus.ACTIVE },
+    include: { tenants: { orderBy: { isPrimary: 'desc' } } },
+    orderBy: { id: 'asc' },
+  });
+  const late = new Set(
+    leases
+      .filter((lease) => lease.id !== 'seed-lease-maple-11')
+      .slice(0, 3)
+      .map((lease) => lease.id),
+  );
+  const autopay = new Set(
+    leases
+      .filter((lease) => lease.id !== 'seed-lease-maple-11' && !late.has(lease.id))
+      .slice(0, 5)
+      .map((lease) => lease.id),
+  );
+  for (const lease of leases) {
+    for (const month of ['2026-08', '2026-09', '2026-10']) {
+      if (new Date(`${month}-01T00:00:00.000Z`) < lease.startDate) continue;
+      await prisma.charge.upsert({
+        where: { id: `seed-charge-${lease.id}-${month}` },
+        update: {},
+        create: {
+          id: `seed-charge-${lease.id}-${month}`,
+          organizationId,
+          leaseId: lease.id,
+          kind: 'RENT',
+          amount: lease.monthlyRent,
+          dueDate: date(`${month}-01`),
+          description: `rent:${lease.id}:${month}`,
+        },
+      });
+      if (
+        lease.id === 'seed-lease-maple-11' ||
+        (month === '2026-10' && (late.has(lease.id) || autopay.has(lease.id)))
+      )
+        continue;
+      await prisma.payment.upsert({
+        where: { id: `seed-payment-${lease.id}-${month}` },
+        update: {},
+        create: {
+          id: `seed-payment-${lease.id}-${month}`,
+          organizationId,
+          leaseId: lease.id,
+          amount: lease.monthlyRent,
+          status: PaymentStatus.SUCCEEDED,
+          providerReference: `seed:${lease.id}:${month}`,
+          paidAt: date(`${month}-03`),
+        },
+      });
+    }
+    if (autopay.has(lease.id) && lease.tenants[0]) {
+      const tenantId = lease.tenants[0].tenantId;
+      const methodId = `seed-method-${lease.id}`;
+      await prisma.paymentMethod.upsert({
+        where: { id: methodId },
+        update: {},
+        create: {
+          id: methodId,
+          organizationId,
+          tenantId,
+          provider: 'mock',
+          providerToken: `pm_seed_${lease.id}`,
+          type: 'ach',
+          last4: '4082',
+        },
+      });
+      await prisma.autopaySetting.upsert({
+        where: { leaseId_tenantId: { leaseId: lease.id, tenantId } },
+        update: {},
+        create: {
+          organizationId,
+          leaseId: lease.id,
+          tenantId,
+          paymentMethodId: methodId,
+          enabled: true,
+        },
+      });
+    }
+  }
+  for (const propertyId of [
+    'seed-property-maple',
+    'seed-property-harbor',
+    'seed-property-cedar',
+    'seed-property-elm',
+  ]) {
+    await prisma.payout.upsert({
+      where: { id: `seed-payout-${propertyId}-2026-09` },
+      update: {},
+      create: {
+        id: `seed-payout-${propertyId}-2026-09`,
+        organizationId,
+        propertyId,
+        month: '2026-09',
+        provider: 'mock',
+        providerReference: `seed:payout:${propertyId}:2026-09`,
+        amount: 1000,
+        status: 'paid',
+        arrivalDate: date('2026-09-18'),
+      },
+    });
+  }
   await seedPortfolioDetails();
   console.log(
-    'Seeded 4 properties, 45 units, 41 occupied leases, 4 applications, provider connections and payment history.',
+    'Seeded 4 properties, 45 units, 41 occupied leases, 4 applications, charges, payments, autopay and property payouts.',
   );
 }
 

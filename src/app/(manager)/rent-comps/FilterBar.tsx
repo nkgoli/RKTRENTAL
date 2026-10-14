@@ -6,11 +6,7 @@ import { DAYS_OPTIONS, RADIUS_OPTIONS, type CompFilters } from '@/lib/comps/core
 
 const submitOnChange = (event: FormEvent<HTMLFormElement>) => {
   const target = event.target;
-  if (
-    target instanceof HTMLSelectElement ||
-    (target instanceof HTMLInputElement && target.type === 'radio')
-  )
-    event.currentTarget.requestSubmit();
+  if (target instanceof HTMLSelectElement) event.currentTarget.requestSubmit();
 };
 
 export function UnitPicker({
@@ -119,6 +115,7 @@ export function FilterBar({ unitId, filters }: { unitId: string; filters: CompFi
                 name="status"
                 value={chip.value}
                 defaultChecked={filters.status === chip.value}
+                onChange={(event) => event.currentTarget.form?.requestSubmit()}
                 style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
               />
               {chip.label}

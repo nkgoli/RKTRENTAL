@@ -19,6 +19,7 @@ export default defineConfig({
         webServer: {
           command: 'npm.cmd run dev',
           url: `http://127.0.0.1:${port}/sign-in`,
+          env: { PORT: String(port) },
           reuseExistingServer: false,
           timeout: 120_000,
         },

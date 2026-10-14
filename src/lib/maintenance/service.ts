@@ -169,9 +169,20 @@ export async function assignVendor(session: AuthSession, requestId: string, vend
         actorId: session.subjectId,
         kind: 'VENDOR_ASSIGNED',
         body: vendor.name,
-        ...(request.status === 'NEW' ? { fromStatus: 'NEW', toStatus: 'ASSIGNED' } : {}),
       },
     });
+    if (request.status === 'NEW') {
+      await tx.maintenanceEvent.create({
+        data: {
+          organizationId: session.organizationId,
+          maintenanceRequestId: request.id,
+          actorId: session.subjectId,
+          kind: 'STATUS_CHANGED',
+          fromStatus: 'NEW',
+          toStatus: 'ASSIGNED',
+        },
+      });
+    }
     return updated;
   });
 }
@@ -205,6 +216,19 @@ export async function changeRequestStatus(
         toStatus: status,
       },
     });
+  });
+}
+
+/** Ordered status events for a notification worker; consumers deduplicate by event ID. */
+export async function listStatusChangeEvents(organizationId: string, since: Date) {
+  return db.maintenanceEvent.findMany({
+    where: { organizationId, kind: 'STATUS_CHANGED', createdAt: { gte: since } },
+    include: {
+      maintenanceRequest: {
+        select: { id: true, title: true, tenantId: true, propertyId: true, unitId: true },
+      },
+    },
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
   });
 }
 

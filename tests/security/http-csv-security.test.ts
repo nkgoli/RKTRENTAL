@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { NextRequest } from 'next/server';
-import nextConfig from '../../next.config';
+import nextConfig, { contentSecurityPolicy } from '../../next.config';
 import { isAllowedRequestOrigin, isSameOrigin, middleware } from '../../src/middleware';
 import { buildReturnsCsv, type ReturnsCsvRow } from '../../src/lib/returns/csv';
 
@@ -68,6 +68,11 @@ describe('cookie request origin checks', () => {
 });
 
 describe('application security headers', () => {
+  it('allows Next development refresh without enabling eval in production', () => {
+    expect(contentSecurityPolicy('development')).toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval'");
+    expect(contentSecurityPolicy('production')).not.toContain("'unsafe-eval'");
+  });
+
   it('sets CSP, frame denial, referrer policy and nosniff on every route', async () => {
     const rules = await nextConfig.headers?.();
     const rule = rules?.find((item) => item.source === '/:path*');

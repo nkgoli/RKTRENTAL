@@ -67,6 +67,7 @@ test('manager reviews comps, filters them, and applies a market rent', async ({
   // Filtering by radius refetches fewer, closer comps.
   await page.getByLabel('Radius').selectOption('1');
   await expect(page).toHaveURL(/radius=1/);
+  await expect(rows.first()).toBeVisible();
   await expect(rows).not.toHaveCount(initialCount);
   const nearCount = await rows.count();
   expect(nearCount).toBeGreaterThan(0);
@@ -81,6 +82,7 @@ test('manager reviews comps, filters them, and applies a market rent', async ({
     .getByText('Leased', { exact: true })
     .click();
   await expect(page).toHaveURL(/status=leased/);
+  await expect(rows.first()).toBeVisible();
   for (const badge of await rows.locator('td:nth-child(8)').allTextContents())
     expect(badge).toBe('Leased');
 

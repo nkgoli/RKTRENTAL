@@ -55,6 +55,8 @@ test('manager uploads a lease file, finds it, previews and downloads it', async 
   await page.screenshot({ path: 'test-results/documents-lease-uploaded.png', fullPage: true });
 
   const fileUrl = downloadUrl!.replace(/\/download$/, '');
-  const deleted = await page.request.delete(fileUrl);
+  const deleted = await page.request.delete(fileUrl, {
+    headers: { Origin: new URL(page.url()).origin },
+  });
   expect(deleted.status()).toBe(204);
 });

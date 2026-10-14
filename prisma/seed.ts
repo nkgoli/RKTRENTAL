@@ -1,6 +1,8 @@
 import {
+  ApplicationStatus,
   ESignStatus,
   LeaseStatus,
+  PaymentStatus,
   PrismaClient,
   PropertyType,
   UnitStatus,
@@ -268,7 +270,183 @@ async function main() {
       status: 'NEW',
     },
   });
-  console.log('Seeded 4 properties, 45 units, 41 occupied leases, Jordan Mills and Alex Rivera.');
+
+  const connections = [
+    {
+      kind: 'PAYMENTS' as const,
+      provider: 'stripe',
+      status: process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_')
+        ? ('CONNECTED' as const)
+        : ('DISCONNECTED' as const),
+      settings: { mode: 'test' },
+    },
+    {
+      kind: 'PAYMENTS' as const,
+      provider: 'mock',
+      status: 'CONNECTED' as const,
+      settings: { mode: 'development' },
+    },
+    {
+      kind: 'BANKING' as const,
+      provider: 'plaid',
+      status: 'DISCONNECTED' as const,
+      settings: { mode: 'sandbox' },
+    },
+    {
+      kind: 'SCREENING' as const,
+      provider: 'transunion',
+      status: 'DISCONNECTED' as const,
+      settings: { product: 'SmartMove' },
+    },
+    {
+      kind: 'COMPS' as const,
+      provider: 'rentrange',
+      status: 'DISCONNECTED' as const,
+      settings: {},
+    },
+  ];
+  for (const connection of connections) {
+    await prisma.providerConnection.upsert({
+      where: {
+        organizationId_kind_provider: {
+          organizationId,
+          kind: connection.kind,
+          provider: connection.provider,
+        },
+      },
+      update: { status: connection.status, settings: connection.settings },
+      create: { organizationId, ...connection },
+    });
+  }
+
+  const applicants = [
+    {
+      id: 'seed-application-olivia',
+      name: 'Olivia Reed',
+      email: 'olivia.reed@example.com',
+      unitId: 'seed-unit-maple-7',
+      status: ApplicationStatus.REVIEW,
+      appliedAt: date('2026-10-08'),
+      consentAt: date('2026-10-08'),
+      reportId: 'SM-48291',
+      reportStatus: 'complete',
+      score: 742,
+    },
+    {
+      id: 'seed-application-marcus',
+      name: 'Marcus Bell',
+      email: 'marcus.bell@example.com',
+      unitId: 'seed-unit-harbor-21',
+      status: ApplicationStatus.SCREENING,
+      appliedAt: date('2026-10-10'),
+      consentAt: date('2026-10-10'),
+      reportId: 'SM-48292',
+      reportStatus: 'pending',
+    },
+    {
+      id: 'seed-application-nina',
+      name: 'Nina Park',
+      email: 'nina.park@example.com',
+      unitId: 'seed-unit-cedar-8',
+      status: ApplicationStatus.REVIEW,
+      appliedAt: date('2026-10-09'),
+      consentAt: date('2026-10-09'),
+      reportId: 'SM-48293',
+      reportStatus: 'complete',
+    },
+    {
+      id: 'seed-application-rohan',
+      name: 'Rohan Das',
+      email: 'rohan.das@example.com',
+      unitId: 'seed-unit-maple-7',
+      status: ApplicationStatus.SUBMITTED,
+      appliedAt: date('2026-10-11'),
+    },
+  ];
+  for (const applicant of applicants) {
+    await prisma.application.upsert({
+      where: { id: applicant.id },
+      update: {
+        applicantName: applicant.name,
+        applicantEmail: applicant.email,
+        unitId: applicant.unitId,
+        status: applicant.status,
+        appliedAt: applicant.appliedAt,
+      },
+      create: {
+        id: applicant.id,
+        organizationId,
+        applicantName: applicant.name,
+        applicantEmail: applicant.email,
+        unitId: applicant.unitId,
+        status: applicant.status,
+        appliedAt: applicant.appliedAt,
+      },
+    });
+    if ('consentAt' in applicant && applicant.consentAt) {
+      await prisma.screeningConsent.upsert({
+        where: { applicationId_provider: { applicationId: applicant.id, provider: 'transunion' } },
+        update: { consentedAt: applicant.consentAt, consentVersion: 'demo-2026' },
+        create: {
+          organizationId,
+          applicationId: applicant.id,
+          provider: 'transunion',
+          consentedAt: applicant.consentAt,
+          consentVersion: 'demo-2026',
+        },
+      });
+    }
+    if ('reportId' in applicant && applicant.reportId) {
+      await prisma.screeningReport.upsert({
+        where: {
+          provider_providerReference: {
+            provider: 'transunion',
+            providerReference: applicant.reportId,
+          },
+        },
+        update: {
+          status: applicant.reportStatus!,
+          summary: applicant.score
+            ? { creditScore: applicant.score, background: 'clear', eviction: 'clear' }
+            : undefined,
+        },
+        create: {
+          organizationId,
+          applicationId: applicant.id,
+          provider: 'transunion',
+          providerReference: applicant.reportId,
+          status: applicant.reportStatus!,
+          summary: applicant.score
+            ? { creditScore: applicant.score, background: 'clear', eviction: 'clear' }
+            : undefined,
+          completedAt: applicant.reportStatus === 'complete' ? date('2026-10-12') : undefined,
+        },
+      });
+    }
+  }
+
+  for (const [month, amount] of [
+    ['2026-08', 1850],
+    ['2026-09', 1850],
+    ['2026-10', 1850],
+  ] as const) {
+    await prisma.payment.upsert({
+      where: { id: `seed-payment-alex-${month}` },
+      update: { amount, status: PaymentStatus.SUCCEEDED },
+      create: {
+        id: `seed-payment-alex-${month}`,
+        organizationId,
+        leaseId: 'seed-lease-maple-11',
+        amount,
+        status: PaymentStatus.SUCCEEDED,
+        providerReference: `mock-payment-alex-${month}`,
+        paidAt: date(`${month}-03`),
+      },
+    });
+  }
+  console.log(
+    'Seeded 4 properties, 45 units, 41 occupied leases, 4 applications, provider connections and payment history.',
+  );
 }
 
 main()

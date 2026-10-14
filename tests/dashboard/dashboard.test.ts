@@ -127,8 +127,13 @@ describe('loadDashboardData', () => {
         ]),
       },
     } as unknown as PrismaClient;
+    const maintenanceBoard = vi.fn().mockResolvedValue([
+      { status: 'NEW', priority: 'URGENT' },
+      { status: 'IN_PROGRESS', priority: 'NORMAL' },
+      { status: 'DONE', priority: 'URGENT' },
+    ]);
 
-    const dashboard = await loadDashboardData('org-1', now, client);
+    const dashboard = await loadDashboardData('org-1', now, client, maintenanceBoard);
     const leaseQuery = vi.mocked(client.lease.findMany).mock.calls[0]?.[0];
 
     expect(leaseQuery?.where).toMatchObject({
@@ -146,6 +151,7 @@ describe('loadDashboardData', () => {
     expect(vi.mocked(client.application.count).mock.calls[0]?.[0]?.where).toMatchObject({
       organizationId: 'org-1',
     });
+    expect(maintenanceBoard).toHaveBeenCalledWith('org-1');
     expect(dashboard).toMatchObject({
       unitsOccupied: 1,
       unitsTotal: 1,
@@ -153,6 +159,8 @@ describe('loadDashboardData', () => {
       rentDueCents: 185_000,
       rentCollectedCents: 185_000,
       openApplications: 2,
+      openMaintenanceRequests: 2,
+      urgentMaintenanceRequests: 1,
       expiringLeases: [{ id: 'seed-lease-maple-11', tenantName: 'Alex Rivera', propertyName: 'Maple Court' }],
     });
     expect(dashboard.activity.map((item) => item.title)).toContain('New rental application');

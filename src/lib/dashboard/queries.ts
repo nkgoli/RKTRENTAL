@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
 import { EVENT_LABEL } from '@/lib/leases/events';
+import { listMaintenanceBoard } from '@/lib/maintenance';
 import {
   addMonths,
   computeBalance,
@@ -86,12 +87,15 @@ export type DashboardData = {
   overdueCents: number;
   overdueLeaseCount: number;
   openApplications: number;
+  openMaintenanceRequests: number;
+  urgentMaintenanceRequests: number;
   collection: CollectionMonth[];
   expiringLeases: ExpiringLease[];
   activity: DashboardActivity[];
 };
 
 const DAY_MS = 86_400_000;
+type DashboardMaintenanceRequest = { status: string; priority: string };
 
 function utcDay(date: Date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -195,6 +199,7 @@ export async function loadDashboardData(
   organizationId: string,
   now = new Date(),
   client: PrismaClient = db,
+  maintenanceBoard: (organizationId: string) => Promise<DashboardMaintenanceRequest[]> = listMaintenanceBoard,
 ): Promise<DashboardData> {
   if (!organizationId.trim()) throw new Error('organizationId is required');
 
@@ -206,7 +211,7 @@ export async function loadDashboardData(
   const nextMonthStart = monthStart(addMonths(month, 1));
   const activitySince = new Date(today.getTime() - 30 * DAY_MS);
 
-  const [units, leases, openApplications, recentApplications] = await Promise.all([
+  const [units, leases, openApplications, recentApplications, maintenanceRequests] = await Promise.all([
     client.unit.findMany({
       where: {
         organizationId,
@@ -251,6 +256,7 @@ export async function loadDashboardData(
       orderBy: { appliedAt: 'desc' },
       take: 10,
     }),
+    maintenanceBoard(organizationId),
   ]);
 
   const activeLeases = leases.filter(
@@ -363,6 +369,10 @@ export async function loadDashboardData(
     overdueCents: overdue.overdueCents,
     overdueLeaseCount: overdue.overdueLeaseCount,
     openApplications,
+    openMaintenanceRequests: maintenanceRequests.filter((request) => request.status !== 'DONE').length,
+    urgentMaintenanceRequests: maintenanceRequests.filter(
+      (request) => request.status !== 'DONE' && request.priority === 'URGENT',
+    ).length,
     collection,
     expiringLeases: expiryLeases.slice(0, 6),
     activity: activity.slice(0, 6),

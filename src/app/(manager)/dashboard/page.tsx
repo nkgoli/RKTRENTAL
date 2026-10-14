@@ -287,10 +287,12 @@ export default async function DashboardPage() {
               {dashboard.openApplications} open {dashboard.openApplications === 1 ? 'application' : 'applications'}.{' '}
               <Link href="/applications">Review</Link>
             </div>
-            <div className={`${styles.alert} ${styles.placeholderAlert}`}>
+            <div className={`${styles.alert} ${styles.maintenanceAlert}`}>
               <div>
-                <strong>Maintenance metrics</strong>
-                <p>Open repair totals will appear when the maintenance dashboard is ready.</p>
+                <strong>Open maintenance requests</strong>
+                <p>
+                  {dashboard.openMaintenanceRequests} open · {dashboard.urgentMaintenanceRequests} urgent
+                </p>
               </div>
               <Link href="/maintenance">Maintenance</Link>
             </div>

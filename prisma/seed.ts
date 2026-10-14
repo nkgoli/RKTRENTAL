@@ -403,6 +403,12 @@ async function main() {
       status: 'DISCONNECTED' as const,
       settings: {},
     },
+    {
+      kind: 'EMAIL' as const,
+      provider: 'mock',
+      status: 'CONNECTED' as const,
+      settings: { mode: 'sandbox' },
+    },
   ];
   for (const connection of connections) {
     await prisma.providerConnection.upsert({
@@ -650,6 +656,7 @@ async function main() {
   }
   await seedPortfolioDetails();
   await seedReturnsData();
+  await seedMaintenance();
   console.log(
     'Seeded 4 properties, 45 units, 41 occupied leases, 4 applications, charges, payments, autopay and property payouts.',
   );
@@ -921,6 +928,166 @@ async function seedReturnsData() {
         await prisma.expense.upsert({ where: { id }, update: data, create: { id, ...data } });
       }
     }
+  }
+}
+
+async function seedMaintenance() {
+  const storage = createStorageAdapter(process.env);
+  const vendors = [
+    { id: 'seed-vendor-northstar', name: 'Northstar Repairs', trade: 'General repairs' },
+    { id: 'seed-vendor-brightline', name: 'Brightline HVAC', trade: 'Heating and cooling' },
+    { id: 'seed-vendor-keyline', name: 'Keyline Services', trade: 'Locks and doors' },
+  ];
+  for (const vendor of vendors) {
+    await prisma.vendor.upsert({
+      where: { id: vendor.id },
+      update: { name: vendor.name, trade: vendor.trade },
+      create: { ...vendor, organizationId },
+    });
+  }
+  const requests = [
+    {
+      id: 'seed-request-maple-4b',
+      propertyId: 'seed-property-maple',
+      unitId: 'seed-unit-maple-11',
+      tenantId: 'seed-tenant-maple-11',
+      title: 'Kitchen sink leak',
+      priority: 'URGENT',
+      status: 'NEW',
+      at: '2026-10-14T08:00:00.000Z',
+      colors: [
+        [191, 211, 225],
+        [104, 140, 163],
+      ],
+    },
+    {
+      id: 'seed-maint-light',
+      propertyId: 'seed-property-elm',
+      unitId: 'seed-unit-elm-1',
+      title: 'Hallway light flickering',
+      priority: 'NORMAL',
+      status: 'NEW',
+      at: '2026-10-13T09:00:00.000Z',
+      colors: [
+        [228, 226, 204],
+        [149, 151, 144],
+      ],
+    },
+    {
+      id: 'seed-maint-window',
+      propertyId: 'seed-property-harbor',
+      unitId: 'seed-unit-harbor-12',
+      title: 'Window latch loose',
+      priority: 'NORMAL',
+      status: 'ASSIGNED',
+      vendorId: 'seed-vendor-northstar',
+      vendorName: 'Northstar Repairs',
+      at: '2026-10-11T10:00:00.000Z',
+      colors: [
+        [216, 224, 233],
+        [143, 158, 176],
+      ],
+    },
+    {
+      id: 'seed-maint-ac',
+      propertyId: 'seed-property-cedar',
+      unitId: 'seed-unit-cedar-3',
+      title: 'AC not cooling',
+      priority: 'HIGH',
+      status: 'IN_PROGRESS',
+      vendorId: 'seed-vendor-brightline',
+      vendorName: 'Brightline HVAC',
+      at: '2026-10-10T12:00:00.000Z',
+      colors: [
+        [206, 223, 232],
+        [126, 159, 175],
+      ],
+    },
+    {
+      id: 'seed-maint-tile',
+      propertyId: 'seed-property-maple',
+      unitId: 'seed-unit-maple-6',
+      title: 'Bathroom tile repair',
+      priority: 'NORMAL',
+      status: 'IN_PROGRESS',
+      vendorId: 'seed-vendor-northstar',
+      vendorName: 'Northstar Repairs',
+      at: '2026-10-09T13:00:00.000Z',
+      colors: [
+        [223, 223, 218],
+        [159, 161, 157],
+      ],
+    },
+    {
+      id: 'seed-maint-lock',
+      propertyId: 'seed-property-harbor',
+      unitId: 'seed-unit-harbor-8',
+      title: 'Entry door lock replaced',
+      priority: 'NORMAL',
+      status: 'DONE',
+      vendorId: 'seed-vendor-keyline',
+      vendorName: 'Keyline Services',
+      at: '2026-10-08T09:00:00.000Z',
+      completedAt: '2026-10-12T12:00:00.000Z',
+      colors: [
+        [212, 221, 223],
+        [123, 143, 149],
+      ],
+    },
+  ] as const;
+  for (const request of requests) {
+    const { at, colors, ...fields } = request;
+    await prisma.maintenanceRequest.upsert({
+      where: { id: fields.id },
+      update: { tenantId: 'tenantId' in fields ? fields.tenantId : null },
+      create: {
+        ...fields,
+        organizationId,
+        priority: fields.priority,
+        status: fields.status,
+        vendorId: 'vendorId' in fields ? fields.vendorId : null,
+        vendorName: 'vendorName' in fields ? fields.vendorName : null,
+        tenantId: 'tenantId' in fields ? fields.tenantId : null,
+        completedAt: 'completedAt' in fields ? new Date(fields.completedAt) : null,
+        createdAt: new Date(at),
+      },
+    });
+    const image = gradientPng(
+      colors[0] as [number, number, number],
+      colors[1] as [number, number, number],
+    );
+    const documentId = `${request.id}-photo`;
+    const storageKey = `seed/${documentId}`;
+    await storage.put(storageKey, image, 'image/png');
+    await prisma.document.upsert({
+      where: { id: documentId },
+      update: {},
+      create: {
+        id: documentId,
+        organizationId,
+        unitId: request.unitId,
+        kind: 'PHOTO',
+        name: `${request.id}.png`,
+        storageKey,
+        sizeBytes: BigInt(image.byteLength),
+        mimeType: 'image/png',
+        createdAt: new Date(at),
+      },
+    });
+    await prisma.maintenancePhoto.upsert({
+      where: { id: `${request.id}-attachment` },
+      update: {},
+      create: {
+        id: `${request.id}-attachment`,
+        organizationId,
+        maintenanceRequestId: request.id,
+        documentId,
+        storageKey,
+        sizeBytes: BigInt(image.byteLength),
+        mimeType: 'image/png',
+        createdAt: new Date(at),
+      },
+    });
   }
 }
 

@@ -477,24 +477,22 @@
   color: #146c4e;
 }
 
-.placeholderAlert {
+.maintenanceAlert {
   align-items: center;
   background: #faf9fc;
-  border-style: dashed;
   border-color: var(--rr-border-strong);
-  color: var(--design-muted);
   display: flex;
   gap: 10px;
   justify-content: space-between;
 }
 
-.placeholderAlert strong {
+.maintenanceAlert strong {
   color: var(--design-text);
   display: block;
   margin-bottom: 2px;
 }
 
-.placeholderAlert p {
+.maintenanceAlert p {
   font-size: 11px;
 }
 

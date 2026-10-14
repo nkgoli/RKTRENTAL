@@ -13,6 +13,15 @@ export interface S3Config {
 type FetchFn = typeof fetch;
 const sha256 = (v: string | Uint8Array) => createHash('sha256').update(v).digest('hex');
 const hmac = (k: Buffer | string, v: string) => createHmac('sha256', k).update(v).digest();
+const awsEncode = (value: string) =>
+  encodeURIComponent(value).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+
+function canonicalQuery(searchParams: URLSearchParams): string {
+  return [...searchParams.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([key, value]) => `${awsEncode(key)}=${awsEncode(value)}`)
+    .join('&');
+}
 
 /** Minimal S3-compatible adapter (AWS S3 / MinIO) signed with SigV4; no SDK dependency. */
 export class S3StorageAdapter implements StorageAdapter {
@@ -93,8 +102,18 @@ export class S3StorageAdapter implements StorageAdapter {
   }
   async getSignedUrl(
     key: string,
-    opts: { method: 'GET' | 'PUT'; expiresInSeconds?: number; contentType?: string },
+    opts: {
+      method: 'GET' | 'PUT';
+      expiresInSeconds?: number;
+      contentType?: string;
+      contentLength?: number;
+    },
   ): Promise<string> {
+    if (
+      opts.method === 'PUT' &&
+      (!opts.contentType || !Number.isSafeInteger(opts.contentLength) || opts.contentLength! <= 0)
+    )
+      throw new StorageError('Signed uploads require a content type and exact content length');
     const expires = Math.min(Math.max(opts.expiresInSeconds ?? 900, 1), 604800);
     const now = new Date();
     const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
@@ -105,13 +124,27 @@ export class S3StorageAdapter implements StorageAdapter {
     url.searchParams.set('X-Amz-Credential', `${this.cfg.accessKeyId}/${scope}`);
     url.searchParams.set('X-Amz-Date', amzDate);
     url.searchParams.set('X-Amz-Expires', String(expires));
-    url.searchParams.set('X-Amz-SignedHeaders', 'host');
+    const canonicalHeaders: Record<string, string> = { host: this.host() };
+    if (opts.method === 'PUT') {
+      canonicalHeaders['content-length'] = String(opts.contentLength);
+      canonicalHeaders['content-type'] = opts.contentType!;
+    } else {
+      // Even if another caller uses a direct GET URL, never ask S3 to render it as HTML.
+      url.searchParams.set('response-content-disposition', 'attachment');
+      url.searchParams.set('response-content-type', 'application/octet-stream');
+    }
+    const signedHeaders = Object.keys(canonicalHeaders).sort().join(';');
+    const headers = Object.keys(canonicalHeaders)
+      .sort()
+      .map((name) => `${name}:${canonicalHeaders[name]!.trim()}\n`)
+      .join('');
+    url.searchParams.set('X-Amz-SignedHeaders', signedHeaders);
     const canonical = [
       opts.method,
       url.pathname,
-      url.searchParams.toString(),
-      `host:${this.host()}\n`,
-      'host',
+      canonicalQuery(url.searchParams),
+      headers,
+      signedHeaders,
       'UNSIGNED-PAYLOAD',
     ].join('\n');
     const toSign = ['AWS4-HMAC-SHA256', amzDate, scope, sha256(canonical)].join('\n');

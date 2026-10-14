@@ -1,11 +1,18 @@
 export const SESSION_COOKIE = 'rr_session';
 export const SESSION_TTL_SECONDS = 60 * 60 * 8;
 
+/** Secure by default; local HTTP development must opt out explicitly. */
+export function sessionCookieSecure(env: Record<string, string | undefined> = process.env): boolean {
+  return env.ROCKETRENTAL_AUTH_COOKIE_SECURE !== 'false';
+}
+
 export type AuthRole = 'MANAGER' | 'OWNER' | 'TENANT' | 'ADMIN';
 
 export type SessionIdentity = {
   subjectId: string;
   organizationId: string;
+  /** Snapshot of User.updatedAt; server session reads compare it to revoke stale tokens. */
+  authVersion: number;
   email: string;
   name: string;
   role: AuthRole;
@@ -65,6 +72,7 @@ function isSession(value: unknown, nowSeconds: number): value is AuthSession {
   return (
     typeof session.subjectId === 'string' &&
     typeof session.organizationId === 'string' &&
+    Number.isSafeInteger(session.authVersion) &&
     typeof session.email === 'string' &&
     typeof session.name === 'string' &&
     isAuthRole(session.role) &&

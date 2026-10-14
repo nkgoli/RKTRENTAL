@@ -3,6 +3,14 @@ import { canAccessRole, requiredRoleForRoute, roleHome } from '@/lib/auth/policy
 import { SESSION_COOKIE, verifySessionToken } from '@/lib/auth/session';
 
 export async function middleware(request: NextRequest) {
+  const method = request.method.toUpperCase();
+  const hasSessionCookie = request.cookies.has(SESSION_COOKIE);
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && hasSessionCookie) {
+    const origin = request.headers.get('origin');
+    if (!origin || !isSameOrigin(origin, request.nextUrl.origin))
+      return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
+  }
+
   const requiredRole = requiredRoleForRoute(request.nextUrl.pathname);
   if (!requiredRole) return NextResponse.next();
 
@@ -18,6 +26,14 @@ export async function middleware(request: NextRequest) {
   }
   if (!session) redirectUrl.searchParams.set('next', request.nextUrl.pathname);
   return NextResponse.redirect(redirectUrl);
+}
+
+export function isSameOrigin(origin: string, requestOrigin: string): boolean {
+  try {
+    return new URL(origin).origin === new URL(requestOrigin).origin;
+  } catch {
+    return false;
+  }
 }
 
 export const config = {
@@ -37,5 +53,6 @@ export const config = {
     '/pay/:path*',
     '/lease/:path*',
     '/repairs/:path*',
+    '/api/:path*',
   ],
 };

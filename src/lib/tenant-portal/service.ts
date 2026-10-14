@@ -61,6 +61,7 @@ export async function findTenantLeaseForPortal(
     if (!own) return null;
     leaseId = own.id;
   }
+  if (!leaseId) return null;
   const where = buildLeaseAccessWhere(scope, leaseId);
   if (!where) return null;
   return client.lease.findFirst({ where, include: leaseInclude });
@@ -209,7 +210,7 @@ export async function listTenantLeaseDocuments(
       id: leaseId,
     },
   );
-  return docs.filter((doc) => doc.kind !== 'PHOTO').map(toPortalDocument);
+  return docs.filter((doc) => doc.kind !== 'PHOTO' && doc.kind !== 'ID').map(toPortalDocument);
 }
 
 export async function loadTenantLease(

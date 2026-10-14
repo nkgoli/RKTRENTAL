@@ -35,6 +35,11 @@ export function canAccessRole(
   return role === 'TENANT';
 }
 
+/** Only managers may perform writes through manager-only actions. Owners are read-only. */
+export function canWriteAsRole(role: AuthRole | undefined): boolean {
+  return role === 'MANAGER';
+}
+
 export function roleHome(role: AuthRole): string {
   if (role === 'TENANT') return '/home';
   if (role === 'MANAGER' || role === 'OWNER') return '/dashboard';
@@ -55,7 +60,8 @@ export function safeRedirectTarget(candidate: string | null | undefined, role: A
 }
 
 export function buildLeaseAccessWhere(
-  session: Pick<AuthSession, 'role' | 'organizationId' | 'tenantId'>,
+  session: Pick<AuthSession, 'role' | 'organizationId' | 'tenantId'> &
+    Partial<Pick<AuthSession, 'subjectId'>>,
   leaseId: string,
 ): Prisma.LeaseWhereInput | null {
   if (session.role === 'TENANT') {
@@ -71,8 +77,25 @@ export function buildLeaseAccessWhere(
       },
     };
   }
-  if (session.role === 'MANAGER' || session.role === 'OWNER') {
+  if (session.role === 'MANAGER') {
     return { id: leaseId, organizationId: session.organizationId };
   }
+  if (session.role === 'OWNER' && session.subjectId) {
+    return {
+      id: leaseId,
+      organizationId: session.organizationId,
+      unit: { property: { ownerId: session.subjectId, organizationId: session.organizationId } },
+    };
+  }
+  return null;
+}
+
+/** A manager can read the whole organization; an owner only sees their own properties. */
+export function buildPropertyAccessWhere(
+  session: Pick<AuthSession, 'role' | 'organizationId' | 'subjectId'>,
+): Prisma.PropertyWhereInput | null {
+  if (session.role === 'MANAGER') return { organizationId: session.organizationId };
+  if (session.role === 'OWNER')
+    return { organizationId: session.organizationId, ownerId: session.subjectId };
   return null;
 }

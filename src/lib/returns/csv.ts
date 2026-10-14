@@ -9,8 +9,10 @@ function dollars(cents: number): string {
   return (cents / 100).toFixed(2);
 }
 
-function cell(value: string): string {
-  return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+function cell(value: string, untrustedText = false): string {
+  const safeValue =
+    untrustedText && /^[\s\u0000-\u001f]*[=+\-@]/u.test(value) ? `'${value}` : value;
+  return /[",\n\r]/.test(safeValue) ? `"${safeValue.replace(/"/g, '""')}"` : safeValue;
 }
 
 /**
@@ -39,8 +41,8 @@ export function buildReturnsCsv(
   ];
   const line = (row: ReturnsCsvRow) =>
     [
-      row.propertyName,
-      periodLabel,
+      cell(row.propertyName, true),
+      cell(periodLabel, true),
       dollars(row.metrics.incomeCents),
       dollars(row.metrics.expensesCents),
       dollars(row.metrics.noiCents),
@@ -51,10 +53,8 @@ export function buildReturnsCsv(
       formatPercent(row.metrics.roi),
       formatPercent(row.metrics.yieldRate),
       formatPercent(row.metrics.expenseRatio),
-    ]
-      .map(cell)
-      .join(',');
-  const lines = [header.map(cell).join(','), ...rows.map(line)];
+    ].join(',');
+  const lines = [header.map((value) => cell(value)).join(','), ...rows.map(line)];
   if (portfolio) lines.push(line(portfolio));
   return `${lines.join('\n')}\n`;
 }

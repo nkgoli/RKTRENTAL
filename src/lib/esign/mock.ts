@@ -5,6 +5,7 @@ import type {
   SendForSignatureRequest,
 } from './types';
 import { EsignError, envelopeIdForLease, leaseIdFromEnvelope } from './types';
+import { isSandboxEnabled } from '@/lib/providers/sandbox';
 
 type Store = Map<string, EsignEnvelope>;
 const globalStore = globalThis as unknown as { __rrMockEsign?: Store };
@@ -86,5 +87,6 @@ export class MockEsignProvider implements EsignProvider {
 }
 
 export function getEsignProvider(): EsignProvider {
+  if (!isSandboxEnabled()) throw new EsignError('Mock e-signature provider is sandbox-only.');
   return new MockEsignProvider();
 }

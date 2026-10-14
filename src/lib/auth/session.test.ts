@@ -5,6 +5,7 @@ const secret = 'test-session-secret-that-is-long-enough-to-use';
 const identity: SessionIdentity = {
   subjectId: 'tenant-1',
   organizationId: 'org-1',
+  authVersion: 50,
   email: 'alex@example.com',
   name: 'Alex Rivera',
   role: 'TENANT',

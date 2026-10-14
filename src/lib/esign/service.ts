@@ -5,6 +5,7 @@ import type { FileActor } from '@/lib/storage/types';
 import { clauseLabels } from '@/lib/lease-create/clauses';
 import { recordLeaseEvents } from '@/lib/leases/events';
 import { MockEsignProvider, getEsignProvider } from './mock';
+import { isSandboxEnabled } from '@/lib/providers/sandbox';
 import { buildLeasePdf, signedLeaseLines } from './pdf';
 import type { EsignCallbackPayload, EsignEnvelope } from './types';
 import { EsignError, envelopeIdForLease } from './types';
@@ -171,6 +172,7 @@ export async function completeMockSigning(
   leaseId: string,
   client: PrismaClient = db,
 ): Promise<EsignEnvelope> {
+  if (!isSandboxEnabled()) throw new Error('Mock signing requires ROCKETRENTAL_SANDBOX=true');
   const envelope = await new MockEsignProvider().completeSigning(leaseId);
   return handleEsignCallback(
     organizationId,

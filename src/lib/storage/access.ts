@@ -23,23 +23,31 @@ export interface TargetLookup {
     leaseId: string;
     organizationId: string;
     tenantId?: string;
+    ownerId?: string;
   }): Promise<boolean>;
-  propertyExists(input: { propertyId: string; organizationId: string }): Promise<boolean>;
-  unitExists(input: { unitId: string; organizationId: string }): Promise<boolean>;
+  propertyExists(input: { propertyId: string; organizationId: string; ownerId?: string }): Promise<boolean>;
+  unitExists(input: { unitId: string; organizationId: string; ownerId?: string }): Promise<boolean>;
 }
 
 /** Pure rule over a TargetLookup — the unit-tested core. */
 export function createFileAccess(lookup: TargetLookup): FileAccess {
   async function canAccessTarget(actor: FileActor, target: FileTarget): Promise<boolean> {
     if (actor.role === 'MANAGER' || actor.role === 'OWNER') {
+      if (actor.role === 'OWNER' && !actor.subjectId) return false;
+      const ownerId = actor.role === 'OWNER' ? actor.subjectId : undefined;
       if (target.kind === 'lease')
-        return lookup.leaseExists({ leaseId: target.id, organizationId: actor.organizationId });
+        return lookup.leaseExists({
+          leaseId: target.id,
+          organizationId: actor.organizationId,
+          ownerId,
+        });
       if (target.kind === 'property')
         return lookup.propertyExists({
           propertyId: target.id,
           organizationId: actor.organizationId,
+          ownerId,
         });
-      return lookup.unitExists({ unitId: target.id, organizationId: actor.organizationId });
+      return lookup.unitExists({ unitId: target.id, organizationId: actor.organizationId, ownerId });
     }
     if (actor.role === 'TENANT') {
       // Tenants: only files of their own lease.
@@ -56,6 +64,9 @@ export function createFileAccess(lookup: TargetLookup): FileAccess {
     canAccessTarget,
     async canAccessDocument(actor, doc) {
       if (doc.organizationId !== actor.organizationId) return false;
+      // Documents are attached to a shared lease, so ID files cannot be safely exposed to
+      // co-tenants until the schema records which tenant uploaded each one.
+      if (actor.role === 'TENANT' && doc.kind === 'ID') return false;
       if (doc.leaseId) return canAccessTarget(actor, { kind: 'lease', id: doc.leaseId });
       if (doc.propertyId) return canAccessTarget(actor, { kind: 'property', id: doc.propertyId });
       if (doc.unitId) return canAccessTarget(actor, { kind: 'unit', id: doc.unitId });
@@ -68,25 +79,31 @@ export function createFileAccess(lookup: TargetLookup): FileAccess {
 export async function createPrismaFileAccess(): Promise<FileAccess> {
   const { db } = await import('@/lib/db/client');
   const lookup: TargetLookup = {
-    async leaseExists({ leaseId, organizationId, tenantId }) {
+    async leaseExists({ leaseId, organizationId, tenantId, ownerId }) {
       const where = tenantId
         ? buildLeaseAccessWhere({ role: 'TENANT', organizationId, tenantId }, leaseId)
-        : buildLeaseAccessWhere({ role: 'MANAGER', organizationId }, leaseId);
+        : ownerId
+          ? buildLeaseAccessWhere({ role: 'OWNER', organizationId, subjectId: ownerId }, leaseId)
+          : buildLeaseAccessWhere({ role: 'MANAGER', organizationId }, leaseId);
       if (!where) return false;
       return (await db.lease.findFirst({ where, select: { id: true } })) !== null;
     },
-    async propertyExists({ propertyId, organizationId }) {
+    async propertyExists({ propertyId, organizationId, ownerId }) {
       return (
         (await db.property.findFirst({
-          where: { id: propertyId, organizationId },
+          where: { id: propertyId, organizationId, ...(ownerId ? { ownerId } : {}) },
           select: { id: true },
         })) !== null
       );
     },
-    async unitExists({ unitId, organizationId }) {
+    async unitExists({ unitId, organizationId, ownerId }) {
       return (
         (await db.unit.findFirst({
-          where: { id: unitId, organizationId },
+          where: {
+            id: unitId,
+            organizationId,
+            ...(ownerId ? { property: { ownerId } } : {}),
+          },
           select: { id: true },
         })) !== null
       );

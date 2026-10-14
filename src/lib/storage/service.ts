@@ -25,6 +25,13 @@ export interface UploadInput {
   body: Uint8Array;
 }
 const KINDS: DocumentKindValue[] = ['LEASE', 'NOTICE', 'INSPECTION', 'ID', 'PHOTO', 'OTHER'];
+export const TENANT_UPLOAD_KINDS: readonly DocumentKindValue[] = ['NOTICE', 'INSPECTION', 'OTHER'];
+
+function assertUploadAllowed(actor: FileActor, kind: DocumentKindValue): void {
+  if (actor.role === 'OWNER') throw new StorageError('Owners have read-only access', 'FORBIDDEN', 403);
+  if (actor.role === 'TENANT' && !TENANT_UPLOAD_KINDS.includes(kind))
+    throw new StorageError('Tenants cannot upload this document kind', 'FORBIDDEN', 403);
+}
 
 export class FileService {
   constructor(
@@ -52,6 +59,7 @@ export class FileService {
     await assertTargetAccess(this.access, actor, input.target);
     const kind = input.kind ?? 'OTHER';
     if (!KINDS.includes(kind)) throw new StorageError(`Unknown kind "${kind}"`, 'VALIDATION', 400);
+    assertUploadAllowed(actor, kind);
     const { canonicalMime } = validateUpload({
       fileName: input.fileName,
       mimeType: input.mimeType,
@@ -82,12 +90,16 @@ export class FileService {
     input: Omit<UploadInput, 'body'> & { sizeBytes: number },
   ): Promise<{ document: StoredDocument; uploadUrl: string; storageKey: string }> {
     await assertTargetAccess(this.access, actor, input.target);
+    const kind = input.kind ?? 'OTHER';
+    if (!KINDS.includes(kind)) throw new StorageError(`Unknown kind "${kind}"`, 'VALIDATION', 400);
+    assertUploadAllowed(actor, kind);
     const { canonicalMime } = validateUploadMeta(input);
     const name = sanitizeFileName(input.fileName);
     const storageKey = this.keyFor(actor, input.target, name);
     const uploadUrl = await this.storage.getSignedUrl(storageKey, {
       method: 'PUT',
       contentType: canonicalMime,
+      contentLength: input.sizeBytes,
     });
     if (!uploadUrl)
       throw new StorageError(
@@ -98,7 +110,7 @@ export class FileService {
     const document = await this.repo.create({
       organizationId: actor.organizationId,
       ...this.targetFields(input.target),
-      kind: input.kind ?? 'OTHER',
+      kind,
       name,
       storageKey,
       sizeBytes: input.sizeBytes,
@@ -108,7 +120,8 @@ export class FileService {
   }
   async list(actor: FileActor, target: FileTarget): Promise<StoredDocument[]> {
     await assertTargetAccess(this.access, actor, target);
-    return this.repo.listByTarget(actor.organizationId, target);
+    const documents = await this.repo.listByTarget(actor.organizationId, target);
+    return actor.role === 'TENANT' ? documents.filter((doc) => doc.kind !== 'ID') : documents;
   }
   async getDocument(actor: FileActor, id: string): Promise<StoredDocument> {
     const doc = await this.repo.findById(actor.organizationId, id);
@@ -121,13 +134,15 @@ export class FileService {
     id: string,
   ): Promise<{ document: StoredDocument; body: Uint8Array; signedUrl: string | null }> {
     const document = await this.getDocument(actor, id);
-    const signedUrl = await this.storage.getSignedUrl(document.storageKey, { method: 'GET' });
-    const obj = signedUrl ? null : await this.storage.get(document.storageKey);
-    if (!signedUrl && !obj) throw notFoundError('File content not found');
-    return { document, body: obj?.body ?? new Uint8Array(), signedUrl };
+    // Proxy downloads through this origin so the response gets a trusted MIME type,
+    // attachment policy and nosniff header instead of relying on bucket response headers.
+    const obj = await this.storage.get(document.storageKey);
+    if (!obj) throw notFoundError('File content not found');
+    return { document, body: obj.body, signedUrl: null };
   }
   async delete(actor: FileActor, id: string): Promise<void> {
-    if (actor.role === 'TENANT') throw new StorageError('Forbidden', 'FORBIDDEN', 403);
+    if (actor.role !== 'MANAGER')
+      throw new StorageError('Forbidden', 'FORBIDDEN', 403);
     const document = await this.getDocument(actor, id);
     await this.storage.delete(document.storageKey);
     await this.repo.delete(document.id);

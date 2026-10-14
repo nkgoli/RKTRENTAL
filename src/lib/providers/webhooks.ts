@@ -64,7 +64,7 @@ export function verifyWebhook(
 }
 
 export type WebhookStore = {
-  connected(organizationId: string, provider: WebhookProvider): Promise<boolean>;
+  connected(organizationId: string, provider: WebhookProvider, eventType: string): Promise<boolean>;
   insert(event: ParsedWebhook): Promise<'created' | 'duplicate'>;
 };
 
@@ -77,7 +77,7 @@ export async function receiveWebhook(
   now = Date.now(),
 ): Promise<'created' | 'duplicate'> {
   const event = verifyWebhook(provider, body, signature, secret, now);
-  if (!(await store.connected(event.organizationId, provider)))
+  if (!(await store.connected(event.organizationId, provider, event.eventType)))
     throw new Error('Provider connection unavailable');
   return store.insert(event);
 }

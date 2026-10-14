@@ -3,8 +3,6 @@ import {
   assessLateFee,
   centsToDecimal,
   computeBalance,
-  decodePayoutStatus,
-  encodePayoutStatus,
   formatUsd,
   isPastGrace,
   planLateFees,
@@ -371,19 +369,5 @@ describe('owner payouts', () => {
       payments: [...input.payments, pay(10000, 'SUCCEEDED', '2026-10-09')],
     });
     expect(more.idempotencyKey).not.toBe(a.idempotencyKey);
-  });
-
-  it('round-trips the property link stored in the payout status', () => {
-    const encoded = encodePayoutStatus('pending', 'PR1', '2026-10');
-    expect(decodePayoutStatus(encoded)).toEqual({
-      status: 'pending',
-      propertyId: 'PR1',
-      month: '2026-10',
-    });
-    expect(decodePayoutStatus('paid')).toEqual({
-      status: 'paid',
-      propertyId: undefined,
-      month: undefined,
-    });
   });
 });

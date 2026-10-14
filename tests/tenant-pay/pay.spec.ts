@@ -1,10 +1,34 @@
+import { PrismaClient } from '@prisma/client';
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * Tenant pay flow at phone width (390px) against a freshly seeded database
- * (Alex Rivera owes $1,850 for the upcoming month). Run `npm run db:seed`
- * before re-running locally: a completed run settles that month for real.
+ * Tenant pay flow at phone width (390px) against the demo database.
  */
+const prisma = new PrismaClient();
+const alexLease = 'seed-lease-maple-11';
+const alexTenant = 'seed-tenant-maple-11';
+test.use({ viewport: { width: 390, height: 844 } });
+test.beforeEach(async () => {
+  // Keep the test independent of a prior successful run, without reseeding the portfolio.
+  await prisma.autopaySetting.deleteMany({ where: { leaseId: alexLease, tenantId: alexTenant } });
+  await prisma.paymentMethod.deleteMany({ where: { tenantId: alexTenant } });
+  await prisma.payment.deleteMany({
+    where: {
+      leaseId: alexLease,
+      id: {
+        notIn: [
+          'seed-payment-alex-2026-08',
+          'seed-payment-alex-2026-09',
+          'seed-payment-alex-2026-10',
+        ],
+      },
+    },
+  });
+  await prisma.charge.deleteMany({
+    where: { leaseId: alexLease, description: `rent:${alexLease}:2026-11` },
+  });
+});
+test.afterAll(async () => prisma.$disconnect());
 const tenantEmail = 'alex.rivera@email.com';
 const tenantPassword = process.env.ROCKETRENTAL_DEMO_TENANT_PASSWORD ?? 'AlexDemo#2026';
 

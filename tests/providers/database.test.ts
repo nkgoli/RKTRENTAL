@@ -31,12 +31,35 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')('provider persistence', 
 
   it('keeps the established portfolio counts while seeding four applications', async () => {
     const demo = 'seed-rocket-rental';
-    expect(await prisma.property.count({ where: { organizationId: demo } })).toBe(4);
-    expect(await prisma.unit.count({ where: { organizationId: demo } })).toBe(45);
-    expect(await prisma.lease.count({ where: { organizationId: demo, status: 'ACTIVE' } })).toBe(
-      41,
-    );
-    expect(await prisma.application.count({ where: { organizationId: demo } })).toBe(4);
-    expect(await prisma.payment.count({ where: { organizationId: demo } })).toBe(3);
+    expect(
+      await prisma.property.count({
+        where: { organizationId: demo, id: { startsWith: 'seed-property-' } },
+      }),
+    ).toBe(4);
+    expect(
+      await prisma.unit.count({
+        where: { organizationId: demo, id: { startsWith: 'seed-unit-' } },
+      }),
+    ).toBe(45);
+    expect(
+      await prisma.lease.count({
+        where: { organizationId: demo, id: { startsWith: 'seed-lease-' }, status: 'ACTIVE' },
+      }),
+    ).toBe(41);
+    expect(
+      await prisma.application.count({
+        where: { organizationId: demo, id: { startsWith: 'seed-application-' } },
+      }),
+    ).toBe(4);
+    expect(
+      await prisma.charge.count({
+        where: { organizationId: demo, id: { startsWith: 'seed-charge-' }, kind: 'RENT' },
+      }),
+    ).toBe(123);
+    expect(
+      await prisma.payment.count({
+        where: { organizationId: demo, id: { startsWith: 'seed-payment-' } },
+      }),
+    ).toBe(115);
   });
 });

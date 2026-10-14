@@ -1,10 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { Avatar } from '../ui/Badge';
-import { Button } from '../ui/Button';
 import { cx } from '../ui/cx';
 import { Icon } from './Icons';
 import { findManagerItem, isActive, managerNav } from './nav';
@@ -26,9 +24,9 @@ export function ManagerShell({
   return (
     <div className="app">
       <aside className="sidebar">
-        <Link className="brand" href="/dashboard">
+        <a className="brand" href="/dashboard">
           <span className="brand-mark">R</span>RocketRental
-        </Link>
+        </a>
         <nav className="nav" aria-label="Main">
           {managerNav.map((group) => (
             <div className="nav-section" key={group.label}>
@@ -36,7 +34,7 @@ export function ManagerShell({
               {group.items.map((item) => {
                 const active = isActive(pathname, item.href);
                 return (
-                  <Link
+                  <a
                     key={item.href}
                     href={item.href}
                     className={cx(active && 'active')}
@@ -44,7 +42,7 @@ export function ManagerShell({
                   >
                     <Icon name={item.icon} />
                     {item.label}
-                  </Link>
+                  </a>
                 );
               })}
             </div>
@@ -56,6 +54,9 @@ export function ManagerShell({
             <strong>{user.name}</strong>
             <small>{user.role}</small>
           </div>
+          <a className={cx('btn', 'btn-ghost', 'btn-sm')} href="/sign-out">
+            Sign out
+          </a>
         </div>
       </aside>
       <main className="main">
@@ -66,9 +67,13 @@ export function ManagerShell({
           </div>
           <div className="topbar-actions">
             {current?.item.actions?.map((a) => (
-              <Button key={a.label} href={a.href} variant={a.primary ? 'primary' : 'secondary'}>
+              <a
+                key={a.label}
+                className={cx('btn', a.primary ? 'btn-primary' : 'btn-secondary')}
+                href={a.href}
+              >
                 {a.label}
-              </Button>
+              </a>
             ))}
           </div>
         </header>

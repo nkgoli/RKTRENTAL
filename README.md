@@ -11,11 +11,22 @@ npm install
 cp env.example .env         # contains local-only defaults, no secrets
 npm run db:up               # starts Postgres via docker compose
 npm run db:migrate          # applies Prisma migrations
-npm run db:seed             # optional placeholder seed
+npm run db:seed             # seed the sample portfolio and dev demo accounts
 npm run dev                 # http://localhost:3000
 ```
 
-If you do not use Docker, point `DATABASE_URL` in `.env` at your own Postgres. The placeholder home page does not query the database, so `dev`, `build` and `start` work without one.
+If you do not use Docker, point `DATABASE_URL` in `.env` at your own Postgres. The sign-in flow and seeded role-based pages require the database; the placeholder root page can load without querying it.
+
+## Demo accounts (dev only)
+
+The local seed creates two demo sign-ins. Jordan Mills is a manager and Alex Rivera is a tenant:
+
+| Account | Email                               | Password          |
+| ------- | ----------------------------------- | ----------------- |
+| Manager | `jordan.mills@rocketrental.example` | `JordanDemo#2026` |
+| Tenant  | `alex.rivera@email.com`             | `AlexDemo#2026`   |
+
+Demo password hashes are written by the seed when `NODE_ENV` is not `production`. To seed them intentionally in production, set `SEED_DEMO_PASSWORDS=1`; do not enable that flag on a production system.
 
 ## Scripts
 

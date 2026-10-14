@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { NextRequest } from 'next/server';
 import nextConfig from '../../next.config';
-import { isSameOrigin, middleware } from '../../src/middleware';
+import { isAllowedRequestOrigin, isSameOrigin, middleware } from '../../src/middleware';
 import { buildReturnsCsv, type ReturnsCsvRow } from '../../src/lib/returns/csv';
 
 const metrics = {
@@ -24,6 +24,25 @@ describe('cookie request origin checks', () => {
     expect(isSameOrigin('https://rentals.example/path', 'https://rentals.example')).toBe(true);
     expect(isSameOrigin('https://attacker.example', 'https://rentals.example')).toBe(false);
     expect(isSameOrigin('not a URL', 'https://rentals.example')).toBe(false);
+  });
+
+  it('accepts the public host origin when a proxy normalizes the request URL', () => {
+    expect(
+      isAllowedRequestOrigin(
+        'https://rentals.example',
+        'http://internal:3000',
+        'rentals.example',
+        'https',
+      ),
+    ).toBe(true);
+    expect(
+      isAllowedRequestOrigin(
+        'https://attacker.example',
+        'http://internal:3000',
+        'rentals.example',
+        'https',
+      ),
+    ).toBe(false);
   });
 
   it('blocks cookie-authenticated non-GET requests with a hostile origin', async () => {

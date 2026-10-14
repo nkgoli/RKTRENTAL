@@ -7,6 +7,7 @@ import { getSession } from '@/lib/auth/server-session';
 import { db } from '@/lib/db/client';
 import { screeningProvider } from '@/lib/providers';
 import { MockScreeningProvider } from '@/lib/providers/mock';
+import { recordDecision as recordScreeningDecisionAudit } from '@/lib/screening/decision-audit';
 import {
   applicationStatusForReport,
   hasCurrentConsent,
@@ -171,17 +172,12 @@ export async function recordDecision(formData: FormData) {
     where: { id: applicationId },
     data: { status: decision as ApplicationStatus },
   });
-
-  // Emit a structured audit event with a fixed reason code and the authenticated actor.
-  console.info(JSON.stringify({
-    event: 'application.screening.decision',
+  await recordScreeningDecisionAudit({
     applicationId,
-    organizationId: session.organizationId,
     actorId: session.subjectId,
-    decision,
+    decision: decision as 'APPROVED' | 'DECLINED',
     reason,
-    occurredAt: new Date().toISOString(),
-  }));
+  });
 
   revalidatePath('/applications');
   redirect('/applications?applicant=' + encodeURIComponent(applicationId) + '&notice=' + decision.toLowerCase());

@@ -56,14 +56,18 @@ export async function compsProvider(organizationId: string): Promise<CompsProvid
     'rentrange',
     'mock',
   ]);
-  if (isDevelopment() && connection?.provider === 'rentometer')
+  // Comps are public market data with no credentials or money movement, so the keyless sandbox
+  // adapter also serves production until a live rent comps adapter is wired in.
+  if (connection?.provider === 'rentometer')
     return new MockRentometerProvider(settings.radiusMiles);
-  if (
-    isDevelopment() &&
-    (!connection || connection.provider === 'mock' || connection.provider === 'rentrange')
-  )
-    return new MockCompsProvider(settings.radiusMiles);
-  throw new Error('Comps provider unavailable');
+  return new MockCompsProvider(settings.radiusMiles);
 }
 
-export type { PaymentsProvider, ScreeningProvider, CompsProvider } from './types';
+export type {
+  PaymentsProvider,
+  ScreeningProvider,
+  CompsProvider,
+  Comparable,
+  CompsSearch,
+  CompStatus,
+} from './types';

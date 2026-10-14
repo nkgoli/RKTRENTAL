@@ -53,19 +53,37 @@ export interface ScreeningProvider {
   report(requestId: string): Promise<ScreeningReportResult>;
 }
 
+export type CompStatus = 'listed' | 'leased';
 export type Comparable = {
+  id?: string;
   address: string;
   monthlyRentCents: number;
   bedrooms: number;
+  bathrooms?: number;
   squareFeet: number;
   distanceMiles: number;
+  /** Compass bearing from the subject, used to place the comp on the map. */
+  bearingDegrees?: number;
+  status?: CompStatus;
+  /** ISO date the comp was listed or leased. */
+  observedAt?: string;
+  source?: string;
+  /** Property features that make a comp a poor match (for example furnished, short-term). */
+  caveat?: string;
+};
+export type CompsSearch = {
+  postalCode: string;
+  bedrooms: number;
+  bathrooms?: number;
+  squareFeet?: number;
+  minSquareFeet?: number;
+  maxSquareFeet?: number;
+  radiusMiles?: number;
+  withinDays?: number;
+  status?: CompStatus;
+  limit?: number;
 };
 export interface CompsProvider {
   readonly name: string;
-  search(input: {
-    postalCode: string;
-    bedrooms: number;
-    squareFeet?: number;
-    limit?: number;
-  }): Promise<Comparable[]>;
+  search(input: CompsSearch): Promise<Comparable[]>;
 }

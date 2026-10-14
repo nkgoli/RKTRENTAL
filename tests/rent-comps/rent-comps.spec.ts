@@ -74,7 +74,10 @@ test('manager reviews comps, filters them, and applies a market rent', async ({
   await page.screenshot({ path: 'test-results/rent-comps-filtered.png', fullPage: true });
 
   // Status chips filter to leased comps only.
-  await page.getByText('Leased', { exact: true }).first().click();
+  await page
+    .getByRole('form', { name: 'Comp filters' })
+    .getByText('Leased', { exact: true })
+    .click();
   await expect(page).toHaveURL(/status=leased/);
   for (const badge of await rows.locator('td:nth-child(8)').allTextContents())
     expect(badge).toBe('Leased');

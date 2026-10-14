@@ -17,6 +17,7 @@ const suites: { dir: string; viewport?: { width: number; height: number } }[] = 
   { dir: 'integrations' },
   { dir: 'providers' },
   { dir: 'ledger' },
+  { dir: 'dashboard', viewport: { width: 1440, height: 1000 } },
   { dir: 'returns' },
   { dir: 'rent-comps' },
   { dir: 'screening', viewport: { width: 1280, height: 1000 } },

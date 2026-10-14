@@ -25,7 +25,12 @@ export interface UploadInput {
   body: Uint8Array;
 }
 const KINDS: DocumentKindValue[] = ['LEASE', 'NOTICE', 'INSPECTION', 'ID', 'PHOTO', 'OTHER'];
-export const TENANT_UPLOAD_KINDS: readonly DocumentKindValue[] = ['NOTICE', 'INSPECTION', 'OTHER'];
+export const TENANT_UPLOAD_KINDS: readonly DocumentKindValue[] = [
+  'NOTICE',
+  'INSPECTION',
+  'PHOTO',
+  'OTHER',
+];
 
 function assertUploadAllowed(actor: FileActor, kind: DocumentKindValue): void {
   if (actor.role === 'OWNER') throw new StorageError('Owners have read-only access', 'FORBIDDEN', 403);

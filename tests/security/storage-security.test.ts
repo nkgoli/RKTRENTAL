@@ -6,7 +6,7 @@ import { FileService } from '../../src/lib/storage/service';
 import type { FileActor, StoredDocument } from '../../src/lib/storage/types';
 import { validateUpload } from '../../src/lib/storage/validation';
 import { listTenantLeaseDocuments } from '../../src/lib/tenant-portal/service';
-import { memoryRepo, PDF } from '../storage/helpers';
+import { JPG, memoryRepo, PDF } from '../storage/helpers';
 
 vi.mock('../../src/lib/db/client', () => ({ db: {} }));
 
@@ -185,7 +185,7 @@ describe('owner and tenant document access', () => {
     await expect(files.delete(owner, leaseDoc.id)).rejects.toMatchObject({ status: 403 });
   });
 
-  it('rejects tenant attempts to upload manager-only document kinds', async () => {
+  it('allows tenant repair photos but rejects manager-only lease and ID uploads', async () => {
     const repo = memoryRepo();
     const access = createFileAccess({
       leaseExists: async ({ tenantId }) => tenantId === 'tenant-1',
@@ -203,12 +203,29 @@ describe('owner and tenant document access', () => {
       repo,
       access,
     );
+    const photo = await files.upload(tenant, {
+      target: { kind: 'lease', id: 'lease-1' },
+      fileName: 'repair.jpg',
+      mimeType: 'image/jpeg',
+      kind: 'PHOTO',
+      body: JPG,
+    });
+    expect(photo.kind).toBe('PHOTO');
     await expect(
       files.upload(tenant, {
         target: { kind: 'lease', id: 'lease-1' },
         fileName: 'replacement.pdf',
         mimeType: 'application/pdf',
         kind: 'LEASE',
+        body: PDF,
+      }),
+    ).rejects.toMatchObject({ status: 403 });
+    await expect(
+      files.upload(tenant, {
+        target: { kind: 'lease', id: 'lease-1' },
+        fileName: 'identity.pdf',
+        mimeType: 'application/pdf',
+        kind: 'ID',
         body: PDF,
       }),
     ).rejects.toMatchObject({ status: 403 });

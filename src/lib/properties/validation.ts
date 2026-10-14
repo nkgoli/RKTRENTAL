@@ -29,6 +29,9 @@ export type UnitInput = {
   bathrooms: number | null;
   squareFeet: number | null;
   listedRent: number | null;
+  marketRent: number | null;
+  floor: number | null;
+  amenities: string[];
   status: UnitStatusValue;
 };
 
@@ -142,20 +145,48 @@ export function parseUnitInput(
     } else bathrooms = n;
   }
 
-  let listedRent: number | null = null;
-  const rentText = text(raw, 'listedRent').replace(/^\$/, '').replace(/,/g, '');
-  if (rentText) {
-    if (!/^\d+(\.\d{1,2})?$/.test(rentText) || Number(rentText) > 1_000_000) {
-      errors.listedRent = 'Rent must be a dollar amount up to $1,000,000';
-    } else listedRent = Number(rentText);
-  }
+  const rent = (key: 'listedRent' | 'marketRent', label: string): number | null => {
+    const value = text(raw, key).replace(/^\$/, '').replace(/,/g, '');
+    if (!value) return null;
+    if (!/^\d+(\.\d{1,2})?$/.test(value) || Number(value) > 1_000_000) {
+      errors[key] = `${label} must be a dollar amount up to $1,000,000`;
+      return null;
+    }
+    return Number(value);
+  };
+  const listedRent = rent('listedRent', 'Rent');
+  const marketRent = rent('marketRent', 'Market rent');
+  const floor = optionalInt(raw, 'floor', 'Floor', 0, 200, errors);
+  const amenities = [
+    ...new Set(
+      text(raw, 'amenities')
+        .split(/[,\n]/)
+        .map((a) => a.trim().replace(/\s+/g, ' '))
+        .filter(Boolean),
+    ),
+  ];
+  if (amenities.length > 30 || amenities.some((a) => a.length > 60))
+    errors.amenities = 'List up to 30 amenities, each 60 characters or fewer';
 
   const statusText = text(raw, 'status') || 'VACANT';
   const status = statusText as UnitStatusValue;
   if (!UNIT_STATUSES.includes(status)) errors.status = 'Choose a status';
 
   if (Object.keys(errors).length) return { ok: false, errors };
-  return { ok: true, data: { number, bedrooms, bathrooms, squareFeet, listedRent, status } };
+  return {
+    ok: true,
+    data: {
+      number,
+      bedrooms,
+      bathrooms,
+      squareFeet,
+      listedRent,
+      marketRent,
+      floor,
+      amenities,
+      status,
+    },
+  };
 }
 
 /**

@@ -6,11 +6,17 @@ import { requireRole } from '@/lib/auth/access';
 import {
   createTenant,
   moveInTenant,
+  addTenantNote,
   moveOutTenant,
   TenantServiceError,
   updateTenant,
 } from '@/lib/tenants/service';
-import { parseNewTenantInput, parseTenantInput, type FieldErrors } from '@/lib/tenants/validation';
+import {
+  parseNewTenantInput,
+  parseNoteInput,
+  parseTenantInput,
+  type FieldErrors,
+} from '@/lib/tenants/validation';
 
 export type FormState = { errors: FieldErrors; message?: string; values?: Record<string, string> };
 
@@ -58,6 +64,23 @@ export async function updateTenantAction(
   }
   revalidatePath('/tenants');
   redirect(`/tenants/${tenantId}`);
+}
+
+export async function addNoteAction(
+  tenantId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await requireRole('MANAGER');
+  const parsed = parseNoteInput(formData);
+  if (!parsed.ok) return { errors: parsed.errors, values: values(formData) };
+  try {
+    await addTenantNote(session.organizationId, tenantId, session.name, parsed.data.body);
+  } catch (error) {
+    return failure(error, formData);
+  }
+  revalidatePath(`/tenants/${tenantId}`);
+  return { errors: {}, message: 'Note added.' };
 }
 
 async function leaseAction(

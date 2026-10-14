@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
+import { recordLeaseEvents } from '@/lib/leases/events';
 import { LeaseServiceError } from '@/lib/leases/service';
 import { hasOverlap, parseWizardTerms, renewalWindow, validateReview } from './validation';
 import type { WizardDraft } from './types';
@@ -75,6 +76,9 @@ export async function createLeaseFromWizard(
         where: { id: draft.unitId, organizationId },
         data: { status: 'OCCUPIED' },
       });
+    await recordLeaseEvents(tx, organizationId, lease.id, [
+      { kind: 'CREATED', message: status === 'DRAFT' ? 'Saved as draft' : 'Created from wizard' },
+    ]);
     return lease;
   });
 }
@@ -113,6 +117,13 @@ export async function createRenewalFromWizard(
             source.tenants.find((t) => t.tenantId === tenantId)?.isPrimary === true),
       })),
     });
+    await recordLeaseEvents(tx, organizationId, lease.id, [
+      { kind: 'CREATED', message: 'Created as a renewal' },
+      { kind: 'RENEWED', message: `Renews lease ${source.id}` },
+    ]);
+    await recordLeaseEvents(tx, organizationId, source.id, [
+      { kind: 'RENEWED', message: `Renewal ${lease.id} created` },
+    ]);
     return lease;
   });
 }

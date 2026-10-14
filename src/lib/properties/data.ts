@@ -93,7 +93,7 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
     const photos = ids.length
       ? await client.document.findMany({
           where: { organizationId, kind: 'PHOTO', propertyId: { in: ids } },
-          orderBy: { createdAt: 'asc' },
+          orderBy: [{ isCover: 'desc' }, { createdAt: 'asc' }],
           select: { id: true, propertyId: true },
         })
       : [];
@@ -165,7 +165,7 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
     const [documents, leaseDocuments, repairs, expiring] = await Promise.all([
       client.document.findMany({
         where: { organizationId, propertyId: id },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
       }),
       client.document.findMany({
         where: { organizationId, lease: { unit: { propertyId: id } } },
@@ -256,7 +256,7 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
 
     const documents = await client.document.findMany({
       where: { organizationId, unitId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
     });
     const current = unit.leases.find((l) => l.status === 'ACTIVE') ?? null;
     const primary = (l: (typeof unit.leases)[number]) => l.tenants[0]?.tenant ?? null;
@@ -269,6 +269,9 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
       bathrooms: num(unit.bathrooms),
       squareFeet: unit.squareFeet,
       listedRent: num(unit.listedRent),
+      marketRent: num(unit.marketRent),
+      floor: unit.floor,
+      amenities: unit.amenities,
       status: unit.status as UnitStatusValue,
       property: {
         id: unit.property.id,
@@ -513,6 +516,8 @@ function fileView(d: {
   mimeType: string;
   sizeBytes: bigint;
   createdAt: Date;
+  isCover?: boolean;
+  caption?: string | null;
 }) {
   return {
     id: d.id,
@@ -521,6 +526,8 @@ function fileView(d: {
     mimeType: d.mimeType,
     sizeBytes: Number(d.sizeBytes),
     createdAt: d.createdAt,
+    isCover: d.isCover ?? false,
+    caption: d.caption ?? null,
   };
 }
 

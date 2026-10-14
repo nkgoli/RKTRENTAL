@@ -29,7 +29,7 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')('provider persistence', 
     expect(await prisma.webhookEvent.count({ where: { organizationId } })).toBe(1);
   });
 
-  it('keeps the established portfolio counts while seeding four applications', async () => {
+  it('keeps the established portfolio counts while seeding four applications and payments', async () => {
     const demo = 'seed-rocket-rental';
     expect(
       await prisma.property.count({
@@ -55,11 +55,11 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')('provider persistence', 
       await prisma.charge.count({
         where: { organizationId: demo, id: { startsWith: 'seed-charge-' }, kind: 'RENT' },
       }),
-    ).toBe(123);
+    ).toBe(131); // plus Alex Rivera's earlier months
     expect(
       await prisma.payment.count({
         where: { organizationId: demo, id: { startsWith: 'seed-payment-' } },
       }),
-    ).toBe(115);
+    ).toBe(123);
   });
 });

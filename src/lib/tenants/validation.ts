@@ -2,6 +2,9 @@ export type TenantInput = {
   name: string;
   email: string | null;
   phone: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  emergencyContactRelationship?: string | null;
 };
 
 export type NewTenantInput = TenantInput & {
@@ -10,7 +13,18 @@ export type NewTenantInput = TenantInput & {
 };
 
 export type FieldErrors = Partial<
-  Record<'name' | 'email' | 'phone' | 'unitId' | 'moveInDate', string>
+  Record<
+    | 'name'
+    | 'email'
+    | 'phone'
+    | 'unitId'
+    | 'moveInDate'
+    | 'emergencyContactName'
+    | 'emergencyContactPhone'
+    | 'emergencyContactRelationship'
+    | 'body',
+    string
+  >
 >;
 
 export type ParseResult<T> = { ok: true; data: T } | { ok: false; errors: FieldErrors };
@@ -54,7 +68,39 @@ function parseContact(form: FormLike, errors: FieldErrors): TenantInput {
     }
   }
 
-  return { name, email: email || null, phone: phone || null };
+  const emergencyContactName = text(form, 'emergencyContactName');
+  const emergencyContactPhone = text(form, 'emergencyContactPhone');
+  const emergencyContactRelationship = text(form, 'emergencyContactRelationship');
+  if (emergencyContactName.length > 120)
+    errors.emergencyContactName = 'Name must be 120 characters or fewer.';
+  if (emergencyContactRelationship.length > 60)
+    errors.emergencyContactRelationship = 'Relationship must be 60 characters or fewer.';
+  if (emergencyContactPhone) {
+    const digits = emergencyContactPhone.replace(/\D/g, '');
+    if (!PHONE_CHARS.test(emergencyContactPhone) || digits.length < 7 || digits.length > 15) {
+      errors.emergencyContactPhone = 'Enter a valid phone number.';
+    }
+  }
+
+  return {
+    name,
+    email: email || null,
+    phone: phone || null,
+    emergencyContactName: emergencyContactName || null,
+    emergencyContactPhone: emergencyContactPhone || null,
+    emergencyContactRelationship: emergencyContactRelationship || null,
+  };
+}
+
+export const MAX_NOTE_LENGTH = 2000;
+
+/** Validates a tenant note body. */
+export function parseNoteInput(form: FormLike): ParseResult<{ body: string }> {
+  const body = text(form, 'body');
+  if (!body) return { ok: false, errors: { body: 'Write a note before saving.' } };
+  if (body.length > MAX_NOTE_LENGTH)
+    return { ok: false, errors: { body: `Notes can be up to ${MAX_NOTE_LENGTH} characters.` } };
+  return { ok: true, data: { body } };
 }
 
 /** Validates the profile fields editable on an existing tenant. */

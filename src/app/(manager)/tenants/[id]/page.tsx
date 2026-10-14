@@ -15,8 +15,8 @@ import { requireManagerRole } from '@/lib/auth/access';
 import { formatBytes, formatDate, formatMoney, initials } from '@/lib/tenants/format';
 import { organizationTenants, type TenantDetail } from '@/lib/tenants/queries';
 import { STATUS_LABEL, STATUS_TONE } from '@/lib/tenants/status';
-import { moveInAction, moveOutAction, updateTenantAction } from '../actions';
-import { EditTenantForm } from '../TenantForms';
+import { addNoteAction, moveInAction, moveOutAction, updateTenantAction } from '../actions';
+import { AddNoteForm, EditTenantForm } from '../TenantForms';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -47,6 +47,18 @@ function unitLabel(lease: TenantDetail['leases'][number]) {
 
 function history(detail: TenantDetail) {
   const events: { at: Date; title: string; meta: string }[] = [];
+  for (const note of detail.tenant.notes) {
+    events.push({ at: note.createdAt, title: note.body, meta: `Note · ${note.authorName}` });
+  }
+  for (const lease of detail.leases) {
+    if (lease.noticeGivenAt) {
+      events.push({
+        at: lease.noticeGivenAt,
+        title: `Notice given: ${unitLabel(lease)}`,
+        meta: lease.moveOutDate ? `Move-out ${formatDate(lease.moveOutDate)}` : 'Notice to vacate',
+      });
+    }
+  }
   for (const lease of detail.leases) {
     const label = unitLabel(lease);
     events.push({
@@ -75,7 +87,7 @@ function history(detail: TenantDetail) {
       });
     }
   }
-  return events.sort((a, b) => b.at.getTime() - a.at.getTime()).slice(0, 8);
+  return events.sort((a, b) => b.at.getTime() - a.at.getTime()).slice(0, 12);
 }
 
 export default async function TenantDetailPage({
@@ -112,9 +124,12 @@ export default async function TenantDetailPage({
         title={tenant.name}
         actions={[
           { label: 'Edit profile', href: `/tenants/${tenant.id}?edit=1` },
-          ...(currentLease
-            ? [{ label: 'View lease', href: `/leases/${currentLease.id}`, primary: true }]
-            : []),
+          ...(currentLease ? [{ label: 'View lease', href: `/leases/${currentLease.id}` }] : []),
+          activeLease
+            ? { label: 'Renew lease', href: `/leases/new?renew=${activeLease.id}`, primary: true }
+            : !draftLease
+              ? { label: 'Create lease', href: `/leases/new?tenant=${tenant.id}`, primary: true }
+              : { label: 'View draft lease', href: `/leases/${draftLease.id}`, primary: true },
         ]}
       />
 
@@ -158,6 +173,7 @@ export default async function TenantDetailPage({
         </div>
         <div className="row">
           <Badge tone={STATUS_TONE[detail.status]}>{STATUS_LABEL[detail.status]}</Badge>
+          {activeLease?.noticeGivenAt && <Badge tone="warning">Notice given</Badge>}
           {detail.balanceCents > 0 && (
             <Badge tone="danger">{formatMoney(detail.balanceCents / 100)} due</Badge>
           )}
@@ -217,6 +233,19 @@ export default async function TenantDetailPage({
                     {formatDate(currentLease.startDate)} – {formatDate(currentLease.endDate)}
                   </Link>
                 </dd>
+                <dt>Occupants</dt>
+                <dd>{currentLease.occupants ?? '—'}</dd>
+                {currentLease.noticeGivenAt && (
+                  <>
+                    <dt>Notice</dt>
+                    <dd>
+                      <strong>Notice given</strong> {formatDate(currentLease.noticeGivenAt)}
+                      {currentLease.moveOutDate && (
+                        <> · move-out {formatDate(currentLease.moveOutDate)}</>
+                      )}
+                    </dd>
+                  </>
+                )}
                 <dt>Co-tenants</dt>
                 <dd>
                   {currentLease.tenants.filter((t) => t.tenantId !== tenant.id).length
@@ -337,6 +366,25 @@ export default async function TenantDetailPage({
               <dd>{tenant.email ?? '—'}</dd>
               <dt>Phone</dt>
               <dd>{tenant.phone ?? '—'}</dd>
+              <dt>Emergency</dt>
+              <dd>
+                {tenant.emergencyContactName ? (
+                  <>
+                    {tenant.emergencyContactName}
+                    {tenant.emergencyContactRelationship && (
+                      <span className="muted"> ({tenant.emergencyContactRelationship})</span>
+                    )}
+                    {tenant.emergencyContactPhone && (
+                      <>
+                        <br />
+                        {tenant.emergencyContactPhone}
+                      </>
+                    )}
+                  </>
+                ) : (
+                  '—'
+                )}
+              </dd>
             </dl>
           </Card>
 
@@ -382,6 +430,7 @@ export default async function TenantDetailPage({
 
           <Card>
             <CardHeader title="Notes and history" />
+            <AddNoteForm action={addNoteAction.bind(null, tenant.id)} />
             {history(detail).map((event, i) => (
               <div className="list-item" key={i}>
                 <Avatar initials="•" size="sm" />

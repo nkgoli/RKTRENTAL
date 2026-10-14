@@ -15,13 +15,7 @@ test.beforeEach(async () => {
   await prisma.payment.deleteMany({
     where: {
       leaseId: alexLease,
-      id: {
-        notIn: [
-          'seed-payment-alex-2026-08',
-          'seed-payment-alex-2026-09',
-          'seed-payment-alex-2026-10',
-        ],
-      },
+      NOT: { id: { startsWith: 'seed-payment-alex-' } },
     },
   });
   await prisma.charge.deleteMany({

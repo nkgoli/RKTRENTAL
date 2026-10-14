@@ -161,6 +161,7 @@ function fakeDb() {
         return { id: row.id as string };
       },
     },
+    leaseEvent: { createMany: async () => ({ count: 0 }) },
     leaseTenant: {
       createMany: async ({ data }: { data: { leaseId: string; tenantId: string }[] }) => {
         for (const d of data) leases.find((l) => l.id === d.leaseId)?.tenants.push(d.tenantId);

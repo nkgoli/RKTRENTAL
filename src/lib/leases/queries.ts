@@ -40,6 +40,7 @@ export function leasesDb(organizationId: string, client: PrismaClient = db, now 
           documents: { orderBy: { createdAt: 'desc' } },
           charges: { orderBy: { dueDate: 'desc' } },
           payments: { orderBy: { createdAt: 'desc' } },
+          events: { orderBy: { createdAt: 'desc' }, include: { tenant: true } },
         },
       });
     },

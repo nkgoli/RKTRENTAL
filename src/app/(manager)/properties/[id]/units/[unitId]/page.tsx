@@ -62,7 +62,7 @@ export default async function UnitDetailPage({
         actions={[
           { label: 'Edit unit', href: '#edit-unit' },
           { label: 'Rent comps', href: '/rent-comps' },
-          { label: 'Create lease', href: `/leases/new?unitId=${unit.id}`, primary: true },
+          { label: 'Create lease', href: `/leases/new?unit=${unit.id}`, primary: true },
         ]}
       />
       <nav className="breadcrumbs" aria-label="Breadcrumb">
@@ -117,8 +117,35 @@ export default async function UnitDetailPage({
               <dd>{unit.bathrooms ?? '—'}</dd>
               <dt>Size</dt>
               <dd>{unit.squareFeet ? `${unit.squareFeet.toLocaleString('en-US')} sqft` : '—'}</dd>
+              <dt>Floor</dt>
+              <dd>{unit.floor ?? '—'}</dd>
               <dt>Listed rent</dt>
               <dd>{formatMoney(unit.listedRent)}</dd>
+              <dt>Market rent</dt>
+              <dd>
+                {formatMoney(unit.marketRent)}
+                {unit.marketRent != null && unit.listedRent != null && (
+                  <span className="muted">
+                    {' '}
+                    ·{' '}
+                    {unit.listedRent === unit.marketRent
+                      ? 'at market'
+                      : `${formatMoney(Math.abs(unit.listedRent - unit.marketRent))} ${unit.listedRent > unit.marketRent ? 'above' : 'below'} market`}
+                  </span>
+                )}
+              </dd>
+              <dt>Amenities</dt>
+              <dd>
+                {unit.amenities.length ? (
+                  <span className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                    {unit.amenities.map((a) => (
+                      <Badge key={a}>{a}</Badge>
+                    ))}
+                  </span>
+                ) : (
+                  '—'
+                )}
+              </dd>
             </dl>
             <EditUnitForm
               propertyId={unit.property.id}
@@ -131,6 +158,9 @@ export default async function UnitDetailPage({
                 bathrooms: unit.bathrooms,
                 squareFeet: unit.squareFeet,
                 listedRent: unit.listedRent,
+                marketRent: unit.marketRent,
+                floor: unit.floor,
+                amenities: unit.amenities,
                 status: unit.status,
               }}
             />
@@ -201,7 +231,7 @@ export default async function UnitDetailPage({
               <>
                 <p className="muted">No active lease on this unit.</p>
                 <div className="row" style={{ marginTop: 12 }}>
-                  <Link className="btn btn-primary btn-sm" href={`/leases/new?unitId=${unit.id}`}>
+                  <Link className="btn btn-primary btn-sm" href={`/leases/new?unit=${unit.id}`}>
                     Create lease
                   </Link>
                 </div>

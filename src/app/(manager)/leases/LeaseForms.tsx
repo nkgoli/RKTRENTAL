@@ -5,6 +5,7 @@ import { Alert, Button } from '@/components/ui';
 import {
   activateLeaseAction,
   editTermsAction,
+  recordNoticeAction,
   saveLeaseAction,
   terminateLeaseAction,
   type LeaseFormState,
@@ -221,6 +222,38 @@ export function LeaseStatusActions({ leaseId, status }: { leaseId: string; statu
         <Alert tone={endState.ok ? 'success' : 'warning'}>{endState.message}</Alert>
       )}
     </div>
+  );
+}
+
+export function NoticeForm({
+  leaseId,
+  noticeGivenAt,
+  moveOutDate,
+}: {
+  leaseId: string;
+  noticeGivenAt: string;
+  moveOutDate: string;
+}) {
+  const [state, action, pending] = useActionState(recordNoticeAction, initial);
+  return (
+    <form className="form" action={action} noValidate>
+      <input type="hidden" name="leaseId" value={leaseId} />
+      {state.message && <Alert tone={state.ok ? 'success' : 'warning'}>{state.message}</Alert>}
+      <div className="form-row">
+        <label className="field">
+          Notice given
+          <input name="noticeGivenAt" type="date" defaultValue={noticeGivenAt} required />
+        </label>
+        <label className="field">
+          Planned move-out
+          <input name="moveOutDate" type="date" defaultValue={moveOutDate} />
+          {state.errors?.moveOutDate && <small role="alert">{state.errors.moveOutDate}</small>}
+        </label>
+      </div>
+      <Button type="submit" variant="secondary" disabled={pending}>
+        {pending ? 'Saving…' : 'Record notice'}
+      </Button>
+    </form>
   );
 }
 

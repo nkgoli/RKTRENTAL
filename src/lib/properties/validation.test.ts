@@ -100,9 +100,26 @@ describe('parseUnitInput', () => {
         bathrooms: 1.5,
         squareFeet: 950,
         listedRent: 1750.5,
+        marketRent: null,
+        floor: null,
+        amenities: [],
         status: 'VACANT',
       },
     });
+  });
+
+  it('parses floor, market rent and amenities', () => {
+    const r = parseUnitInput({
+      number: '4B',
+      floor: '4',
+      marketRent: '$1,900',
+      amenities: 'Balcony, In-unit laundry,, Balcony',
+    });
+    expect(r).toMatchObject({
+      ok: true,
+      data: { floor: 4, marketRent: 1900, amenities: ['Balcony', 'In-unit laundry'] },
+    });
+    expect(parseUnitInput({ number: '4B', floor: 'x' }).ok).toBe(false);
   });
 
   it('treats blanks as null and defaults to vacant', () => {

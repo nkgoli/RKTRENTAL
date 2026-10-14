@@ -40,4 +40,4 @@ managers/owners within their organization; tenants only files of their own
 lease; other roles denied. Tests inject a stub `FileAccess`/`TargetLookup`
 (see `tests/storage/`), so no TODO hook remains — swap the stub there.
 
-Run tests: `npx vitest run --config tests/storage/vitest.config.mts`
+Run tests: `npx vitest run tests/storage`

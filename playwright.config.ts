@@ -1,25 +1,44 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const port = Number(process.env.PORT ?? 3000);
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
+
+// Every suite shares one seeded database and one server, so run serially. `npm run test:e2e`
+// (scripts/e2e.mjs) provisions the database; set PLAYWRIGHT_BASE_URL to reuse a running server.
+const suites: { dir: string; viewport?: { width: number; height: number } }[] = [
+  { dir: 'e2e' },
+  { dir: 'auth' },
+  { dir: 'properties' },
+  { dir: 'tenants' },
+  { dir: 'leases' },
+  { dir: 'lease-create' },
+  { dir: 'documents' },
+  { dir: 'portfolio' },
+  { dir: 'integrations' },
+  { dir: 'providers' },
+  { dir: 'ledger' },
+  { dir: 'screening', viewport: { width: 1280, height: 1000 } },
+  { dir: 'tenant-pay', viewport: { width: 390, height: 844 } },
+];
 
 export default defineConfig({
   testDir: './tests',
-  testMatch: [
-    '**/e2e/**/*.spec.ts',
-    '**/ledger/**/*.spec.ts',
-    '**/tenant-pay/**/*.spec.ts',
-    '**/screening/**/*.spec.ts',
-    '**/integrations/**/*.spec.ts',
-    '**/providers/**/*.spec.ts',
-  ],
+  fullyParallel: false,
+  workers: 1,
   reporter: process.env.CI ? 'github' : 'list',
-  use: { baseURL: `http://localhost:${port}` },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: {
-    command: process.env.CI ? 'npm run start' : 'npm run dev',
-    url: `http://localhost:${port}`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    env: { MOCK_WEBHOOK_SECRET: process.env.MOCK_WEBHOOK_SECRET ?? 'dev-webhook-secret' },
-  },
+  use: { baseURL },
+  projects: suites.map(({ dir, viewport }) => ({
+    name: dir,
+    testMatch: `${dir}/**/*.spec.ts`,
+    use: { ...devices['Desktop Chrome'], ...(viewport ? { viewport } : {}) },
+  })),
+  webServer: process.env.PLAYWRIGHT_BASE_URL
+    ? undefined
+    : {
+        command: `node node_modules/next/dist/bin/next dev -p ${port}`,
+        url: `${baseURL}/sign-in`,
+        reuseExistingServer: false,
+        timeout: 120_000,
+        env: { MOCK_WEBHOOK_SECRET: process.env.MOCK_WEBHOOK_SECRET ?? 'dev-webhook-secret' },
+      },
 });

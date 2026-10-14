@@ -9,6 +9,9 @@ const unitInput = {
   bathrooms: 1,
   squareFeet: null,
   listedRent: 1750,
+  marketRent: null,
+  floor: null,
+  amenities: [] as string[],
   status: 'VACANT' as const,
 };
 

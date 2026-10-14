@@ -31,9 +31,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run lint
       - run: npm run typecheck
+      - run: npm run lint
       - run: npm test
+      - run: npm run db:migrate
+      - run: RUN_DB_INTEGRATION=1 npm test
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e

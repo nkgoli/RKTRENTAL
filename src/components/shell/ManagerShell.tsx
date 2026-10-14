@@ -1,10 +1,11 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Avatar } from '../ui/Badge';
 import { cx } from '../ui/cx';
 import { Icon } from './Icons';
+import { PageHeaderContext, type PageHeaderConfig } from './PageHeader';
 import { findManagerItem, isActive, managerNav } from './nav';
 
 export type ManagerUser = { name: string; role: string; initials: string };
@@ -20,6 +21,11 @@ export function ManagerShell({
 }) {
   const pathname = usePathname() ?? '';
   const current = findManagerItem(pathname);
+  const [override, setOverride] = useState<PageHeaderConfig | null>(null);
+  const eyebrow = override?.eyebrow ?? current?.group.label ?? 'RocketRental';
+  const title =
+    override?.title ?? (current ? (current.item.title ?? current.item.label) : 'RocketRental');
+  const actions = override?.actions ?? current?.item.actions;
 
   return (
     <div className="app">
@@ -62,11 +68,11 @@ export function ManagerShell({
       <main className="main">
         <header className="topbar">
           <div>
-            <p className="eyebrow">{current?.group.label ?? 'RocketRental'}</p>
-            <h1>{current ? (current.item.title ?? current.item.label) : 'RocketRental'}</h1>
+            <p className="eyebrow">{eyebrow}</p>
+            <h1>{title}</h1>
           </div>
           <div className="topbar-actions">
-            {current?.item.actions?.map((a) => (
+            {actions?.map((a) => (
               <a
                 key={a.label}
                 className={cx('btn', a.primary ? 'btn-primary' : 'btn-secondary')}
@@ -77,7 +83,9 @@ export function ManagerShell({
             ))}
           </div>
         </header>
-        <div className="page">{children}</div>
+        <div className="page">
+          <PageHeaderContext.Provider value={setOverride}>{children}</PageHeaderContext.Provider>
+        </div>
       </main>
     </div>
   );

@@ -59,6 +59,7 @@ test('manager creates a photographed request, assigns a vendor, and changes stat
   await inProgress.getByText('Manage request').click();
   await inProgress.getByLabel('Comment').fill('Vendor visit confirmed.');
   await inProgress.getByRole('button', { name: 'Add comment' }).click();
+  await page.locator('article').filter({ hasText: title }).getByText('Manage request').click();
   await expect(
     page.locator('article').filter({ hasText: title }).getByText('Vendor visit confirmed.'),
   ).toBeVisible();

@@ -1,14 +1,7 @@
 # Authentication setup
 
-The seeded development accounts can sign in with these demo credentials:
+Email and password credentials are stored on `User` as nullable scrypt hashes in `passwordHash`. Hashes use a random 16-byte salt and the `scrypt$N$r$p$salt$hash` format; authentication compares the derived key in constant time. There is no plaintext fallback.
 
-| Role                   | Email                               | Password          |
-| ---------------------- | ----------------------------------- | ----------------- |
-| Manager (Jordan Mills) | `jordan.mills@rocketrental.example` | `JordanDemo#2026` |
-| Tenant (Alex Rivera)   | `alex.rivera@email.com`             | `AlexDemo#2026`   |
+The seed sets the Jordan Mills manager and Alex Rivera tenant demo password hashes when `NODE_ENV` is not `production`. Set `SEED_DEMO_PASSWORDS=1` to opt in explicitly when running the seed in production. See the root README's **Demo accounts (dev only)** section for local sign-in details. Do not enable demo accounts on a production system.
 
-These fallback passwords are accepted only when `NODE_ENV=development`. You can override them with `ROCKETRENTAL_DEMO_MANAGER_PASSWORD` and `ROCKETRENTAL_DEMO_TENANT_PASSWORD`. Do not use the demo credentials outside a local development environment.
-
-Set `ROCKETRENTAL_AUTH_SECRET` to a random value of at least 32 characters for a deployed environment. Deployed credentials use `ROCKETRENTAL_AUTH_PASSWORD_HASHES`, a JSON object from normalized email addresses to `scrypt$<base64url salt>$<base64url hash>` values. The derived hash must be 32 bytes; use a unique salt of at least 16 bytes for each user.
-
-The current seed stores Alex as a tenant record and does not store either password. The development-only account mapping resolves those seeded identities without changing the rental data model.
+Set `ROCKETRENTAL_AUTH_SECRET` to a random value of at least 32 characters for a deployed environment.

@@ -6,10 +6,17 @@ import {
   UnitStatus,
   UserRole,
 } from '@prisma/client';
+import { hashPassword } from '../src/lib/auth/password';
 
 const prisma = new PrismaClient();
 const organizationId = 'seed-rocket-rental';
 const date = (value: string) => new Date(value + 'T00:00:00.000Z');
+const seedDemoPasswords =
+  process.env.NODE_ENV !== 'production' || process.env.SEED_DEMO_PASSWORDS === '1';
+const demoPasswords = {
+  jordan: 'JordanDemo#2026',
+  alex: 'AlexDemo#2026',
+};
 
 type UnitSeed = {
   number: string;
@@ -80,6 +87,10 @@ const elm: UnitSeed[] = [
 ];
 
 async function main() {
+  const [jordanPasswordHash, alexPasswordHash] = seedDemoPasswords
+    ? await Promise.all([hashPassword(demoPasswords.jordan), hashPassword(demoPasswords.alex)])
+    : [undefined, undefined];
+
   await prisma.organization.upsert({
     where: { id: organizationId },
     update: { name: 'RocketRental Demo' },
@@ -87,13 +98,37 @@ async function main() {
   });
   await prisma.user.upsert({
     where: { id: 'seed-jordan-mills' },
-    update: { organizationId, name: 'Jordan Mills', role: UserRole.MANAGER },
+    update: {
+      organizationId,
+      name: 'Jordan Mills',
+      role: UserRole.MANAGER,
+      ...(jordanPasswordHash ? { passwordHash: jordanPasswordHash } : {}),
+    },
     create: {
       id: 'seed-jordan-mills',
       organizationId,
       email: 'jordan.mills@rocketrental.example',
       name: 'Jordan Mills',
       role: UserRole.MANAGER,
+      ...(jordanPasswordHash ? { passwordHash: jordanPasswordHash } : {}),
+    },
+  });
+  await prisma.user.upsert({
+    where: { id: 'seed-alex-rivera' },
+    update: {
+      organizationId,
+      email: 'alex.rivera@email.com',
+      name: 'Alex Rivera',
+      role: UserRole.TENANT,
+      ...(alexPasswordHash ? { passwordHash: alexPasswordHash } : {}),
+    },
+    create: {
+      id: 'seed-alex-rivera',
+      organizationId,
+      email: 'alex.rivera@email.com',
+      name: 'Alex Rivera',
+      role: UserRole.TENANT,
+      ...(alexPasswordHash ? { passwordHash: alexPasswordHash } : {}),
     },
   });
   await prisma.user.upsert({
@@ -184,10 +219,15 @@ async function main() {
 
       const tenantId = `seed-tenant-${slug}-${index + 1}`;
       const name = item.tenant ?? `Sample Tenant ${slug.toUpperCase()}-${index + 1}`;
+      const tenantData = {
+        name,
+        email: item.email,
+        ...(name === 'Alex Rivera' ? { userId: 'seed-alex-rivera' } : {}),
+      };
       await prisma.tenant.upsert({
         where: { id: tenantId },
-        update: { name, email: item.email },
-        create: { id: tenantId, organizationId, name, email: item.email },
+        update: tenantData,
+        create: { id: tenantId, organizationId, ...tenantData },
       });
 
       const leaseId = `seed-lease-${slug}-${index + 1}`;
@@ -228,7 +268,7 @@ async function main() {
       status: 'NEW',
     },
   });
-  console.log('Seeded 4 properties, 45 units, 41 occupied leases and Jordan Mills.');
+  console.log('Seeded 4 properties, 45 units, 41 occupied leases, Jordan Mills and Alex Rivera.');
 }
 
 main()

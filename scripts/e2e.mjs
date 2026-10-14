@@ -4,6 +4,11 @@
 // With DATABASE_URL the database is used as-is: seed it fresh first (`npm run db:seed`), because
 // some suites (rent payments, move-in/out) change the seeded data.
 // Extra arguments are passed to `playwright test` (e.g. `npm run test:e2e -- --project=leases`).
+//
+// The dev server is started here, not via Playwright's `webServer` block: the
+// Next dev process spawns a `next-server` child that Playwright does not reap,
+// which used to leave a listener behind after the run. This script owns the
+// server and kills its whole process tree on every exit path.
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
@@ -12,6 +17,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dbPort = process.env.ROCKETRENTAL_DB_PORT ?? '5432';
+const port = process.env.PORT ?? '3000';
+const baseURL = `http://127.0.0.1:${port}`;
 const env = {
   ...process.env,
   DATABASE_URL:
@@ -24,6 +31,40 @@ const env = {
 const node = process.execPath;
 const bin = (...p) => path.join(root, 'node_modules', ...p);
 
+/** Kill a child and its whole process tree (Next dev spawns a server child). */
+function killTree(child) {
+  if (!child || child.pid === undefined) return;
+  if (child.exitCode !== null || child.signalCode) return;
+  if (process.platform === 'win32') {
+    spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+  } else {
+    try {
+      process.kill(-child.pid, 'SIGTERM');
+    } catch {
+      try {
+        child.kill('SIGTERM');
+      } catch {
+        // already gone
+      }
+    }
+  }
+}
+
+async function waitForServer(server) {
+  const deadline = Date.now() + 120_000;
+  while (Date.now() < deadline) {
+    if (server.exitCode !== null) throw new Error(`Next dev server exited (${server.exitCode})`);
+    try {
+      const res = await fetch(`${baseURL}/sign-in`);
+      if (res.status < 500) return;
+    } catch {
+      // not up yet
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error('Timed out waiting for the Next dev server');
+}
+
 function run(label, args, extraEnv = {}) {
   console.log(`[e2e] ${label}`);
   const r = spawnSync(node, args, { cwd: root, env: { ...env, ...extraEnv }, stdio: 'inherit' });
@@ -32,8 +73,12 @@ function run(label, args, extraEnv = {}) {
 
 let db;
 let dbDir;
+let server;
 function finish(code) {
-  db?.kill();
+  killTree(server);
+  server = undefined;
+  killTree(db);
+  db = undefined;
   if (dbDir) setTimeout(() => rmSync(dbDir, { recursive: true, force: true }), 1500).unref?.();
   process.exit(code);
 }
@@ -68,10 +113,23 @@ try {
     ['--import', './prisma/os-userinfo.mjs', bin('tsx', 'dist', 'cli.mjs'), 'prisma/seed.ts'],
     { NODE_ENV: 'development' },
   );
+  console.log(`[e2e] starting Next dev server on ${baseURL}`);
+  server = spawn(node, [bin('next', 'dist', 'bin', 'next'), 'dev', '-p', String(port)], {
+    cwd: root,
+    env: {
+      ...env,
+      PORT: String(port),
+      MOCK_WEBHOOK_SECRET: env.MOCK_WEBHOOK_SECRET ?? 'dev-webhook-secret',
+    },
+    stdio: 'inherit',
+    detached: process.platform !== 'win32',
+  });
+  await waitForServer(server);
+  // PLAYWRIGHT_BASE_URL tells playwright.config.ts not to start a second server.
   const result = spawnSync(
     node,
     [bin('@playwright', 'test', 'cli.js'), 'test', ...process.argv.slice(2)],
-    { cwd: root, env, stdio: 'inherit' },
+    { cwd: root, env: { ...env, PLAYWRIGHT_BASE_URL: baseURL, PORT: String(port) }, stdio: 'inherit' },
   );
   finish(result.status ?? 1);
 } catch (error) {

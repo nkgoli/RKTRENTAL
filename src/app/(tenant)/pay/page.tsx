@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { Alert } from '@/components/ui/Feedback';
+import { EmptyState } from '@/components/RouteStates';
 import { requireTenantRole } from '@/lib/auth/access';
 import { graceEnd } from '@/lib/ledger/core';
 import { formatUsd, loadTenantPayView, monthLabel } from '@/lib/tenant-pay';
@@ -220,9 +221,7 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
             </div>
           ))
         ) : (
-          <p className="muted" style={{ fontSize: 13 }}>
-            No payments yet. Your receipts will appear here after your first payment.
-          </p>
+          <EmptyState title="No payments yet" description="Your receipts will appear here after your first payment." action="Back to home" href="/home" />
         )}
       </section>
 

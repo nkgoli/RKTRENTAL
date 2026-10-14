@@ -1,0 +1,24 @@
+.scope :global(a:focus-visible),
+.scope :global(button:focus-visible),
+.scope :global(input:focus-visible),
+.scope :global(select:focus-visible),
+.scope :global(textarea:focus-visible),
+.scope :global(summary:focus-visible) {
+  outline: 3px solid var(--design-primary);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+.scope :global(.nav-label) { color: var(--design-muted); }
+.skip {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 1000;
+  transform: translateY(-150%);
+  background: var(--design-surface);
+  color: var(--design-text);
+  border: 2px solid var(--design-primary);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.skip:focus-visible { transform: none; }

@@ -30,6 +30,10 @@ export async function requireTenantRole(): Promise<AuthSession> {
 }
 
 export async function findLeaseAccess(session: AuthSession, leaseId: string) {
+  // Owner-scoped policy helpers are retained for a future owner view, but no current
+  // manager API or page may expose lease data to owners.
+  if (session.role === 'OWNER') return null;
+
   const where = buildLeaseAccessWhere(session, leaseId);
   if (!where) return null;
 
@@ -40,7 +44,7 @@ export async function findLeaseAccess(session: AuthSession, leaseId: string) {
 }
 
 export async function requireLeaseAccess(leaseId: string) {
-  const session = await requireRole('MANAGER', 'OWNER', 'TENANT');
+  const session = await requireRole('MANAGER', 'TENANT');
   const lease = await findLeaseAccess(session, leaseId);
   if (!lease) notFound();
   return { ...lease, tenantId: session.tenantId };

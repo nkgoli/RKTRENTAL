@@ -3,7 +3,7 @@ import {
   authenticateCredentials,
   CredentialAttemptLimiter,
 } from '../../src/lib/auth/credentials';
-import { buildLeaseAccessWhere, buildPropertyAccessWhere, canWriteAsRole } from '../../src/lib/auth/policy';
+import { buildLeaseAccessWhere, buildPropertyAccessWhere, canAccessRole, canWriteAsRole } from '../../src/lib/auth/policy';
 import { hydrateCurrentSession } from '../../src/lib/auth/server-session';
 import {
   createSessionToken,
@@ -36,6 +36,7 @@ describe('OWNER access policies', () => {
     });
     expect(canWriteAsRole('OWNER')).toBe(false);
     expect(canWriteAsRole('MANAGER')).toBe(true);
+    expect(canAccessRole('OWNER', 'MANAGER')).toBe(false);
   });
 });
 

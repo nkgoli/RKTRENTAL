@@ -31,18 +31,18 @@ export function canAccessRole(
   role: AuthRole | undefined,
   requiredRole: 'MANAGER' | 'TENANT',
 ): boolean {
-  if (requiredRole === 'MANAGER') return role === 'MANAGER' || role === 'OWNER';
+  if (requiredRole === 'MANAGER') return role === 'MANAGER';
   return role === 'TENANT';
 }
 
-/** Only managers may perform writes through manager-only actions. Owners are read-only. */
+/** Only managers may perform writes through manager-only actions. */
 export function canWriteAsRole(role: AuthRole | undefined): boolean {
   return role === 'MANAGER';
 }
 
 export function roleHome(role: AuthRole): string {
   if (role === 'TENANT') return '/home';
-  if (role === 'MANAGER' || role === 'OWNER') return '/dashboard';
+  if (role === 'MANAGER') return '/dashboard';
   return '/sign-out';
 }
 

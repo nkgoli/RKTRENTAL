@@ -8,4 +8,4 @@ prisma/migrations
 .orchestra
 .agents
 .claude
-.codex
+.codexoutput

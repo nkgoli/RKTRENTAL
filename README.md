@@ -2,20 +2,22 @@
 
 Rental property management app for managers and tenants. Next.js (App Router) + TypeScript, PostgreSQL via Prisma, Vitest for unit tests, Playwright for e2e.
 
-## Local setup
+## Quick start
 
-Requirements: Node 22+, npm, and Docker (or any PostgreSQL 16 instance).
+Requirements: Node 22+ and npm. No Docker is needed; an embedded PostgreSQL 16 runs from `prisma/`.
 
 ```bash
 npm install
-cp env.example .env         # contains local-only defaults, no secrets
-npm run db:up               # starts Postgres via docker compose
-npm run db:migrate          # applies Prisma migrations
-npm run db:seed             # seed the sample portfolio and dev demo accounts
-npm run dev                 # http://localhost:3000
+cp env.example .env     # local-only defaults, no secrets (PowerShell: Copy-Item env.example .env)
+npm run db:local        # terminal 1: start embedded Postgres on :5432 and leave it running
+npm run db:migrate      # terminal 2: apply Prisma migrations
+npm run db:seed         # seed the 45-unit portfolio and the demo accounts
+npm run dev             # http://localhost:3000, sign in at /sign-in
 ```
 
-If you do not use Docker, point `DATABASE_URL` in `.env` at your own Postgres. The sign-in flow and seeded role-based pages require the database; the placeholder root page can load without querying it.
+Prefer Docker or your own Postgres? Use `npm run db:up` (docker compose) or point `DATABASE_URL` in `.env` at your database, and skip `db:local`. Set `ROCKETRENTAL_DB_PORT` (and the port in `DATABASE_URL`) if 5432 is taken. Data persists in `prisma/.local-postgres/` (git-ignored); stop the runner with Ctrl+C.
+
+`db:migrate` runs `prisma migrate deploy` (non-interactive); use `npm run db:migrate:dev` when authoring a new migration. `db:seed` loads `.env` and a small preload (`prisma/os-userinfo.mjs`) that works around `os.userInfo()` failing with `ENOMEM` on some sandboxed hosts.
 
 ## Demo accounts (dev only)
 
@@ -41,11 +43,13 @@ Demo password hashes are written by the seed when `NODE_ENV` is not `production`
 | `npm run test:e2e`   | Playwright e2e (run `npx playwright install chromium` once) |
 | `npm run db:migrate` | `prisma migrate dev`                                        |
 | `npm run db:seed`    | Run `prisma/seed.ts`                                        |
+| `npm run db:local`   | Start the embedded Postgres (installs it on first run)      |
+| `npm run preview`    | Embedded DB + migrate + seed + `next start` (after build)   |
 | `npm run format`     | Prettier                                                    |
 
 ## Running as a Managed Preview
 
-The app is a standard Next.js package. Publish it as a package preview with the script `start` after `npm run build`, readiness path `/` (set `PORT` if the host requires it; Next.js honours it). No database or env vars are needed for the placeholder home page.
+The Preview needs a database, so it starts one itself. Publish the repository as a package preview with script `preview` (it runs `npm install` and `npm run build` first when `node_modules` or `.next` are missing; locally just run `npm run preview` after a build) (readiness path `/sign-in`; honours `PORT`). The script installs/starts the embedded Postgres, applies migrations, seeds the demo data and then runs `next start`. Everything stops when the process is stopped. Set `DATABASE_URL` to use an external database instead (the embedded one is then skipped); `ROCKETRENTAL_AUTH_SECRET` defaults to a preview-only value and should be set for any real deployment. Sign in with the demo accounts below.
 
 ## Folder layout
 
@@ -64,8 +68,8 @@ tests/e2e/            Playwright tests
 .github/workflows/    CI (lint, typecheck, test, build, e2e)
 ```
 
-The only model is a placeholder (`AppMeta`); real models arrive in later Tasks. Import alias: `@/*` maps to `src/*`.
+Import alias: `@/*` maps to `src/*`.
 
 ## CI
 
-`.github/workflows/ci.yml` runs `npm ci`, lint, typecheck, unit tests, build and e2e against a Postgres service on every push to `main` and every pull request.
+`.github/workflows/ci.yml` runs `npm ci`, typecheck, lint, unit tests (db, auth, storage and UI), build and e2e against a Postgres service on every push to `main` and every pull request.

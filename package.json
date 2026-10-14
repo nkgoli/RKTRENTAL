@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate \u0026\u0026 next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
@@ -13,10 +13,13 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "db:up": "docker compose up -d db",
-    "db:migrate": "prisma migrate dev",
+    "db:migrate": "prisma migrate deploy",
     "db:deploy": "prisma migrate deploy",
-    "db:seed": "prisma db seed",
-    "postinstall": "prisma generate"
+    "db:seed": "node --env-file-if-exists=.env --import ./prisma/os-userinfo.mjs node_modules/tsx/dist/cli.mjs prisma/seed.ts",
+    "postinstall": "prisma generate",
+    "db:local": "npm install --prefix prisma \u0026\u0026 npm run db:local --prefix prisma",
+    "db:migrate:dev": "prisma migrate dev",
+    "preview": "node scripts/preview.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -45,6 +45,7 @@ function runPlaywright(args) {
     let summaryTimer;
     let fallbackTimer;
     let finalStatus;
+    let expectedTests;
     let settled = false;
 
     const finish = (status) => {
@@ -59,17 +60,21 @@ function runPlaywright(args) {
       output = (output + chunk.toString()).slice(-128_000);
       const plain = output.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '').replace(/\r/g, '\n');
       const hasFinalSummary = /^\s*\d+\s+(?:passed|failed)\s*\([^)]+\)\s*$/m.test(plain);
-      if (!hasFinalSummary || summaryTimer) return;
+      const testCount = plain.match(/Running\s+(\d+)\s+tests?\s+using\b/);
+      if (testCount) expectedTests = Number(testCount[1]);
+      const completedTests = [...plain.matchAll(/^\s*(?:ok|x)\s+\d+\s+\[[^\]]+\]\s+›/gm)].length;
+      const allCasesReported = expectedTests !== undefined && completedTests >= expectedTests;
+      if ((!hasFinalSummary && !allCasesReported) || summaryTimer) return;
 
       summaryTimer = setTimeout(() => {
         if (child.exitCode !== null) return;
         const finalOutput = output
           .replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '')
           .replace(/\r/g, '\n');
-        const listedFailures = [...finalOutput.matchAll(/^\s*\d+\)\s+\[[^\]]+\]\s+›/gm)].length;
+        const listedFailures = [...finalOutput.matchAll(/^\s*x\s+\d+\s+\[[^\]]+\]\s+›/gm)].length;
         const reportedFailures = [...finalOutput.matchAll(/^\s*(\d+)\s+failed\b/gm)].at(-1);
         finalStatus = Number(reportedFailures?.[1] ?? listedFailures) > 0 ? 1 : 0;
-        console.error('[e2e] Playwright printed its final summary but stayed open; stopping the remaining process tree.');
+        console.error('[e2e] Playwright reported all cases but stayed open; stopping the remaining process tree.');
         if (process.platform === 'win32' && child.pid) {
           const killer = spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], {
             stdio: 'ignore',

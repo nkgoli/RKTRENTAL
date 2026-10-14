@@ -32,20 +32,20 @@ Demo password hashes are written by the seed when `NODE_ENV` is not `production`
 
 ## Scripts
 
-| Script               | Purpose                                                     |
-| -------------------- | ----------------------------------------------------------- |
-| `npm run dev`        | Start the dev server                                        |
-| `npm run build`      | Generate the Prisma client and build for prod               |
-| `npm start`          | Serve the production build                                  |
-| `npm run lint`       | ESLint (zero warnings allowed)                              |
-| `npm run typecheck`  | `tsc --noEmit`                                              |
-| `npm test`           | Vitest unit tests                                           |
-| `npm run test:e2e`   | Playwright e2e (run `npx playwright install chromium` once) |
-| `npm run db:migrate` | `prisma migrate dev`                                        |
-| `npm run db:seed`    | Run `prisma/seed.ts`                                        |
-| `npm run db:local`   | Start the embedded Postgres (installs it on first run)      |
-| `npm run preview`    | Embedded DB + migrate + seed + `next start` (after build)   |
-| `npm run format`     | Prettier                                                    |
+| Script               | Purpose                                                                                                                                                     |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`        | Start the dev server                                                                                                                                        |
+| `npm run build`      | Generate the Prisma client and build for prod                                                                                                               |
+| `npm start`          | Serve the production build                                                                                                                                  |
+| `npm run lint`       | ESLint (zero warnings allowed)                                                                                                                              |
+| `npm run typecheck`  | `tsc --noEmit`                                                                                                                                              |
+| `npm test`           | All Vitest unit tests (`src/**` and `tests/**`)                                                                                                             |
+| `npm run test:e2e`   | All Playwright suites against one freshly seeded DB and server (embedded Postgres unless `DATABASE_URL` is set; run `npx playwright install chromium` once) |
+| `npm run db:migrate` | `prisma migrate dev`                                                                                                                                        |
+| `npm run db:seed`    | Run `prisma/seed.ts`                                                                                                                                        |
+| `npm run db:local`   | Start the embedded Postgres (installs it on first run)                                                                                                      |
+| `npm run preview`    | Embedded DB + migrate + seed + `next start` (after build)                                                                                                   |
+| `npm run format`     | Prettier                                                                                                                                                    |
 
 ## Running as a Managed Preview
 
@@ -63,8 +63,7 @@ src/lib/db/           Prisma client
 src/lib/auth/         auth and session helpers
 src/lib/storage/      file/document storage adapters
 src/styles/           global CSS and design tokens
-tests/unit/           Vitest tests
-tests/e2e/            Playwright tests
+tests/<area>/         Vitest (*.test.ts) and Playwright (*.spec.ts) tests per area
 .github/workflows/    CI (lint, typecheck, test, build, e2e)
 ```
 

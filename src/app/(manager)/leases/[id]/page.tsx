@@ -4,10 +4,11 @@ import { PageHeader } from '@/components/shell/PageHeader';
 import { Avatar, Badge, Card, CardHeader, FileRow } from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import { dateInput } from '@/lib/leases/core';
+import { EVENT_LABEL } from '@/lib/leases/events';
 import { leaseName, money, signLabel, statusLabel, term } from '@/lib/leases/format';
 import { leasesDb } from '@/lib/leases/queries';
 import { formatAddress, formatBytes, formatDate, initials } from '@/lib/properties/format';
-import { EditTermsForm, LeaseStatusActions, LeaseUploader } from '../LeaseForms';
+import { EditTermsForm, LeaseStatusActions, LeaseUploader, NoticeForm } from '../LeaseForms';
 
 export default async function LeaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireManagerRole();
@@ -31,11 +32,27 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
     lateFee: lease.lateFee.toString(),
     graceDays: lease.graceDays,
   };
+  const eventText = (e: (typeof lease.events)[number]) =>
+    [e.tenant ? `${EVENT_LABEL[e.kind]}: ${e.tenant.name}` : EVENT_LABEL[e.kind], e.message]
+      .filter(Boolean)
+      .join(' · ');
   const activities = [
     ...lease.documents.map((d) => ({ date: d.createdAt, text: `${d.name} uploaded` })),
-    ...(lease.signedAt ? [{ date: lease.signedAt, text: 'Lease marked fully signed' }] : []),
-    { date: lease.createdAt, text: 'Lease created' },
+    ...lease.events.map((e) => ({ date: e.createdAt, text: eventText(e) })),
+    ...(lease.events.length
+      ? []
+      : [
+          ...(lease.signedAt ? [{ date: lease.signedAt, text: 'Lease marked fully signed' }] : []),
+          { date: lease.createdAt, text: 'Lease created' },
+        ]),
   ].sort((a, b) => b.date.getTime() - a.date.getTime());
+  const signerStatus = lease.tenants.map(({ tenant }) => {
+    const latest = lease.events.find(
+      (e) => e.tenantId === tenant.id && ['SENT', 'SIGNED', 'DECLINED'].includes(e.kind),
+    );
+    return { tenant, event: latest };
+  });
+  const noticeGiven = lease.noticeGivenAt != null;
   return (
     <>
       <PageHeader
@@ -67,6 +84,9 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
           lease.endDate <= new Date(Date.now() + 60 * 86_400_000) && (
             <Badge tone="warning">Expiring soon · {formatDate(lease.endDate)}</Badge>
           )}
+        {noticeGiven && (
+          <Badge tone="warning">Notice given {formatDate(lease.noticeGivenAt!)}</Badge>
+        )}
         <span className="muted">{signLabel(lease.eSignStatus)}</span>
       </div>
       <div className="split">
@@ -123,7 +143,29 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
               <dd>
                 {money(lease.lateFee)} after a {lease.graceDays}-day grace period
               </dd>
+              <dt>Occupants</dt>
+              <dd>{lease.occupants ?? '—'}</dd>
+              <dt>Notice</dt>
+              <dd>
+                {noticeGiven ? (
+                  <>
+                    <strong>Notice given</strong> on {formatDate(lease.noticeGivenAt!)}
+                    {lease.moveOutDate && <> · move-out {formatDate(lease.moveOutDate)}</>}
+                  </>
+                ) : (
+                  'No notice given'
+                )}
+              </dd>
             </dl>
+            {lease.status === 'ACTIVE' && (
+              <div style={{ marginTop: 16 }}>
+                <NoticeForm
+                  leaseId={lease.id}
+                  noticeGivenAt={lease.noticeGivenAt ? dateInput(lease.noticeGivenAt) : ''}
+                  moveOutDate={lease.moveOutDate ? dateInput(lease.moveOutDate) : ''}
+                />
+              </div>
+            )}
           </Card>
           <Card>
             <div className="card-header">
@@ -207,7 +249,9 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
               <div>
                 <div className="eyebrow">Balance due</div>
                 <strong style={{ fontSize: 20 }}>
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(balance)}
+                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
+                    balance,
+                  )}
                 </strong>
               </div>
               <div>
@@ -250,6 +294,40 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
                   ? 'Marked signed; signature time was not recorded.'
                   : 'No completed signature recorded yet.'}
             </p>
+            {signerStatus.length > 0 && (
+              <div aria-label="Signers" style={{ marginTop: 12 }}>
+                {signerStatus.map(({ tenant, event }) => (
+                  <div className="list-item" key={tenant.id}>
+                    <Avatar initials={initials(tenant.name)} size="sm" />
+                    <span className="file-meta">
+                      <strong>{tenant.name}</strong>
+                      <small>
+                        {event
+                          ? `${EVENT_LABEL[event.kind]} · ${formatDate(event.createdAt)}`
+                          : 'Not sent'}
+                      </small>
+                    </span>
+                    <Badge
+                      tone={
+                        event?.kind === 'SIGNED'
+                          ? 'success'
+                          : event?.kind === 'DECLINED'
+                            ? 'danger'
+                            : 'info'
+                      }
+                    >
+                      {event?.kind === 'SIGNED'
+                        ? 'Signed'
+                        : event?.kind === 'DECLINED'
+                          ? 'Declined'
+                          : event
+                            ? 'Awaiting'
+                            : 'Draft'}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="card-header" style={{ margin: '20px 0 8px' }}>
               <h3>Activity</h3>
             </div>

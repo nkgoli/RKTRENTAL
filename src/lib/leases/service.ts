@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
+import { recordLeaseEvents } from './events';
 import { nextLeaseStart, overlaps, renewalEnd, terminationEnd, type LeaseWindow } from './core';
 
 export class LeaseServiceError extends Error {
@@ -99,6 +100,7 @@ export async function createLease(
           where: { id: unitId, organizationId },
           data: { status: 'OCCUPIED' },
         });
+      await recordLeaseEvents(tx, organizationId, lease.id, [{ kind: 'CREATED' }]);
       return lease;
     })
     .catch(overlapError);

@@ -8,7 +8,11 @@ import {
   UnitStatus,
   UserRole,
 } from '@prisma/client';
+import { deflateSync } from 'node:zlib';
 import { hashPassword } from '../src/lib/auth/password';
+import { buildLeasePdf } from '../src/lib/esign/pdf';
+import { addMonths, monthStart, rentKey } from '../src/lib/ledger/core';
+import { createStorageAdapter } from '../src/lib/storage/config';
 
 const prisma = new PrismaClient();
 const organizationId = 'seed-rocket-rental';
@@ -19,6 +23,82 @@ const demoPasswords = {
   jordan: 'JordanDemo#2026',
   alex: 'AlexDemo#2026',
 };
+
+const amenitiesByProperty: Record<string, string[]> = {
+  maple: ['In-unit laundry', 'Central A/C', 'Dishwasher', 'Assigned parking'],
+  harbor: ['Harbor views', 'Elevator', 'Rooftop deck', 'Gym access'],
+  cedar: ['Private garage', 'Fenced patio', 'Washer/dryer hookup'],
+  elm: ['Fenced yard', 'Garage', 'Central A/C'],
+};
+
+/** Floor from the unit number ("4B" -> 4); loft numbers are spread over six floors. */
+function floorFor(slug: string, number: string, index: number): number | null {
+  if (slug === 'elm') return 1;
+  if (slug === 'cedar') return 1;
+  const leading = /^(\d)[A-Z]/.exec(number);
+  if (slug === 'maple' && leading) return Number(leading[1]);
+  if (slug === 'harbor') return Math.floor(index / 4) + 1;
+  return null;
+}
+
+const emergencyContacts: Record<string, [string, string, string]> = {
+  'Alex Rivera': ['Maria Rivera', '(512) 555-0142', 'Mother'],
+  'Priya Shah': ['Dev Shah', '(512) 555-0177', 'Spouse'],
+  'Sam Patel': ['Anita Patel', '(512) 555-0119', 'Sister'],
+  'Tara Wu': ['Kevin Wu', '(512) 555-0163', 'Brother'],
+  'Dana Kim': ['Joon Kim', '(512) 555-0108', 'Father'],
+  'Marcus Okafor': ['Ngozi Okafor', '(512) 555-0134', 'Mother'],
+};
+
+/** A small solid-colour gradient PNG so seeded cover photos render without binary fixtures. */
+function gradientPng(top: [number, number, number], bottom: [number, number, number]): Uint8Array {
+  const width = 480;
+  const height = 300;
+  const crcTable = Array.from({ length: 256 }, (_, n) => {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    return c >>> 0;
+  });
+  const crc = (bytes: Buffer) => {
+    let c = 0xffffffff;
+    for (const byte of bytes) c = crcTable[(c ^ byte) & 0xff]! ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type: string, data: Buffer) => {
+    const body = Buffer.concat([Buffer.from(type), data]);
+    const out = Buffer.alloc(body.length + 8);
+    out.writeUInt32BE(data.length, 0);
+    body.copy(out, 4);
+    out.writeUInt32BE(crc(body), body.length + 4);
+    return out;
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8;
+  header[9] = 2;
+  const rows: Buffer[] = [];
+  for (let y = 0; y < height; y++) {
+    const row = Buffer.alloc(1 + width * 3);
+    const t = y / (height - 1);
+    for (let x = 0; x < width; x++) {
+      for (let channel = 0; channel < 3; channel++) {
+        row[1 + x * 3 + channel] = Math.round(
+          top[channel]! + (bottom[channel]! - top[channel]!) * t,
+        );
+      }
+    }
+    rows.push(row);
+  }
+  return new Uint8Array(
+    Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      chunk('IHDR', header),
+      chunk('IDAT', deflateSync(Buffer.concat(rows))),
+      chunk('IEND', Buffer.alloc(0)),
+    ]),
+  );
+}
 
 type UnitSeed = {
   number: string;
@@ -205,6 +285,9 @@ async function main() {
           number: item.number,
           status: item.occupied ? UnitStatus.OCCUPIED : UnitStatus.VACANT,
           listedRent: item.rent,
+          marketRent: item.rent + (index % 3 === 0 ? 75 : index % 3 === 1 ? 0 : -50),
+          floor: floorFor(slug, item.number, index),
+          amenities: amenitiesByProperty[slug] ?? [],
           isImplicit: property.type === PropertyType.SINGLE_UNIT,
         },
         create: {
@@ -214,6 +297,9 @@ async function main() {
           number: item.number,
           status: item.occupied ? UnitStatus.OCCUPIED : UnitStatus.VACANT,
           listedRent: item.rent,
+          marketRent: item.rent + (index % 3 === 0 ? 75 : index % 3 === 1 ? 0 : -50),
+          floor: floorFor(slug, item.number, index),
+          amenities: amenitiesByProperty[slug] ?? [],
           isImplicit: property.type === PropertyType.SINGLE_UNIT,
         },
       });
@@ -225,6 +311,13 @@ async function main() {
         name,
         email: item.email,
         ...(name === 'Alex Rivera' ? { userId: 'seed-alex-rivera' } : {}),
+        ...(emergencyContacts[name]
+          ? {
+              emergencyContactName: emergencyContacts[name][0],
+              emergencyContactPhone: emergencyContacts[name][1],
+              emergencyContactRelationship: emergencyContacts[name][2],
+            }
+          : {}),
       };
       await prisma.tenant.upsert({
         where: { id: tenantId },
@@ -243,6 +336,11 @@ async function main() {
         graceDays: 5,
         status: LeaseStatus.ACTIVE,
         eSignStatus: ESignStatus.SIGNED,
+        signedAt: date('2025-11-24'),
+        ...(name === 'Alex Rivera' ? { occupants: 'Alex Rivera, Casey Rivera' } : {}),
+        ...(name === 'Sam Patel'
+          ? { noticeGivenAt: date('2026-10-01'), moveOutDate: date('2026-11-30') }
+          : {}),
       };
       await prisma.lease.upsert({
         where: { id: leaseId },
@@ -444,9 +542,233 @@ async function main() {
       },
     });
   }
+  await seedPortfolioDetails();
   console.log(
     'Seeded 4 properties, 45 units, 41 occupied leases, 4 applications, provider connections and payment history.',
   );
+}
+
+async function seedPortfolioDetails() {
+  const storage = createStorageAdapter(process.env);
+  const alexLease = 'seed-lease-maple-11';
+  const alexTenant = 'seed-tenant-maple-11';
+
+  // Alex Rivera: a full ledger (every month since move-in charged and paid), so his pages are populated.
+  for (let month = '2025-12'; month <= '2026-10'; month = addMonths(month, 1)) {
+    const description = rentKey(alexLease, month);
+    const existing = await prisma.charge.findFirst({
+      where: { organizationId, leaseId: alexLease, description },
+    });
+    if (!existing) {
+      await prisma.charge.create({
+        data: {
+          organizationId,
+          leaseId: alexLease,
+          kind: 'RENT',
+          amount: 1850,
+          dueDate: monthStart(month),
+          description,
+        },
+      });
+    }
+    await prisma.payment.upsert({
+      where: { id: `seed-payment-alex-${month}` },
+      update: {},
+      create: {
+        id: `seed-payment-alex-${month}`,
+        organizationId,
+        leaseId: alexLease,
+        amount: 1850,
+        status: PaymentStatus.SUCCEEDED,
+        providerReference: `mock-payment-alex-${month}`,
+        paidAt: date(`${month}-03`),
+      },
+    });
+  }
+
+  // Tenant notes.
+  const notes = [
+    {
+      id: 'seed-note-alex-1',
+      tenantId: alexTenant,
+      body: 'Asked about a second parking permit. Told him to email the request.',
+      at: '2026-09-12T15:30:00.000Z',
+    },
+    {
+      id: 'seed-note-alex-2',
+      tenantId: alexTenant,
+      body: 'Kitchen sink leak reported; plumber scheduled for this week.',
+      at: '2026-10-09T09:10:00.000Z',
+    },
+    {
+      id: 'seed-note-sam-1',
+      tenantId: 'seed-tenant-maple-6',
+      body: 'Gave 60 days notice by email. Moving out November 30.',
+      at: '2026-10-01T13:00:00.000Z',
+    },
+  ];
+  for (const note of notes) {
+    await prisma.tenantNote.upsert({
+      where: { id: note.id },
+      update: {},
+      create: {
+        id: note.id,
+        organizationId,
+        tenantId: note.tenantId,
+        authorName: 'Jordan Mills',
+        body: note.body,
+        createdAt: new Date(note.at),
+      },
+    });
+  }
+
+  // Lease activity: per-signer e-sign events and notice.
+  const events = [
+    {
+      id: 'seed-event-alex-1',
+      kind: 'CREATED',
+      at: '2025-11-20T10:00:00.000Z',
+      message: 'Created from wizard',
+    },
+    {
+      id: 'seed-event-alex-2',
+      kind: 'SENT',
+      at: '2025-11-21T09:00:00.000Z',
+      message: 'Sent to alex.rivera@email.com',
+      tenantId: alexTenant,
+    },
+    {
+      id: 'seed-event-alex-3',
+      kind: 'SIGNED',
+      at: '2025-11-24T17:42:00.000Z',
+      tenantId: alexTenant,
+    },
+    {
+      id: 'seed-event-alex-4',
+      kind: 'COMPLETED',
+      at: '2025-11-24T17:42:00.000Z',
+      message: 'Signed lease agreement.pdf',
+    },
+  ] as const;
+  for (const event of events) {
+    await prisma.leaseEvent.upsert({
+      where: { id: event.id },
+      update: {},
+      create: {
+        id: event.id,
+        organizationId,
+        leaseId: alexLease,
+        kind: event.kind,
+        tenantId: 'tenantId' in event ? event.tenantId : null,
+        message: 'message' in event ? event.message : null,
+        actorName: event.kind === 'CREATED' ? 'Jordan Mills' : null,
+        createdAt: new Date(event.at),
+      },
+    });
+  }
+  await prisma.leaseEvent.upsert({
+    where: { id: 'seed-event-sam-notice' },
+    update: {},
+    create: {
+      id: 'seed-event-sam-notice',
+      organizationId,
+      leaseId: 'seed-lease-maple-6',
+      kind: 'NOTICE_GIVEN',
+      actorName: 'Jordan Mills',
+      message: 'Planned move-out 2026-11-30',
+      createdAt: new Date('2026-10-01T13:00:00.000Z'),
+    },
+  });
+
+  // Documents: stored in the configured storage so previews and downloads work.
+  const leasePdf = buildLeasePdf([
+    `Lease: ${alexLease}`,
+    'Premises: Maple Court - Unit 4B',
+    'Tenants: Alex Rivera',
+    'Term: Dec 1, 2025 - Nov 30, 2026',
+    'Monthly rent: $1850 - Deposit: $1850',
+    'Signed electronically via RocketRental (mock e-signature).',
+    'Signer: Alex Rivera - signed',
+  ]);
+  const inspectionPdf = buildLeasePdf([
+    'Move-in inspection report',
+    'Premises: Maple Court - Unit 4B',
+    'Inspected: Dec 1, 2025',
+    'Kitchen: good. Bathroom: good. Floors: minor scuff near entry.',
+  ]);
+  const idPdf = buildLeasePdf(['Photo ID on file', 'Tenant: Alex Rivera', 'Verified Nov 20, 2025']);
+  const documents = [
+    {
+      id: 'seed-doc-alex-lease',
+      leaseId: alexLease,
+      kind: 'LEASE' as const,
+      name: 'Signed lease agreement.pdf',
+      mimeType: 'application/pdf',
+      body: leasePdf,
+      createdAt: '2025-11-24T17:42:00.000Z',
+    },
+    {
+      id: 'seed-doc-alex-inspection',
+      leaseId: alexLease,
+      kind: 'INSPECTION' as const,
+      name: 'Move-in inspection.pdf',
+      mimeType: 'application/pdf',
+      body: inspectionPdf,
+      createdAt: '2025-12-01T16:00:00.000Z',
+    },
+    {
+      id: 'seed-doc-alex-id',
+      leaseId: alexLease,
+      kind: 'ID' as const,
+      name: 'Photo ID.pdf',
+      mimeType: 'application/pdf',
+      body: idPdf,
+      createdAt: '2025-11-20T11:00:00.000Z',
+    },
+    {
+      id: 'seed-doc-maple-cover',
+      propertyId: 'seed-property-maple',
+      kind: 'PHOTO' as const,
+      name: 'maple-court-front.png',
+      mimeType: 'image/png',
+      body: gradientPng([201, 223, 255], [58, 94, 168]),
+      isCover: true,
+      caption: 'Maple Court street view',
+      createdAt: '2025-06-01T12:00:00.000Z',
+    },
+    {
+      id: 'seed-doc-maple-lobby',
+      propertyId: 'seed-property-maple',
+      kind: 'PHOTO' as const,
+      name: 'maple-court-lobby.png',
+      mimeType: 'image/png',
+      body: gradientPng([255, 226, 189], [168, 112, 58]),
+      caption: 'Lobby',
+      createdAt: '2025-06-02T12:00:00.000Z',
+    },
+    {
+      id: 'seed-doc-unit-4b-photo',
+      unitId: 'seed-unit-maple-11',
+      kind: 'PHOTO' as const,
+      name: 'unit-4b-living-room.png',
+      mimeType: 'image/png',
+      body: gradientPng([214, 240, 214], [74, 140, 96]),
+      isCover: true,
+      caption: 'Living room',
+      createdAt: '2025-11-15T12:00:00.000Z',
+    },
+  ];
+  for (const doc of documents) {
+    const { body, createdAt, id, ...fields } = doc;
+    const storageKey = `seed/${id}`;
+    await storage.put(storageKey, body, doc.mimeType);
+    const data = { ...fields, storageKey, sizeBytes: body.byteLength };
+    await prisma.document.upsert({
+      where: { id },
+      update: data,
+      create: { id, organizationId, ...data, createdAt: new Date(createdAt) },
+    });
+  }
 }
 
 main()

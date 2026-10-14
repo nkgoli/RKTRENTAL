@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireManagerRole } from '@/lib/auth/access';
 import { parseTerms } from '@/lib/leases/core';
+import { recordNotice } from '@/lib/leases/events';
+import { parseIsoDate } from '@/lib/tenants/validation';
 import {
   activateLease,
   createLease,
@@ -80,6 +82,35 @@ export async function activateLeaseAction(
   revalidatePath('/leases');
   revalidatePath(`/leases/${leaseId}`);
   return { ok: true, message: 'Lease activated.' };
+}
+
+export async function recordNoticeAction(
+  _prev: LeaseFormState,
+  form: FormData,
+): Promise<LeaseFormState> {
+  const session = await requireManagerRole();
+  const leaseId = String(form.get('leaseId') ?? '');
+  const noticeGivenAt = parseIsoDate(String(form.get('noticeGivenAt') ?? ''));
+  const moveOutText = String(form.get('moveOutDate') ?? '');
+  const moveOutDate = moveOutText ? parseIsoDate(moveOutText) : null;
+  if (!noticeGivenAt)
+    return { message: 'Enter the date notice was given.', errors: { noticeGivenAt: 'Required' } };
+  if (moveOutText && !moveOutDate)
+    return { message: 'Enter a valid move-out date.', errors: { moveOutDate: 'Invalid date' } };
+  try {
+    await recordNotice(
+      session.organizationId,
+      leaseId,
+      { noticeGivenAt, moveOutDate },
+      session.name,
+    );
+  } catch (error) {
+    return failure(error);
+  }
+  revalidatePath('/leases');
+  revalidatePath(`/leases/${leaseId}`);
+  revalidatePath('/tenants');
+  return { ok: true, message: 'Notice recorded.' };
 }
 
 export async function terminateLeaseAction(

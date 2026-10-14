@@ -1,7 +1,15 @@
 import { FileRow } from '@/components/ui';
 import { formatBytes, formatDate } from '@/lib/properties/format';
 
-type FileItem = { id: string; name: string; mimeType: string; sizeBytes: number; createdAt: Date };
+type FileItem = {
+  id: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: Date;
+  isCover?: boolean;
+  caption?: string | null;
+};
 
 const shades = ['', 'b', 'c', 'd'] as const;
 
@@ -26,7 +34,7 @@ export function PhotoImage({
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={previewUrl(photo.id)}
-        alt={photo.name}
+        alt={photo.caption ?? photo.name}
         style={{
           position: 'absolute',
           inset: 0,
@@ -35,7 +43,10 @@ export function PhotoImage({
           objectFit: 'cover',
         }}
       />
-      <span className="caption">{photo.name}</span>
+      <span className="caption">
+        {photo.isCover ? 'Cover · ' : ''}
+        {photo.caption ?? photo.name}
+      </span>
     </div>
   );
 }

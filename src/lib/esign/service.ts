@@ -3,6 +3,7 @@ import { db } from '@/lib/db/client';
 import { unitLabel } from '@/lib/properties/format';
 import type { FileActor } from '@/lib/storage/types';
 import { clauseLabels } from '@/lib/lease-create/clauses';
+import { recordLeaseEvents } from '@/lib/leases/events';
 import { MockEsignProvider, getEsignProvider } from './mock';
 import { buildLeasePdf, signedLeaseLines } from './pdf';
 import type { EsignCallbackPayload, EsignEnvelope } from './types';
@@ -58,6 +59,16 @@ export async function sendLeaseForSignature(
     where: { id: leaseId, organizationId },
     data: { eSignStatus: 'SENT' },
   });
+  await recordLeaseEvents(
+    client,
+    organizationId,
+    leaseId,
+    lease.tenants.map(({ tenant }) => ({
+      kind: 'SENT' as const,
+      tenantId: tenant.id,
+      message: `Sent to ${tenant.email}`,
+    })),
+  );
   return envelope;
 }
 
@@ -96,6 +107,12 @@ export async function handleEsignCallback(
       where: { id: lease.id, organizationId },
       data: { eSignStatus: 'DECLINED' },
     });
+    await recordLeaseEvents(
+      client,
+      organizationId,
+      lease.id,
+      lease.tenants.map(({ tenant }) => ({ kind: 'DECLINED' as const, tenantId: tenant.id })),
+    );
     return envelope;
   }
   if (payload.event !== 'signed') return envelope;
@@ -129,6 +146,16 @@ export async function handleEsignCallback(
       kind: 'LEASE',
       body: buildLeasePdf(lines),
     });
+  }
+  if (lease.eSignStatus !== 'SIGNED') {
+    await recordLeaseEvents(client, organizationId, lease.id, [
+      ...lease.tenants.map(({ tenant }) => ({
+        kind: 'SIGNED' as const,
+        tenantId: tenant.id,
+        createdAt: signedAt,
+      })),
+      { kind: 'COMPLETED' as const, message: SIGNED_LEASE_NAME, createdAt: signedAt },
+    ]);
   }
   await client.lease.updateMany({
     where: { id: lease.id, organizationId },

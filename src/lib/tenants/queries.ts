@@ -226,6 +226,7 @@ export function organizationTenants(
       const tenant = await client.tenant.findFirst({
         where: { id: tenantId, organizationId },
         include: {
+          notes: { where: { organizationId }, orderBy: { createdAt: 'desc' } },
           leases: {
             where: { organizationId },
             include: {

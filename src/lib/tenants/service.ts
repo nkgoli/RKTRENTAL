@@ -77,7 +77,15 @@ export async function createTenant(
     }
 
     const tenant = await tx.tenant.create({
-      data: { organizationId, name: input.name, email: input.email, phone: input.phone },
+      data: {
+        organizationId,
+        name: input.name,
+        email: input.email,
+        phone: input.phone,
+        emergencyContactName: input.emergencyContactName,
+        emergencyContactPhone: input.emergencyContactPhone,
+        emergencyContactRelationship: input.emergencyContactRelationship,
+      },
       select: { id: true },
     });
     if (!lease) return { tenantId: tenant.id, leaseId: null };
@@ -112,10 +120,34 @@ export async function updateTenant(
     await assertEmailFree(tx, organizationId, input.email, tenantId);
     const { count } = await tx.tenant.updateMany({
       where: { id: tenantId, organizationId },
-      data: { name: input.name, email: input.email, phone: input.phone },
+      data: {
+        name: input.name,
+        email: input.email,
+        phone: input.phone,
+        emergencyContactName: input.emergencyContactName,
+        emergencyContactPhone: input.emergencyContactPhone,
+        emergencyContactRelationship: input.emergencyContactRelationship,
+      },
     });
     if (count === 0) throw new TenantServiceError('Tenant not found.');
   });
+}
+
+/** Appends a note to a tenant's activity log. */
+export async function addTenantNote(
+  organizationId: string,
+  tenantId: string,
+  authorName: string,
+  body: string,
+  client: PrismaClient = db,
+): Promise<void> {
+  requireOrg(organizationId);
+  const tenant = await client.tenant.findFirst({
+    where: { id: tenantId, organizationId },
+    select: { id: true },
+  });
+  if (!tenant) throw new TenantServiceError('Tenant not found.');
+  await client.tenantNote.create({ data: { organizationId, tenantId, authorName, body } });
 }
 
 async function findTenantLease(

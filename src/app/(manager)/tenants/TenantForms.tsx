@@ -26,6 +26,7 @@ export function AddTenantForm({
   const [state, formAction, pending] = useActionState(action, empty);
   const v = state.values ?? {};
   const [propertyId, setPropertyId] = useState(v.propertyId ?? '');
+  const [unitId, setUnitId] = useState(v.unitId ?? '');
   const units = properties.find((p) => p.id === propertyId)?.units ?? [];
 
   return (
@@ -56,7 +57,10 @@ export function AddTenantForm({
             <Select
               name="propertyId"
               value={propertyId}
-              onChange={(e) => setPropertyId(e.target.value)}
+              onChange={(e) => {
+                setPropertyId(e.target.value);
+                setUnitId('');
+              }}
             >
               <option value="">No unit yet</option>
               {properties.map((p) => (
@@ -67,7 +71,12 @@ export function AddTenantForm({
             </Select>
           </Field>
           <Field label="Unit">
-            <Select name="unitId" defaultValue={v.unitId ?? ''} key={propertyId}>
+            <Select
+              name="unitId"
+              value={unitId}
+              onChange={(e) => setUnitId(e.target.value)}
+              key={propertyId}
+            >
               <option value="">
                 {propertyId ? 'Select a vacant unit' : 'Choose a property first'}
               </option>
@@ -88,7 +97,19 @@ export function AddTenantForm({
           <span className="muted" style={{ flex: 1 }}>
             Choosing a unit drafts a lease you can move the tenant into.
           </span>
-          <Button type="reset" variant="secondary" onClick={() => setPropertyId('')}>
+          {unitId && (
+            <Button href={`/leases/new?unit=${encodeURIComponent(unitId)}`} variant="secondary">
+              Create lease
+            </Button>
+          )}
+          <Button
+            type="reset"
+            variant="secondary"
+            onClick={() => {
+              setPropertyId('');
+              setUnitId('');
+            }}
+          >
             Cancel
           </Button>
           <Button type="submit" variant="primary" disabled={pending}>
@@ -100,12 +121,58 @@ export function AddTenantForm({
   );
 }
 
+export function AddNoteForm({
+  action,
+}: {
+  action: (prev: FormState, formData: FormData) => Promise<FormState>;
+}) {
+  const [state, formAction, pending] = useActionState(action, empty);
+  return (
+    <form
+      className="form"
+      action={formAction}
+      key={state.message ?? 'note'}
+      noValidate
+      style={{ marginBottom: 12 }}
+    >
+      {state.message && !Object.keys(state.errors).length && (
+        <div className="alert success" role="status">
+          {state.message}
+        </div>
+      )}
+      <Field label="Add a note">
+        <textarea
+          name="body"
+          aria-label="Note"
+          rows={3}
+          maxLength={2000}
+          placeholder="Called about the parking permit…"
+          defaultValue={state.values?.body}
+        />
+        <FieldError message={state.errors.body} />
+      </Field>
+      <div className="row" style={{ justifyContent: 'flex-end' }}>
+        <Button type="submit" variant="secondary" size="sm" disabled={pending}>
+          {pending ? 'Saving…' : 'Save note'}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 export function EditTenantForm({
   tenant,
   action,
   cancelHref,
 }: {
-  tenant: { name: string; email: string | null; phone: string | null };
+  tenant: {
+    name: string;
+    email: string | null;
+    phone: string | null;
+    emergencyContactName: string | null;
+    emergencyContactPhone: string | null;
+    emergencyContactRelationship: string | null;
+  };
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   cancelHref: string;
 }) {
@@ -132,6 +199,32 @@ export function EditTenantForm({
           <Field label="Phone">
             <Input name="phone" type="tel" defaultValue={v.phone ?? tenant.phone ?? ''} />
             <FieldError message={state.errors.phone} />
+          </Field>
+        </FormRow>
+        <FormRow columns={3}>
+          <Field label="Emergency contact">
+            <Input
+              name="emergencyContactName"
+              defaultValue={v.emergencyContactName ?? tenant.emergencyContactName ?? ''}
+            />
+            <FieldError message={state.errors.emergencyContactName} />
+          </Field>
+          <Field label="Emergency contact phone">
+            <Input
+              name="emergencyContactPhone"
+              type="tel"
+              defaultValue={v.emergencyContactPhone ?? tenant.emergencyContactPhone ?? ''}
+            />
+            <FieldError message={state.errors.emergencyContactPhone} />
+          </Field>
+          <Field label="Relationship">
+            <Input
+              name="emergencyContactRelationship"
+              defaultValue={
+                v.emergencyContactRelationship ?? tenant.emergencyContactRelationship ?? ''
+              }
+            />
+            <FieldError message={state.errors.emergencyContactRelationship} />
           </Field>
         </FormRow>
         <div className="row" style={{ justifyContent: 'flex-end' }}>

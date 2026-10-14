@@ -10,7 +10,7 @@ import {
   updateTenant,
 } from './service';
 import { balanceCents, deriveStatus, matchesStatusFilter, parseStatusFilter } from './status';
-import { parseNewTenantInput, parseTenantInput } from './validation';
+import { parseNewTenantInput, parseNoteInput, parseTenantInput } from './validation';
 
 const form = (values: Record<string, string>) => new Map(Object.entries(values));
 
@@ -21,7 +21,14 @@ describe('parseTenantInput', () => {
     );
     expect(result).toEqual({
       ok: true,
-      data: { name: 'Jamie Doe', email: 'jamie@email.com', phone: null },
+      data: {
+        name: 'Jamie Doe',
+        email: 'jamie@email.com',
+        phone: null,
+        emergencyContactName: null,
+        emergencyContactPhone: null,
+        emergencyContactRelationship: null,
+      },
     });
   });
 
@@ -259,5 +266,32 @@ describe('move-in and move-out', () => {
     const b = fakeTx({});
     b.tx.lease.findFirst.mockResolvedValue(null);
     await expect(moveOutTenant('org-2', 't1', 'l1', b.client)).rejects.toThrow('Lease not found');
+  });
+});
+
+describe('tenant notes and emergency contacts', () => {
+  it('parses emergency contact fields', () => {
+    const result = parseTenantInput(
+      form({
+        name: 'Alex',
+        emergencyContactName: ' Maria ',
+        emergencyContactPhone: '(512) 555-0142',
+        emergencyContactRelationship: 'Mother',
+      }),
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      data: { emergencyContactName: 'Maria', emergencyContactRelationship: 'Mother' },
+    });
+  });
+
+  it('rejects an invalid emergency phone and blank notes', () => {
+    const bad = parseTenantInput(form({ name: 'Alex', emergencyContactPhone: 'abc' }));
+    expect(bad.ok).toBe(false);
+    expect(parseNoteInput(form({ body: '   ' })).ok).toBe(false);
+    expect(parseNoteInput(form({ body: ' Called ' }))).toEqual({
+      ok: true,
+      data: { body: 'Called' },
+    });
   });
 });

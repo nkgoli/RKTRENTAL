@@ -11,6 +11,9 @@ export type UnitFormValues = {
   bathrooms: number | null;
   squareFeet: number | null;
   listedRent: number | null;
+  marketRent: number | null;
+  floor: number | null;
+  amenities: string[];
   status: string;
 };
 
@@ -169,14 +172,43 @@ export function EditUnitForm({
           <FieldError message={e.squareFeet} />
         </Field>
       </FormRow>
-      <Field label="Listed rent (per month)">
+      <FormRow columns={3}>
+        <Field label="Listed rent (per month)">
+          <Input
+            name="listedRent"
+            inputMode="decimal"
+            defaultValue={initial.listedRent ?? ''}
+            aria-invalid={!!e.listedRent}
+          />
+          <FieldError message={e.listedRent} />
+        </Field>
+        <Field label="Market rent (per month)">
+          <Input
+            name="marketRent"
+            inputMode="decimal"
+            defaultValue={initial.marketRent ?? ''}
+            aria-invalid={!!e.marketRent}
+          />
+          <FieldError message={e.marketRent} />
+        </Field>
+        <Field label="Floor">
+          <Input
+            name="floor"
+            type="number"
+            min={0}
+            defaultValue={initial.floor ?? ''}
+            aria-invalid={!!e.floor}
+          />
+          <FieldError message={e.floor} />
+        </Field>
+      </FormRow>
+      <Field label="Amenities" hint="Comma-separated, e.g. In-unit laundry, Balcony">
         <Input
-          name="listedRent"
-          inputMode="decimal"
-          defaultValue={initial.listedRent ?? ''}
-          aria-invalid={!!e.listedRent}
+          name="amenities"
+          defaultValue={initial.amenities.join(', ')}
+          aria-invalid={!!e.amenities}
         />
-        <FieldError message={e.listedRent} />
+        <FieldError message={e.amenities} />
       </Field>
       <div className="row">
         <Button type="submit" variant="primary" disabled={pending}>

@@ -83,11 +83,21 @@ test('manager renews, edits, activates and terminates a lease', async ({ page })
   await page.goto('/leases/seed-lease-maple-11');
   await page.getByRole('link', { name: 'Renew lease' }).click();
   await expect(page).toHaveURL(/\/leases\/new\?renew=seed-lease-maple-11/);
+  // The first click can land before the dev server has hydrated the wizard.
+  await expect(async () => {
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await expect(page.getByLabel('Start date')).toBeVisible({ timeout: 1000 });
+  }).toPass();
   await expect(page.getByLabel('Start date')).toHaveValue('2026-12-01');
+  await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByLabel('Monthly rent').fill('1900.00');
-  await page.getByRole('button', { name: 'Create renewal draft' }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Save draft' }).click();
+  await expect(page.getByText('Draft lease saved.')).toBeVisible();
+  await page.getByRole('link', { name: 'View lease detail' }).click();
   await expect(page).toHaveURL(/\/leases\/[^/?]+$/);
-  await expect(page.getByText('Draft', { exact: true })).toBeVisible();
+  await expect(page.getByText('Draft', { exact: true }).first()).toBeVisible();
   await page.locator('#edit-terms').getByLabel('Monthly rent').fill('1950.00');
   await page.getByRole('button', { name: 'Save terms' }).click();
   await expect(page.getByText('Lease terms saved.')).toBeVisible();

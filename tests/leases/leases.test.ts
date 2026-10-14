@@ -128,6 +128,7 @@ function fakeDb() {
             l.status === where.status,
         ).length,
     },
+    leaseEvent: { createMany: async () => ({ count: 0 }) },
     leaseTenant: {
       create: async ({
         data,

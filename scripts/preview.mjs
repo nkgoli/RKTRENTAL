@@ -1,6 +1,7 @@
 // Managed Preview launcher: embedded Postgres -> migrate -> seed -> next start.
 // Run `npm run build` first. Honours PORT (default 3000) and ROCKETRENTAL_DB_PORT (default 5432).
 import { spawn, spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,6 +27,12 @@ function run(label, args, extraEnv = {}) {
     stdio: 'inherit',
   });
   if (r.status !== 0) throw new Error(`${label} failed (exit ${r.status})`);
+}
+
+function sh(label, command) {
+  console.log(`[preview] ${label}`);
+  const r = spawnSync(command, { cwd: root, env, shell: true, stdio: 'inherit' });
+  if (r.status !== 0) throw new Error(` failed (exit ${r.status})`);
 }
 
 let db;

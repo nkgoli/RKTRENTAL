@@ -1,4 +1,4 @@
-# RocketRental
+﻿# RocketRental
 
 Rental property management app for managers and tenants. Next.js (App Router) + TypeScript, PostgreSQL via Prisma, Vitest for unit tests, Playwright for e2e.
 
@@ -49,7 +49,7 @@ Demo password hashes are written by the seed when `NODE_ENV` is not `production`
 
 ## Running as a Managed Preview
 
-The Preview needs a database, so it starts one itself. After `npm run build`, run `npm run preview` (package script `preview`, readiness path `/sign-in`; honours `PORT`). The script installs/starts the embedded Postgres, applies migrations, seeds the demo data and then runs `next start`. Everything stops when the process is stopped. Set `DATABASE_URL` to use an external database instead (the embedded one is then skipped); `ROCKETRENTAL_AUTH_SECRET` defaults to a preview-only value and should be set for any real deployment. Sign in with the demo accounts below.
+The Preview needs a database, so it starts one itself. Publish the repository as a package preview with script `preview` (it runs `npm install` and `npm run build` first when `node_modules` or `.next` are missing; locally just run `npm run preview` after a build) (readiness path `/sign-in`; honours `PORT`). The script installs/starts the embedded Postgres, applies migrations, seeds the demo data and then runs `next start`. Everything stops when the process is stopped. Set `DATABASE_URL` to use an external database instead (the embedded one is then skipped); `ROCKETRENTAL_AUTH_SECRET` defaults to a preview-only value and should be set for any real deployment. Sign in with the demo accounts below.
 
 ## Folder layout
 

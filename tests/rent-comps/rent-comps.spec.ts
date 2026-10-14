@@ -99,7 +99,7 @@ test('manager reviews comps, filters them, and applies a market rent', async ({
   expect(unit.marketRentSetById).toBeTruthy();
   expect(unit.marketRentSetAt!.getTime()).toBeGreaterThan(Date.now() - 60_000);
 
-  await page.goto(`/properties/${propertyId}/units/${unitId}`);
+  await open(page, `/properties/${propertyId}/units/${unitId}`);
   const facts = page.locator('dl.kv').first();
   await expect(facts.getByText('Market rent', { exact: true })).toBeVisible();
   await expect(facts).toContainText('$1,725');

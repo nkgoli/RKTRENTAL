@@ -126,6 +126,8 @@ model Organization {
   payments            Payment[]
   maintenanceRequests MaintenanceRequest[]
   maintenancePhotos   MaintenancePhoto[]
+  vendors             Vendor[]
+  maintenanceEvents   MaintenanceEvent[]
   providerConnections ProviderConnection[]
   webhookEvents       WebhookEvent[]
   paymentMethods      PaymentMethod[]
@@ -139,18 +141,19 @@ model Organization {
 }
 
 model User {
-  id              String       @id @default(cuid())
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  email           String
-  name            String
-  phone           String?
-  passwordHash    String?
-  role            UserRole
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  ownedProperties Property[]   @relation("PropertyOwner")
-  tenant          Tenant?
+  id                String             @id @default(cuid())
+  organizationId    String
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email             String
+  name              String
+  phone             String?
+  passwordHash      String?
+  role              UserRole
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  ownedProperties   Property[]         @relation("PropertyOwner")
+  tenant            Tenant?
+  maintenanceEvents MaintenanceEvent[]
 
   @@unique([organizationId, email])
   @@unique([id, organizationId])
@@ -213,24 +216,25 @@ model Unit {
 }
 
 model Tenant {
-  id                           String           @id @default(cuid())
+  id                           String               @id @default(cuid())
   organizationId               String
-  organization                 Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization                 Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   userId                       String?
-  user                         User?            @relation(fields: [userId, organizationId], references: [id, organizationId])
+  user                         User?                @relation(fields: [userId, organizationId], references: [id, organizationId])
   name                         String
   email                        String?
   phone                        String?
   emergencyContactName         String?
   emergencyContactPhone        String?
   emergencyContactRelationship String?
-  createdAt                    DateTime         @default(now())
-  updatedAt                    DateTime         @updatedAt
+  createdAt                    DateTime             @default(now())
+  updatedAt                    DateTime             @updatedAt
   notes                        TenantNote[]
   leaseEvents                  LeaseEvent[]
   leases                       LeaseTenant[]
   paymentMethods               PaymentMethod[]
   autopaySettings              AutopaySetting[]
+  maintenanceRequests          MaintenanceRequest[]
 
   @@unique([id, organizationId])
   @@unique([userId, organizationId])
@@ -283,23 +287,24 @@ model LeaseTenant {
 
 // SQL migration requires exactly one of leaseId, propertyId or unitId.
 model Document {
-  id             String       @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  leaseId        String?
-  lease          Lease?       @relation(fields: [leaseId, organizationId], references: [id, organizationId])
-  propertyId     String?
-  property       Property?    @relation(fields: [propertyId, organizationId], references: [id, organizationId])
-  unitId         String?
-  unit           Unit?        @relation(fields: [unitId, organizationId], references: [id, organizationId])
-  kind           DocumentKind
-  name           String
-  storageKey     String       @unique
-  sizeBytes      BigInt
-  mimeType       String
-  isCover        Boolean      @default(false)
-  caption        String?
-  createdAt      DateTime     @default(now())
+  id               String            @id @default(cuid())
+  organizationId   String
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leaseId          String?
+  lease            Lease?            @relation(fields: [leaseId, organizationId], references: [id, organizationId])
+  propertyId       String?
+  property         Property?         @relation(fields: [propertyId, organizationId], references: [id, organizationId])
+  unitId           String?
+  unit             Unit?             @relation(fields: [unitId, organizationId], references: [id, organizationId])
+  kind             DocumentKind
+  name             String
+  storageKey       String            @unique
+  sizeBytes        BigInt
+  mimeType         String
+  isCover          Boolean           @default(false)
+  caption          String?
+  createdAt        DateTime          @default(now())
+  maintenancePhoto MaintenancePhoto?
 
   @@index([organizationId, leaseId])
   @@index([organizationId, propertyId])
@@ -379,10 +384,15 @@ model MaintenanceRequest {
   priority       MaintenancePriority @default(NORMAL)
   status         MaintenanceStatus   @default(NEW)
   vendorName     String?
+  vendorId       String?
+  vendor         Vendor?             @relation(fields: [vendorId, organizationId], references: [id, organizationId])
+  tenantId       String?
+  tenant         Tenant?             @relation(fields: [tenantId, organizationId], references: [id, organizationId])
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
   completedAt    DateTime?
   photos         MaintenancePhoto[]
+  events         MaintenanceEvent[]
 
   @@unique([id, organizationId])
   @@index([organizationId, status, priority])
@@ -398,9 +408,42 @@ model MaintenancePhoto {
   storageKey           String             @unique
   sizeBytes            BigInt
   mimeType             String
+  documentId           String?            @unique
+  document             Document?          @relation(fields: [documentId], references: [id], onDelete: SetNull)
   createdAt            DateTime           @default(now())
 
   @@index([organizationId, maintenanceRequestId])
+}
+
+model Vendor {
+  id             String               @id @default(cuid())
+  organizationId String
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  trade          String?
+  email          String?
+  phone          String?
+  requests       MaintenanceRequest[]
+
+  @@unique([id, organizationId])
+  @@unique([organizationId, name])
+}
+
+model MaintenanceEvent {
+  id                   String             @id @default(cuid())
+  organizationId       String
+  organization         Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  maintenanceRequestId String
+  maintenanceRequest   MaintenanceRequest @relation(fields: [maintenanceRequestId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  actorId              String?
+  actor                User?              @relation(fields: [actorId, organizationId], references: [id, organizationId])
+  kind                 String
+  body                 String?
+  fromStatus           MaintenanceStatus?
+  toStatus             MaintenanceStatus?
+  createdAt            DateTime           @default(now())
+
+  @@index([organizationId, maintenanceRequestId, createdAt])
 }
 
 // settings contain non-secret connection metadata only. Credentials belong in environment variables.

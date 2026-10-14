@@ -10,6 +10,8 @@ you have test credentials; keep real secrets in your deployment secret store.
 DATABASE_URL="postgresql://rocketrental:rocketrental@localhost:5432/rocketrental?schema=public"
 # Port used by the bundled local PostgreSQL server; keep it aligned with DATABASE_URL.
 ROCKETRENTAL_DB_PORT=5432
+# Optional persistent directory for embedded Postgres (default: prisma/.local-postgres).
+# ROCKETRENTAL_DB_DIR=prisma/.local-postgres
 # HTTP port for the Next.js server.
 PORT=3000
 # Local-only cookie-signing placeholder; generate a unique long secret for deployment.
@@ -56,3 +58,12 @@ S3_FORCE_PATH_STYLE=
 
 `npm run preview` and `npm run test:e2e` supply their own local sandbox and
 HTTP cookie settings, so those commands can run without creating `.env`.
+When `DATABASE_URL` is unset, `npm run test:e2e` starts a fresh database in a
+throwaway directory. With `DATABASE_URL` set, it uses that database as-is.
+
+The S3 adapter also accepts `AWS_S3_BUCKET`, `AWS_REGION`,
+`AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` as fallbacks for the matching
+`S3_*` settings. For test runs, `RUN_DB_INTEGRATION=1` opts the PostgreSQL
+integration tests into `npm test` after migrations have been applied.
+`ROCKETRENTAL_DEMO_MANAGER_PASSWORD` and `ROCKETRENTAL_DEMO_TENANT_PASSWORD`
+override the passwords used by browser tests when testing a custom seed.

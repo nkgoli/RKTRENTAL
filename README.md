@@ -8,7 +8,7 @@ Requirements: Node 22+, npm, and Docker (or any PostgreSQL 16 instance).
 
 ```bash
 npm install
-cp .env.example .env        # contains local-only defaults, no secrets
+cp env.example .env         # contains local-only defaults, no secrets
 npm run db:up               # starts Postgres via docker compose
 npm run db:migrate          # applies Prisma migrations
 npm run db:seed             # optional placeholder seed

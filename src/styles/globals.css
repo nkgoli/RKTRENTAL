@@ -987,4 +987,6 @@ button.switch {
   border-left: 1px solid var(--rr-border);
   border-right: 1px solid var(--rr-border);
 }
-.ticket .badge{align-self:flex-start}
+.ticket .badge {
+  align-self: flex-start;
+}

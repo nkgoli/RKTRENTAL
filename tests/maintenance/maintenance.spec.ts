@@ -55,4 +55,11 @@ test('manager creates a photographed request, assigns a vendor, and changes stat
   await expect(
     page.getByRole('region', { name: 'In progress' }).locator('article').filter({ hasText: title }),
   ).toBeVisible();
+  const inProgress = page.locator('article').filter({ hasText: title });
+  await inProgress.getByText('Manage request').click();
+  await inProgress.getByLabel('Comment').fill('Vendor visit confirmed.');
+  await inProgress.getByRole('button', { name: 'Add comment' }).click();
+  await expect(
+    page.locator('article').filter({ hasText: title }).getByText('Vendor visit confirmed.'),
+  ).toBeVisible();
 });

@@ -1,23 +1,4 @@
 .dashboard {
-  --design-primary: #5b3df5;
-  --design-background: #f5f4fb;
-  --design-surface: #fff;
-  --design-text: #17142b;
-  --design-muted: #6b6785;
-  --design-accent: #ff7a45;
-  --design-danger: #e5484d;
-  --design-radius: 12px;
-  --design-heading-font: 'Space Grotesk', var(--design-font);
-  --rr-border: #e7e5f0;
-  --rr-border-strong: #d4d1e2;
-  --rr-subtle: #f3f1fa;
-  --rr-primary-tint: #efecff;
-  --rr-ok: #12805c;
-  --rr-ok-bg: #eaf8f1;
-  --rr-warn: #a85b11;
-  --rr-warn-bg: #fff5e9;
-  --rr-bad: #c73b48;
-  --rr-bad-bg: #fff0f0;
   display: flex;
   flex-direction: column;
   gap: 20px;

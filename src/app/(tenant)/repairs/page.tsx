@@ -53,12 +53,7 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
     return (
       <>
         <h1 style={{ fontSize: 22 }}>Repairs</h1>
-        <section className="card">
-          <h3 style={{ fontSize: 15 }}>No active lease</h3>
-          <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>
-            There is no active lease on your account yet, so you cannot send a repair request.
-          </p>
-        </section>
+        <EmptyState title="No active lease" description="There is no active lease on your account yet, so you cannot send a repair request." action="Check again" href="/repairs" />
       </>
     );
   }
@@ -177,7 +172,7 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
                   {request.vendorName ? ` · Vendor: ${request.vendorName}` : ''}
                 </p>
                 {request.status !== 'CANCELLED' && (
-                  <Progress value={repairProgress(request.status)} />
+                  <Progress value={repairProgress(request.status)} label={`${request.title} repair progress`} />
                 )}
                 {text && (
                   <p style={{ fontSize: 13, marginTop: 8, whiteSpace: 'pre-wrap' }}>{text}</p>

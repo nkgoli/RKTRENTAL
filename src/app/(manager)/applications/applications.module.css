@@ -1,18 +1,4 @@
 .applications {
-  --design-primary: #5b3df5;
-  --design-background: #f5f4fb;
-  --design-surface: #fff;
-  --design-text: #17142b;
-  --design-muted: #6b6785;
-  --design-accent: #ff7a45;
-  --design-danger: #e5484d;
-  --design-radius: 12px;
-  --rr-border: #e8e6f0;
-  --rr-border-strong: #d7d3e4;
-  --rr-subtle: #f7f6fb;
-  --rr-primary-tint: #f0edff;
-  --rr-ok-bg: #ecfdf3;
-  --rr-warn-bg: #fffaeb;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -36,7 +22,7 @@
 }
 
 .applications :global(.btn-primary:hover) {
-  background: #4d2fe2;
+  background: var(--rr-primary-hover);
 }
 
 .applications :global(.btn-danger) {

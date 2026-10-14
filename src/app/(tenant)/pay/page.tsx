@@ -66,12 +66,7 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
             {session.name}
           </p>
         </div>
-        <section className="card">
-          <h3 style={{ fontSize: 15 }}>No active lease</h3>
-          <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>
-            There is no active lease on your account yet, so there is nothing to pay.
-          </p>
-        </section>
+        <EmptyState title="No active lease" description="There is no active lease on your account yet, so there is nothing to pay." action="Check again" href="/pay" />
         <p style={{ textAlign: 'center' }}>
           <Link href="/home" style={{ fontSize: 13 }}>
             ← Back to home

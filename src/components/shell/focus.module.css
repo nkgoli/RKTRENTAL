@@ -8,7 +8,9 @@
   outline-offset: 3px;
   border-radius: 3px;
 }
+.scope { --design-muted: #526176; --design-danger: #b42318; }
 .scope :global(.nav-label) { color: var(--design-muted); }
+.scope :global(.alert a) { text-decoration: underline; text-underline-offset: 2px; }
 .skip {
   position: fixed;
   top: 8px;

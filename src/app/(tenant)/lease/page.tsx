@@ -1,7 +1,6 @@
 ﻿import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/RouteStates';
-import { Alert } from '@/components/ui/Feedback';
 import { requireTenantRole } from '@/lib/auth/access';
 import { formatUsd } from '@/lib/ledger/core';
 import { formatBytes, formatDate } from '@/lib/properties/format';
@@ -18,11 +17,7 @@ export default async function TenantLeasePage() {
     return (
       <>
         <h1 style={{ fontSize: 22 }}>My lease</h1>
-        <Alert tone="info">
-          <p>
-            You have no active lease yet. Your property manager will add it here once it is set up.
-          </p>
-        </Alert>
+        <EmptyState title="No active lease yet" description="Your property manager will add it here once it is set up." action="Check again" href="/lease" />
       </>
     );
   }

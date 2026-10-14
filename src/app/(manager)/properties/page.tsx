@@ -148,7 +148,7 @@ export default async function PropertiesPage({
                 <p className="muted" style={{ margin: '4px 0 12px' }}>
                   {formatAddress(p)}
                 </p>
-                <Progress value={p.unitCount ? (p.occupied / p.unitCount) * 100 : 0} />
+                <Progress value={p.unitCount ? (p.occupied / p.unitCount) * 100 : 0} label={`${p.name} occupancy`} />
                 <div className="row between muted" style={{ fontSize: 13, marginTop: 10 }}>
                   <span>
                     {single

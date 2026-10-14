@@ -81,11 +81,7 @@ export default async function TenantHomePage() {
         <div>
           <h1 style={{ fontSize: 24 }}>Welcome home</h1>
         </div>
-        <Alert tone="info">
-          <p>
-            You have no active lease yet. Your property manager will add it here once it is set up.
-          </p>
-        </Alert>
+        <EmptyState title="No active lease yet" description="Your property manager will add it here once it is set up." action="Check again" href="/home" />
       </>
     );
   }
@@ -186,7 +182,7 @@ export default async function TenantHomePage() {
             {repair.vendorName ? ' · Vendor assigned' : ''} · {view.managerName} will confirm a
             visit window.
           </p>
-          <Progress value={repairProgress(repair.status)} style={{ margin: '12px 0 8px' }} />
+          <Progress value={repairProgress(repair.status)} label={`${repair.title} repair progress`} style={{ margin: '12px 0 8px' }} />
           <div className="row between">
             <small className="muted">Received → Scheduled → Done</small>
             <Link href="/repairs" style={{ fontSize: 13, fontWeight: 600 }}>

@@ -64,6 +64,27 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum ProviderKind {
+  PAYMENTS
+  BANKING
+  SCREENING
+  COMPS
+}
+
+enum ProviderConnectionStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  SCREENING
+  REVIEW
+  APPROVED
+  DECLINED
+}
+
 enum MaintenancePriority {
   LOW
   NORMAL
@@ -94,6 +115,14 @@ model Organization {
   payments            Payment[]
   maintenanceRequests MaintenanceRequest[]
   maintenancePhotos   MaintenancePhoto[]
+  providerConnections ProviderConnection[]
+  webhookEvents       WebhookEvent[]
+  paymentMethods      PaymentMethod[]
+  autopaySettings     AutopaySetting[]
+  payouts             Payout[]
+  applications        Application[]
+  screeningConsents   ScreeningConsent[]
+  screeningReports    ScreeningReport[]
 }
 
 model User {
@@ -158,6 +187,7 @@ model Unit {
   leases              Lease[]
   documents           Document[]
   maintenanceRequests MaintenanceRequest[]
+  applications        Application[]
 
   @@unique([propertyId, number])
   @@unique([id, organizationId])
@@ -166,17 +196,19 @@ model Unit {
 }
 
 model Tenant {
-  id             String        @id @default(cuid())
-  organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId         String?
-  user           User?         @relation(fields: [userId, organizationId], references: [id, organizationId])
-  name           String
-  email          String?
-  phone          String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  leases         LeaseTenant[]
+  id              String           @id @default(cuid())
+  organizationId  String
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId          String?
+  user            User?            @relation(fields: [userId, organizationId], references: [id, organizationId])
+  name            String
+  email           String?
+  phone           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  leases          LeaseTenant[]
+  paymentMethods  PaymentMethod[]
+  autopaySettings AutopaySetting[]
 
   @@unique([id, organizationId])
   @@unique([userId, organizationId])
@@ -184,26 +216,27 @@ model Tenant {
 }
 
 model Lease {
-  id             String        @id @default(cuid())
-  organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  unitId         String
-  unit           Unit          @relation(fields: [unitId, organizationId], references: [id, organizationId])
-  startDate      DateTime      @db.Date
-  endDate        DateTime      @db.Date
-  monthlyRent    Decimal       @db.Decimal(12, 2)
-  deposit        Decimal       @db.Decimal(12, 2)
-  lateFee        Decimal       @default(0) @db.Decimal(12, 2)
-  graceDays      Int           @default(0)
-  status         LeaseStatus   @default(DRAFT)
-  eSignStatus    ESignStatus   @default(NOT_SENT)
-  signedAt       DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  tenants        LeaseTenant[]
-  documents      Document[]
-  charges        Charge[]
-  payments       Payment[]
+  id              String           @id @default(cuid())
+  organizationId  String
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  unitId          String
+  unit            Unit             @relation(fields: [unitId, organizationId], references: [id, organizationId])
+  startDate       DateTime         @db.Date
+  endDate         DateTime         @db.Date
+  monthlyRent     Decimal          @db.Decimal(12, 2)
+  deposit         Decimal          @db.Decimal(12, 2)
+  lateFee         Decimal          @default(0) @db.Decimal(12, 2)
+  graceDays       Int              @default(0)
+  status          LeaseStatus      @default(DRAFT)
+  eSignStatus     ESignStatus      @default(NOT_SENT)
+  signedAt        DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  tenants         LeaseTenant[]
+  documents       Document[]
+  charges         Charge[]
+  payments        Payment[]
+  autopaySettings AutopaySetting[]
 
   @@unique([id, organizationId])
   @@index([organizationId, unitId, status])
@@ -310,4 +343,140 @@ model MaintenancePhoto {
   createdAt            DateTime           @default(now())
 
   @@index([organizationId, maintenanceRequestId])
+}
+
+// settings contain non-secret connection metadata only. Credentials belong in environment variables.
+model ProviderConnection {
+  id             String                   @id @default(cuid())
+  organizationId String
+  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  kind           ProviderKind
+  provider       String
+  status         ProviderConnectionStatus @default(DISCONNECTED)
+  settings       Json                     @default("{}")
+  lastSyncAt     DateTime?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  @@unique([organizationId, kind, provider])
+  @@index([organizationId, status])
+}
+
+model WebhookEvent {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  provider        String
+  externalEventId String
+  eventType       String
+  payloadHash     String
+  receivedAt      DateTime     @default(now())
+
+  @@unique([provider, externalEventId])
+  @@index([organizationId, receivedAt])
+}
+
+// Only provider-issued tokens and display metadata; never card or bank account numbers.
+model PaymentMethod {
+  id              String           @id @default(cuid())
+  organizationId  String
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenantId        String
+  tenant          Tenant           @relation(fields: [tenantId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  provider        String
+  providerToken   String
+  type            String
+  last4           String?
+  brand           String?
+  createdAt       DateTime         @default(now())
+  autopaySettings AutopaySetting[]
+
+  @@unique([id, organizationId])
+  @@unique([provider, providerToken])
+  @@index([organizationId, tenantId])
+}
+
+model AutopaySetting {
+  id              String        @id @default(cuid())
+  organizationId  String
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leaseId         String
+  lease           Lease         @relation(fields: [leaseId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  paymentMethodId String
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId, organizationId], references: [id, organizationId])
+  enabled         Boolean       @default(false)
+  dayOfMonth      Int           @default(1)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([leaseId, tenantId])
+  @@index([organizationId, enabled])
+}
+
+model Payout {
+  id                String       @id @default(cuid())
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  provider          String
+  providerReference String?      @unique
+  amount            Decimal      @db.Decimal(12, 2)
+  currency          String       @default("usd")
+  status            String
+  arrivalDate       DateTime?
+  createdAt         DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+}
+
+model Application {
+  id             String             @id @default(cuid())
+  organizationId String
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  unitId         String
+  unit           Unit               @relation(fields: [unitId, organizationId], references: [id, organizationId])
+  applicantName  String
+  applicantEmail String
+  status         ApplicationStatus  @default(SUBMITTED)
+  appliedAt      DateTime           @default(now())
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  consents       ScreeningConsent[]
+  reports        ScreeningReport[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId, status, appliedAt])
+}
+
+model ScreeningConsent {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  applicationId  String
+  application    Application  @relation(fields: [applicationId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  provider       String
+  consentedAt    DateTime
+  consentVersion String
+  revokedAt      DateTime?
+
+  @@unique([applicationId, provider])
+  @@index([organizationId, consentedAt])
+}
+
+model ScreeningReport {
+  id                String       @id @default(cuid())
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  applicationId     String
+  application       Application  @relation(fields: [applicationId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  provider          String
+  providerReference String
+  status            String
+  summary           Json? // Only approved summary fields; full reports remain with the provider.
+  completedAt       DateTime?
+  createdAt         DateTime     @default(now())
+
+  @@unique([provider, providerReference])
+  @@index([organizationId, applicationId])
 }

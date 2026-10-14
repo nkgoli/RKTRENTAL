@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useActionState, useMemo, useState } from 'react';
 import { Alert, Badge, Card, CardHeader } from '@/components/ui';
+import { EmptyState } from '@/components/RouteStates';
 import { MAP, dollars, mapPins, suggestRent, summarize, type CompRow } from '@/lib/comps/core';
 import { applyRentAction, type ApplyState } from './actions';
 
@@ -337,8 +338,8 @@ export function CompsWorkbench(props: WorkbenchProps) {
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={10} className="muted">
-                  No comparable rentals match these filters.
+                <td colSpan={10}>
+                  <EmptyState title="No comparable rentals match" description="Widen the search filters to see more nearby rentals." action="Reset filters" href="/rent-comps" />
                 </td>
               </tr>
             )}

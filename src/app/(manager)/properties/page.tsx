@@ -1,11 +1,12 @@
 ﻿import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
-import { Badge, Card, Chip, Chips, Progress, Stat } from '@/components/ui';
+import { Badge, Chip, Chips, Progress, Stat } from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import { propertiesDb, propertyFilterFrom, type PropertyFilter } from '@/lib/properties/data';
 import { formatAddress, formatMoney } from '@/lib/properties/format';
 import { AddPropertyForm } from './_components/PropertyForm';
 import { PhotoImage } from './_components/Media';
+import { EmptyState } from '@/components/RouteStates';
 
 const FILTERS: { key: PropertyFilter; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -95,15 +96,14 @@ export default async function PropertiesPage({
 
       <section className="grid-3">
         {properties.length === 0 && (
-          <Card style={{ gridColumn: 'span 3' }}>
-            <p className="muted">
-              {filter === 'archived'
-                ? 'No archived properties.'
-                : q || filter !== 'all'
-                  ? 'No properties match this search.'
-                  : 'No properties yet. Add your first property below.'}
-            </p>
-          </Card>
+          <div style={{ gridColumn: 'span 3' }}>
+            <EmptyState
+              title={q || filter !== 'all' ? 'No properties match this view' : 'No properties yet'}
+              description={q || filter !== 'all' ? 'Clear the filters to see your full portfolio.' : 'Add your first property to start tracking units and leases.'}
+              action={q || filter !== 'all' ? 'Clear filters' : 'Add a property'}
+              href={q || filter !== 'all' ? '/properties' : '#add-property'}
+            />
+          </div>
         )}
         {properties.map((p) => {
           const single = p.type === 'SINGLE_UNIT';

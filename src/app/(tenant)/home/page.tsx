@@ -1,6 +1,7 @@
 ﻿import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { Alert, Progress } from '@/components/ui/Feedback';
+import { EmptyState } from '@/components/RouteStates';
 import { requireTenantRole } from '@/lib/auth/access';
 import { formatUsd } from '@/lib/ledger/core';
 import { formatDate } from '@/lib/properties/format';
@@ -201,9 +202,7 @@ export default async function TenantHomePage() {
         </h2>
         <div className="stack" style={{ gap: 10 }}>
           {view.activity.length === 0 && (
-            <Alert tone="info">
-              <p className="muted">No activity yet. Payments and notices will show up here.</p>
-            </Alert>
+            <EmptyState title="No activity yet" description="Payments and notices will show up here." action="View your lease" href="/lease" />
           )}
           {view.activity.map((item) => (
             <Alert

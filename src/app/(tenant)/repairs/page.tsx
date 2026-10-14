@@ -7,6 +7,7 @@ import { commentRepairAction } from './actions';
 import { loadTenantRepairs } from './data';
 import { CATEGORIES, ENTRY_OPTIONS, MAX_PHOTOS, parseDescription, URGENCY_OPTIONS } from './format';
 import styles from './repairs.module.css';
+import { EmptyState } from '@/components/RouteStates';
 
 export const dynamic = 'force-dynamic';
 
@@ -155,9 +156,7 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
         </h2>
         <div className="stack" style={{ gap: 12 }}>
           {view.requests.length === 0 && (
-            <p className="muted" style={{ fontSize: 13 }}>
-              No repair requests for your unit yet.
-            </p>
+            <EmptyState title="No repair requests yet" description="Describe what needs fixing and your manager will follow up." action="Start a repair request" href="#new-request-title" />
           )}
           {view.requests.map((request) => {
             const { category, text } = parseDescription(request.description);

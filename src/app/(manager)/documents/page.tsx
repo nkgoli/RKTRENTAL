@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { EmptyState } from '@/components/RouteStates';
 import { db } from '@/lib/db/client';
 import { requireManagerRole } from '@/lib/auth/access';
 import { PageHeader } from '@/components/shell/PageHeader';
@@ -359,7 +360,7 @@ export default async function DocumentsPage({
               );
             })
           ) : (
-            <p className="muted">No lease documents match these filters.</p>
+            <EmptyState title="No lease documents in this view" description="Lease documents will appear here after they are added." action="View leases" href="/leases" />
           )}
         </Card>
 
@@ -385,7 +386,7 @@ export default async function DocumentsPage({
               return <DocumentRow key={file.id} file={file} owner={owner} />;
             })
           ) : (
-            <p className="muted">No property files match these filters.</p>
+            <EmptyState title="No property files in this view" description="Upload a file from a property to keep it with the portfolio." action="View properties" href="/properties" />
           )}
         </Card>
 
@@ -430,7 +431,7 @@ export default async function DocumentsPage({
               })}
             </Gallery>
           ) : (
-            <p className="muted">No photos match these filters.</p>
+            <EmptyState title="No photos in this view" description="Add property or unit photos to make them available here." action="View properties" href="/properties" />
           )}
         </Card>
         <Badge tone="info">{matchingFiles.length} matching files</Badge>

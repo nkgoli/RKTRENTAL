@@ -13,6 +13,7 @@ import {
 } from '@/lib/tenants/status';
 import { addTenantAction } from './actions';
 import { AddTenantForm } from './TenantForms';
+import { EmptyState } from '@/components/RouteStates';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -135,8 +136,8 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="muted">
-                  No tenants match these filters.
+                <td colSpan={6}>
+                  <EmptyState title={q || property || status !== 'all' ? 'No tenants match this view' : 'No tenants yet'} description={q || property || status !== 'all' ? 'Clear the filters to see all tenants.' : 'Add a tenant to keep contact and lease details together.'} action={q || property || status !== 'all' ? 'Clear filters' : 'Add a tenant'} href={q || property || status !== 'all' ? '/tenants' : '#add-tenant'} />
                 </td>
               </tr>
             )}

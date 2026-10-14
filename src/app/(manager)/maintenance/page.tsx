@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { EmptyState } from '@/components/RouteStates';
 import { Alert, Avatar, Badge, KanbanBoard, KanbanColumn, Stat, Ticket } from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import {
@@ -203,6 +204,7 @@ export default async function MaintenancePage() {
           tone="up"
         />
       </div>
+      {requests.length === 0 && <EmptyState title="No repair requests yet" description="Create a repair request to track work from start to finish." action="Create a request" href="#new-request" />}
       <div id="requests" className={styles.board}>
         <KanbanBoard>
           {columns.map((column) => {

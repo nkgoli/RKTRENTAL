@@ -1,9 +1,11 @@
 import { defineConfig } from '@playwright/test';
+import path from 'node:path';
 
 const port = Number(process.env.PORT ?? 3141);
 const externalBaseUrl = process.env.PLAYWRIGHT_BASE_URL;
 
 export default defineConfig({
+  outputDir: path.resolve(process.cwd(), 'tests/screening/.playwright-results'),
   testDir: '.',
   testMatch: 'applications.spec.ts',
   reporter: process.env.CI ? 'github' : 'list',

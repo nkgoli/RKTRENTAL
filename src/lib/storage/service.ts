@@ -1,0 +1,170 @@
+import { randomUUID } from 'node:crypto';
+import type { FileAccess } from './access';
+import { assertDocumentAccess, assertTargetAccess } from './access';
+import type {
+  DocumentKindValue,
+  FileActor,
+  FileTarget,
+  StorageAdapter,
+  StoredDocument,
+} from './types';
+import { notFoundError, StorageError } from './types';
+import { sanitizeFileName, validateUpload, validateUploadMeta } from './validation';
+
+export interface DocumentRepository {
+  create(input: Omit<StoredDocument, 'id' | 'createdAt'>): Promise<StoredDocument>;
+  listByTarget(orgId: string, target: FileTarget): Promise<StoredDocument[]>;
+  findById(orgId: string, id: string): Promise<StoredDocument | null>;
+  delete(id: string): Promise<void>;
+}
+export interface UploadInput {
+  target: FileTarget;
+  fileName: string;
+  mimeType: string;
+  kind?: DocumentKindValue;
+  body: Uint8Array;
+}
+const KINDS: DocumentKindValue[] = ['LEASE', 'NOTICE', 'INSPECTION', 'ID', 'PHOTO', 'OTHER'];
+
+export class FileService {
+  constructor(
+    private storage: StorageAdapter,
+    private repo: DocumentRepository,
+    private access: FileAccess,
+  ) {}
+  private keyFor(actor: FileActor, target: FileTarget, fileName: string): string {
+    return [
+      'org',
+      actor.organizationId,
+      target.kind,
+      target.id,
+      `${randomUUID()}-${sanitizeFileName(fileName)}`,
+    ].join('/');
+  }
+  private targetFields(t: FileTarget) {
+    return {
+      leaseId: t.kind === 'lease' ? t.id : null,
+      propertyId: t.kind === 'property' ? t.id : null,
+      unitId: t.kind === 'unit' ? t.id : null,
+    };
+  }
+  async upload(actor: FileActor, input: UploadInput): Promise<StoredDocument> {
+    await assertTargetAccess(this.access, actor, input.target);
+    const kind = input.kind ?? 'OTHER';
+    if (!KINDS.includes(kind)) throw new StorageError(`Unknown kind "${kind}"`, 'VALIDATION', 400);
+    const { canonicalMime } = validateUpload({
+      fileName: input.fileName,
+      mimeType: input.mimeType,
+      sizeBytes: input.body.byteLength,
+      body: input.body,
+    });
+    const name = sanitizeFileName(input.fileName);
+    const storageKey = this.keyFor(actor, input.target, name);
+    await this.storage.put(storageKey, input.body, canonicalMime);
+    try {
+      return await this.repo.create({
+        organizationId: actor.organizationId,
+        ...this.targetFields(input.target),
+        kind,
+        name,
+        storageKey,
+        sizeBytes: input.body.byteLength,
+        mimeType: canonicalMime,
+      });
+    } catch (e) {
+      await this.storage.delete(storageKey).catch(() => undefined);
+      throw e;
+    }
+  }
+  /** Signed direct-upload: validates metadata, reserves the Document row, returns PUT URL (S3 only). */
+  async createSignedUpload(
+    actor: FileActor,
+    input: Omit<UploadInput, 'body'> & { sizeBytes: number },
+  ): Promise<{ document: StoredDocument; uploadUrl: string; storageKey: string }> {
+    await assertTargetAccess(this.access, actor, input.target);
+    const { canonicalMime } = validateUploadMeta(input);
+    const name = sanitizeFileName(input.fileName);
+    const storageKey = this.keyFor(actor, input.target, name);
+    const uploadUrl = await this.storage.getSignedUrl(storageKey, {
+      method: 'PUT',
+      contentType: canonicalMime,
+    });
+    if (!uploadUrl)
+      throw new StorageError(
+        'Signed upload is not available with the local storage driver; use server upload',
+        'CONFIG',
+        501,
+      );
+    const document = await this.repo.create({
+      organizationId: actor.organizationId,
+      ...this.targetFields(input.target),
+      kind: input.kind ?? 'OTHER',
+      name,
+      storageKey,
+      sizeBytes: input.sizeBytes,
+      mimeType: canonicalMime,
+    });
+    return { document, uploadUrl, storageKey };
+  }
+  async list(actor: FileActor, target: FileTarget): Promise<StoredDocument[]> {
+    await assertTargetAccess(this.access, actor, target);
+    return this.repo.listByTarget(actor.organizationId, target);
+  }
+  async getDocument(actor: FileActor, id: string): Promise<StoredDocument> {
+    const doc = await this.repo.findById(actor.organizationId, id);
+    if (!doc) throw notFoundError('File not found');
+    await assertDocumentAccess(this.access, actor, doc);
+    return doc;
+  }
+  async download(
+    actor: FileActor,
+    id: string,
+  ): Promise<{ document: StoredDocument; body: Uint8Array; signedUrl: string | null }> {
+    const document = await this.getDocument(actor, id);
+    const signedUrl = await this.storage.getSignedUrl(document.storageKey, { method: 'GET' });
+    const obj = signedUrl ? null : await this.storage.get(document.storageKey);
+    if (!signedUrl && !obj) throw notFoundError('File content not found');
+    return { document, body: obj?.body ?? new Uint8Array(), signedUrl };
+  }
+  async delete(actor: FileActor, id: string): Promise<void> {
+    if (actor.role === 'TENANT') throw new StorageError('Forbidden', 'FORBIDDEN', 403);
+    const document = await this.getDocument(actor, id);
+    await this.storage.delete(document.storageKey);
+    await this.repo.delete(document.id);
+  }
+}
+
+/** Production wiring: Prisma repository + Prisma access + configured adapter. Lazy imports. */
+export async function createPrismaFileService(): Promise<FileService> {
+  const [{ db }, { createPrismaFileAccess }, { getStorage }] = await Promise.all([
+    import('@/lib/db/client'),
+    import('./access'),
+    import('./config'),
+  ]);
+  const repo: DocumentRepository = {
+    async create(input) {
+      const row = await db.document.create({
+        data: { ...input, sizeBytes: BigInt(input.sizeBytes) },
+      });
+      return { ...row, sizeBytes: Number(row.sizeBytes) };
+    },
+    async listByTarget(orgId, target) {
+      const where =
+        target.kind === 'lease'
+          ? { organizationId: orgId, leaseId: target.id }
+          : target.kind === 'property'
+            ? { organizationId: orgId, propertyId: target.id }
+            : { organizationId: orgId, unitId: target.id };
+      const rows = await db.document.findMany({ where, orderBy: { createdAt: 'desc' } });
+      return rows.map((r) => ({ ...r, sizeBytes: Number(r.sizeBytes) }));
+    },
+    async findById(orgId, id) {
+      const row = await db.document.findFirst({ where: { id, organizationId: orgId } });
+      return row ? { ...row, sizeBytes: Number(row.sizeBytes) } : null;
+    },
+    async delete(id) {
+      await db.document.delete({ where: { id } });
+    },
+  };
+  return new FileService(getStorage(), repo, await createPrismaFileAccess());
+}

@@ -1,0 +1,43 @@
+import type { DocumentRepository } from '../../src/lib/storage/service';
+import type { StoredDocument } from '../../src/lib/storage/types';
+
+export const PDF = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37, 0x0a, 1, 2, 3]);
+export const JPG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 1, 2]);
+export const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]);
+export const DOCX = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 1, 2, 3]);
+export const HEIC = new Uint8Array([
+  0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63, 0, 0, 0, 0,
+]);
+
+export function memoryRepo(): DocumentRepository & { rows: StoredDocument[] } {
+  const rows: StoredDocument[] = [];
+  let n = 0;
+  return {
+    rows,
+    async create(input) {
+      const doc: StoredDocument = {
+        ...input,
+        id: `doc-${++n}`,
+        createdAt: new Date(1700000000000 + n),
+      };
+      rows.push(doc);
+      return doc;
+    },
+    async listByTarget(orgId, target) {
+      return rows.filter(
+        (r) =>
+          r.organizationId === orgId &&
+          ((target.kind === 'lease' && r.leaseId === target.id) ||
+            (target.kind === 'property' && r.propertyId === target.id) ||
+            (target.kind === 'unit' && r.unitId === target.id)),
+      );
+    },
+    async findById(orgId, id) {
+      return rows.find((r) => r.id === id && r.organizationId === orgId) ?? null;
+    },
+    async delete(id) {
+      const i = rows.findIndex((r) => r.id === id);
+      if (i >= 0) rows.splice(i, 1);
+    },
+  };
+}

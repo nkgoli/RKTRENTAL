@@ -1,0 +1,115 @@
+.documentToolbar {
+  display: block;
+  padding: 16px 20px;
+  border: 1px solid var(--rr-border);
+  border-radius: var(--design-radius);
+  background: var(--design-surface);
+}
+
+.documentFilters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.documentFilters :global(.search) {
+  flex: 1 1 280px;
+  min-width: 220px;
+}
+
+.documentSelect {
+  display: flex;
+}
+
+.documentSelect select {
+  min-height: 34px;
+  max-width: 220px;
+  padding: 0 30px 0 10px;
+  border: 1px solid var(--rr-border-strong);
+  border-radius: 6px;
+  color: var(--design-text);
+  background: var(--design-surface);
+  font: inherit;
+}
+
+.leaseDocumentGroup {
+  padding: 8px 0 12px;
+  border-bottom: 1px solid var(--rr-border);
+}
+
+.leaseDocumentGroup:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.leaseDocumentHeading {
+  padding: 4px 0 10px;
+  flex-wrap: wrap;
+}
+
+.documentRelatedLinks {
+  margin-top: 3px;
+  font-size: 13px;
+}
+
+.documentActions {
+  flex: 0 0 auto;
+}
+
+.uploadDropZone {
+  display: block;
+}
+
+.documentPhotoCard {
+  min-width: 0;
+}
+
+.documentPhotoMeta {
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.documentPhotoActions {
+  display: flex;
+  gap: 14px;
+  margin-top: 5px;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .documentToolbar {
+    padding: 14px;
+  }
+
+  .documentFilters :global(.search) {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .documentSelect {
+    flex: 1 1 170px;
+  }
+
+  .documentSelect select {
+    width: 100%;
+    max-width: none;
+  }
+
+  .documentActions {
+    flex-basis: 100%;
+    justify-content: flex-start !important;
+  }
+}
+
+@media (max-width: 680px) {
+  .leaseDocumentHeading > div:first-child {
+    min-width: 100%;
+  }
+
+  .documentToolbar :global(.chip) {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+}

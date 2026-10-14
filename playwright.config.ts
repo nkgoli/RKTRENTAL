@@ -19,6 +19,7 @@ const suites: { dir: string; viewport?: { width: number; height: number } }[] = 
   { dir: 'ledger' },
   { dir: 'screening', viewport: { width: 1280, height: 1000 } },
   { dir: 'tenant-pay', viewport: { width: 390, height: 844 } },
+  { dir: 'tenant-portal', viewport: { width: 390, height: 844 } },
 ];
 
 export default defineConfig({

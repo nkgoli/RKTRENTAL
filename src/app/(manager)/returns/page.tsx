@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { EmptyState } from '@/components/RouteStates';
 import { Avatar, Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, Stat } from '@/components/ui/Card';
@@ -346,7 +347,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           />
           <div className="stack" style={{ gap: 14 }}>
             {overview.expenseBreakdown.length === 0 && (
-              <p className="muted">No expenses recorded for this period yet.</p>
+              <EmptyState title="No expenses this period" description="Record an expense to include it in your returns." action="Add expense" href={`/returns?period=${periodKey}&add=1`} />
             )}
             {overview.expenseBreakdown.map((entry) => (
               <div key={entry.category}>
@@ -364,6 +365,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
                 </div>
                 <Progress
                   value={totalExpenses > 0 ? (entry.amountCents / totalExpenses) * 100 : 0}
+                  label={`${entry.label} share of expenses`}
                   style={{ marginTop: 6 }}
                 />
               </div>

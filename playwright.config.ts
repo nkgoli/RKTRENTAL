@@ -6,6 +6,7 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
 // Every suite shares one seeded database and one server, so run serially. `npm run test:e2e`
 // (scripts/e2e.mjs) provisions the database; set PLAYWRIGHT_BASE_URL to reuse a running server.
 const suites: { dir: string; viewport?: { width: number; height: number } }[] = [
+  { dir: 'a11y' },
   { dir: 'e2e' },
   { dir: 'auth' },
   { dir: 'properties' },

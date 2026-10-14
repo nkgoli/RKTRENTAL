@@ -1,6 +1,6 @@
 ﻿import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
-import { Alert } from '@/components/ui/Feedback';
+import { EmptyState } from '@/components/RouteStates';
 import { requireTenantRole } from '@/lib/auth/access';
 import { formatUsd } from '@/lib/ledger/core';
 import { formatBytes, formatDate } from '@/lib/properties/format';
@@ -17,11 +17,7 @@ export default async function TenantLeasePage() {
     return (
       <>
         <h1 style={{ fontSize: 22 }}>My lease</h1>
-        <Alert tone="info">
-          <p>
-            You have no active lease yet. Your property manager will add it here once it is set up.
-          </p>
-        </Alert>
+        <EmptyState title="No active lease yet" description="Your property manager will add it here once it is set up." action="Check again" href="/lease" />
       </>
     );
   }
@@ -111,11 +107,7 @@ export default async function TenantLeasePage() {
             {view.documents.length} {view.documents.length === 1 ? 'file' : 'files'}
           </Badge>
         </div>
-        {view.documents.length === 0 && (
-          <p className="muted" style={{ fontSize: 13 }}>
-            No documents yet. Your lease and notices will appear here.
-          </p>
-        )}
+        {view.documents.length === 0 && <EmptyState title="No documents yet" description="Your lease and notices will appear here when your manager adds them." action="Back to home" href="/home" />}
         {view.documents.map((doc) => {
           const badge = fileBadge(doc.mimeType);
           return (

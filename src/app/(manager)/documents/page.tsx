@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { EmptyState } from '@/components/RouteStates';
 import { db } from '@/lib/db/client';
 import { requireManagerRole } from '@/lib/auth/access';
 import { PageHeader } from '@/components/shell/PageHeader';
@@ -241,7 +242,7 @@ export default async function DocumentsPage({
               <strong>{formatBytes(usedBytes)} of 10 GB</strong>
               <span className="muted">{libraryFiles.length} files</span>
             </div>
-            <Progress value={storagePercent} style={{ marginTop: 10 }} />
+            <Progress value={storagePercent} label="Portfolio storage used" style={{ marginTop: 10 }} />
             <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
               Documents and photos stored for your portfolio
             </p>
@@ -359,7 +360,7 @@ export default async function DocumentsPage({
               );
             })
           ) : (
-            <p className="muted">No lease documents match these filters.</p>
+            <EmptyState title="No lease documents in this view" description="Lease documents will appear here after they are added." action="View leases" href="/leases" />
           )}
         </Card>
 
@@ -385,7 +386,7 @@ export default async function DocumentsPage({
               return <DocumentRow key={file.id} file={file} owner={owner} />;
             })
           ) : (
-            <p className="muted">No property files match these filters.</p>
+            <EmptyState title="Nothing uploaded for properties yet" description="Upload a file from a property to keep it with the portfolio." action="View properties" href="/properties" />
           )}
         </Card>
 
@@ -430,7 +431,7 @@ export default async function DocumentsPage({
               })}
             </Gallery>
           ) : (
-            <p className="muted">No photos match these filters.</p>
+            <EmptyState title="No photos in this view" description="Add property or unit photos to make them available here." action="View properties" href="/properties" />
           )}
         </Card>
         <Badge tone="info">{matchingFiles.length} matching files</Badge>

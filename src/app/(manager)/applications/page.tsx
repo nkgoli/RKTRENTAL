@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { EmptyState } from '@/components/RouteStates';
 import { Avatar, Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/shell/PageHeader';
@@ -165,7 +166,7 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
                 </span>
               </Link>
             </li>;
-          })}</ul> : <p className={styles.empty}>No applications match these filters.</p>}
+          })}</ul> : <EmptyState title="No applications in this view" description="Check the other filters or choose a property to review applicants." action="View properties" href="/properties" />}
         </section>
 
         {selected ? <section className={styles.detail} id="selected-applicant" aria-labelledby="selected-title">

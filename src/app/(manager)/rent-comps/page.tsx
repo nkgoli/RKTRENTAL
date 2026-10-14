@@ -14,6 +14,7 @@ import {
 import { refreshCompsAction } from './actions';
 import { CompsWorkbench } from './CompsWorkbench';
 import { FilterBar, UnitPicker } from './FilterBar';
+import { EmptyState } from '@/components/RouteStates';
 
 type Search = Record<string, string | string[] | undefined>;
 
@@ -46,12 +47,7 @@ export default async function RentCompsPage({ searchParams }: { searchParams: Pr
     return (
       <>
         {header}
-        <Card>
-          <p className="muted">Add a property and unit to compare it with nearby rentals.</p>
-          <Link className="btn btn-primary btn-sm" href="/properties">
-            Go to properties
-          </Link>
-        </Card>
+        <EmptyState title="No units to compare yet" description="Add a property and unit to compare it with nearby rentals." action="Go to properties" href="/properties" />
       </>
     );
 

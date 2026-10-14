@@ -74,7 +74,20 @@ try {
     });
     db.on('exit', () => shutdown(1));
   }
-  run('migrate', [bin('prisma', 'build', 'index.js'), 'migrate', 'deploy']);
+  // Always apply pending migrations to the persistent local database before
+  // seeding/serving, so a database created by an older build cannot drift from
+  // prisma/migrations. If deploy still fails (a pre-migration or hand-edited
+  // database), `npm run db:reset` deletes the embedded data directory and the
+  // next preview recreates it from scratch.
+  try {
+    run('apply pending migrations', [bin('prisma', 'build', 'index.js'), 'migrate', 'deploy']);
+  } catch (error) {
+    console.error(
+      '[preview] Migration failed. If this is the default local database, run ' +
+        '`npm run db:reset` and start the preview again.',
+    );
+    throw error;
+  }
   run(
     'seed',
     ['--import', './prisma/os-userinfo.mjs', bin('tsx', 'dist', 'cli.mjs'), 'prisma/seed.ts'],

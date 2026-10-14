@@ -1,6 +1,7 @@
 ﻿import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { Alert, Progress } from '@/components/ui/Feedback';
+import { EmptyState } from '@/components/RouteStates';
 import { requireTenantRole } from '@/lib/auth/access';
 import { formatUsd } from '@/lib/ledger/core';
 import { formatDate } from '@/lib/properties/format';
@@ -80,11 +81,7 @@ export default async function TenantHomePage() {
         <div>
           <h1 style={{ fontSize: 24 }}>Welcome home</h1>
         </div>
-        <Alert tone="info">
-          <p>
-            You have no active lease yet. Your property manager will add it here once it is set up.
-          </p>
-        </Alert>
+        <EmptyState title="No active lease yet" description="Your property manager will add it here once it is set up." action="Check again" href="/home" />
       </>
     );
   }
@@ -185,7 +182,7 @@ export default async function TenantHomePage() {
             {repair.vendorName ? ' · Vendor assigned' : ''} · {view.managerName} will confirm a
             visit window.
           </p>
-          <Progress value={repairProgress(repair.status)} style={{ margin: '12px 0 8px' }} />
+          <Progress value={repairProgress(repair.status)} label={`${repair.title} repair progress`} style={{ margin: '12px 0 8px' }} />
           <div className="row between">
             <small className="muted">Received → Scheduled → Done</small>
             <Link href="/repairs" style={{ fontSize: 13, fontWeight: 600 }}>
@@ -201,9 +198,7 @@ export default async function TenantHomePage() {
         </h2>
         <div className="stack" style={{ gap: 10 }}>
           {view.activity.length === 0 && (
-            <Alert tone="info">
-              <p className="muted">No activity yet. Payments and notices will show up here.</p>
-            </Alert>
+            <EmptyState title="No activity yet" description="Payments and notices will show up here." action="View your lease" href="/lease" />
           )}
           {view.activity.map((item) => (
             <Alert

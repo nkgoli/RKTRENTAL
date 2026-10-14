@@ -54,7 +54,9 @@ test('manager reviews comps, filters them, and applies a market rent', async ({
   await expect(page.getByRole('heading', { name: 'Maple Court · Unit 3A' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Comparable rentals map' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Market summary' })).toBeVisible();
-  const rows = page.getByRole('table', { name: 'Comparable rentals' }).locator('tbody tr');
+  const table = page.getByRole('table', { name: 'Comparable rentals' });
+  await expect(table).toBeVisible();
+  const rows = table.locator('tbody tr');
   const pins = page.getByTestId('comp-pin');
   const initialCount = await rows.count();
   expect(initialCount).toBeGreaterThan(2);

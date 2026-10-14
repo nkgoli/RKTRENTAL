@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { EmptyState } from '@/components/RouteStates';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { Alert } from '@/components/ui/Feedback';
 import { Badge, Avatar } from '@/components/ui/Badge';
@@ -220,8 +221,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="muted">
-                  No rent charges for this view.
+                <td colSpan={5}>
+                  <EmptyState title="No rent charges in this view" description="Choose another status or create a lease to start collecting rent." action="View leases" href="/leases" />
                 </td>
               </tr>
             )}
@@ -326,7 +327,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                 <strong>{formatUsd(payout.readyCents)}</strong>
               </div>
             ))}
-            <Progress value={payoutShare} />
+            <Progress value={payoutShare} label="Owner payout share" />
             <div className="row between">
               <p className="muted">
                 {formatUsd(overview.payoutReadyCents)} ready to transfer · {formatUsd(paidOut)}{' '}

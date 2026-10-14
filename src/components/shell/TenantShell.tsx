@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { cx } from '../ui/cx';
 import { AccountMenu } from './AccountMenu';
 import { findTenantTab, isActive, tenantTabs } from './nav';
+import focus from './focus.module.css';
 
 export function TenantShell({
   children,
@@ -17,13 +18,15 @@ export function TenantShell({
   const current = findTenantTab(pathname);
 
   return (
-    <div className="phone">
+    <>
+    <a className={focus.skip} href="#tenant-main">Skip to main content</a>
+    <div className={`phone ${focus.scope}`}>
       <header className="phone-top">
         <span className="brand-mark">R</span>
         <span className="title">{current?.label ?? 'RocketRental'}</span>
         <AccountMenu initials={initials} />
       </header>
-      <main className="phone-body">{children}</main>
+      <main className="phone-body" id="tenant-main" tabIndex={-1}>{children}</main>
       <nav className="tabbar" aria-label="Tenant">
         {tenantTabs.map((tab) => {
           const active = isActive(pathname, tab.href);
@@ -40,5 +43,6 @@ export function TenantShell({
         })}
       </nav>
     </div>
+    </>
   );
 }

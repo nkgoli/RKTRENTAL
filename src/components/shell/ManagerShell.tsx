@@ -7,6 +7,7 @@ import { cx } from '../ui/cx';
 import { Icon } from './Icons';
 import { PageHeaderContext, type PageHeaderConfig } from './PageHeader';
 import { findManagerItem, isActive, managerNav } from './nav';
+import focus from './focus.module.css';
 
 export type ManagerUser = { name: string; role: string; initials: string };
 
@@ -28,7 +29,9 @@ export function ManagerShell({
   const actions = override?.actions ?? current?.item.actions;
 
   return (
-    <div className="app">
+    <>
+    <a className={focus.skip} href="#main-content">Skip to main content</a>
+    <div className={`app ${focus.scope}`}>
       <aside className="sidebar">
         <a className="brand" href="/dashboard">
           <span className="brand-mark">R</span>RocketRental
@@ -65,7 +68,7 @@ export function ManagerShell({
           </a>
         </div>
       </aside>
-      <main className="main">
+      <main className="main" id="main-content" tabIndex={-1}>
         <header className="topbar">
           <div>
             <p className="eyebrow">{eyebrow}</p>
@@ -88,5 +91,6 @@ export function ManagerShell({
         </div>
       </main>
     </div>
+    </>
   );
 }

@@ -1,10 +1,10 @@
 {
   "name": "rocketrental",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate \u0026\u0026 next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
@@ -17,8 +17,9 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "node --env-file-if-exists=.env --import ./prisma/os-userinfo.mjs node_modules/tsx/dist/cli.mjs prisma/seed.ts",
     "postinstall": "prisma generate",
-    "db:local": "npm install --prefix prisma \u0026\u0026 npm run db:local --prefix prisma",
+    "db:local": "npm install --prefix prisma && npm run db:local --prefix prisma",
     "db:migrate:dev": "prisma migrate dev",
+    "db:reset": "node scripts/db-reset.mjs",
     "preview": "node scripts/preview.mjs"
   },
   "prisma": {
@@ -31,6 +32,7 @@
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
     "@eslint/eslintrc": "^3.3.7",
     "@playwright/test": "^1.64.0",
     "@types/node": "^26.6.5",

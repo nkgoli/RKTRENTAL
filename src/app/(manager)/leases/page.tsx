@@ -5,6 +5,7 @@ import { requireManagerRole } from '@/lib/auth/access';
 import { formatMoney, initials } from '@/lib/properties/format';
 import { leaseName, signLabel, term } from '@/lib/leases/format';
 import { leasesDb, type LeaseListItem } from '@/lib/leases/queries';
+import { EmptyState } from '@/components/RouteStates';
 
 type Tab = 'active' | 'expiring' | 'drafts' | 'ended';
 const tabs: Tab[] = ['active', 'expiring', 'drafts', 'ended'];
@@ -122,6 +123,16 @@ export default async function LeasesPage({
               </tr>
             </thead>
             <tbody>
+              {shown.length === 0 && (
+                <tr><td colSpan={6}>
+                  <EmptyState
+                    title={q || tab !== 'active' ? 'No leases match this view' : 'No active leases yet'}
+                    description={q || tab !== 'active' ? 'Try another search or view to find a lease.' : 'Create a lease to connect a tenant with a property.'}
+                    action={q || tab !== 'active' ? 'View active leases' : 'Create a lease'}
+                    href={q || tab !== 'active' ? '/leases' : '/leases/new'}
+                  />
+                </td></tr>
+              )}
               {shown.map((lease) => {
                 const tenant =
                   lease.tenants.find((t) => t.isPrimary)?.tenant ?? lease.tenants[0]?.tenant;

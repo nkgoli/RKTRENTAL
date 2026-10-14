@@ -1,0 +1,1 @@
+ALTER TABLE "Property" ADD COLUMN "annualDebtService" DECIMAL(12,2) NOT NULL DEFAULT 0;

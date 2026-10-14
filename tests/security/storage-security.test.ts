@@ -3,7 +3,7 @@ import { createFileAccess } from '../../src/lib/storage/access';
 import { fileResponse } from '../../src/lib/storage/http';
 import { S3StorageAdapter } from '../../src/lib/storage/s3';
 import { FileService } from '../../src/lib/storage/service';
-import type { FileActor, StoredDocument } from '../../src/lib/storage/types';
+import type { FileActor, StorageAdapter, StoredDocument } from '../../src/lib/storage/types';
 import { validateUpload } from '../../src/lib/storage/validation';
 import { listTenantLeaseDocuments } from '../../src/lib/tenant-portal/service';
 import { JPG, memoryRepo, PDF } from '../storage/helpers';
@@ -64,9 +64,13 @@ function heicContainer(): Uint8Array {
   return new Uint8Array(Buffer.concat([ftyp, meta, mdat]));
 }
 
-const validDocx = zipStored({ '[Content_Types].xml': '<Types/>', 'word/document.xml': '<w:document/>' });
+const validDocx = zipStored({
+  '[Content_Types].xml': '<Types/>',
+  'word/document.xml': '<w:document/>',
+});
 const validHeic = heicContainer();
 const owner: FileActor = { subjectId: 'owner-1', organizationId: 'org-1', role: 'OWNER' };
+const manager: FileActor = { subjectId: 'manager-1', organizationId: 'org-1', role: 'MANAGER' };
 const tenant: FileActor = {
   subjectId: 'tenant-user-1',
   organizationId: 'org-1',
@@ -104,7 +108,9 @@ describe('upload content validation', () => {
         body: validHeic,
       }).extension,
     ).toBe('.heic');
-    const weakBrandOnly = new Uint8Array([0, 0, 0, 0, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63, 0, 0, 0, 0]);
+    const weakBrandOnly = new Uint8Array([
+      0, 0, 0, 0, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63, 0, 0, 0, 0,
+    ]);
     expect(() =>
       validateUpload({
         fileName: 'fake.heic',
@@ -118,9 +124,15 @@ describe('upload content validation', () => {
 
 describe('owner and tenant document access', () => {
   it('passes the signed-in owner id into each property access lookup', async () => {
-    const leaseExists = vi.fn(async ({ ownerId }: { ownerId?: string }) => ownerId === owner.subjectId);
-    const propertyExists = vi.fn(async ({ ownerId }: { ownerId?: string }) => ownerId === owner.subjectId);
-    const unitExists = vi.fn(async ({ ownerId }: { ownerId?: string }) => ownerId === owner.subjectId);
+    const leaseExists = vi.fn(
+      async ({ ownerId }: { ownerId?: string }) => ownerId === owner.subjectId,
+    );
+    const propertyExists = vi.fn(
+      async ({ ownerId }: { ownerId?: string }) => ownerId === owner.subjectId,
+    );
+    const unitExists = vi.fn(
+      async ({ ownerId }: { ownerId?: string }) => ownerId === owner.subjectId,
+    );
     const access = createFileAccess({ leaseExists, propertyExists, unitExists });
     expect(await access.canAccessTarget(owner, { kind: 'lease', id: 'lease-1' })).toBe(true);
     expect(await access.canAccessTarget(owner, { kind: 'property', id: 'property-1' })).toBe(true);
@@ -170,9 +182,9 @@ describe('owner and tenant document access', () => {
       sizeBytes: PDF.byteLength,
       mimeType: 'application/pdf',
     });
-    expect((await files.list(tenant, { kind: 'lease', id: 'lease-1' })).map((doc) => doc.kind)).toEqual([
-      'LEASE',
-    ]);
+    expect(
+      (await files.list(tenant, { kind: 'lease', id: 'lease-1' })).map((doc) => doc.kind),
+    ).toEqual(['LEASE']);
     await expect(files.getDocument(tenant, idDocument.id)).rejects.toMatchObject({ status: 403 });
     await expect(
       files.upload(owner, {
@@ -236,14 +248,30 @@ describe('owner and tenant document access', () => {
     const docs = await listTenantLeaseDocuments(tenant, 'lease-1', {
       list: async () => [
         {
-          id: 'lease-file', organizationId: 'org-1', leaseId: 'lease-1', propertyId: null,
-          unitId: null, kind: 'LEASE', name: 'lease.pdf', storageKey: 'lease',
-          sizeBytes: PDF.byteLength, mimeType: 'application/pdf', createdAt: now,
+          id: 'lease-file',
+          organizationId: 'org-1',
+          leaseId: 'lease-1',
+          propertyId: null,
+          unitId: null,
+          kind: 'LEASE',
+          name: 'lease.pdf',
+          storageKey: 'lease',
+          sizeBytes: PDF.byteLength,
+          mimeType: 'application/pdf',
+          createdAt: now,
         },
         {
-          id: 'id-file', organizationId: 'org-1', leaseId: 'lease-1', propertyId: null,
-          unitId: null, kind: 'ID', name: 'identity.pdf', storageKey: 'identity',
-          sizeBytes: PDF.byteLength, mimeType: 'application/pdf', createdAt: now,
+          id: 'id-file',
+          organizationId: 'org-1',
+          leaseId: 'lease-1',
+          propertyId: null,
+          unitId: null,
+          kind: 'ID',
+          name: 'identity.pdf',
+          storageKey: 'identity',
+          sizeBytes: PDF.byteLength,
+          mimeType: 'application/pdf',
+          createdAt: now,
         },
       ],
     });
@@ -293,5 +321,188 @@ describe('signed S3 transfer and safe responses', () => {
     const response = fileResponse(new Uint8Array([1, 2, 3, 4]), document, 'inline');
     expect(response.headers.get('content-disposition')).toMatch(/^attachment;/);
     expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+  });
+
+  it('does not create a document until the uploaded object passes exact type, size, and content checks', async () => {
+    const repo = memoryRepo();
+    const objects = new Map<string, { body: Uint8Array; contentType: string }>();
+    const deleted: string[] = [];
+    const storage: StorageAdapter = {
+      driver: 'memory',
+      async put() {},
+      async get(key) {
+        return objects.get(key) ?? null;
+      },
+      async delete(key) {
+        deleted.push(key);
+        objects.delete(key);
+      },
+      getSignedUrl: vi.fn(async () => 'https://storage.example.test/signed-put'),
+    };
+    const files = new FileService(storage, repo, {
+      canAccessTarget: async () => true,
+      canAccessDocument: async () => true,
+    });
+    const target = { kind: 'lease' as const, id: 'lease-1' };
+    const metadata = {
+      target,
+      fileName: 'notice.pdf',
+      mimeType: 'application/pdf',
+      kind: 'NOTICE' as const,
+      sizeBytes: PDF.byteLength,
+    };
+
+    const upload = await files.createSignedUpload(manager, metadata);
+    expect(repo.rows).toHaveLength(0);
+    expect(storage.getSignedUrl).toHaveBeenCalledWith(upload.storageKey, {
+      method: 'PUT',
+      contentType: 'application/pdf',
+      contentLength: PDF.byteLength,
+    });
+
+    objects.set(upload.storageKey, { body: PDF, contentType: 'application/pdf' });
+    const document = await files.completeSignedUpload(manager, {
+      ...metadata,
+      storageKey: upload.storageKey,
+    });
+    expect(document.sizeBytes).toBe(PDF.byteLength);
+    expect(document.mimeType).toBe('application/pdf');
+    expect(repo.rows).toEqual([document]);
+    expect(deleted).toEqual([]);
+  });
+
+  it.each([
+    {
+      caseName: 'a different stored MIME type',
+      body: PDF,
+      contentType: 'text/html',
+    },
+    {
+      caseName: 'a body whose actual length differs from the signed length',
+      body: new Uint8Array([...PDF, 0]),
+      contentType: 'application/pdf',
+    },
+    {
+      caseName: 'content with a PDF name but no PDF signature',
+      body: new Uint8Array(PDF.byteLength),
+      contentType: 'application/pdf',
+    },
+  ])('deletes the object and records no document for $caseName', async ({ body, contentType }) => {
+    const repo = memoryRepo();
+    const objects = new Map<string, { body: Uint8Array; contentType: string }>();
+    const deleted: string[] = [];
+    const storage: StorageAdapter = {
+      driver: 'memory',
+      async put() {},
+      async get(key) {
+        return objects.get(key) ?? null;
+      },
+      async delete(key) {
+        deleted.push(key);
+        objects.delete(key);
+      },
+      async getSignedUrl() {
+        return 'https://storage.example.test/signed-put';
+      },
+    };
+    const files = new FileService(storage, repo, {
+      canAccessTarget: async () => true,
+      canAccessDocument: async () => true,
+    });
+    const metadata = {
+      target: { kind: 'lease' as const, id: 'lease-1' },
+      fileName: 'notice.pdf',
+      mimeType: 'application/pdf',
+      kind: 'NOTICE' as const,
+      sizeBytes: PDF.byteLength,
+    };
+    const upload = await files.createSignedUpload(manager, metadata);
+    objects.set(upload.storageKey, { body, contentType });
+
+    await expect(
+      files.completeSignedUpload(manager, { ...metadata, storageKey: upload.storageKey }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(repo.rows).toHaveLength(0);
+    expect(objects.has(upload.storageKey)).toBe(false);
+    expect(deleted).toEqual([upload.storageKey]);
+  });
+
+  it('deletes the uploaded object if document persistence fails', async () => {
+    const repo = memoryRepo();
+    vi.spyOn(repo, 'create').mockRejectedValue(new Error('database unavailable'));
+    const objects = new Map<string, { body: Uint8Array; contentType: string }>();
+    const deleted: string[] = [];
+    const storage: StorageAdapter = {
+      driver: 'memory',
+      async put() {},
+      async get(key) {
+        return objects.get(key) ?? null;
+      },
+      async delete(key) {
+        deleted.push(key);
+        objects.delete(key);
+      },
+      async getSignedUrl() {
+        return 'https://storage.example.test/signed-put';
+      },
+    };
+    const files = new FileService(storage, repo, {
+      canAccessTarget: async () => true,
+      canAccessDocument: async () => true,
+    });
+    const metadata = {
+      target: { kind: 'lease' as const, id: 'lease-1' },
+      fileName: 'notice.pdf',
+      mimeType: 'application/pdf',
+      kind: 'NOTICE' as const,
+      sizeBytes: PDF.byteLength,
+    };
+    const upload = await files.createSignedUpload(manager, metadata);
+    objects.set(upload.storageKey, { body: PDF, contentType: 'application/pdf' });
+
+    await expect(
+      files.completeSignedUpload(manager, { ...metadata, storageKey: upload.storageKey }),
+    ).rejects.toThrow('database unavailable');
+    expect(objects.has(upload.storageKey)).toBe(false);
+    expect(deleted).toEqual([upload.storageKey]);
+  });
+
+  it('refuses to delete an upload key belonging to another target', async () => {
+    const repo = memoryRepo();
+    const deleted: string[] = [];
+    const storage: StorageAdapter = {
+      driver: 'memory',
+      async put() {},
+      async get() {
+        return null;
+      },
+      async delete(key) {
+        deleted.push(key);
+      },
+      async getSignedUrl() {
+        return 'https://storage.example.test/signed-put';
+      },
+    };
+    const files = new FileService(storage, repo, {
+      canAccessTarget: async () => true,
+      canAccessDocument: async () => true,
+    });
+    const upload = await files.createSignedUpload(manager, {
+      target: { kind: 'lease', id: 'lease-1' },
+      fileName: 'notice.pdf',
+      mimeType: 'application/pdf',
+      sizeBytes: PDF.byteLength,
+    });
+
+    await expect(
+      files.completeSignedUpload(manager, {
+        target: { kind: 'lease', id: 'lease-2' },
+        storageKey: upload.storageKey,
+        fileName: 'notice.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: PDF.byteLength,
+      }),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(deleted).toEqual([]);
   });
 });

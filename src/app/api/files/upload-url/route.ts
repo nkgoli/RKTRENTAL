@@ -1,12 +1,12 @@
 import { createPrismaFileService } from '@/lib/storage/service';
-import { errorResponse, publicDocument, requireActor } from '@/lib/storage/http';
+import { errorResponse, requireActor } from '@/lib/storage/http';
 import type { DocumentKindValue, FileTargetKind } from '@/lib/storage/types';
 
 export const runtime = 'nodejs';
 /**
- * POST /api/files/upload-url — signed direct upload (S3/MinIO).
+ * POST /api/files/upload-url — begin a signed direct upload (S3/MinIO).
  * JSON: { fileName, mimeType, sizeBytes, targetType, targetId, kind? }
- * Returns { file, uploadUrl, storageKey }; client PUTs bytes to uploadUrl.
+ * Returns { uploadUrl, storageKey }; after PUT the client must complete the upload.
  * With the local driver this returns 501 and clients should POST /api/files.
  */
 export async function POST(request: Request) {
@@ -29,14 +29,7 @@ export async function POST(request: Request) {
       sizeBytes: Number(b.sizeBytes),
       kind: typeof b.kind === 'string' ? (b.kind as DocumentKindValue) : undefined,
     });
-    return Response.json(
-      {
-        file: publicDocument(result.document),
-        uploadUrl: result.uploadUrl,
-        storageKey: result.storageKey,
-      },
-      { status: 201 },
-    );
+    return Response.json(result);
   } catch (e) {
     return errorResponse(e);
   }

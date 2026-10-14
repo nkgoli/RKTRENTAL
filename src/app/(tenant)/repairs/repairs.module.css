@@ -1,0 +1,73 @@
+.upload {
+  display: block;
+  border: 1px dashed #cbd5e1;
+  border-radius: var(--design-radius);
+  padding: 20px;
+  text-align: center;
+  color: var(--design-muted);
+  background: #f8fafc;
+  cursor: pointer;
+}
+.upload strong {
+  color: var(--design-primary);
+  font-weight: 600;
+}
+.upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+.upload:focus-within {
+  outline: 2px solid var(--design-primary);
+}
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--design-surface);
+  border: 1px solid var(--rr-border-strong);
+}
+.option:has(input:checked) {
+  border-color: var(--design-primary);
+  background: var(--rr-primary-tint);
+}
+.photos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+.photo {
+  border-radius: var(--design-radius);
+  aspect-ratio: 4 / 3;
+  background: #e2e8f0 center / cover no-repeat;
+}
+.timeline {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+.timeline small {
+  color: var(--design-muted);
+}
+.comment {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.comment input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--rr-border-strong);
+}

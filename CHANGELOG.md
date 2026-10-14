@@ -13,8 +13,8 @@ mode only) and a deployable Docker image.
 - Next.js (App Router) + TypeScript app with Prisma/PostgreSQL schema,
   embedded local Postgres for development, and `prisma migrate deploy`
   -based upgrades.
-- Email/password auth with signed session cookies and role-based access
-  (manager/owner, tenant, admin), including per-organization scoping.
+- Email/password auth with signed session cookies, manager and tenant route
+  guards, owner identities, and per-organization scoping.
 - Portfolio seed: a 45-unit demo portfolio with manager and tenant demo
   accounts, plus CI running typecheck, lint, unit tests, build and e2e.
 
@@ -60,12 +60,25 @@ mode only) and a deployable Docker image.
 
 ### Release engineering
 
+- Route loading, empty, error and not-found states, plus keyboard and screen
+  reader improvements backed by the Playwright accessibility suite.
 - Production multi-stage Dockerfile that applies migrations on container
   start, `.dockerignore`, and a CI Docker build job.
 - Setup, deployment and user-help documentation (`README.md`, `docs/`).
 - Fixes: the e2e runner now kills the Next dev server process tree on exit,
   and the preview launcher applies pending migrations to the local database
   on every start (`npm run db:reset` recovers an irreconcilable database).
+
+### Known limitations
+
+- OWNER accounts are denied the manager app until a scoped owner view exists.
+- `npm audit` still reports items in the Next.js, Prisma and
+  `eslint-config-next` dependency chains; addressing them requires breaking
+  upgrades.
+- The Docker image is built in CI but has not been verified locally.
+- Most sample leases have income only for August through October 2026;
+  Alex Rivera's tenant history extends back to December 2025.
+- ROI calculations assume 3% annual property appreciation.
 
 ## [0.1.0] - 2026-10-01
 

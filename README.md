@@ -59,23 +59,26 @@ is irreconcilable, run `npm run db:reset` and start the preview again.
 
 ## Scripts
 
-| Script                  | Purpose                                              |
-| ----------------------- | ---------------------------------------------------- |
-| `npm run dev`           | Dev server                                           |
-| `npm run build`         | Generate Prisma client and build for production      |
-| `npm start`             | Serve the production build                           |
-| `npm run preview`       | Embedded DB + migrate + seed + `next start`          |
-| `npm run db:local`      | Start the embedded Postgres (installs on first run)  |
-| `npm run db:up`         | Start Postgres via docker compose                    |
-| `npm run db:migrate`    | `prisma migrate deploy`                              |
-| `npm run db:migrate:dev`| Author a new migration                               |
-| `npm run db:seed`       | Run `prisma/seed.ts`                                 |
-| `npm run db:reset`      | Delete the embedded local database (never external)  |
-| `npm run typecheck`     | `tsc --noEmit`                                       |
-| `npm run lint`          | ESLint (zero warnings allowed)                       |
-| `npm test`              | Vitest unit tests (`src/**`, `tests/**`)             |
-| `npm run test:e2e`      | Playwright suites against one seeded DB and server   |
-| `npm run format:check`  | Prettier check                                       |
+| Script                   | Purpose                                             |
+| ------------------------ | --------------------------------------------------- |
+| `npm run dev`            | Dev server                                          |
+| `npm run build`          | Generate Prisma client and build for production     |
+| `npm start`              | Serve the production build                          |
+| `npm run preview`        | Embedded DB + migrate + seed + `next start`         |
+| `npm run db:local`       | Start the embedded Postgres (installs on first run) |
+| `npm run db:up`          | Start Postgres via docker compose                   |
+| `npm run db:migrate`     | `prisma migrate deploy`                             |
+| `npm run db:deploy`      | Alias for `db:migrate`                              |
+| `npm run db:migrate:dev` | Author a new migration                              |
+| `npm run db:seed`        | Run `prisma/seed.ts`                                |
+| `npm run db:reset`       | Delete the embedded local database (never external) |
+| `npm run typecheck`      | `tsc --noEmit`                                      |
+| `npm run lint`           | ESLint (zero warnings allowed)                      |
+| `npm test`               | Vitest unit tests (`src/**`, `tests/**`)            |
+| `npm run test:e2e`       | Playwright suites against one seeded DB and server  |
+| `npm run format:check`   | Prettier check                                      |
+| `npm run format`         | Format the repository with Prettier                 |
+| `npm run postinstall`    | Generate the Prisma client after dependency install |
 
 ## Documentation
 

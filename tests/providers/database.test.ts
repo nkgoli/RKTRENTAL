@@ -55,7 +55,7 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')('provider persistence', 
       await prisma.charge.count({
         where: { organizationId: demo, id: { startsWith: 'seed-charge-' }, kind: 'RENT' },
       }),
-    ).toBe(131); // plus Alex Rivera's earlier months
+    ).toBe(123); // 41 active leases across August–October 2026
     expect(
       await prisma.payment.count({
         where: { organizationId: demo, id: { startsWith: 'seed-payment-' } },

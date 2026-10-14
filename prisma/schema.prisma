@@ -111,6 +111,15 @@ enum MaintenanceStatus {
   CANCELLED
 }
 
+enum ExpenseCategory {
+  TAXES
+  INSURANCE
+  REPAIRS
+  MANAGEMENT
+  UTILITIES
+  OTHER
+}
+
 model Organization {
   id                  String               @id @default(cuid())
   name                String
@@ -136,6 +145,7 @@ model Organization {
   screeningReports    ScreeningReport[]
   tenantNotes         TenantNote[]
   leaseEvents         LeaseEvent[]
+  expenses            Expense[]
 }
 
 model User {
@@ -170,6 +180,10 @@ model Property {
   state               String
   postalCode          String
   yearBuilt           Int?
+  purchasePrice       Decimal?             @db.Decimal(12, 2)
+  downPayment         Decimal?             @db.Decimal(12, 2)
+  loanAmount          Decimal?             @db.Decimal(12, 2)
+  annualDebtService   Decimal              @default(0) @db.Decimal(12, 2)
   archivedAt          DateTime?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -177,6 +191,7 @@ model Property {
   documents           Document[]
   maintenanceRequests MaintenanceRequest[]
   payouts             Payout[]
+  expenses            Expense[]
 
   @@unique([id, organizationId])
   @@index([organizationId, archivedAt])
@@ -196,6 +211,9 @@ model Unit {
   squareFeet          Int?
   listedRent          Decimal?             @db.Decimal(12, 2)
   marketRent          Decimal?             @db.Decimal(12, 2)
+  marketRentSetById   String?
+  marketRentSetByName String?
+  marketRentSetAt     DateTime?
   floor               Int?
   amenities           String[]             @default([])
   status              UnitStatus           @default(VACANT)
@@ -544,4 +562,22 @@ model ScreeningReport {
 
   @@unique([provider, providerReference])
   @@index([organizationId, applicationId])
+}
+
+model Expense {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  propertyId     String
+  property       Property        @relation(fields: [propertyId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  category       ExpenseCategory
+  amount         Decimal         @db.Decimal(12, 2)
+  occurredOn     DateTime        @db.Date
+  description    String?
+  vendor         String?
+  createdAt      DateTime        @default(now())
+
+  @@unique([id, organizationId])
+  @@index([organizationId, propertyId, occurredOn])
+  @@index([organizationId, category, occurredOn])
 }

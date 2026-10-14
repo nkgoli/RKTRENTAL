@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type {
   Comparable,
   CompsProvider,
+  CompsSearch,
   PaymentsProvider,
   PaymentResult,
   ScreeningProvider,
@@ -123,12 +124,7 @@ export class MockScreeningProvider implements ScreeningProvider {
 export class MockCompsProvider implements CompsProvider {
   readonly name: string = 'mock';
   constructor(readonly radiusMiles = 5) {}
-  async search(input: {
-    postalCode: string;
-    bedrooms: number;
-    squareFeet?: number;
-    limit?: number;
-  }): Promise<Comparable[]> {
+  async search(input: CompsSearch): Promise<Comparable[]> {
     if (
       !/^\d{5}$/.test(input.postalCode) ||
       !Number.isInteger(input.bedrooms) ||
@@ -136,14 +132,45 @@ export class MockCompsProvider implements CompsProvider {
     )
       throw new Error('Valid postal code and bedroom count required');
     const limit = Math.max(0, Math.min(input.limit ?? 3, 10));
-    return Array.from({ length: limit }, (_, index) => ({
-      address: `${210 + index * 12} Sample St, ${input.postalCode}`,
-      monthlyRentCents: 150000 + input.bedrooms * 25000 + index * 5000,
-      bedrooms: input.bedrooms,
-      squareFeet: input.squareFeet ?? 850,
-      distanceMiles: Number(((index + 1) * 0.3).toFixed(1)),
-    })).filter((comparable) => comparable.distanceMiles <= this.radiusMiles);
+    const radius = input.radiusMiles ?? this.radiusMiles;
+    const baseSqft = input.squareFeet ?? 850;
+    const today = Date.now();
+    // Deterministic sandbox data derived from the search only; no keys and no network.
+    return Array.from({ length: limit }, (_, index): Comparable => {
+      const jitter = mockNumber(`${input.postalCode}:${input.bedrooms}:${index}`);
+      const squareFeet = Math.round(baseSqft * (0.88 + (jitter % 25) / 100));
+      const leased = index % 2 === 0;
+      const daysAgo = 4 + index * 9 + (jitter % 5);
+      return {
+        id: mockId('comp', `${input.postalCode}:${input.bedrooms}:${index}`),
+        address: `${210 + index * 12} Sample St, ${input.postalCode}`,
+        monthlyRentCents:
+          150000 + input.bedrooms * 25000 + index * 5000 + (jitter % 9) * 2500 - 10000,
+        bedrooms: input.bedrooms,
+        bathrooms: index % 3 === 2 ? 1.5 : 1,
+        squareFeet,
+        distanceMiles: Number(((index + 1) * 0.3).toFixed(1)),
+        bearingDegrees: (index * 137 + (jitter % 40)) % 360,
+        status: leased ? 'leased' : 'listed',
+        observedAt: new Date(today - daysAgo * 86_400_000).toISOString(),
+        source: this.name === 'mock' ? 'Sandbox' : this.name,
+        ...(index === 7 ? { caveat: 'furnished, short-term' } : {}),
+      };
+    }).filter(
+      (comp) =>
+        comp.distanceMiles <= radius &&
+        (input.bathrooms === undefined || comp.bathrooms === input.bathrooms) &&
+        (input.minSquareFeet === undefined || comp.squareFeet >= input.minSquareFeet) &&
+        (input.maxSquareFeet === undefined || comp.squareFeet <= input.maxSquareFeet) &&
+        (input.status === undefined || comp.status === input.status) &&
+        (input.withinDays === undefined ||
+          Date.parse(comp.observedAt!) >= today - input.withinDays * 86_400_000),
+    );
   }
+}
+
+function mockNumber(value: string) {
+  return createHash('sha256').update(value).digest().readUInt16BE(0);
 }
 
 export class MockRentometerProvider extends MockCompsProvider {

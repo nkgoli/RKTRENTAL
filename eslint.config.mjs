@@ -7,6 +7,7 @@ const config = [
   {
     ignores: [
       '.next/**',
+      'output/**',
       'node_modules/**',
       'coverage/**',
       'playwright-report/**',
@@ -23,3 +24,4 @@ const config = [
 ];
 
 export default config;
+

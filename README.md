@@ -1,4 +1,4 @@
-﻿# RocketRental
+# RocketRental
 
 Rental property management app for managers and tenants. Next.js (App Router) + TypeScript, PostgreSQL via Prisma, Vitest for unit tests, Playwright for e2e.
 

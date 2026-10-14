@@ -2,6 +2,7 @@
 // Run `npm run build` first. Honours PORT (default 3000) and ROCKETRENTAL_DB_PORT (default 5432).
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -35,6 +36,12 @@ function sh(label, command) {
   if (r.status !== 0) throw new Error(` failed (exit ${r.status})`);
 }
 
+function sh(label, command) {
+  console.log(`[preview] ${label}`);
+  const r = spawnSync(command, { cwd: root, env, shell: true, stdio: 'inherit' });
+  if (r.status !== 0) throw new Error(` failed (exit ${r.status})`);
+}
+
 let db;
 let app;
 function shutdown(code = 0) {
@@ -46,6 +53,9 @@ process.on('SIGINT', () => shutdown());
 process.on('SIGTERM', () => shutdown());
 
 try {
+  if (!existsSync(bin('.bin'))) sh('npm install', 'npm install');
+  if (!existsSync(path.join(root, '.next', 'BUILD_ID'))) sh('build', 'npm run build');
+
   if (!process.env.DATABASE_URL) {
     console.log('[preview] installing embedded Postgres');
     const install = spawnSync('npm install --prefix prisma', {

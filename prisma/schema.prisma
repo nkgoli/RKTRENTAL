@@ -7,8 +7,306 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Placeholder model so the first migration is non-empty. Replace with real models in later Tasks.
-model AppMeta {
-  key   String @id
-  value String
+enum UserRole {
+  MANAGER
+  OWNER
+  TENANT
+  ADMIN
+}
+
+enum PropertyType {
+  SINGLE_UNIT
+  MULTI_UNIT
+}
+
+enum UnitStatus {
+  OCCUPIED
+  VACANT
+  TURNOVER
+  ARCHIVED
+}
+
+enum LeaseStatus {
+  DRAFT
+  ACTIVE
+  ENDED
+  TERMINATED
+}
+
+enum ESignStatus {
+  NOT_SENT
+  SENT
+  PARTIALLY_SIGNED
+  SIGNED
+  DECLINED
+}
+
+enum DocumentKind {
+  LEASE
+  NOTICE
+  INSPECTION
+  ID
+  PHOTO
+  OTHER
+}
+
+enum ChargeKind {
+  RENT
+  LATE_FEE
+  DEPOSIT
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum MaintenancePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum MaintenanceStatus {
+  NEW
+  ASSIGNED
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+model Organization {
+  id                  String               @id @default(cuid())
+  name                String
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  users               User[]
+  properties          Property[]
+  units               Unit[]
+  tenants             Tenant[]
+  leases              Lease[]
+  documents           Document[]
+  charges             Charge[]
+  payments            Payment[]
+  maintenanceRequests MaintenanceRequest[]
+  maintenancePhotos   MaintenancePhoto[]
+}
+
+model User {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email           String
+  name            String
+  phone           String?
+  role            UserRole
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  ownedProperties Property[]   @relation("PropertyOwner")
+  tenant          Tenant?
+
+  @@unique([organizationId, email])
+  @@unique([id, organizationId])
+  @@index([organizationId, role])
+}
+
+model Property {
+  id                  String               @id @default(cuid())
+  organizationId      String
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ownerId             String?
+  owner               User?                @relation("PropertyOwner", fields: [ownerId, organizationId], references: [id, organizationId])
+  name                String
+  type                PropertyType
+  street              String
+  city                String
+  state               String
+  postalCode          String
+  yearBuilt           Int?
+  archivedAt          DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  units               Unit[]
+  documents           Document[]
+  maintenanceRequests MaintenanceRequest[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId, archivedAt])
+  @@index([organizationId, ownerId])
+}
+
+model Unit {
+  id                  String               @id @default(cuid())
+  organizationId      String
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  propertyId          String
+  property            Property             @relation(fields: [propertyId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  number              String
+  isImplicit          Boolean              @default(false)
+  bedrooms            Int?
+  bathrooms           Decimal?             @db.Decimal(3, 1)
+  squareFeet          Int?
+  listedRent          Decimal?             @db.Decimal(12, 2)
+  status              UnitStatus           @default(VACANT)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  leases              Lease[]
+  documents           Document[]
+  maintenanceRequests MaintenanceRequest[]
+
+  @@unique([propertyId, number])
+  @@unique([id, organizationId])
+  @@unique([id, propertyId, organizationId])
+  @@index([organizationId, status])
+}
+
+model Tenant {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?         @relation(fields: [userId, organizationId], references: [id, organizationId])
+  name           String
+  email          String?
+  phone          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  leases         LeaseTenant[]
+
+  @@unique([id, organizationId])
+  @@unique([userId, organizationId])
+  @@index([organizationId, name])
+}
+
+model Lease {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  unitId         String
+  unit           Unit          @relation(fields: [unitId, organizationId], references: [id, organizationId])
+  startDate      DateTime      @db.Date
+  endDate        DateTime      @db.Date
+  monthlyRent    Decimal       @db.Decimal(12, 2)
+  deposit        Decimal       @db.Decimal(12, 2)
+  lateFee        Decimal       @default(0) @db.Decimal(12, 2)
+  graceDays      Int           @default(0)
+  status         LeaseStatus   @default(DRAFT)
+  eSignStatus    ESignStatus   @default(NOT_SENT)
+  signedAt       DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  tenants        LeaseTenant[]
+  documents      Document[]
+  charges        Charge[]
+  payments       Payment[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId, unitId, status])
+  @@index([organizationId, endDate])
+}
+
+model LeaseTenant {
+  leaseId        String
+  tenantId       String
+  organizationId String
+  lease          Lease   @relation(fields: [leaseId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  tenant         Tenant  @relation(fields: [tenantId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  isPrimary      Boolean @default(false)
+
+  @@id([leaseId, tenantId])
+  @@index([organizationId, tenantId])
+}
+
+// SQL migration requires exactly one of leaseId, propertyId or unitId.
+model Document {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leaseId        String?
+  lease          Lease?       @relation(fields: [leaseId, organizationId], references: [id, organizationId])
+  propertyId     String?
+  property       Property?    @relation(fields: [propertyId, organizationId], references: [id, organizationId])
+  unitId         String?
+  unit           Unit?        @relation(fields: [unitId, organizationId], references: [id, organizationId])
+  kind           DocumentKind
+  name           String
+  storageKey     String       @unique
+  sizeBytes      BigInt
+  mimeType       String
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, leaseId])
+  @@index([organizationId, propertyId])
+  @@index([organizationId, unitId])
+}
+
+model Charge {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leaseId        String
+  lease          Lease        @relation(fields: [leaseId, organizationId], references: [id, organizationId])
+  kind           ChargeKind
+  amount         Decimal      @db.Decimal(12, 2)
+  dueDate        DateTime     @db.Date
+  description    String?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, leaseId, dueDate])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  organizationId    String
+  organization      Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leaseId           String
+  lease             Lease         @relation(fields: [leaseId, organizationId], references: [id, organizationId])
+  amount            Decimal       @db.Decimal(12, 2)
+  status            PaymentStatus @default(PENDING)
+  providerReference String?       @unique
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+
+  @@index([organizationId, leaseId, createdAt])
+}
+
+model MaintenanceRequest {
+  id             String              @id @default(cuid())
+  organizationId String
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  propertyId     String
+  property       Property            @relation(fields: [propertyId, organizationId], references: [id, organizationId])
+  unitId         String
+  unit           Unit                @relation(fields: [unitId, propertyId, organizationId], references: [id, propertyId, organizationId])
+  title          String
+  description    String?
+  priority       MaintenancePriority @default(NORMAL)
+  status         MaintenanceStatus   @default(NEW)
+  vendorName     String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  completedAt    DateTime?
+  photos         MaintenancePhoto[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId, status, priority])
+  @@index([organizationId, unitId])
+}
+
+model MaintenancePhoto {
+  id                   String             @id @default(cuid())
+  organizationId       String
+  organization         Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  maintenanceRequestId String
+  maintenanceRequest   MaintenanceRequest @relation(fields: [maintenanceRequestId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  storageKey           String             @unique
+  sizeBytes            BigInt
+  mimeType             String
+  createdAt            DateTime           @default(now())
+
+  @@index([organizationId, maintenanceRequestId])
 }

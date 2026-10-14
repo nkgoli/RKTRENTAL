@@ -1,0 +1,14 @@
+{
+  "name": "rocketrental-local-db",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "db:local": "node local-postgres.mjs"
+  },
+  "devDependencies": {
+    "embedded-postgres": "16.14.0-beta.17"
+  },
+  "dependencies": {
+    "rocketrental": "file:.."
+  }
+}

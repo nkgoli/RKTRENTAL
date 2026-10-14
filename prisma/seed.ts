@@ -402,6 +402,12 @@ async function main() {
       status: 'DISCONNECTED' as const,
       settings: {},
     },
+    {
+      kind: 'EMAIL' as const,
+      provider: 'mock',
+      status: 'CONNECTED' as const,
+      settings: { mode: 'sandbox' },
+    },
   ];
   for (const connection of connections) {
     await prisma.providerConnection.upsert({

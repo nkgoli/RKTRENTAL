@@ -330,7 +330,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                 <strong>{formatUsd(payout.readyCents)}</strong>
               </div>
             ))}
-            <Progress value={payoutShare} />
+            <Progress value={payoutShare} label="Owner payout share" />
             <div className="row between">
               <p className="muted">
                 {formatUsd(overview.payoutReadyCents)} ready to transfer · {formatUsd(paidOut)}{' '}

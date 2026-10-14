@@ -165,7 +165,7 @@ export function UiShowcase() {
 
       <Section title="Steps, progress and alerts">
         <Steps steps={['Set the terms', 'Add tenants', 'Review', 'Send']} current={1} />
-        <Progress value={60} />
+        <Progress value={60} label="Example progress" />
         <div className="stack" style={{ gap: 10 }}>
           <Alert>2 applications waiting for screening.</Alert>
           <Alert tone="warning">3 tenants are past due.</Alert>

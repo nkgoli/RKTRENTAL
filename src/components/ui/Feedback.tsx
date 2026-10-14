@@ -15,12 +15,13 @@ export function Alert({
   );
 }
 
-export function Progress({ value, style }: { value: number; style?: CSSProperties }) {
+export function Progress({ value, label = 'Progress', style }: { value: number; label?: string; style?: CSSProperties }) {
   const pct = Math.max(0, Math.min(100, value));
   return (
     <div
       className="progress"
       role="progressbar"
+      aria-label={label}
       aria-valuenow={pct}
       aria-valuemin={0}
       aria-valuemax={100}

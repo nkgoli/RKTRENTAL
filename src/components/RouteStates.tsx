@@ -13,7 +13,7 @@ export function EmptyState({
   href: string;
 }) {
   return (
-    <div className={styles.empty} role="status">
+    <div className={styles.empty}>
       <div className={styles.emptyMark} aria-hidden="true">＋</div>
       <h2>{title}</h2>
       <p>{description}</p>

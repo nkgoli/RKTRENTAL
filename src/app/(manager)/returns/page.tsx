@@ -365,6 +365,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
                 </div>
                 <Progress
                   value={totalExpenses > 0 ? (entry.amountCents / totalExpenses) * 100 : 0}
+                  label={`${entry.label} share of expenses`}
                   style={{ marginTop: 6 }}
                 />
               </div>

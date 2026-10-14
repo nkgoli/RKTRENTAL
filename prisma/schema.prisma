@@ -1,0 +1,14 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Placeholder model so the first migration is non-empty. Replace with real models in later Tasks.
+model AppMeta {
+  key   String @id
+  value String
+}

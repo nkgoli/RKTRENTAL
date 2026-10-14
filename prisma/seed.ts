@@ -1,6 +1,7 @@
 import {
   ApplicationStatus,
   ESignStatus,
+  ExpenseCategory,
   LeaseStatus,
   PaymentStatus,
   PrismaClient,
@@ -648,6 +649,7 @@ async function main() {
     });
   }
   await seedPortfolioDetails();
+  await seedReturnsData();
   console.log(
     'Seeded 4 properties, 45 units, 41 occupied leases, 4 applications, charges, payments, autopay and property payouts.',
   );
@@ -873,6 +875,52 @@ async function seedPortfolioDetails() {
       update: data,
       create: { id, organizationId, ...data, createdAt: new Date(createdAt) },
     });
+  }
+}
+
+/** Purchase/financing inputs and a year of operating expenses for the returns screen. */
+async function seedReturnsData() {
+  const financing: Record<
+    string,
+    { purchasePrice: number; downPayment: number; loanAmount: number; annualDebtService: number }
+  > = {
+    maple: { purchasePrice: 2830000, downPayment: 850000, loanAmount: 1980000, annualDebtService: 36000 },
+    harbor: { purchasePrice: 4790000, downPayment: 1440000, loanAmount: 3350000, annualDebtService: 60000 },
+    cedar: { purchasePrice: 1470000, downPayment: 440000, loanAmount: 1030000, annualDebtService: 18000 },
+    elm: { purchasePrice: 413000, downPayment: 124000, loanAmount: 289000, annualDebtService: 4800 },
+  };
+  for (const [slug, figures] of Object.entries(financing)) {
+    await prisma.property.update({
+      where: { id: `seed-property-${slug}` },
+      data: figures,
+    });
+  }
+
+  const monthly: Record<string, Partial<Record<ExpenseCategory, number>>> = {
+    maple: { TAXES: 2600, INSURANCE: 950, REPAIRS: 1400, MANAGEMENT: 1250, UTILITIES: 1050, OTHER: 750 },
+    harbor: { TAXES: 5200, INSURANCE: 1750, REPAIRS: 2600, MANAGEMENT: 2300, UTILITIES: 1900, OTHER: 1400 },
+    cedar: { TAXES: 1400, INSURANCE: 520, REPAIRS: 800, MANAGEMENT: 700, UTILITIES: 550, OTHER: 430 },
+    elm: { TAXES: 350, INSURANCE: 140, REPAIRS: 220, MANAGEMENT: 180, UTILITIES: 160, OTHER: 120 },
+  };
+  // Same months as the seeded rent ledger (Aug-Oct 2026), so the returns
+  // screen compares a full set of expenses against the income on record.
+  const months: string[] = [];
+  for (let month = '2026-08'; month <= '2026-10'; month = addMonths(month, 1)) months.push(month);
+  for (const [slug, categories] of Object.entries(monthly)) {
+    for (const month of months) {
+      for (const [category, amount] of Object.entries(categories)) {
+        if (!amount) continue;
+        const id = `seed-expense-${slug}-${category.toLowerCase()}-${month}`;
+        const data = {
+          organizationId,
+          propertyId: `seed-property-${slug}`,
+          category: category as ExpenseCategory,
+          amount,
+          occurredOn: date(`${month}-15`),
+        };
+        await prisma.expense.upsert({ where: { id }, update: data, create: { id, ...data } });
+      }
+    }
   }
 }
 

@@ -15,6 +15,8 @@ const env = {
   ROCKETRENTAL_DB_PORT: dbPort,
   ROCKETRENTAL_AUTH_SECRET:
     process.env.ROCKETRENTAL_AUTH_SECRET ?? 'preview-only-secret-not-for-production-use-0123456789',
+  ROCKETRENTAL_SANDBOX: process.env.ROCKETRENTAL_SANDBOX ?? 'true',
+  ROCKETRENTAL_AUTH_COOKIE_SECURE: process.env.ROCKETRENTAL_AUTH_COOKIE_SECURE ?? 'false',
 };
 const node = process.execPath;
 const bin = (...p) => path.join(root, 'node_modules', ...p);

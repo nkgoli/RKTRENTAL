@@ -3,7 +3,7 @@
 import { Prisma, type ApplicationStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { getSession } from '@/lib/auth/server-session';
+import { requireManagerWriteRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
 import { screeningProvider } from '@/lib/providers';
 import { recordDecision as recordScreeningDecisionAudit } from '@/lib/screening/decision-audit';
@@ -15,9 +15,7 @@ import {
 } from '@/lib/screening/policy';
 
 async function requireManager() {
-  const session = await getSession();
-  if (!session || !['MANAGER', 'OWNER', 'ADMIN'].includes(session.role)) redirect('/sign-in');
-  return session;
+  return requireManagerWriteRole();
 }
 
 function value(formData: FormData, key: string) {

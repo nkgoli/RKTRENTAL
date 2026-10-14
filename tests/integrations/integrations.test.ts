@@ -14,6 +14,7 @@ import { SettingsError, parseSettings, readSettings } from '../../src/lib/integr
 
 const org = 'org-1';
 const env = (values: Record<string, string> = {}) => values as unknown as NodeJS.ProcessEnv;
+const sandboxEnv = () => env({ ROCKETRENTAL_SANDBOX: 'true' });
 
 function memoryStore() {
   const rows: (ConnectionRow & { organizationId: string })[] = [];
@@ -81,7 +82,7 @@ describe('connections', () => {
       'SCREENING',
       'checkr',
       store,
-      env(),
+      sandboxEnv(),
       new Date('2026-01-01T00:00:00Z'),
     );
     expect(rows).toHaveLength(1);
@@ -122,7 +123,7 @@ describe('connections', () => {
 
   it('disconnects without deleting and clears health', async () => {
     const { rows, store } = memoryStore();
-    await connectProvider(org, 'PAYMENTS', 'stripe', store, env());
+    await connectProvider(org, 'PAYMENTS', 'stripe', store, sandboxEnv());
     await disconnectProvider(org, 'PAYMENTS', 'stripe', store);
     expect(rows[0].status).toBe('DISCONNECTED');
     expect(JSON.stringify(rows[0].settings)).not.toContain('health');
@@ -132,7 +133,7 @@ describe('connections', () => {
 
   it('isolates organizations', async () => {
     const { store } = memoryStore();
-    await connectProvider('other-org', 'SCREENING', 'checkr', store, env());
+    await connectProvider('other-org', 'SCREENING', 'checkr', store, sandboxEnv());
     const view = await loadIntegrations(org, store, env());
     expect(view.groups.screening.every((p) => !p.connected)).toBe(true);
   });
@@ -154,7 +155,7 @@ describe('group settings', () => {
 describe('health and outage alerts', () => {
   it('flags an outage after a failed webhook or sync, and clears it on success', async () => {
     const { store } = memoryStore();
-    await connectProvider(org, 'PAYMENTS', 'stripe', store, env());
+    await connectProvider(org, 'PAYMENTS', 'stripe', store, sandboxEnv());
     expect((await loadIntegrations(org, store, env())).outages).toHaveLength(0);
 
     await recordProviderHealth(

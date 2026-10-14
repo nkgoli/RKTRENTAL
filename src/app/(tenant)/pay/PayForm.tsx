@@ -25,13 +25,11 @@ function parseAmountCents(value: string): number {
 
 export function PayForm({
   leaseId,
-  idempotencyKey,
   totalDueCents,
   passFees,
   methods,
 }: {
   leaseId: string;
-  idempotencyKey: string;
   totalDueCents: number;
   passFees: boolean;
   methods: SavedMethod[];
@@ -73,7 +71,6 @@ export function PayForm({
       </h2>
       <form action={payRentAction} className="stack" style={{ gap: 10 }}>
         <input type="hidden" name="leaseId" value={leaseId} />
-        <input type="hidden" name="key" value={idempotencyKey} />
         <input type="hidden" name="method" value={selected?.type ?? 'ach'} />
         <input type="hidden" name="providerToken" value={selected?.token ?? ''} />
         <input type="hidden" name="paymentMethodId" value={selected?.methodId ?? ''} />

@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { Alert } from '@/components/ui/Feedback';
@@ -167,7 +166,6 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
             }
           />
           <form action={recordPaymentAction} className="form">
-            <input type="hidden" name="key" value={randomUUID()} />
             <FormRow>
               <Field label="Lease">
                 <Select name="leaseId" defaultValue={params.record || undefined} required>
@@ -289,7 +287,6 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                         <form action={refundPaymentAction}>
                           <input type="hidden" name="paymentId" value={row.lastPaymentId} />
                           <input type="hidden" name="month" value={month} />
-                          <input type="hidden" name="key" value={randomUUID()} />
                           <Button type="submit" size="sm" variant="ghost">
                             Refund
                           </Button>

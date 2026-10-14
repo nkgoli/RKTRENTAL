@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthSession } from '../../src/lib/auth/session';
 
@@ -47,6 +49,22 @@ describe('OWNER manager access guards', () => {
   it('refuses an OWNER session for manager writes', async () => {
     await expect(requireManagerWriteRole()).rejects.toThrow('redirect:/sign-out');
     expect(mocks.redirect).toHaveBeenCalledWith('/sign-out');
+  });
+
+  it('wires the applications page and mutations through the manager guards', () => {
+    const page = readFileSync(
+      path.join(process.cwd(), 'src/app/(manager)/applications/page.tsx'),
+      'utf8',
+    );
+    const actions = readFileSync(
+      path.join(process.cwd(), 'src/app/(manager)/applications/actions.ts'),
+      'utf8',
+    );
+
+    expect(page).toContain('requireManagerRole');
+    expect(page).not.toMatch(/getSession|OWNER/);
+    expect(actions).toContain('requireManagerWriteRole');
+    expect(actions).not.toMatch(/getSession|OWNER/);
   });
 
   it('does not return an owner lease through the shared API access guard', async () => {

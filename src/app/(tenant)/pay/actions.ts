@@ -44,7 +44,6 @@ export async function payRentAction(data: FormData) {
       method,
       providerToken: text(data, 'providerToken') || undefined,
       paymentMethodId: text(data, 'paymentMethodId') || undefined,
-      idempotencyKey: text(data, 'key'),
       saveMethod: text(data, 'saveMethod') === 'on',
     });
     back(

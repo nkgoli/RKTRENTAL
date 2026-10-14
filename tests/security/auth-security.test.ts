@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
   authenticateCredentials,
@@ -192,5 +194,13 @@ describe('session cookie transport', () => {
     expect(sessionCookieSecure({ NODE_ENV: 'development' })).toBe(true);
     expect(sessionCookieSecure({ NODE_ENV: 'production' })).toBe(true);
     expect(sessionCookieSecure({ NODE_ENV: 'development', ROCKETRENTAL_AUTH_COOKIE_SECURE: 'false' })).toBe(false);
+  });
+
+  it('uses the shared cookie security policy at the sign-in call site', () => {
+    const action = readFileSync(
+      path.join(process.cwd(), 'src/app/(auth)/sign-in/actions.ts'),
+      'utf8',
+    );
+    expect(action).toContain('secure: sessionCookieSecure()');
   });
 });

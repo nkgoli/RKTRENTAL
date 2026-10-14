@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { Alert } from '@/components/ui/Feedback';
@@ -156,7 +155,6 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
       {amountDue.totalDueCents > 0 ? (
         <PayForm
           leaseId={view.leaseId}
-          idempotencyKey={randomUUID()}
           totalDueCents={amountDue.totalDueCents}
           passFees={view.passFees}
           methods={view.methods}

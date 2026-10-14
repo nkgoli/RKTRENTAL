@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   MockCompsProvider,
   MockPaymentsProvider,
+  MockRentometerProvider,
   MockScreeningProvider,
 } from '../../src/lib/providers/mock';
 import { StripeTestPaymentsProvider } from '../../src/lib/providers/stripe';
@@ -69,6 +70,11 @@ describe('mock adapters', () => {
     });
     expect(comps).toHaveLength(10);
     expect(comps[0].monthlyRentCents).toBeGreaterThan(0);
+    const rentometer = new MockRentometerProvider(1);
+    expect(rentometer.name).toBe('rentometer');
+    expect((await rentometer.search({ postalCode: '78704', bedrooms: 2, limit: 10 })).length).toBe(
+      3,
+    );
   });
 });
 

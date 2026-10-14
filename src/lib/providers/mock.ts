@@ -79,6 +79,8 @@ export class MockScreeningProvider implements ScreeningProvider {
   readonly name = 'mock';
   private reports = new Map<string, ScreeningReportResult>();
 
+  constructor(readonly screeningPackage = 'smartmove-plus') {}
+
   async request(input: {
     applicationId: string;
     applicantName: string;
@@ -119,7 +121,8 @@ export class MockScreeningProvider implements ScreeningProvider {
 }
 
 export class MockCompsProvider implements CompsProvider {
-  readonly name = 'mock';
+  readonly name: string = 'mock';
+  constructor(readonly radiusMiles = 5) {}
   async search(input: {
     postalCode: string;
     bedrooms: number;
@@ -139,6 +142,10 @@ export class MockCompsProvider implements CompsProvider {
       bedrooms: input.bedrooms,
       squareFeet: input.squareFeet ?? 850,
       distanceMiles: Number(((index + 1) * 0.3).toFixed(1)),
-    }));
+    })).filter((comparable) => comparable.distanceMiles <= this.radiusMiles);
   }
+}
+
+export class MockRentometerProvider extends MockCompsProvider {
+  override readonly name: string = 'rentometer';
 }

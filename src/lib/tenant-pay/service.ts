@@ -1,6 +1,6 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
-import { readSettings, SETTINGS_PROVIDER } from '@/lib/integrations/settings';
+import { activeIntegration } from '@/lib/integrations/active';
 import {
   centsToDecimal,
   ensureRentCharges,
@@ -57,12 +57,12 @@ const methodLabel = (type: string, last4: string | null) =>
 
 async function passProcessingFees(organizationId: string, client: Client): Promise<boolean> {
   try {
-    const row = await client.providerConnection.findFirst({
-      where: { organizationId, kind: 'PAYMENTS', provider: SETTINGS_PROVIDER },
-    });
-    return readSettings('payments', row?.settings).passProcessingFees;
+    const { settings } = await activeIntegration(organizationId, 'payments', [], (args) =>
+      client.providerConnection.findMany(args),
+    );
+    return settings.passProcessingFees;
   } catch {
-    return readSettings('payments', undefined).passProcessingFees;
+    return true;
   }
 }
 

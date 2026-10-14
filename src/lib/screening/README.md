@@ -2,9 +2,7 @@
 
 ## Application decisions
 
-`recordDecision({ applicationId, decision, reason, actorId })` is the audit seam used by the applications server action. The action stores the final decision in `Application.status`; the current adapter emits a structured audit event until durable audit fields are added.
-
-The follow-up schema change should add these nullable fields to `Application`:
+`recordDecision({ organizationId, applicationId, decision, reason, actorId })` writes the final status and audit fields together. It only updates an application in `REVIEW` for the given organization:
 
 ```prisma
 decisionReason String?
@@ -12,11 +10,11 @@ decidedBy      String?
 decidedAt      DateTime?
 ```
 
-The follow-up can persist the same input alongside the status update, with `decidedBy` set to the authenticated actor's ID and `decidedAt` set when the decision is recorded.
+`decidedBy` is the authenticated actor's ID and `decidedAt` is the time of the decision.
 
 ## Screening provider webhooks
 
-The provider route should verify the signature, validate and normalize the provider payload, and claim the event in its idempotency store before calling the exported handler. Call `handleScreeningWebhook` only for a newly claimed event; repeated event IDs should return the route's duplicate response without applying the update again.
+The provider route verifies the signature and claims the event before calling the exported handler. Matching repeated deliveries can safely run the handler again, allowing a retry after an interrupted first attempt. The handler keeps report and application transitions idempotent.
 
 ```ts
 await handleScreeningWebhook({

@@ -323,9 +323,10 @@ export function rentStatus(input: {
   // Pending payments cover what is left (e.g. an ACH debit in flight): wait for the provider.
   if (balance.pendingCents >= balance.outstandingCents && balance.pendingCents > 0)
     return { status: 'PENDING', outstandingCents, rent };
+  if (autopay) return { status: 'AUTOPAY', outstandingCents, rent };
   if (isPastGrace(rent.dueDate, lease.graceDays, asOf))
     return { status: 'LATE', outstandingCents, rent };
-  return { status: autopay ? 'AUTOPAY' : 'PENDING', outstandingCents, rent };
+  return { status: 'PENDING', outstandingCents, rent };
 }
 
 // ---------------------------------------------------------------------------------------- refunds
@@ -370,21 +371,6 @@ export function planRefund(
 }
 
 // ---------------------------------------------------------------------------------------- payouts
-
-/** Payout rows carry no property column, so the link rides in Payout.status. */
-export function encodePayoutStatus(status: string, propertyId: string, month: string): string {
-  return `${status}|property:${propertyId}|period:${month}`;
-}
-
-export function decodePayoutStatus(value: string): {
-  status: string;
-  propertyId?: string;
-  month?: string;
-} {
-  const [status, ...rest] = value.split('|');
-  const find = (name: string) => rest.find((p) => p.startsWith(`${name}:`))?.slice(name.length + 1);
-  return { status, propertyId: find('property'), month: find('period') };
-}
 
 export type PayoutPlan = {
   propertyId: string;

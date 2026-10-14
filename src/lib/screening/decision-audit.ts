@@ -1,7 +1,10 @@
+import { db } from '@/lib/db/client';
+
 export type ApplicationDecision = 'APPROVED' | 'DECLINED';
 
 export type DecisionAuditInput = {
   applicationId: string;
+  organizationId: string;
   decision: ApplicationDecision;
   reason: string;
   actorId: string;
@@ -26,11 +29,23 @@ export function createDecisionAuditRecorder(
   };
 }
 
-// Temporary adapter until the follow-up schema adds durable decision audit fields.
-const temporaryDecisionAudit = createDecisionAuditRecorder((event) => {
-  console.info(JSON.stringify({ event: 'application.screening.decision', ...event }));
+const persistentDecisionAudit = createDecisionAuditRecorder(async (event) => {
+  const result = await db.application.updateMany({
+    where: {
+      id: event.applicationId,
+      organizationId: event.organizationId,
+      status: 'REVIEW',
+    },
+    data: {
+      status: event.decision,
+      decisionReason: event.reason,
+      decidedBy: event.actorId,
+      decidedAt: event.occurredAt,
+    },
+  });
+  if (result.count !== 1) throw new Error('Application decision could not be recorded');
 });
 
 export function recordDecision(input: DecisionAuditInput): Promise<void> {
-  return temporaryDecisionAudit.recordDecision(input);
+  return persistentDecisionAudit.recordDecision(input);
 }

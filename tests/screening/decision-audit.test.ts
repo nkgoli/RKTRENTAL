@@ -12,6 +12,7 @@ describe('screening decision audit', () => {
 
     await recorder.recordDecision({
       applicationId: 'application-olivia',
+      organizationId: 'organization-1',
       decision: 'APPROVED',
       reason: 'criteria-met',
       actorId: 'manager-jordan',
@@ -19,6 +20,7 @@ describe('screening decision audit', () => {
 
     expect(write).toHaveBeenCalledWith({
       applicationId: 'application-olivia',
+      organizationId: 'organization-1',
       decision: 'APPROVED',
       reason: 'criteria-met',
       actorId: 'manager-jordan',

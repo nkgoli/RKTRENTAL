@@ -1,6 +1,9 @@
 import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db/client';
-import { receiveWebhook, type WebhookProvider } from '@/lib/providers/webhooks';
+import { recordProviderHealth } from '@/lib/integrations/service';
+import { applyPaymentWebhook } from '@/lib/ledger/webhooks';
+import { receiveWebhook, verifyWebhook, type WebhookProvider } from '@/lib/providers/webhooks';
+import { handleScreeningWebhook, type ScreeningWebhookEvent } from '@/lib/screening/webhook';
 
 export const runtime = 'nodejs';
 
@@ -18,18 +21,28 @@ export async function POST(request: Request, context: { params: Promise<{ provid
   const signature = request.headers.get(
     name === 'stripe' ? 'stripe-signature' : 'x-mock-signature',
   );
+  let verified: ReturnType<typeof verifyWebhook> | undefined;
+  let healthKind: 'PAYMENTS' | 'SCREENING' = 'PAYMENTS';
+  let healthProvider: string = name;
+  let created = false;
   try {
+    verified = verifyWebhook(name, body, signature, secret);
+    const screening = verified.eventType.startsWith('screening.');
+    const payload = JSON.parse(body) as { data?: Record<string, unknown> };
+    healthKind = screening ? 'SCREENING' : 'PAYMENTS';
+    healthProvider =
+      screening && typeof payload.data?.provider === 'string' ? payload.data.provider : name;
     const result = await receiveWebhook(name, body, signature, secret, {
       connected: async (organizationId, webhookProvider) => {
         const connection = await db.providerConnection.findFirst({
           where: {
             organizationId,
-            kind: 'PAYMENTS',
-            provider: webhookProvider,
+            kind: healthKind,
+            provider: healthProvider,
             status: 'CONNECTED',
           },
         });
-        return Boolean(connection);
+        return Boolean(connection) && (!screening || webhookProvider === 'mock');
       },
       insert: async (event) => {
         try {
@@ -57,8 +70,64 @@ export async function POST(request: Request, context: { params: Promise<{ provid
         }
       },
     });
+    created = result === 'created';
+    // Replaying a matching delivery is safe in both stores and repairs an interrupted first attempt.
+    if (screening) {
+      const data = payload.data ?? {};
+      await handleScreeningWebhook({
+        externalEventId: verified.externalEventId,
+        organizationId: verified.organizationId,
+        applicationId: data.applicationId,
+        provider: healthProvider,
+        providerReference: data.providerReference,
+        status: data.status,
+        creditScore: data.creditScore,
+        background: data.background,
+        eviction: data.eviction,
+      } as ScreeningWebhookEvent);
+    } else {
+      await applyPaymentWebhook(
+        {
+          provider: name,
+          organizationId: verified.organizationId,
+          eventType: verified.eventType,
+        },
+        body,
+      );
+    }
+    await recordProviderHealth(
+      verified.organizationId,
+      healthKind,
+      healthProvider,
+      { webhook: 'ok' },
+      db.providerConnection,
+    );
     return Response.json({ received: true, duplicate: result === 'duplicate' });
   } catch (error) {
+    if (verified) {
+      if (created) {
+        await db.webhookEvent
+          .deleteMany({
+            where: {
+              provider: verified.provider,
+              externalEventId: verified.externalEventId,
+              organizationId: verified.organizationId,
+              payloadHash: verified.payloadHash,
+            },
+          })
+          .catch(() => undefined);
+      }
+      await recordProviderHealth(
+        verified.organizationId,
+        healthKind,
+        healthProvider,
+        {
+          webhook: 'failed',
+          error: error instanceof Error ? error.message : 'Webhook processing failed',
+        },
+        db.providerConnection,
+      ).catch(() => undefined);
+    }
     if (error instanceof Error && /signature|timestamp|JSON|event fields/.test(error.message))
       return Response.json({ error: 'Invalid webhook' }, { status: 400 });
     if (error instanceof Error && error.message === 'Provider connection unavailable')

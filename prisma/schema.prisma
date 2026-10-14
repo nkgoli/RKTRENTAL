@@ -80,6 +80,7 @@ enum ProviderKind {
   BANKING
   SCREENING
   COMPS
+  EMAIL
 }
 
 enum ProviderConnectionStatus {
@@ -128,6 +129,7 @@ model Organization {
   maintenancePhotos   MaintenancePhoto[]
   vendors             Vendor[]
   maintenanceEvents   MaintenanceEvent[]
+  emailDeliveries     EmailDelivery[]
   providerConnections ProviderConnection[]
   webhookEvents       WebhookEvent[]
   paymentMethods      PaymentMethod[]
@@ -154,6 +156,7 @@ model User {
   ownedProperties   Property[]         @relation("PropertyOwner")
   tenant            Tenant?
   maintenanceEvents MaintenanceEvent[]
+  emailNotificationsEnabled Boolean @default(true)
 
   @@unique([organizationId, email])
   @@unique([id, organizationId])
@@ -444,6 +447,23 @@ model MaintenanceEvent {
   createdAt            DateTime           @default(now())
 
   @@index([organizationId, maintenanceRequestId, createdAt])
+}
+
+// The mock email outbox also enforces one delivery per event and recipient.
+model EmailDelivery {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  eventKey       String
+  kind           String
+  recipient      String
+  subject        String
+  body           String
+  provider       String       @default("mock")
+  sentAt         DateTime     @default(now())
+
+  @@unique([organizationId, eventKey, recipient])
+  @@index([organizationId, sentAt])
 }
 
 // settings contain non-secret connection metadata only. Credentials belong in environment variables.

@@ -1,0 +1,111 @@
+.page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background: var(--design-background);
+}
+
+.card {
+  width: min(100%, 440px);
+  padding: 32px;
+  border: 1px solid var(--rr-border);
+  border-radius: 12px;
+  background: var(--design-surface);
+  box-shadow: var(--rr-shadow);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+  color: var(--design-text);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.brandMark {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: var(--design-radius);
+  background: var(--design-primary);
+  color: white;
+  font-weight: 700;
+}
+
+.eyebrow {
+  margin-bottom: 6px;
+  color: var(--design-muted);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.card h1 {
+  margin-bottom: 8px;
+  font-size: 26px;
+}
+
+.description {
+  margin-bottom: 24px;
+  color: var(--design-muted);
+}
+
+.form {
+  display: grid;
+  gap: 18px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  color: var(--design-text);
+  font-weight: 500;
+}
+
+.field input {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--rr-border-strong);
+  border-radius: var(--design-radius);
+  background: var(--design-surface);
+  color: var(--design-text);
+  font: inherit;
+}
+
+.field input:focus-visible {
+  outline: 3px solid var(--rr-primary-tint);
+  border-color: var(--design-primary);
+}
+
+.error,
+.success {
+  margin-bottom: 18px;
+  padding: 10px 12px;
+  border-radius: var(--design-radius);
+}
+
+.error {
+  background: var(--rr-bad-bg);
+  color: var(--rr-bad);
+}
+
+.success {
+  background: var(--rr-ok-bg);
+  color: var(--rr-ok);
+}
+
+.footnote {
+  margin-top: 22px;
+  color: var(--design-muted);
+  font-size: 12px;
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 24px;
+  }
+}

@@ -76,7 +76,8 @@ mode only) and a deployable Docker image.
   `eslint-config-next` dependency chains; addressing them requires breaking
   upgrades.
 - The Docker image is built in CI but has not been verified locally.
-- The sample ledger contains income for August through October 2026 only.
+- Most sample leases have income only for August through October 2026;
+  Alex Rivera's tenant history extends back to December 2025.
 - ROI calculations assume 3% annual property appreciation.
 
 ## [0.1.0] - 2026-10-01

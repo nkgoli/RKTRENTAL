@@ -1,11 +1,10 @@
 import Link from 'next/link';
 import { EmptyState } from '@/components/RouteStates';
-import { redirect } from 'next/navigation';
 import { Avatar, Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { db } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/server-session';
+import { requireManagerRole } from '@/lib/auth/access';
 import { hasCurrentConsent, type ApplicationStatus } from '@/lib/screening/policy';
 import { recordDecision, requestScreening } from './actions';
 import styles from './applications.module.css';
@@ -38,8 +37,7 @@ function objectSummary(value: unknown): Record<string, unknown> {
 }
 
 export default async function ApplicationsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const [session, params] = await Promise.all([getSession(), searchParams]);
-  if (!session || !['MANAGER', 'OWNER', 'ADMIN'].includes(session.role)) redirect('/sign-in');
+  const [session, params] = await Promise.all([requireManagerRole(), searchParams]);
   const q = params.q?.trim().slice(0, 100) ?? '';
   const status = statuses.includes(params.status as ApplicationStatus) ? params.status as ApplicationStatus : undefined;
   const where = {

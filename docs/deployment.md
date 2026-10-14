@@ -7,7 +7,7 @@ runs OCI containers and can reach a Postgres 16 database can serve it.
 ## Build and run with Docker
 
 ```bash
-cp .env.example .env   # fill in real values, see the table below
+# create .env from the block in docs/environment.md; replace local placeholders
 docker build -t rocketrental:1.0.0 .
 docker run --env-file .env -p 3000:3000 rocketrental:1.0.0
 ```
@@ -88,7 +88,7 @@ the default everywhere is **sandbox**:
   outbox (`EmailDelivery`); no mail leaves the system.
 
 Before enabling any live provider, review its adapter, move the real keys
-into your secret store (never into `.env.example` or an image layer), and
+into your secret store (never into committed documentation or an image layer), and
 re-test charges, payouts and screening in its sandbox mode first.
 
 ## Webhooks

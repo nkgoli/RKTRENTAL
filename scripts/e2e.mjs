@@ -27,6 +27,8 @@ const env = {
   ROCKETRENTAL_DB_PORT: dbPort,
   ROCKETRENTAL_AUTH_SECRET:
     process.env.ROCKETRENTAL_AUTH_SECRET ?? 'e2e-only-secret-not-for-production-use-0123456789',
+  ROCKETRENTAL_SANDBOX: process.env.ROCKETRENTAL_SANDBOX ?? 'true',
+  ROCKETRENTAL_AUTH_COOKIE_SECURE: process.env.ROCKETRENTAL_AUTH_COOKIE_SECURE ?? 'false',
 };
 const node = process.execPath;
 const bin = (...p) => path.join(root, 'node_modules', ...p);
@@ -95,7 +97,7 @@ try {
     if (install.status !== 0) throw new Error('npm install --prefix prisma failed');
     console.log('[e2e] starting embedded Postgres');
     dbDir = mkdtempSync(path.join(os.tmpdir(), 'rocketrental-e2e-'));
-    db = spawn(node, ['prisma/local-postgres.mjs'], {
+    db = spawn(node, ['--import', './prisma/os-userinfo.mjs', 'prisma/local-postgres.mjs'], {
       cwd: root,
       env: { ...env, ROCKETRENTAL_DB_DIR: dbDir },
       stdio: ['pipe', 'pipe', 'inherit'],
@@ -110,7 +112,7 @@ try {
   run('migrate', [bin('prisma', 'build', 'index.js'), 'migrate', 'deploy']);
   run(
     'seed',
-    ['--import', './prisma/os-userinfo.mjs', bin('tsx', 'dist', 'cli.mjs'), 'prisma/seed.ts'],
+    ['--import', './prisma/os-userinfo.mjs', '--import', 'tsx', 'prisma/seed.ts'],
     { NODE_ENV: 'development' },
   );
   console.log(`[e2e] starting Next dev server on ${baseURL}`);

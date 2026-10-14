@@ -24,7 +24,25 @@ export interface UploadInput {
   kind?: DocumentKindValue;
   body: Uint8Array;
 }
+export interface SignedUploadInput extends Omit<UploadInput, 'body'> {
+  sizeBytes: number;
+}
+export interface CompleteSignedUploadInput extends SignedUploadInput {
+  storageKey: string;
+}
 const KINDS: DocumentKindValue[] = ['LEASE', 'NOTICE', 'INSPECTION', 'ID', 'PHOTO', 'OTHER'];
+export const TENANT_UPLOAD_KINDS: readonly DocumentKindValue[] = [
+  'NOTICE',
+  'INSPECTION',
+  'PHOTO',
+  'OTHER',
+];
+
+function assertUploadAllowed(actor: FileActor, kind: DocumentKindValue): void {
+  if (actor.role === 'OWNER') throw new StorageError('Owners have read-only access', 'FORBIDDEN', 403);
+  if (actor.role === 'TENANT' && !TENANT_UPLOAD_KINDS.includes(kind))
+    throw new StorageError('Tenants cannot upload this document kind', 'FORBIDDEN', 403);
+}
 
 export class FileService {
   constructor(
@@ -48,10 +66,24 @@ export class FileService {
       unitId: t.kind === 'unit' ? t.id : null,
     };
   }
+  private assertSignedUploadKey(actor: FileActor, target: FileTarget, storageKey: string): void {
+    const prefix = `org/${actor.organizationId}/${target.kind}/${target.id}/`;
+    const keySuffix = storageKey.startsWith(prefix) ? storageKey.slice(prefix.length) : '';
+    // Keys are generated with a random UUID followed by one sanitized filename segment.
+    // The target prefix prevents a completion request from deleting another target's object.
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}-.+$/i.test(
+        keySuffix,
+      ) ||
+      keySuffix.includes('/')
+    )
+      throw new StorageError('Upload key does not belong to this target', 'FORBIDDEN', 403);
+  }
   async upload(actor: FileActor, input: UploadInput): Promise<StoredDocument> {
     await assertTargetAccess(this.access, actor, input.target);
     const kind = input.kind ?? 'OTHER';
     if (!KINDS.includes(kind)) throw new StorageError(`Unknown kind "${kind}"`, 'VALIDATION', 400);
+    assertUploadAllowed(actor, kind);
     const { canonicalMime } = validateUpload({
       fileName: input.fileName,
       mimeType: input.mimeType,
@@ -76,18 +108,22 @@ export class FileService {
       throw e;
     }
   }
-  /** Signed direct-upload: validates metadata, reserves the Document row, returns PUT URL (S3 only). */
+  /** Signed direct-upload: validates metadata and returns a PUT URL without recording a Document. */
   async createSignedUpload(
     actor: FileActor,
-    input: Omit<UploadInput, 'body'> & { sizeBytes: number },
-  ): Promise<{ document: StoredDocument; uploadUrl: string; storageKey: string }> {
+    input: SignedUploadInput,
+  ): Promise<{ uploadUrl: string; storageKey: string }> {
     await assertTargetAccess(this.access, actor, input.target);
+    const kind = input.kind ?? 'OTHER';
+    if (!KINDS.includes(kind)) throw new StorageError(`Unknown kind "${kind}"`, 'VALIDATION', 400);
+    assertUploadAllowed(actor, kind);
     const { canonicalMime } = validateUploadMeta(input);
     const name = sanitizeFileName(input.fileName);
     const storageKey = this.keyFor(actor, input.target, name);
     const uploadUrl = await this.storage.getSignedUrl(storageKey, {
       method: 'PUT',
       contentType: canonicalMime,
+      contentLength: input.sizeBytes,
     });
     if (!uploadUrl)
       throw new StorageError(
@@ -95,20 +131,49 @@ export class FileService {
         'CONFIG',
         501,
       );
-    const document = await this.repo.create({
-      organizationId: actor.organizationId,
-      ...this.targetFields(input.target),
-      kind: input.kind ?? 'OTHER',
-      name,
-      storageKey,
-      sizeBytes: input.sizeBytes,
-      mimeType: canonicalMime,
-    });
-    return { document, uploadUrl, storageKey };
+    return { uploadUrl, storageKey };
+  }
+  /** Verifies the uploaded object before recording it; every failed completion removes the object. */
+  async completeSignedUpload(
+    actor: FileActor,
+    input: CompleteSignedUploadInput,
+  ): Promise<StoredDocument> {
+    await assertTargetAccess(this.access, actor, input.target);
+    this.assertSignedUploadKey(actor, input.target, input.storageKey);
+    try {
+      const kind = input.kind ?? 'OTHER';
+      if (!KINDS.includes(kind)) throw new StorageError(`Unknown kind "${kind}"`, 'VALIDATION', 400);
+      assertUploadAllowed(actor, kind);
+      const { canonicalMime } = validateUploadMeta(input);
+      const object = await this.storage.get(input.storageKey);
+      if (!object) throw notFoundError('Uploaded file not found');
+      if (object.contentType?.trim().toLowerCase() !== canonicalMime)
+        throw new StorageError('Stored content type does not match the expected file type');
+      validateUpload({
+        fileName: input.fileName,
+        mimeType: canonicalMime,
+        sizeBytes: input.sizeBytes,
+        body: object.body,
+      });
+      const name = sanitizeFileName(input.fileName);
+      return await this.repo.create({
+        organizationId: actor.organizationId,
+        ...this.targetFields(input.target),
+        kind,
+        name,
+        storageKey: input.storageKey,
+        sizeBytes: object.body.byteLength,
+        mimeType: canonicalMime,
+      });
+    } catch (e) {
+      await this.storage.delete(input.storageKey).catch(() => undefined);
+      throw e;
+    }
   }
   async list(actor: FileActor, target: FileTarget): Promise<StoredDocument[]> {
     await assertTargetAccess(this.access, actor, target);
-    return this.repo.listByTarget(actor.organizationId, target);
+    const documents = await this.repo.listByTarget(actor.organizationId, target);
+    return actor.role === 'TENANT' ? documents.filter((doc) => doc.kind !== 'ID') : documents;
   }
   async getDocument(actor: FileActor, id: string): Promise<StoredDocument> {
     const doc = await this.repo.findById(actor.organizationId, id);
@@ -121,13 +186,15 @@ export class FileService {
     id: string,
   ): Promise<{ document: StoredDocument; body: Uint8Array; signedUrl: string | null }> {
     const document = await this.getDocument(actor, id);
-    const signedUrl = await this.storage.getSignedUrl(document.storageKey, { method: 'GET' });
-    const obj = signedUrl ? null : await this.storage.get(document.storageKey);
-    if (!signedUrl && !obj) throw notFoundError('File content not found');
-    return { document, body: obj?.body ?? new Uint8Array(), signedUrl };
+    // Proxy downloads through this origin so the response gets a trusted MIME type,
+    // attachment policy and nosniff header instead of relying on bucket response headers.
+    const obj = await this.storage.get(document.storageKey);
+    if (!obj) throw notFoundError('File content not found');
+    return { document, body: obj.body, signedUrl: null };
   }
   async delete(actor: FileActor, id: string): Promise<void> {
-    if (actor.role === 'TENANT') throw new StorageError('Forbidden', 'FORBIDDEN', 403);
+    if (actor.role !== 'MANAGER')
+      throw new StorageError('Forbidden', 'FORBIDDEN', 403);
     const document = await this.getDocument(actor, id);
     await this.storage.delete(document.storageKey);
     await this.repo.delete(document.id);

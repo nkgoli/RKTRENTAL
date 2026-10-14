@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import { db } from '@/lib/db/client';
-import { buildLeaseAccessWhere, canAccessRole, roleHome } from './policy';
+import { buildLeaseAccessWhere, canAccessRole, canWriteAsRole, roleHome } from './policy';
 import { getSession } from './server-session';
 import type { AuthRole, AuthSession } from './session';
 
@@ -18,11 +18,22 @@ export async function requireManagerRole(): Promise<AuthSession> {
   return session;
 }
 
+export async function requireManagerWriteRole(): Promise<AuthSession> {
+  const session = await getSession();
+  if (!session) redirect('/sign-in');
+  if (!canWriteAsRole(session.role)) redirect(roleHome(session.role));
+  return session;
+}
+
 export async function requireTenantRole(): Promise<AuthSession> {
   return requireRole('TENANT');
 }
 
 export async function findLeaseAccess(session: AuthSession, leaseId: string) {
+  // Owner-scoped policy helpers are retained for a future owner view, but no current
+  // manager API or page may expose lease data to owners.
+  if (session.role === 'OWNER') return null;
+
   const where = buildLeaseAccessWhere(session, leaseId);
   if (!where) return null;
 
@@ -33,7 +44,7 @@ export async function findLeaseAccess(session: AuthSession, leaseId: string) {
 }
 
 export async function requireLeaseAccess(leaseId: string) {
-  const session = await requireRole('MANAGER', 'OWNER', 'TENANT');
+  const session = await requireRole('MANAGER', 'TENANT');
   const lease = await findLeaseAccess(session, leaseId);
   if (!lease) notFound();
   return { ...lease, tenantId: session.tenantId };

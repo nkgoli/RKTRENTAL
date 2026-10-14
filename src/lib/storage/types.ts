@@ -72,7 +72,12 @@ export interface StorageAdapter {
   /** Signed URL for direct client transfer; null when the driver cannot sign (local dev). */
   getSignedUrl(
     key: string,
-    opts: { method: 'GET' | 'PUT'; expiresInSeconds?: number; contentType?: string },
+    opts: {
+      method: 'GET' | 'PUT';
+      expiresInSeconds?: number;
+      contentType?: string;
+      contentLength?: number;
+    },
   ): Promise<string | null>;
 }
 

@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
+import { createHash } from 'node:crypto';
 import { db } from '@/lib/db/client';
 import { activeIntegration } from '@/lib/integrations/active';
 import {
@@ -27,6 +28,32 @@ import {
 type Client = PrismaClient;
 
 export class TenantPayError extends Error {}
+
+/** Stable per ledger snapshot, so parallel retries cannot pick a caller-controlled provider key. */
+export function serverPaymentIdempotencyKey(input: {
+  organizationId: string;
+  tenantId: string;
+  leaseId: string;
+  amountCents: number;
+  method: PayMethodType;
+  charges: Array<{ id?: string; amountCents: number; dueDate: Date; description?: string | null }>;
+  payments: Array<{ id?: string; amountCents: number; status: string; providerReference?: string | null }>;
+}): string {
+  const snapshot = JSON.stringify({
+    organizationId: input.organizationId,
+    tenantId: input.tenantId,
+    leaseId: input.leaseId,
+    amountCents: input.amountCents,
+    method: input.method,
+    charges: input.charges
+      .map((charge) => [charge.id ?? '', charge.amountCents, charge.dueDate.toISOString(), charge.description ?? ''])
+      .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+    payments: input.payments
+      .map((payment) => [payment.id ?? '', payment.amountCents, payment.status, payment.providerReference ?? ''])
+      .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+  });
+  return `tenant-pay-${createHash('sha256').update(snapshot).digest('hex')}`;
+}
 
 export type SavedMethod = {
   id: string;
@@ -230,7 +257,8 @@ export async function payRent(
     /** Provider token from hosted fields, or omit and pass paymentMethodId for a saved method. */
     providerToken?: string;
     paymentMethodId?: string;
-    idempotencyKey: string;
+    /** Ignored for provider idempotency; retained for backwards-compatible action payloads. */
+    idempotencyKey?: string;
     saveMethod?: boolean;
   },
   options: { client?: Client; provider?: PaymentsProvider; now?: Date } = {},
@@ -238,7 +266,6 @@ export async function payRent(
   const client = options.client ?? db;
   const now = options.now ?? new Date();
   const { organizationId, tenantId, leaseId } = input;
-  if (!input.idempotencyKey.trim()) throw new TenantPayError('Idempotency key required');
   const lease = await findTenantLeaseById(client, organizationId, tenantId, leaseId);
   if (!lease) throw new TenantPayError('Lease not found');
   let token: string;
@@ -291,6 +318,15 @@ export async function payRent(
   const chargedCents = amountCents + feeCents;
 
   const provider = options.provider ?? (await paymentsProvider(organizationId));
+  const serverKey = serverPaymentIdempotencyKey({
+    organizationId,
+    tenantId,
+    leaseId,
+    amountCents,
+    method: input.method,
+    charges: ledger.charges,
+    payments: ledger.payments,
+  });
   const tenant = lease.tenants.find((t) => t.tenantId === tenantId)?.tenant;
   const customer = await provider.createCustomer({
     organizationId,
@@ -302,7 +338,7 @@ export async function payRent(
     paymentMethodToken: token,
     type: input.method,
     money: { amountCents: chargedCents, currency: 'usd' },
-    idempotencyKey: input.idempotencyKey,
+    idempotencyKey: serverKey,
   });
   if (result.status === 'failed' || result.status === 'requires_action')
     throw new TenantPayError('The provider could not complete this payment');

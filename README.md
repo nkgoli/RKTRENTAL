@@ -13,7 +13,7 @@ needed: every external provider runs as a sandbox/mock adapter by default.
 
 ```bash
 npm install
-cp .env.example .env   # sandbox providers, no live keys (PowerShell: Copy-Item .env.example .env)
+# create .env from the block in docs/environment.md (sandbox providers, no live keys)
 npm run db:local       # terminal 1: embedded Postgres 16 on :5432, leave it running
 npm run db:migrate     # terminal 2: apply Prisma migrations (prisma migrate deploy)
 npm run db:seed        # seed the demo portfolio and accounts
@@ -79,6 +79,7 @@ is irreconcilable, run `npm run db:reset` and start the preview again.
 
 ## Documentation
 
+- [Environment configuration](docs/environment.md) — local template and variable explanations.
 - [Deployment guide](docs/deployment.md) — environment variables, Postgres,
   S3-compatible storage, sandbox vs live providers, webhooks, Docker.
 - [Manager help](docs/managers.md) — day-to-day work for property managers.

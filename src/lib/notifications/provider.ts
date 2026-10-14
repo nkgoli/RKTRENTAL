@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
+import { isSandboxEnabled } from '@/lib/providers/sandbox';
 import type { EmailMessage } from './messages';
 
 export interface EmailProvider {
@@ -41,10 +42,11 @@ export async function emailProvider(
       : undefined;
   if (
     connection?.provider === 'mock' &&
+    isSandboxEnabled() &&
     (mode === undefined || mode === 'mock' || mode === 'sandbox')
   )
     return new MockEmailProvider(client);
-  if (!connection && process.env.NODE_ENV !== 'production') return new MockEmailProvider(client);
+  if (!connection && isSandboxEnabled()) return new MockEmailProvider(client);
   throw new Error(
     'Email provider unavailable; connect the mock email provider for sandbox delivery',
   );

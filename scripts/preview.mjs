@@ -1,7 +1,7 @@
 // Managed Preview launcher: embedded Postgres -> migrate -> seed -> next start.
 // Run `npm run build` first. Honours PORT (default 3000) and ROCKETRENTAL_DB_PORT (default 5432).
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -15,6 +15,8 @@ const env = {
   ROCKETRENTAL_DB_PORT: dbPort,
   ROCKETRENTAL_AUTH_SECRET:
     process.env.ROCKETRENTAL_AUTH_SECRET ?? 'preview-only-secret-not-for-production-use-0123456789',
+  ROCKETRENTAL_SANDBOX: process.env.ROCKETRENTAL_SANDBOX ?? 'true',
+  ROCKETRENTAL_AUTH_COOKIE_SECURE: process.env.ROCKETRENTAL_AUTH_COOKIE_SECURE ?? 'false',
 };
 const node = process.execPath;
 const bin = (...p) => path.join(root, 'node_modules', ...p);
@@ -50,6 +52,10 @@ try {
   if (!existsSync(path.join(root, '.next', 'BUILD_ID'))) sh('build', 'npm run build');
 
   if (!process.env.DATABASE_URL) {
+    // Windows sandbox hosts can require the database directory to exist before initdb starts.
+    mkdirSync(env.ROCKETRENTAL_DB_DIR ?? path.join(root, 'prisma', '.local-postgres'), {
+      recursive: true,
+    });
     console.log('[preview] installing embedded Postgres');
     const install = spawnSync('npm install --prefix prisma', {
       cwd: root,
@@ -58,7 +64,7 @@ try {
     });
     if (install.status !== 0) throw new Error('npm install --prefix prisma failed');
     console.log('[preview] starting embedded Postgres');
-    db = spawn(node, ['prisma/local-postgres.mjs'], {
+    db = spawn(node, ['--import', './prisma/os-userinfo.mjs', 'prisma/local-postgres.mjs'], {
       cwd: root,
       env,
       stdio: ['pipe', 'pipe', 'inherit'],
@@ -88,7 +94,7 @@ try {
   }
   run(
     'seed',
-    ['--import', './prisma/os-userinfo.mjs', bin('tsx', 'dist', 'cli.mjs'), 'prisma/seed.ts'],
+    ['--import', './prisma/os-userinfo.mjs', '--import', 'tsx', 'prisma/seed.ts'],
     { NODE_ENV: 'development' },
   );
   console.log('[preview] starting Next.js');

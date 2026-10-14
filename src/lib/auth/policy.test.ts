@@ -8,9 +8,9 @@ import {
 } from './policy';
 
 describe('authentication access policy', () => {
-  it('allows only managers and owners into manager routes', () => {
+  it('allows only managers into manager routes', () => {
     expect(canAccessRole('MANAGER', 'MANAGER')).toBe(true);
-    expect(canAccessRole('OWNER', 'MANAGER')).toBe(true);
+    expect(canAccessRole('OWNER', 'MANAGER')).toBe(false);
     expect(canAccessRole('TENANT', 'MANAGER')).toBe(false);
   });
 
@@ -42,8 +42,10 @@ describe('authentication access policy', () => {
   it('rejects cross-role and external post-login destinations', () => {
     expect(safeRedirectTarget('/dashboard/properties', 'MANAGER')).toBe('/dashboard/properties');
     expect(safeRedirectTarget('/dashboard', 'TENANT')).toBe('/home');
+    expect(safeRedirectTarget('/dashboard', 'OWNER')).toBe('/sign-out');
     expect(safeRedirectTarget('//attacker.example', 'TENANT')).toBe('/home');
     expect(safeRedirectTarget('/sign-in', 'MANAGER')).toBe('/dashboard');
+    expect(roleHome('OWNER')).toBe('/sign-out');
     expect(roleHome('ADMIN')).toBe('/sign-out');
   });
 });

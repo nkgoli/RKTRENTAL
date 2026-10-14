@@ -132,8 +132,11 @@ export async function connectProvider(
   const definition = findProvider(kind, provider);
   if (!definition) throw new IntegrationError('Unknown provider');
   const live = Boolean(env[definition.credentialEnv]);
-  if (!live && env.NODE_ENV === 'production')
-    throw new IntegrationError(`Set ${definition.credentialEnv} in the server environment first`);
+  const sandbox = env.ROCKETRENTAL_SANDBOX === 'true';
+  if (!live && !sandbox)
+    throw new IntegrationError(
+      `Set ${definition.credentialEnv} for a live provider or enable ROCKETRENTAL_SANDBOX=true`,
+    );
 
   const existing = (await store.findMany({ where: { organizationId } })).find(
     (row) => row.kind === definition.kind && row.provider === definition.provider,

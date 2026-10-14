@@ -78,11 +78,13 @@ export function fileResponse(
   disposition: 'inline' | 'attachment',
 ): Response {
   const encoded = encodeURIComponent(d.name);
+  const inlineSafe = ['application/pdf', 'image/jpeg', 'image/png'].includes(d.mimeType);
+  const effectiveDisposition = disposition === 'inline' && inlineSafe ? 'inline' : 'attachment';
   return new Response(Buffer.from(body), {
     headers: {
       'content-type': d.mimeType,
       'content-length': String(body.byteLength),
-      'content-disposition': `${disposition}; filename*=UTF-8''${encoded}`,
+      'content-disposition': `${effectiveDisposition}; filename*=UTF-8''${encoded}`,
       'cache-control': 'private, no-store',
       'x-content-type-options': 'nosniff',
     },

@@ -6,16 +6,13 @@ import {
   MockScreeningProvider,
 } from './mock';
 import { StripeTestPaymentsProvider } from './stripe';
+import { isSandboxEnabled } from './sandbox';
 import type { CompsProvider, PaymentsProvider, ScreeningProvider } from './types';
 
 export type ProviderConnectionSettings = {
   accountId?: string;
   webhookEndpointId?: string;
 };
-
-function isDevelopment() {
-  return process.env.NODE_ENV !== 'production';
-}
 
 export async function paymentsProvider(organizationId: string): Promise<PaymentsProvider> {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -28,7 +25,7 @@ export async function paymentsProvider(organizationId: string): Promise<Payments
     const settings = connection.settings as ProviderConnectionSettings;
     return new StripeTestPaymentsProvider(key, fetch, settings?.accountId);
   }
-  if (isDevelopment() && (!connection || connection.provider === 'mock'))
+  if (isSandboxEnabled() && (!connection || connection.provider === 'mock'))
     return new MockPaymentsProvider();
   throw new Error('Payments provider unavailable');
 }
@@ -40,7 +37,7 @@ export async function screeningProvider(organizationId: string): Promise<Screeni
     'mock',
   ]);
   if (
-    isDevelopment() &&
+    isSandboxEnabled() &&
     (!connection ||
       connection.provider === 'mock' ||
       connection.provider === 'transunion' ||
@@ -56,8 +53,8 @@ export async function compsProvider(organizationId: string): Promise<CompsProvid
     'rentrange',
     'mock',
   ]);
-  // Comps are public market data with no credentials or money movement, so the keyless sandbox
-  // adapter also serves production until a live rent comps adapter is wired in.
+  if (!isSandboxEnabled()) throw new Error('Mock comps provider requires ROCKETRENTAL_SANDBOX=true');
+  // No live rent comps adapter is wired in yet; mock market data is sandbox-only.
   if (connection?.provider === 'rentometer')
     return new MockRentometerProvider(settings.radiusMiles);
   return new MockCompsProvider(settings.radiusMiles);

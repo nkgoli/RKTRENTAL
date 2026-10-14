@@ -190,8 +190,7 @@ describe('tenant lease lookup', () => {
 describe('tenant lease documents', () => {
   it("lists only the tenant's own lease files and hides unit photos", async () => {
     const { service } = fileService();
-    const alexActor = { ...alex };
-    await service.upload(alexActor, {
+    await service.upload(manager, {
       target: { kind: 'lease', id: 'lease-alex' },
       fileName: 'Signed lease.pdf',
       mimeType: 'application/pdf',
@@ -217,7 +216,7 @@ describe('tenant lease documents', () => {
   it("refuses to preview or download another tenant's document", async () => {
     const { service } = fileService();
     const blakeDoc = await service.upload(
-      { ...blake },
+      manager,
       {
         target: { kind: 'lease', id: 'lease-blake' },
         fileName: 'Blake lease.pdf',
@@ -239,7 +238,7 @@ describe('tenant lease documents', () => {
   it('loadTenantLease returns only the signed-in tenant lease with its documents', async () => {
     const { service } = fileService();
     await service.upload(
-      { ...alex },
+      manager,
       {
         target: { kind: 'lease', id: 'lease-alex' },
         fileName: 'alex.pdf',
@@ -249,7 +248,7 @@ describe('tenant lease documents', () => {
       },
     );
     await service.upload(
-      { ...blake },
+      manager,
       {
         target: { kind: 'lease', id: 'lease-blake' },
         fileName: 'blake.pdf',

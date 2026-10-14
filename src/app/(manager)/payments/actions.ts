@@ -1,5 +1,6 @@
 'use server';
 
+import { randomUUID } from 'node:crypto';
 import { redirect } from 'next/navigation';
 import { requireManagerRole } from '@/lib/auth/access';
 import {
@@ -36,7 +37,7 @@ export async function recordPaymentAction(data: FormData) {
       organizationId: session.organizationId,
       leaseId: text(data, 'leaseId'),
       amountCents: cents,
-      idempotencyKey: text(data, 'key'),
+      idempotencyKey: randomUUID(),
     });
     back(result.duplicate ? 'payment-duplicate' : 'payment-recorded');
   } catch (error) {
@@ -68,7 +69,7 @@ export async function refundPaymentAction(data: FormData) {
     const result = await refundPayment({
       organizationId: session.organizationId,
       paymentId: text(data, 'paymentId'),
-      idempotencyKey: text(data, 'key'),
+      idempotencyKey: randomUUID(),
     });
     back(result.duplicate ? 'refund-duplicate' : 'refunded', text(data, 'month'));
   } catch (error) {

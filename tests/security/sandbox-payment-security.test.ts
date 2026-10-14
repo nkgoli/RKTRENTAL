@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { completeMockSigning } from '../../src/lib/esign/service';
 import { getEsignProvider } from '../../src/lib/esign/mock';
 import { isSandboxEnabled } from '../../src/lib/providers/sandbox';
 import { serverPaymentIdempotencyKey } from '../../src/lib/tenant-pay/service';
@@ -15,6 +16,17 @@ describe('sandbox-only mock integration selection', () => {
     expect(() => getEsignProvider()).toThrow(/sandbox-only/);
     vi.stubEnv('ROCKETRENTAL_SANDBOX', 'true');
     expect(getEsignProvider().name).toBe('mock');
+  });
+
+  it('refuses mock signing when the explicit sandbox flag is absent', async () => {
+    vi.stubEnv('ROCKETRENTAL_SANDBOX', 'false');
+    await expect(
+      completeMockSigning(
+        'org-1',
+        { subjectId: 'manager-1', organizationId: 'org-1', role: 'MANAGER' },
+        'lease-1',
+      ),
+    ).rejects.toThrow('Mock signing requires ROCKETRENTAL_SANDBOX=true');
   });
 });
 

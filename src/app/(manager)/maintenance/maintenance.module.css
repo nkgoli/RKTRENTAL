@@ -1,0 +1,103 @@
+.board {
+  min-width: 0;
+}
+.ticketContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scroll-margin-top: 24px;
+}
+.photo,
+.photoEmpty {
+  height: 78px;
+  border-radius: var(--design-radius);
+  background-color: #e2e8f0;
+  background-position: center;
+  background-size: cover;
+  position: relative;
+}
+.photoEmpty {
+  display: grid;
+  place-items: center;
+  color: var(--design-muted);
+  font-size: 12px;
+}
+.photo :global(.caption) {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #fff;
+  background: rgb(15 23 42 / 0.7);
+  font-size: 12px;
+}
+.description {
+  color: var(--design-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.controls {
+  border-top: 1px solid var(--rr-border);
+  padding-top: 8px;
+}
+.controls summary {
+  color: var(--design-primary);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+.compactForm {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 10px;
+  font-size: 12px;
+}
+.compactForm input,
+.compactForm select,
+.compactForm textarea {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--rr-border-strong);
+  border-radius: 6px;
+  padding: 5px 6px;
+  background: #fff;
+  font: inherit;
+}
+.compactForm textarea {
+  min-height: 60px;
+}
+.compactForm button {
+  align-self: flex-start;
+}
+.inlineControls {
+  display: flex;
+  gap: 4px;
+}
+.comment {
+  font-size: 12px;
+  color: var(--design-muted);
+  border-left: 2px solid var(--rr-border-strong);
+  padding-left: 8px;
+  margin-top: 8px;
+}
+.newRequest {
+  scroll-margin-top: 24px;
+}
+.newRequest :global(.form) {
+  max-width: 760px;
+}
+.newRequest :global(.btn) {
+  align-self: flex-start;
+}
+@media (max-width: 1100px) {
+  .board :global(.kanban) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .board :global(.kanban) {
+    grid-template-columns: 1fr;
+  }
+}

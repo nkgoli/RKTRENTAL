@@ -79,3 +79,36 @@ test('screening stays blocked until the applicant records FCRA consent', async (
   await expect(page.getByText('FCRA consent required')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Run screening' })).toBeDisabled();
 });
+
+test('screening and decision redirects keep the property and unit scope', async ({ page }) => {
+  const reset = await prisma.application.updateMany({
+    where: { id: oliviaId },
+    data: { status: 'REVIEW', decisionReason: null, decidedBy: null, decidedAt: null },
+  });
+  expect(reset.count).toBe(1);
+  const olivia = await prisma.application.findUniqueOrThrow({
+    where: { id: oliviaId },
+    include: { unit: true },
+  });
+  const scope = { propertyId: olivia.unit.propertyId, unitId: olivia.unitId };
+
+  await signIn(page);
+  await page.goto(
+    `/applications?propertyId=${scope.propertyId}&unitId=${scope.unitId}&applicant=${oliviaId}`,
+  );
+  await page.getByRole('button', { name: 'Run screening again' }).click();
+  await expect(page.getByRole('status')).toContainText('Screening request sent');
+  await expect(page).toHaveURL(new RegExp(`propertyId=${scope.propertyId}`));
+  await expect(page).toHaveURL(new RegExp(`unitId=${scope.unitId}`));
+  await expect(page).toHaveURL(/notice=screening/);
+
+  await page.getByLabel('Decision reason').selectOption('credit-below-criteria');
+  await page.getByRole('button', { name: 'Decline' }).click();
+  await expect(page.getByRole('status')).toContainText('Decision recorded');
+  await expect(page).toHaveURL(new RegExp(`propertyId=${scope.propertyId}`));
+  await expect(page).toHaveURL(new RegExp(`unitId=${scope.unitId}`));
+  await prisma.application.update({
+    where: { id: oliviaId },
+    data: { status: 'REVIEW', decisionReason: null, decidedBy: null, decidedAt: null },
+  });
+});

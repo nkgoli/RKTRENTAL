@@ -65,7 +65,7 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
       <PageHeader
         eyebrow="People"
         title="Tenants"
-        actions={[{ label: '+ Add tenant', href: '#add-tenant', primary: true }]}
+        actions={[{ label: '+ Add tenant', href: '/tenants?view=directory#add-tenant', primary: true }]}
       />
 
       <nav className={styles.viewTabs} aria-label="Tenant views">

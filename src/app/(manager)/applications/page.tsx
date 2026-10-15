@@ -473,6 +473,10 @@ export default async function ApplicationsPage({
               </div>
               <form action={requestScreening}>
                 <input type="hidden" name="applicationId" value={selected.id} />
+                {scope.propertyId && (
+                  <input type="hidden" name="propertyId" value={scope.propertyId} />
+                )}
+                {scope.unitId && <input type="hidden" name="unitId" value={scope.unitId} />}
                 <Button type="submit" variant="secondary" disabled={!canScreen}>
                   {report ? 'Run screening again' : 'Run screening'}
                 </Button>
@@ -486,6 +490,10 @@ export default async function ApplicationsPage({
               {canDecide ? (
                 <form action={recordDecision} className={styles.decisionForm}>
                   <input type="hidden" name="applicationId" value={selected.id} />
+                {scope.propertyId && (
+                  <input type="hidden" name="propertyId" value={scope.propertyId} />
+                )}
+                {scope.unitId && <input type="hidden" name="unitId" value={scope.unitId} />}
                   <label>
                     <span>Decision reason</span>
                     <select name="reason" defaultValue="" required>

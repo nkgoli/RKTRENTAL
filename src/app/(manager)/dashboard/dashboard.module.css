@@ -349,7 +349,25 @@
 }
 
 .tableCard {
+  container-type: inline-size;
   overflow: hidden;
+}
+
+@container (max-width: 560px) {
+  .table {
+    min-width: 0;
+  }
+
+  .table th:nth-child(n + 3),
+  .table td:nth-child(n + 3) {
+    display: none;
+  }
+
+  .table th,
+  .table td {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
 }
 
 .tableScroller {

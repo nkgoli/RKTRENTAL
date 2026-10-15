@@ -100,7 +100,7 @@ export default async function NewLeasePage({
           ) : (
             <>
               {applicant.applicantName} ({applicant.applicantEmail}) isn’t a tenant yet.{' '}
-              <Link href="/tenants#add-tenant">Add them as a tenant</Link>, then return here to
+              <Link href="/tenants?view=directory#add-tenant">Add them as a tenant</Link>, then return here to
               select them.
             </>
           )}

@@ -105,8 +105,12 @@ test('single-unit property links straight to its one unit; archive hides it', as
     .getByRole('link', { name: /Whole property|Open/ })
     .first()
     .click();
+  await expect(page).toHaveURL(/\/properties\/[^/]+\/units\/[^/]+$/);
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
-  await expect(page.getByText('single-unit property, so this page is its one unit')).toBeVisible();
+  // The implicit unit is the whole property, so it cannot be deleted.
+  await expect(page.getByRole('button', { name: /^Delete/ })).toBeDisabled();
+  await expect(page.getByText('The single-family home unit cannot be deleted.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Listing' }).first()).toBeVisible();
 
   // Edit then archive from the property page.
   await page.getByRole('link', { name: 'Properties', exact: true }).first().click();

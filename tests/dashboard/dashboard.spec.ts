@@ -16,7 +16,8 @@ test('manager dashboard shows live portfolio data and opens an expiring lease', 
   await expect(page.getByRole('heading', { name: 'Good morning, Jordan' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Rent collection this month' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Leases expiring soon' })).toBeVisible();
-  await expect(page.getByText('Open applications', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Recent activity' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Alex Rivera', exact: true })).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath('dashboard-after-sign-in.png'),
@@ -25,7 +26,7 @@ test('manager dashboard shows live portfolio data and opens an expiring lease', 
 
   await page.getByRole('link', { name: 'Alex Rivera', exact: true }).click();
   await expect(page).toHaveURL(/\/leases\/seed-lease-maple-11$/);
-  await expect(page.getByRole('heading', { name: 'Alex Rivera', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Maple Court · Unit \w+ Lease$/, level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Leased premises' })).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath('expiring-lease-detail.png'),

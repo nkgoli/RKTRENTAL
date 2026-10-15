@@ -15,6 +15,9 @@ test('manager lists, searches, adds and opens a tenant', async ({ page }) => {
   await signIn(page);
   await page.goto('/tenants');
   await expect(page.getByRole('heading', { name: 'Tenants', level: 1 })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Tenant views' })).toBeVisible();
+  await page.getByRole('link', { name: 'Directory', exact: true }).click();
+  await expect(page).toHaveURL(/view=directory/);
   await expect(page.getByRole('link', { name: /Alex Rivera/ }).first()).toBeVisible();
 
   await page.getByRole('searchbox').fill('priya');
@@ -23,7 +26,7 @@ test('manager lists, searches, adds and opens a tenant', async ({ page }) => {
   await expect(page.getByRole('link', { name: /Priya Shah/ }).first()).toBeVisible();
   await expect(page.getByRole('link', { name: /Alex Rivera/ })).toHaveCount(0);
 
-  await page.goto('/tenants');
+  await page.goto('/tenants?view=directory');
   const unique = `e2e-${Date.now()}`;
   const form = page.locator('#add-tenant');
   await form.getByLabel('Full name').fill('Validation Check');
@@ -44,7 +47,7 @@ test('manager lists, searches, adds and opens a tenant', async ({ page }) => {
 
 test('tenant detail shows lease summary linking to the lease', async ({ page }) => {
   await signIn(page);
-  await page.goto('/tenants?q=alex.rivera');
+  await page.goto('/tenants?view=directory&q=alex.rivera');
   await page
     .getByRole('link', { name: /Alex Rivera/ })
     .first()
@@ -61,7 +64,7 @@ test('tenant detail shows lease summary linking to the lease', async ({ page }) 
 
 test('manager moves a new tenant in and out of a vacant unit', async ({ page }) => {
   await signIn(page);
-  await page.goto('/tenants');
+  await page.goto('/tenants?view=directory');
   const form = page.locator('#add-tenant');
   const name = `Mover ${Date.now()}`;
   await form.getByLabel('Full name').fill(name);

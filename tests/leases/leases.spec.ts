@@ -29,11 +29,11 @@ test('manager reviews lease tabs, Alex Rivera detail, and uploads a lease docume
   await expect(page).toHaveURL(/tab=ended/);
 
   await page.goto('/leases/seed-lease-maple-11');
-  await expect(page.getByRole('heading', { name: 'Alex Rivera', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Maple Court · Unit \w+ Lease$/, level: 1 })).toBeVisible();
   for (const heading of [
     'Leased premises',
     'Lease terms',
-    'Documents',
+    'Lease documents',
     'Tenants on this lease',
     'Rent ledger',
     'E-signature history',
@@ -41,7 +41,8 @@ test('manager reviews lease tabs, Alex Rivera detail, and uploads a lease docume
   ]) {
     await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
   }
-  await expect(page.getByRole('link', { name: 'Maple Court' })).toHaveAttribute(
+  await expect(page.getByLabel('Lease summary').getByText('Alex Rivera').first()).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Maple Court' }).first()).toHaveAttribute(
     'href',
     '/properties/seed-property-maple',
   );
@@ -58,8 +59,8 @@ test('manager reviews lease tabs, Alex Rivera detail, and uploads a lease docume
     buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n'),
   });
   await expect(page.getByText(name, { exact: true })).toBeVisible();
-  const file = page.locator('.file', { hasText: name });
-  const download = file.getByRole('link', { name: /Download/ });
+  const file = page.locator('article', { hasText: name });
+  const download = file.getByRole('link', { name: /Download/ }).first();
   const href = await download.getAttribute('href');
   expect(href).toMatch(/^\/api\/files\/[^/]+\/download$/);
   const response = await page.request.get(href!);
@@ -104,7 +105,7 @@ test('manager renews, edits, activates and terminates a lease', async ({ page })
   await page.getByRole('button', { name: 'Activate lease' }).click();
   await expect(page.getByText('Lease activated.')).toBeVisible();
   await page.reload();
-  await expect(page.getByText('Active', { exact: true })).toBeVisible();
+  await expect(page.getByText('Active', { exact: true }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Terminate', exact: true }).click();
   await expect(page.getByText('Terminate this lease?')).toBeVisible();
   await page.getByRole('button', { name: 'Confirm terminate' }).click();

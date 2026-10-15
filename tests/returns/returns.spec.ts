@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+﻿import { expect, test, type Page } from '@playwright/test';
 
 const managerEmail = 'jordan.mills@rocketrental.example';
 const managerPassword = process.env.ROCKETRENTAL_DEMO_MANAGER_PASSWORD ?? 'JordanDemo#2026';
@@ -33,7 +33,7 @@ test('manager reviews returns, adds an expense and exports CSV', async ({ page }
     await expect(page.locator('tbody tr', { hasText: name }).first()).toBeVisible();
   await expect(
     page.locator('tbody tr', { hasText: 'Maple Court' }).getByRole('link', { name: /Maple Court/ }),
-  ).toHaveAttribute('href', /\/properties\/seed-property-maple$/);
+  ).toHaveAttribute('href', /\/properties\/seed-property-maple\?tab=returns$/);
   await page.screenshot({ path: 'test-results/returns-overview.png', fullPage: true });
 
   const noiBefore = await page
@@ -70,3 +70,4 @@ test('manager reviews returns, adds an expense and exports CSV', async ({ page }
   const path = await download.path();
   expect(path).toBeTruthy();
 });
+

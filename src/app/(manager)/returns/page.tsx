@@ -1,9 +1,20 @@
 import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { EmptyState } from '@/components/RouteStates';
-import { Avatar, Badge } from '@/components/ui/Badge';
+import { Badge } from '@/components/ui/Badge';
+import { PageHero } from '@/components/dashboard/PageHero';
+import { KpiCard } from '@/components/dashboard/KpiCard';
+import { MiniCover } from '@/components/dashboard/MiniCover';
+import { trendOf } from '@/components/dashboard/trend';
+import {
+  IconBuilding,
+  IconCash,
+  IconChart,
+  IconPercent,
+} from '@/components/dashboard/icons';
+import { propertiesDb } from '@/lib/properties/data';
 import { Button } from '@/components/ui/Button';
-import { Card, CardHeader, Stat } from '@/components/ui/Card';
+import { Card, CardHeader } from '@/components/ui/Card';
 import { Alert, Progress } from '@/components/ui/Feedback';
 import { Field, FormRow, Input, Select } from '@/components/ui/Forms';
 import { requireManagerRole } from '@/lib/auth/access';
@@ -39,20 +50,18 @@ const notices: Record<string, { tone: 'success' | 'warning'; text: string }> = {
   },
 };
 
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase();
+const returnsHref = (propertyId: string) => `/properties/${propertyId}?tab=returns`;
 
 export default async function ReturnsPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireManagerRole();
   const params = await searchParams;
   const periodKey: PeriodKey = periodKeyFrom(params.period);
   const period = resolvePeriod(periodKey, new Date());
-  const overview = await loadReturnsOverview(session.organizationId, period);
+  const [overview, propertyList] = await Promise.all([
+    loadReturnsOverview(session.organizationId, period),
+    propertiesDb(session.organizationId).listProperties(),
+  ]);
+  const covers = new Map(propertyList.properties.map((p) => [p.id, p]));
   const selected =
     overview.properties.find((p) => p.propertyId === params.property) ?? null;
   const scope = selected ?? overview.portfolio;
@@ -71,6 +80,10 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
     ...overview.monthly.map((m) => Math.max(m.incomeCents, m.expensesCents)),
   );
   const maxNoi = Math.max(1, ...overview.properties.map((p) => p.metrics.noiCents));
+  const noiSeries = overview.monthly.map((m) => m.incomeCents - m.expensesCents);
+  const expenseSeries = overview.monthly.map((m) => m.expensesCents);
+  const noiTrend = selected ? null : trendOf(noiSeries);
+  const expenseTrend = selected ? null : trendOf(expenseSeries, false);
   const totalExpenses = overview.expenseBreakdown.reduce((s, e) => s + e.amountCents, 0);
 
   return (
@@ -83,6 +96,11 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           { label: 'Export report', href: exportHref, primary: true },
         ]}
       />
+      <PageHero eyebrow={period.label} title={selected ? selected.propertyName : 'Portfolio returns'}>
+        {metrics
+          ? `NOI ${formatUsd(metrics.noiCents)} on ${formatUsd(metrics.incomeCents)} income across ${overview.properties.length} ${overview.properties.length === 1 ? 'property' : 'properties'}.`
+          : 'Add a property to start tracking returns.'}
+      </PageHero>
       {notice && (
         <Alert tone={notice.tone}>
           <div>{notice.text}</div>
@@ -126,32 +144,56 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
 
       {metrics && (
         <section className="grid-3">
-          <Stat label="Net operating income" value={formatUsd(metrics.noiCents)} />
-          <Stat
+          <KpiCard
+            label="Net operating income"
+            value={formatUsd(metrics.noiCents)}
+            note="Income less operating expenses"
+            icon={<IconChart />}
+            trend={noiTrend?.label}
+            trendWarm={noiTrend?.warm}
+            spark={selected ? undefined : noiSeries}
+            sparkTone="ok"
+            sparkLabel="Monthly NOI"
+          />
+          <KpiCard
             label="Cash flow"
             value={formatUsd(metrics.cashFlowCents)}
-            delta={`After ${formatUsd(metrics.debtServiceCents)} debt service`}
+            note={`After ${formatUsd(metrics.debtServiceCents)} debt service`}
+            icon={<IconCash />}
+            tone="green"
           />
-          <Stat
+          <KpiCard
             label="Cap rate"
             value={formatPercent(metrics.capRate)}
-            delta="NOI on portfolio value"
+            note="NOI on portfolio value"
+            icon={<IconPercent />}
           />
-          <Stat
+          <KpiCard
             label="Cash-on-cash return"
             value={formatPercent(metrics.cashOnCash)}
-            delta={`On ${metrics.cashInvestedCents ? formatUsd(metrics.cashInvestedCents) : '—'} invested`}
+            note={`On ${metrics.cashInvestedCents ? formatUsd(metrics.cashInvestedCents) : '—'} invested`}
+            icon={<IconPercent />}
+            tone="coral"
           />
-          <Stat
+          <KpiCard
             label="Occupancy"
             value={`${occupancy}%`}
-            delta={`${overview.occupiedUnits} of ${overview.totalUnits} units`}
-            progress={occupancy}
+            note={`${overview.occupiedUnits} of ${overview.totalUnits} units`}
+            icon={<IconBuilding />}
+            ring={occupancy}
+            ringLabel={`${occupancy}% occupied`}
           />
-          <Stat
+          <KpiCard
             label="Expense ratio"
             value={formatPercent(metrics.expenseRatio)}
-            delta={`${formatUsd(metrics.expensesCents)} of ${formatUsd(metrics.incomeCents)} income`}
+            note={`${formatUsd(metrics.expensesCents)} of ${formatUsd(metrics.incomeCents)} income`}
+            icon={<IconChart />}
+            tone="coral"
+            trend={expenseTrend?.label}
+            trendWarm={expenseTrend?.warm}
+            spark={selected ? undefined : expenseSeries}
+            sparkTone="warm"
+            sparkLabel="Monthly expenses"
           />
         </section>
       )}
@@ -229,9 +271,11 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
               const width = Math.max(0, (property.metrics.noiCents / maxNoi) * 220);
               return (
                 <g key={property.propertyId}>
-                  <text x={0} y={y} fontSize={12} fontWeight={600} fill="var(--design-text)">
-                    {property.propertyName}
-                  </text>
+                  <a href={returnsHref(property.propertyId)}>
+                    <text x={0} y={y} fontSize={12} fontWeight={600} fill="var(--design-text)">
+                      {property.propertyName}
+                    </text>
+                  </a>
                   <rect x={0} y={y + 6} width={width} height={24} rx={6} fill="var(--design-primary)" />
                   <text x={width + 8} y={y + 23} fontSize={12} fill="var(--design-muted)">
                     {formatUsd(property.metrics.noiCents)}
@@ -272,10 +316,10 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
                 <td>
                   <Link
                     className="cell-main"
-                    href={`/properties/${property.propertyId}`}
+                    href={returnsHref(property.propertyId)}
                     style={{ color: 'inherit' }}
                   >
-                    <Avatar initials={initials(property.propertyName)} size="sm" />
+                    <MiniCover cover={covers.get(property.propertyId)} />
                     <span>
                       <strong>{property.propertyName}</strong>
                       <small>
@@ -299,7 +343,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
               <tr style={{ background: 'var(--rr-subtle)' }}>
                 <td>
                   <div className="cell-main">
-                    <Avatar initials="Σ" size="sm" />
+                    <span className="avatar sm">Σ</span>
                     <span>
                       <strong>Portfolio</strong>
                       <small>

@@ -12,6 +12,10 @@ import {
   SCREENING_PACKAGES,
 } from '@/lib/integrations/settings';
 import { Alert, Badge, Button } from '@/components/ui';
+import { PageHero } from '@/components/dashboard/PageHero';
+import { KpiCard } from '@/components/dashboard/KpiCard';
+import { IconAlert, IconCheck, IconPlug } from '@/components/dashboard/icons';
+import { ProviderLogo } from '@/components/integrations/ProviderLogo';
 import { connectAction, disconnectAction, saveSettingsAction } from './actions';
 import { FeeSwitch } from './FeeSwitch';
 
@@ -35,7 +39,7 @@ function ProviderCard({ provider }: { provider: ProviderView }) {
     <article className="card" data-provider={provider.provider} data-status={provider.status}>
       <div className="row between">
         <div className="provider">
-          <span className="provider-logo">{provider.logo}</span>
+          <ProviderLogo logo={provider.logo} connected={provider.connected} />
           <div>
             <h3>{provider.name}</h3>
             <p className="muted">{provider.description}</p>
@@ -191,9 +195,47 @@ export default async function Page({
   const { notice, error } = await searchParams;
   const view = await loadIntegrations(session.organizationId, db.providerConnection);
   const { payments, screening, comps } = view.settings;
+  const providers = [...view.groups.payments, ...view.groups.screening, ...view.groups.comps];
+  const connected = providers.filter((provider) => provider.connected);
+  const attention = providers.filter(
+    (provider) => provider.connected && (provider.status === 'ERROR' || provider.health.tone === 'danger'),
+  );
+  const connectedPercent = providers.length
+    ? Math.round((connected.length / providers.length) * 100)
+    : 0;
 
   return (
     <div className="page" style={{ padding: 0 }}>
+      <PageHero eyebrow="Connections" title="Integrations">
+        Payments, screening and rent comps providers in one place. {connected.length} of {providers.length}{' '}
+        connected.
+      </PageHero>
+      <section className="grid-3" aria-label="Integration status">
+        <KpiCard
+          label="Connected providers"
+          value={connected.length}
+          note={`of ${providers.length} available`}
+          icon={<IconPlug />}
+          ring={connectedPercent}
+          ringLabel={`% of providers connected`}
+        />
+        <KpiCard
+          label="Healthy connections"
+          value={connected.length - attention.length}
+          note="Syncing normally"
+          icon={<IconCheck />}
+          tone="green"
+        />
+        <KpiCard
+          label="Needs attention"
+          value={attention.length}
+          note={attention.length ? 'Check sync errors below' : 'No sync problems'}
+          icon={<IconAlert />}
+          tone={attention.length ? 'coral' : 'green'}
+          trend={attention.length ? ` failing` : 'All clear'}
+          trendWarm={attention.length > 0}
+        />
+      </section>
       {error && (
         <Alert tone="warning">
           <div role="alert">{error}</div>

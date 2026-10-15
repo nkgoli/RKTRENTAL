@@ -1,0 +1,22 @@
+﻿.logo {
+  align-items: center;
+  background: linear-gradient(135deg, #e8eefc 0%, #cfdafa 100%);
+  border: 1px solid #c3d1f6;
+  border-radius: 12px;
+  color: #1e3a8a;
+  display: inline-grid;
+  flex: none;
+  font-family: var(--design-heading-font);
+  font-size: 14px;
+  font-weight: 700;
+  height: 44px;
+  letter-spacing: 0.02em;
+  place-items: center;
+  width: 44px;
+}
+
+.connected {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2f4fae 100%);
+  border-color: #1e3a8a;
+  color: #fff;
+}

@@ -92,17 +92,50 @@ $TaskName = 'RocketRentalPreview'
 
 function Info($m) { Write-Host "[start] $m" -ForegroundColor Cyan }
 function Warn($m) { Write-Host "[start] $m" -ForegroundColor Yellow }
-function Fail($m) { Write-Host "[start] ERROR: $m" -ForegroundColor Red; exit 1 }
+function Fail($m, [int]$code = 1) { Write-Host "[start] ERROR: $m" -ForegroundColor Red; exit $code }
+
+trap {
+    Fail "Unexpected startup failure: $($_.Exception.Message)"
+}
 
 # Run a native command line through cmd so npm.cmd/docker resolve; stops on failure.
 function Invoke-Step($label, $cmd) {
     Info $label
-    & cmd.exe /c $cmd
-    if ($LASTEXITCODE -ne 0) { Fail "$label failed (exit $LASTEXITCODE)." }
+    # Windows PowerShell 5.1 can turn native stderr into a terminating error
+    # with ErrorActionPreference=Stop, even when the command exits successfully.
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        & cmd.exe /c $cmd 2>&1 | ForEach-Object {
+            if ($_ -is [System.Management.Automation.ErrorRecord]) {
+                Write-Host $_.Exception.Message
+            } else {
+                Write-Host $_
+            }
+        }
+        $code = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
+    if ($code -ne 0) { Fail "$label failed (exit $code)." }
 }
 
 function Stop-Tree($processId) {
-    & taskkill.exe /PID $processId /T /F 2>&1 | Out-Null
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        & taskkill.exe /PID $processId /T /F 2>&1 | Out-Null
+        $code = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
+    if ($code -ne 0 -and (Get-Process -Id $processId -ErrorAction SilentlyContinue)) {
+        try {
+            Stop-Process -Id $processId -Force -ErrorAction Stop
+        } catch {
+            Warn "Could not stop PID $processId (taskkill exit $code): $($_.Exception.Message)"
+        }
+    }
 }
 
 Set-Location $Root
@@ -114,6 +147,7 @@ if (-not $node) {
     $missing += 'Node.js 22+ (https://nodejs.org) - `node` not found on PATH'
 } else {
     $v = (& node -v).TrimStart('v')
+    if ($LASTEXITCODE -ne 0) { Fail "Unable to read the Node.js version (exit $LASTEXITCODE)." }
     if ([int]($v.Split('.')[0]) -lt 22) { $missing += "Node.js 22+ (found $v)" }
 }
 if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { $missing += 'npm - `npm` not found on PATH' }
@@ -121,8 +155,15 @@ if ($Docker) {
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
         $missing += 'Docker Desktop (needed for -Docker) - `docker` not found on PATH; omit -Docker to use embedded Postgres'
     } else {
-        & docker info *> $null
-        if ($LASTEXITCODE -ne 0) { $missing += 'Docker is installed but its engine is not running - start Docker Desktop' }
+        $previousPreference = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = 'Continue'
+            & docker info *> $null
+            $dockerCode = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $previousPreference
+        }
+        if ($dockerCode -ne 0) { $missing += 'Docker is installed but its engine is not running - start Docker Desktop' }
     }
 }
 if ($missing.Count -gt 0) {
@@ -130,7 +171,11 @@ if ($missing.Count -gt 0) {
     $missing | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
     exit 1
 }
-Info "Node $((& node -v)), npm $((& npm -v))"
+$nodeVersion = & node -v
+if ($LASTEXITCODE -ne 0) { Fail "Unable to read the Node.js version (exit $LASTEXITCODE)." }
+$npmVersion = & cmd.exe /c npm -v
+if ($LASTEXITCODE -ne 0) { Fail "Unable to read the npm version (exit $LASTEXITCODE)." }
+Info "Node $nodeVersion, npm $npmVersion"
 
 # ---------------------------------------------------------------- .env
 $envFile = Join-Path $Root '.env'
@@ -152,6 +197,8 @@ if (-not (Test-Path $envFile)) {
     } else {
         Fail 'No .env and no env.example / .env.example / docs\environment.md to create it from.'
     }
+} else {
+    Info 'Using existing .env.'
 }
 
 # Read simple KEY=VALUE pairs from .env (explicit environment variables win).
@@ -177,6 +224,7 @@ if (-not $SkipDatabase) {
         'postgresql://rocketrental:rocketrental@localhost:5432/rocketrental?schema=public' }
     $env:DATABASE_URL = [regex]::Replace($url, '(@(?:localhost|127\.0\.0\.1)):\d+', "`$1:$DbPort")
 }
+Info "Using app port $Port and database port $DbPort."
 
 # ---------------------------------------------------------------- port conflicts
 function Get-Ancestry($processId) {
@@ -208,13 +256,47 @@ function Get-PortHolders([int]$p) {
     }
 }
 
+function Test-PortAvailable([int]$p) {
+    foreach ($address in @([System.Net.IPAddress]::Loopback, [System.Net.IPAddress]::IPv6Loopback)) {
+        $client = [System.Net.Sockets.TcpClient]::new($address.AddressFamily)
+        try {
+            $client.Connect($address, $p)
+            return $false
+        } catch [System.Net.Sockets.SocketException] {
+            # No listener on this loopback address; check the other family.
+        } finally {
+            $client.Close()
+        }
+    }
+    $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any, $p)
+    $listener.Server.ExclusiveAddressUse = $true
+    try {
+        $listener.Start()
+        return $true
+    } catch {
+        return $false
+    } finally {
+        $listener.Stop()
+    }
+}
+
 function Get-PreviewTask {
     Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 }
 
 $ports = @($Port)
 if (-not $SkipDatabase) { $ports += $DbPort }
+Info "Checking required ports: $(($ports -join ', '))."
 $holders = @($ports | ForEach-Object { Get-PortHolders $_ })
+foreach ($p in $ports) {
+    if (-not (Test-PortAvailable $p) -and -not @($holders | Where-Object { $_.Port -eq $p }).Count) {
+        # Process enumeration can be denied even though a listener owns the port.
+        $holders += [pscustomobject]@{
+            Port = $p; Pid = '?'; Name = '?'; CommandLine = ''
+            IsRocketRental = $false; ViaTask = $false
+        }
+    }
+}
 
 if ($holders.Count -gt 0) {
     $task = Get-PreviewTask
@@ -230,7 +312,7 @@ if ($holders.Count -gt 0) {
         Warn 'Nothing was stopped. Options:'
         Warn "  - re-run with -StopExisting to stop the old copy (scheduled task '$TaskName' and its processes)"
         Warn '  - or use other ports: -Port 3100 -DbPort 5433'
-        exit 2
+        Fail 'Required port is already in use.' 2
     }
 
     Info 'Stopping existing copy (-StopExisting)...'
@@ -256,6 +338,8 @@ if ($holders.Count -gt 0) {
     $final = @($ports | ForEach-Object { Get-PortHolders $_ })
     if ($final.Count -gt 0) { Fail "Ports still in use: $(($final | ForEach-Object { $_.Port }) -join ', ')." }
     Info 'Ports are free.'
+} else {
+    Info 'Required ports are free.'
 }
 
 # ---------------------------------------------------------------- dependencies
@@ -274,32 +358,61 @@ if (-not $SkipInstall) {
     }
 } elseif (-not (Test-Path (Join-Path $Root 'node_modules'))) {
     Fail '-SkipInstall given but node_modules is missing.'
+} else {
+    Info 'Dependency install skipped (-SkipInstall).'
 }
 
 # ---------------------------------------------------------------- build (production)
 if (-not $Dev) {
+    Info 'Checking production build freshness.'
     $buildId = Join-Path $Root '.next\BUILD_ID'
     $needBuild = $Rebuild -or -not (Test-Path $buildId)
     if (-not $needBuild) {
         $built = (Get-Item $buildId).LastWriteTime
-        $newer = @('src', 'prisma\schema.prisma', 'package.json', 'next.config.ts') | ForEach-Object {
-            $p = Join-Path $Root $_
-            if (Test-Path $p) { Get-ChildItem $p -Recurse -File -ErrorAction SilentlyContinue }
-        } | Where-Object { $_.LastWriteTime -gt $built } | Select-Object -First 1
-        if ($newer) { $needBuild = $true }
+        foreach ($relativePath in @('src', 'prisma\schema.prisma', 'package.json', 'next.config.ts')) {
+            $p = Join-Path $Root $relativePath
+            if (Test-Path -LiteralPath $p -PathType Container) {
+                $files = Get-ChildItem -LiteralPath $p -Recurse -File
+            } elseif (Test-Path -LiteralPath $p -PathType Leaf) {
+                $files = @(Get-Item -LiteralPath $p)
+            } else {
+                continue
+            }
+            foreach ($file in $files) {
+                if ($file.LastWriteTime -gt $built) { $needBuild = $true; break }
+            }
+            if ($needBuild) { break }
+        }
     }
     if ($needBuild) { Invoke-Step 'Building (npm run build)' 'npm run build' } else { Info 'Production build is up to date.' }
+} else {
+    Info 'Development mode; production build skipped.'
 }
 
 # ---------------------------------------------------------------- database
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 $dbProc = $null
-$freshDb = $false
+$seedMarker = $null
 $app = $null
 
 function Stop-All {
     if ($app -and -not $app.HasExited) { Info 'Stopping app...'; Stop-Tree $app.Id }
-    if ($dbProc -and -not $dbProc.HasExited) { Info 'Stopping embedded Postgres...'; Stop-Tree $dbProc.Id }
+    if ($dbProc -and -not $dbProc.HasExited) {
+        Info 'Stopping embedded Postgres...'
+        $pgCtl = Get-ChildItem (Join-Path $Root 'prisma\node_modules\@embedded-postgres') -Recurse -Filter pg_ctl.exe -File -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($pgCtl -and $dbDir -and (Test-Path (Join-Path $dbDir 'postmaster.pid'))) {
+            $previousPreference = $ErrorActionPreference
+            try {
+                $ErrorActionPreference = 'Continue'
+                & $pgCtl.FullName -D $dbDir stop -m fast 2>&1 | ForEach-Object { Write-Host $_ }
+                $code = $LASTEXITCODE
+            } finally {
+                $ErrorActionPreference = $previousPreference
+            }
+            if ($code -ne 0) { Warn "Postgres shutdown returned exit $code." }
+        }
+        Stop-Tree $dbProc.Id
+    }
 }
 
 try {
@@ -310,7 +423,7 @@ try {
         Invoke-Step 'Starting Postgres with docker compose' 'docker compose up -d --wait db'
     } else {
         $dbDir = if ($env:ROCKETRENTAL_DB_DIR) { $env:ROCKETRENTAL_DB_DIR } elseif ($dotenv['ROCKETRENTAL_DB_DIR']) { $dotenv['ROCKETRENTAL_DB_DIR'] } else { Join-Path $Root 'prisma\.local-postgres' }
-        $freshDb = -not (Test-Path (Join-Path $dbDir 'PG_VERSION'))
+        $seedMarker = Join-Path $dbDir '.demo-seeded'
         New-Item -ItemType Directory -Force -Path $dbDir | Out-Null
         if (-not (Test-Path (Join-Path $Root 'prisma\node_modules\embedded-postgres'))) {
             Invoke-Step 'Installing embedded Postgres (npm install --prefix prisma)' 'npm install --prefix prisma'
@@ -325,7 +438,8 @@ try {
         while ($true) {
             if ($dbProc.HasExited) {
                 Get-Content $dbErr -ErrorAction SilentlyContinue | Select-Object -Last 15 | ForEach-Object { Write-Host $_ }
-                Fail "Embedded Postgres exited early (exit $($dbProc.ExitCode)). See $dbErr"
+                $dbExit = if ($null -eq $dbProc.ExitCode) { 'unavailable' } else { $dbProc.ExitCode }
+                Fail "Embedded Postgres exited early (exit $dbExit). See $dbErr"
             }
             if ((Test-Path $dbOut) -and (Select-String -Path $dbOut -Pattern 'Local PostgreSQL ready' -Quiet)) { break }
             if ((Get-Date) -gt $deadline) { Fail "Timed out waiting for Postgres. See $dbOut / $dbErr" }
@@ -336,11 +450,16 @@ try {
 
     # ------------------------------------------------------------ migrations / seed
     Invoke-Step 'Applying migrations (npm run db:migrate)' 'npm run db:migrate'
-    if ($Seed -or $freshDb) {
+    if ($Seed -or ($seedMarker -and -not (Test-Path $seedMarker))) {
         $prevEnv = $env:NODE_ENV
         $env:NODE_ENV = 'development'
-        Invoke-Step 'Seeding demo data (npm run db:seed)' 'npm run db:seed'
+        # The tsx CLI starts a child that bypasses the os.userInfo preload on
+        # restricted Windows hosts. Node's import hook runs the seed directly.
+        Invoke-Step 'Seeding demo data (node --import tsx prisma/seed.ts)' 'node --env-file-if-exists=.env --import ./prisma/os-userinfo.mjs --import tsx prisma/seed.ts'
         $env:NODE_ENV = $prevEnv
+        if ($seedMarker) { Set-Content -Path $seedMarker -Value 'seeded' -Encoding Ascii }
+    } else {
+        Info 'Demo seed is up to date.'
     }
 
     # ------------------------------------------------------------ app
@@ -360,7 +479,8 @@ try {
     while (-not $ok) {
         if ($app.HasExited) {
             Get-Content $appErr, $appOut -ErrorAction SilentlyContinue | Select-Object -Last 20 | ForEach-Object { Write-Host $_ }
-            Fail "Next.js exited early (exit $($app.ExitCode))."
+            $appExit = if ($null -eq $app.ExitCode) { 'unavailable' } else { $app.ExitCode }
+            Fail "Next.js exited early (exit $appExit)."
         }
         if ((Get-Date) -gt $deadline) { Fail "App did not respond at $url within 180s. See $appOut / $appErr" }
         try {
@@ -370,14 +490,16 @@ try {
     }
 
     Write-Host ''
-    Write-Host "RocketRental is running at $url  (sign in at $url/sign-in)" -ForegroundColor Green
+    Info "RocketRental is running at $url (sign in at $url/sign-in)"
     Write-Host '  Manager: jordan.mills@rocketrental.example / JordanDemo#2026'
     Write-Host '  Tenant:  alex.rivera@email.com / AlexDemo#2026'
     Write-Host "  Logs:    $LogDir"
     Write-Host '  Press Ctrl+C to stop.'
     Write-Host ''
     $app.WaitForExit()
-    Info "App exited (code $($app.ExitCode))."
+    $appExit = if ($null -eq $app.ExitCode) { 'unavailable' } else { $app.ExitCode }
+    Info "App exited (code $appExit)."
+    if ($appExit -ne 0) { Fail "App exited with code $appExit." }
 } finally {
     Stop-All
 }

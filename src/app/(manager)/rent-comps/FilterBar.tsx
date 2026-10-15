@@ -12,12 +12,14 @@ const submitOnChange = (event: FormEvent<HTMLFormElement>) => {
 export function UnitPicker({
   units,
   unitId,
+  action,
 }: {
   units: { id: string; label: string }[];
   unitId: string;
+  action?: string;
 }) {
   return (
-    <form method="get" onChange={submitOnChange}>
+    <form method="get" action={action} onChange={submitOnChange}>
       <label className="field" style={{ minWidth: 200 }}>
         Unit
         <select name="unit" defaultValue={unitId}>
@@ -41,12 +43,12 @@ const STATUS_CHIPS = [
   { value: 'leased', label: 'Leased' },
 ] as const;
 
-export function FilterBar({ unitId, filters }: { unitId: string; filters: CompFilters }) {
+export function FilterBar({ unitId, filters, action }: { unitId: string; filters: CompFilters; action?: string }) {
   const radii = RADIUS_OPTIONS.includes(filters.radiusMiles as 1)
     ? RADIUS_OPTIONS
     : [...RADIUS_OPTIONS, filters.radiusMiles].sort((a, b) => a - b);
   return (
-    <form method="get" className="form" onChange={submitOnChange} aria-label="Comp filters">
+    <form method="get" action={action} className="form" onChange={submitOnChange} aria-label="Comp filters">
       <input type="hidden" name="unit" value={unitId} />
       <div className="form-row" style={{ gridTemplateColumns: 'repeat(6,1fr)' }}>
         <label className="field">

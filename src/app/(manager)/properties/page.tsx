@@ -1,12 +1,12 @@
 ﻿import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
-import { Badge, Chip, Chips, Progress, Stat } from '@/components/ui';
+import { Chip, Chips, Cover, CoverName, CoverPill, OccupancyRing, Sparkline, Stat, TrendChip } from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import { propertiesDb, propertyFilterFrom, type PropertyFilter } from '@/lib/properties/data';
 import { formatAddress, formatMoney } from '@/lib/properties/format';
 import { AddPropertyForm } from './_components/PropertyForm';
-import { PhotoImage } from './_components/Media';
 import { EmptyState } from '@/components/RouteStates';
+import styles from './properties.module.css';
 
 const FILTERS: { key: PropertyFilter; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -43,6 +43,7 @@ export default async function PropertiesPage({
   return (
     <>
       <PageHeader
+        title="Properties"
         actions={[{ label: '+ Add property', href: '/properties#add-property', primary: true }]}
       />
       <section className="toolbar">
@@ -111,52 +112,31 @@ export default async function PropertiesPage({
           return (
             <Link
               key={p.id}
-              className="card flush"
+              className={`card flush ${styles.propertyCard}`}
               href={`/properties/${p.id}`}
-              style={{ color: 'var(--design-text)' }}
             >
-              {p.coverPhotoId ? (
-                <PhotoImage
-                  photo={{
-                    id: p.coverPhotoId,
-                    name: p.name,
-                    mimeType: 'image/*',
-                    sizeBytes: 0,
-                    createdAt: new Date(0),
-                  }}
-                  wide
-                  style={{ borderRadius: 0 }}
-                />
-              ) : (
-                <div className="photo wide" style={{ borderRadius: 0 }}>
-                  <span className="caption">{p.name}</span>
+              <div className={styles.cover}>
+                <Cover
+                  kind={single ? 'house' : 'apartment'}
+                  src={p.coverPhotoId ? `/api/files/${p.coverPhotoId}/preview` : undefined}
+                >
+                  <CoverPill warm={!full || p.archived}>{p.archived ? 'Archived' : single ? (full ? 'Occupied' : 'Vacant') : `${p.occupied} / ${p.unitCount} occupied`}</CoverPill>
+                  <CoverName title={p.name} subtitle={formatAddress(p)} />
+                </Cover>
+              </div>
+              <div className={styles.details}>
+                <div className={styles.propertyMeta}>
+                  <span>{single ? 'Single-family' : `${p.unitCount} ${p.unitCount === 1 ? 'unit' : 'units'}`}</span>
+                  <TrendChip warm={!full && !p.archived}>{p.archived ? 'Archived' : full ? 'Fully occupied' : `${p.vacant} vacant`}</TrendChip>
                 </div>
-              )}
-              <div style={{ padding: 20 }}>
-                <div className="row between">
-                  <h3>{p.name}</h3>
-                  {p.archived ? (
-                    <Badge>Archived</Badge>
-                  ) : single ? (
-                    <Badge tone={full ? 'success' : 'info'}>{full ? 'Occupied' : 'Vacant'}</Badge>
-                  ) : (
-                    <Badge tone={full ? 'success' : 'warning'}>
-                      {p.occupied} / {p.unitCount} occupied
-                    </Badge>
-                  )}
+                <div className={styles.kpis}>
+                  <div><div className={styles.rent}><strong>{formatMoney(p.monthlyRent)}</strong><small>/ mo</small></div><span className="muted">Monthly rent</span></div>
+                  <div className={styles.occupancy}>
+                    <OccupancyRing value={p.unitCount ? (p.occupied / p.unitCount) * 100 : 0} label={`${p.name} occupancy`} />
+                    <span><strong>{p.unitCount ? Math.round((p.occupied / p.unitCount) * 100) : 0}%</strong><small>occupancy</small></span>
+                  </div>
                 </div>
-                <p className="muted" style={{ margin: '4px 0 12px' }}>
-                  {formatAddress(p)}
-                </p>
-                <Progress value={p.unitCount ? (p.occupied / p.unitCount) * 100 : 0} label={`${p.name} occupancy`} />
-                <div className="row between muted" style={{ fontSize: 13, marginTop: 10 }}>
-                  <span>
-                    {single
-                      ? 'Single-unit'
-                      : `Multi-unit · ${p.unitCount} ${p.unitCount === 1 ? 'unit' : 'units'}`}
-                  </span>
-                  <span>{formatMoney(p.monthlyRent)} / mo</span>
-                </div>
+                <Sparkline values={[p.occupied, Math.max(p.occupied, p.unitCount)]} tone={full ? 'ok' : 'warm'} label={`${p.name} occupancy trend`} />
               </div>
             </Link>
           );

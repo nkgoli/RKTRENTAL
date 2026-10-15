@@ -1,316 +1,113 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { PageHeader } from '@/components/shell/PageHeader';
-import { Alert, Badge, Button, Card, CardHeader, FileRow, Stat } from '@/components/ui';
-import { requireManagerRole } from '@/lib/auth/access';
-import { propertiesDb } from '@/lib/properties/data';
-import {
-  bedBath,
-  formatAddress,
-  formatBytes,
-  formatDate,
-  formatMoney,
-  propertyTypeLabel,
-} from '@/lib/properties/format';
-import { FileUploader } from '../_components/FileUploader';
-import { FileList, PhotoImage, downloadUrl, fileKind } from '../_components/Media';
-import { EditPropertyForm } from '../_components/PropertyForm';
+import { Alert } from '@/components/ui';
+import { Workspace, type WorkspaceTab } from '@/components/workspace/Workspace';
+import { PropertyListing } from '@/components/workspace/PropertyListing';
+import { PropertyOverview } from '@/components/workspace/WorkspaceOverview';
+import { ReturnsWorkspace, type ReturnUnitRow } from '@/components/workspace/ReturnsWorkspace';
 import { AddUnitForm } from '../_components/UnitForm';
+import { EditPropertyForm } from '../_components/PropertyForm';
+import { requireManagerRole } from '@/lib/auth/access';
+import { loadPropertyWorkspaceReturns } from '@/lib/metrics';
+import { propertiesDb } from '@/lib/properties/data';
+import { formatAddress } from '@/lib/properties/format';
+import { resolvePeriod, periodKeyFrom } from '@/lib/returns/period';
+import { previewUrl } from '../_components/Media';
+import styles from './workspace.module.css';
 
-const statusBadge = {
-  OCCUPIED: { tone: 'success', label: 'Occupied' },
-  VACANT: { tone: 'info', label: 'Vacant' },
-  TURNOVER: { tone: 'warning', label: 'Turnover' },
-  ARCHIVED: { tone: 'neutral', label: 'Archived' },
-} as const;
+type Search = Record<string, string | string[] | undefined>;
+const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value;
+const validTab = (value: string | undefined): WorkspaceTab =>
+  value === 'listing' || value === 'returns' ? value : 'overview';
 
-export default async function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const session = await requireManagerRole();
-  const { id } = await params;
+export default async function PropertyDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Search>;
+}) {
+  const [session, routeParams, query] = await Promise.all([
+    requireManagerRole(),
+    params,
+    searchParams,
+  ]);
+  const propertyId = routeParams.id;
+  const activeTab = validTab(first(query.tab));
+  const period = resolvePeriod(periodKeyFrom(first(query.period)), new Date());
   const data = propertiesDb(session.organizationId);
-  const [property, owners] = await Promise.all([data.getProperty(id), data.listOwners()]);
-  if (!property) notFound();
+  const [property, owners, workspaceReturns] = await Promise.all([
+    data.getProperty(propertyId),
+    data.listOwners(),
+    loadPropertyWorkspaceReturns(session.organizationId, propertyId, period),
+  ]);
+  if (!property || !workspaceReturns) notFound();
 
-  const single = property.type === 'SINGLE_UNIT';
-  const onlyUnit = single
-    ? (property.units.find((u) => u.status !== 'ARCHIVED') ?? property.units[0])
-    : null;
-  const [hero, ...restPhotos] = property.photos;
-  const unitHref = (unitId: string) => `/properties/${property.id}/units/${unitId}`;
+  const activeUnitCount = property.units.filter((unit) => unit.status !== 'ARCHIVED').length;
+  const firstPhoto = property.photos[0];
+  const scope = {
+    propertyId: property.id,
+    propertyName: property.name,
+    propertyType: property.type,
+    propertyArchived: property.archived,
+    propertyAddress: formatAddress(property),
+    activeUnitCount,
+  };
+  const returnUnitRows: ReturnUnitRow[] = workspaceReturns.units
+    .filter((unitReturn) => unitReturn.unitId !== null)
+    .map((unitReturn) => {
+      const fact = workspaceReturns.unitFacts.find((unit) => unit.id === unitReturn.unitId);
+      return {
+        id: unitReturn.unitId!,
+        number: fact?.number ?? unitReturn.unitNumber ?? 'Unit',
+        returns: unitReturn,
+        currentRent: fact?.currentRent ?? null,
+        listedRent: fact?.listedRent ?? null,
+        marketRent: fact?.marketRent ?? null,
+      };
+    })
+    .filter((row) => workspaceReturns.unitFacts.find((fact) => fact.id === row.id)?.status !== 'ARCHIVED');
 
-  return (
-    <>
-      <PageHeader
-        title={property.name}
-        eyebrow="Portfolio"
-        actions={[
-          { label: 'Edit property', href: '#edit-property' },
-          ...(single ? [] : [{ label: '+ Add unit', href: '#add-unit', primary: true }]),
-        ]}
-      />
-      <nav className="breadcrumbs" aria-label="Breadcrumb">
-        <Link href="/properties">Properties</Link> / {property.name}
-      </nav>
-      {property.archived && (
-        <Alert tone="warning">
-          This property is archived. Restore it from Edit property to add units.
-        </Alert>
-      )}
+  const notice = first(query.notice);
 
-      <section className="split">
-        <div className="stack">
-          <div className="gallery" id="photos" style={{ gridTemplateColumns: '2fr 1fr 1fr' }}>
-            {hero ? (
-              <PhotoImage
-                photo={hero}
-                wide
-                style={{ gridRow: 'span 2', aspectRatio: 'auto', minHeight: 230 }}
-              />
-            ) : (
-              <div
-                className="photo wide"
-                style={{ gridRow: 'span 2', aspectRatio: 'auto', minHeight: 230 }}
-              >
-                <span className="caption">No photos yet</span>
-              </div>
-            )}
-            {restPhotos.slice(0, 3).map((p, i) => (
-              <PhotoImage key={p.id} photo={p} index={i + 1} />
-            ))}
-            <FileUploader
-              targetType="property"
-              targetId={property.id}
-              kind="PHOTO"
-              label="+ Upload photos"
-              hint="JPG, PNG up to 25 MB"
-              compact
-            />
-          </div>
-          {restPhotos.length > 3 && (
-            <div className="gallery">
-              {restPhotos.slice(3).map((p, i) => (
-                <PhotoImage key={p.id} photo={p} index={i} />
-              ))}
-            </div>
-          )}
-        </div>
-        <Card>
-          <CardHeader
-            title="Details"
-            action={
-              property.archived ? <Badge>Archived</Badge> : <Badge tone="success">Active</Badge>
-            }
-          />
-          <dl className="kv" style={{ gridTemplateColumns: '110px 1fr' }}>
-            <dt>Address</dt>
-            <dd>{formatAddress(property)}</dd>
-            <dt>Type</dt>
-            <dd>{propertyTypeLabel(property.type)}</dd>
-            <dt>Units</dt>
-            <dd>
-              {property.stats.unitCount} ({property.stats.occupied} occupied)
-            </dd>
-            <dt>Year built</dt>
-            <dd>{property.yearBuilt ?? '—'}</dd>
-            <dt>Owner</dt>
-            <dd>{property.owner?.name ?? '—'}</dd>
-            <dt>Manager</dt>
-            <dd>{session.name}</dd>
-          </dl>
-        </Card>
+  return <>
+    <Workspace
+      scope={scope}
+      activeTab={activeTab}
+      coverKind={activeUnitCount === 1 ? 'house' : 'apartment'}
+      coverSrc={firstPhoto ? previewUrl(firstPhoto.id) : undefined}
+      actions={[
+        { label: 'Edit property', href: `/properties/${property.id}?tab=overview#edit-property` },
+        ...(!property.archived && property.type !== 'SINGLE_UNIT'
+          ? [{ label: '+ Add unit', href: `/properties/${property.id}?tab=overview#add-unit`, primary: true }]
+          : []),
+      ]}
+    />
+    {notice === 'unit-deleted' && <Alert tone="success">Unit deleted.</Alert>}
+    {notice === 'unit-delete-blocked' && <Alert tone="warning">This unit has linked records or is the single-family home unit, so it could not be deleted.</Alert>}
+    {activeTab === 'listing' ? (
+      <PropertyListing property={property} returns={workspaceReturns} organizationId={session.organizationId} searchParams={query} />
+    ) : activeTab === 'returns' ? (
+      <ReturnsWorkspace returns={workspaceReturns.property} propertyId={property.id} propertyName={property.name} unitRows={returnUnitRows} />
+    ) : <>
+      <PropertyOverview property={property} returns={workspaceReturns.property} leaseFacts={workspaceReturns.unitFacts} />
+      <section className={styles.forms}>
+        <EditPropertyForm
+          propertyId={property.id}
+          archived={property.archived}
+          owners={owners}
+          initial={{
+            name: property.name,
+            type: property.type,
+            street: property.street,
+            city: property.city,
+            state: property.state,
+            postalCode: property.postalCode,
+            yearBuilt: property.yearBuilt,
+            ownerId: property.owner?.id ?? null,
+          }}
+        />
+        {!property.archived && property.type !== 'SINGLE_UNIT' && <AddUnitForm propertyId={property.id} />}
       </section>
-
-      <section className="grid-4">
-        <Stat
-          label="Occupancy"
-          value={`${property.stats.occupancy}%`}
-          progress={property.stats.occupancy}
-        />
-        <Stat
-          label="Monthly rent"
-          value={formatMoney(property.stats.monthlyRent)}
-          delta="From active leases"
-        />
-        <Stat
-          label="Open repairs"
-          value={property.stats.openRepairs}
-          delta={
-            property.stats.openRepairs ? (
-              <Link href="/maintenance">View maintenance</Link>
-            ) : (
-              'All clear'
-            )
-          }
-          tone={property.stats.openRepairs ? 'down' : 'up'}
-        />
-        <Stat
-          label="Leases expiring"
-          value={property.stats.expiringLeases}
-          delta="next 90 days"
-          tone={property.stats.expiringLeases ? 'down' : 'neutral'}
-        />
-      </section>
-
-      <nav className="tabs" aria-label="Sections">
-        <a className="active" href="#units">
-          Units
-        </a>
-        <a href="#documents">Documents</a>
-        <a href="#photos">Photos</a>
-      </nav>
-
-      <section
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0,3fr) minmax(0,2fr)',
-          gap: 20,
-          alignItems: 'start',
-        }}
-      >
-        <div className="card flush" id="units">
-          <div className="card-header">
-            <h3>Units</h3>
-            {!single && (
-              <a className="btn btn-sm btn-secondary" href="#add-unit">
-                + Add unit
-              </a>
-            )}
-          </div>
-          {single && onlyUnit && (
-            <p className="muted" style={{ padding: '12px 20px 0', fontSize: 13 }}>
-              A single-unit property has one unit — its details open straight from here.
-            </p>
-          )}
-          <table className="table" style={{ marginTop: 12 }}>
-            <thead>
-              <tr>
-                <th style={{ padding: '12px 12px 12px 20px' }}>Unit</th>
-                <th style={{ padding: '12px 8px' }}>Tenant</th>
-                <th className="num" style={{ padding: '12px 8px' }}>
-                  Rent
-                </th>
-                <th style={{ padding: '12px 8px' }}>Status</th>
-                <th style={{ padding: '12px 20px 12px 8px' }} />
-              </tr>
-            </thead>
-            <tbody>
-              {property.units.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="muted">
-                    No units yet. Add the first unit using the form.
-                  </td>
-                </tr>
-              )}
-              {property.units.map((u) => {
-                const badge = statusBadge[u.status];
-                return (
-                  <tr key={u.id}>
-                    <td style={{ padding: '14px 12px 14px 20px' }}>
-                      <strong>
-                        <Link href={unitHref(u.id)}>
-                          {u.isImplicit ? 'Whole property' : u.number}
-                        </Link>
-                      </strong>
-                      <br />
-                      <small className="muted">{bedBath(u)}</small>
-                    </td>
-                    <td style={{ padding: '14px 8px' }}>
-                      {u.tenant ? (
-                        <Link href={`/tenants/${u.tenant.id}`}>{u.tenant.name}</Link>
-                      ) : (
-                        <span className="muted">None</span>
-                      )}
-                    </td>
-                    <td className="num" style={{ padding: '14px 8px' }}>
-                      {formatMoney(u.rent ?? u.listedRent)}
-                    </td>
-                    <td style={{ padding: '14px 8px' }}>
-                      <span className={`badge ${badge.tone === 'neutral' ? '' : badge.tone}`}>
-                        {badge.label}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 20px 14px 8px' }}>
-                      <Link
-                        className="btn btn-sm btn-ghost"
-                        href={unitHref(u.id)}
-                        aria-label={`Open unit ${u.number}`}
-                      >
-                        {single ? 'Open' : 'Edit'}
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          <p className="muted" style={{ padding: '12px 20px', fontSize: 13 }}>
-            Showing {property.units.length} of {property.units.length} units
-          </p>
-        </div>
-
-        <div className="stack">
-          {!single && !property.archived && <AddUnitForm propertyId={property.id} />}
-
-          <Card id="documents">
-            <CardHeader title="Documents" action={<Link href="/documents">View all</Link>} />
-            <p className="muted" style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
-              Property files
-            </p>
-            <FileList files={property.files} empty="No property files yet." />
-            <p className="muted" style={{ fontSize: 12, fontWeight: 600, margin: '12px 0 4px' }}>
-              Lease documents
-            </p>
-            {property.leaseDocuments.length === 0 && (
-              <p className="muted" style={{ fontSize: 13 }}>
-                No lease documents yet.
-              </p>
-            )}
-            {property.leaseDocuments.map((d) => (
-              <FileRow
-                key={d.id}
-                kind={fileKind(d.mimeType)}
-                name={d.name}
-                meta={`${d.tenantName ?? 'Lease'} · Unit ${d.unitNumber} · ${formatDate(d.createdAt)} · ${formatBytes(d.sizeBytes)}`}
-                action={
-                  <>
-                    <Button size="sm" href={downloadUrl(d.id)}>
-                      Download
-                    </Button>
-                    <Button size="sm" href={`/leases/${d.leaseId}`}>
-                      Open lease
-                    </Button>
-                  </>
-                }
-              />
-            ))}
-            <div style={{ marginTop: 12 }}>
-              <FileUploader
-                targetType="property"
-                targetId={property.id}
-                kind="OTHER"
-                label="Upload document"
-                hint="PDF, JPG, PNG, DOC up to 25 MB"
-              />
-            </div>
-          </Card>
-        </div>
-      </section>
-
-      <EditPropertyForm
-        propertyId={property.id}
-        archived={property.archived}
-        owners={owners}
-        initial={{
-          name: property.name,
-          type: property.type,
-          street: property.street,
-          city: property.city,
-          state: property.state,
-          postalCode: property.postalCode,
-          yearBuilt: property.yearBuilt,
-          ownerId: property.owner?.id ?? null,
-        }}
-      />
-    </>
-  );
+    </>}
+  </>;
 }

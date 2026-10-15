@@ -327,7 +327,8 @@ p {
   .app.drawer-open .scrim {
     display: none;
   }
-}.main {
+}
+.main {
   display: flex;
   flex-direction: column;
   min-width: 0;

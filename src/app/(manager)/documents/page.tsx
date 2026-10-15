@@ -3,6 +3,8 @@ import { EmptyState } from '@/components/RouteStates';
 import { db } from '@/lib/db/client';
 import { requireManagerRole } from '@/lib/auth/access';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
+import { scopeFilterFrom } from '@/lib/workspace/scope';
 import {
   AvatarStack,
   Badge,
@@ -43,7 +45,13 @@ const KIND_LABELS: Record<LibraryDocumentKind, string> = {
 };
 
 type KindFilter = LibraryDocumentKind | 'ALL';
-type SearchParams = { q?: string; kind?: string; propertyId?: string; sort?: string };
+type SearchParams = {
+  q?: string;
+  kind?: string;
+  propertyId?: string;
+  unitId?: string;
+  sort?: string;
+};
 
 function kindFromParam(value?: string): KindFilter {
   return value && DOCUMENT_KINDS.includes(value as (typeof DOCUMENT_KINDS)[number])
@@ -57,6 +65,7 @@ function documentsHref(filters: SearchParams, overrides: Partial<SearchParams> =
   if (next.q?.trim()) params.set('q', next.q.trim());
   if (next.kind && next.kind !== 'ALL') params.set('kind', next.kind);
   if (next.propertyId) params.set('propertyId', next.propertyId);
+  if (next.unitId) params.set('unitId', next.unitId);
   if (next.sort && next.sort !== 'newest') params.set('sort', next.sort);
   const query = params.toString();
   return query ? `/documents?${query}` : '/documents';
@@ -204,6 +213,7 @@ export default async function DocumentsPage({
     query,
     kind,
     propertyId: params.propertyId,
+    unitId: params.unitId,
     sort,
   });
   const leaseGroups = groupLeaseDocuments(matchingFiles);
@@ -233,7 +243,11 @@ export default async function DocumentsPage({
 
   return (
     <>
-      {/* Property workspace header and tabs attach above this page header. */}
+      <ScopedWorkspace
+        organizationId={session.organizationId}
+        filter={scopeFilterFrom(params)}
+        activeTab="documents"
+      />
       <PageHeader
         title="Documents and photos"
         eyebrow="Files"
@@ -307,6 +321,7 @@ export default async function DocumentsPage({
             </Chips>
             <form action="/documents" method="get" role="search" className={styles.documentFilters}>
               {kind !== 'ALL' && <input type="hidden" name="kind" value={kind} />}
+              {params.unitId && <input type="hidden" name="unitId" value={params.unitId} />}
               <label className="search document-search">
                 <span aria-hidden="true">⌕</span>
                 <input

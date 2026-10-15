@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { Workspace } from '@/components/workspace/Workspace';
+import { hasScope, loadWorkspaceScope, scopeFilterFrom } from '@/lib/workspace/scope';
 import { Avatar, AvatarStack, Badge, Card, CardHeader } from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
@@ -13,9 +15,15 @@ import { leasesDb } from '@/lib/leases/queries';
 import { formatAddress, formatDate, initials } from '@/lib/properties/format';
 import { EditTermsForm, LeaseStatusActions, LeaseUploader, NoticeForm } from '../LeaseForms';
 
-export default async function LeaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function LeaseDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ propertyId?: string; unitId?: string }>;
+}) {
   const session = await requireManagerRole();
-  const { id } = await params;
+  const [{ id }, query] = await Promise.all([params, searchParams]);
   const lease = await leasesDb(session.organizationId).detail(id);
   if (!lease) notFound();
   const property = lease.unit.property;
@@ -62,9 +70,16 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
     return { tenant, event: latest };
   });
   const noticeGiven = lease.noticeGivenAt != null;
+  // Scope comes from the lease itself; the query only says whether to show the workspace.
+  const workspaceScope = hasScope(scopeFilterFrom(query))
+    ? await loadWorkspaceScope(session.organizationId, {
+        propertyId: lease.unit.propertyId,
+        unitId: query.unitId ? lease.unitId : undefined,
+      })
+    : null;
   return (
     <>
-      {/* Property workspace header and tabs attach above this page header. */}
+      {workspaceScope && <Workspace scope={workspaceScope} activeTab="leases" />}
       <PageHeader
         title={title}
         eyebrow="Lease"

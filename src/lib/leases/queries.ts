@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
+import { unitScopeWhere, type ScopeFilter } from '@/lib/workspace/scope';
 
 export const leaseInclude = {
   unit: { include: { property: true } },
@@ -10,9 +11,9 @@ export function leasesDb(organizationId: string, client: PrismaClient = db, now 
   const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const in60 = new Date(today.getTime() + 60 * 86_400_000);
   return {
-    async list() {
+    async list(scope: ScopeFilter = {}) {
       const leases = await client.lease.findMany({
-        where: { organizationId },
+        where: { organizationId, ...unitScopeWhere(scope) },
         include: leaseInclude,
         orderBy: [{ endDate: 'asc' }, { createdAt: 'desc' }],
       });

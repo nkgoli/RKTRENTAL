@@ -46,6 +46,7 @@ export interface LibraryFilters {
   query?: string;
   kind?: LibraryDocumentKind | 'ALL';
   propertyId?: string;
+  unitId?: string;
   sort?: LibrarySort;
 }
 
@@ -87,6 +88,7 @@ export function filterLibraryDocuments(
     .filter((file) => !query || searchText(file).includes(query))
     .filter((file) => !filters.kind || filters.kind === 'ALL' || file.kind === filters.kind)
     .filter((file) => !filters.propertyId || documentProperty(file)?.id === filters.propertyId)
+    .filter((file) => !filters.unitId || documentUnit(file)?.id === filters.unitId)
     .sort((left, right) => {
       const delta = left.createdAt.getTime() - right.createdAt.getTime();
       return filters.sort === 'oldest' ? delta : -delta;

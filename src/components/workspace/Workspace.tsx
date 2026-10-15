@@ -3,7 +3,15 @@ import { Badge, Cover } from '@/components/ui';
 import type { CoverKind } from '@/components/ui';
 import styles from './Workspace.module.css';
 
-export type WorkspaceTab = 'overview' | 'listing' | 'returns';
+export type WorkspaceTab =
+  | 'overview'
+  | 'listing'
+  | 'applications'
+  | 'leases'
+  | 'payments'
+  | 'returns'
+  | 'maintenance'
+  | 'documents';
 
 export type WorkspaceScope = {
   propertyId: string;
@@ -31,12 +39,10 @@ function scopedHref(scope: WorkspaceScope, tab: (typeof tabs)[number]): string {
   if (tab === 'Returns') return `${base}?tab=returns`;
 
   const query = new URLSearchParams();
-  if (tab === 'Applications' || tab === 'Leases') {
-    query.set('q', scope.unitNumber ? `${scope.propertyName} ${scope.unitNumber}` : scope.propertyName);
-    return `/${tab === 'Applications' ? 'applications' : 'leases'}?${query}`;
-  }
   query.set('propertyId', scope.propertyId);
   if (scope.unitId) query.set('unitId', scope.unitId);
+  if (tab === 'Applications') return `/applications?${query}`;
+  if (tab === 'Leases') return `/leases?${query}`;
   if (tab === 'Payments') return `/payments?${query}`;
   if (tab === 'Maintenance') return `/maintenance?${query}`;
   return `/documents?${query}`;

@@ -48,9 +48,9 @@ lists everything.
 | --------------- | ----------------------------------------------------------------------------- |
 | `-Dev`          | Next.js dev server instead of a production build                              |
 | `-Port 3100`    | App port (default 3000)                                                       |
-| `-DbPort 5433`  | Postgres port (default 5432)                                                  |
+| `-DbPort 5433`  | Postgres port (default 5432); also updates the local `DATABASE_URL` port       |
 | `-StopExisting` | Stop an old copy holding the ports (the `RocketRentalPreview` scheduled task) |
-| `-Seed`         | Re-run the demo seed (otherwise only on first database creation)              |
+| `-Seed`         | Re-run the demo seed (otherwise once per embedded database)                    |
 | `-SkipInstall`  | Skip `npm ci`; `-Rebuild` forces a rebuild                                    |
 | `-Docker`       | Postgres from `docker compose` instead of embedded Postgres                   |
 | `-SkipDatabase` | Use the database already named in `DATABASE_URL`                              |
@@ -58,6 +58,8 @@ lists everything.
 If port 3000 or 5432 is busy, the script reports the holding process (and the
 scheduled task, if that is the cause) and exits without stopping anything.
 Re-run with `-StopExisting` to stop the old copy, or use `-Port` / `-DbPort`.
+For example, `powershell -ExecutionPolicy Bypass -File scripts\start.ps1 -Port 3100 -DbPort 5433`
+starts the app on 3100 and embedded Postgres on 5433.
 
 ## Demo accounts (dev only)
 

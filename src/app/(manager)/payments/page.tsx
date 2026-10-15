@@ -1,11 +1,16 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 import { EmptyState } from '@/components/RouteStates';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { Alert } from '@/components/ui/Feedback';
 import { Badge, Avatar } from '@/components/ui/Badge';
 import type { BadgeTone } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Card, CardHeader, Stat } from '@/components/ui/Card';
+import { Card, CardHeader } from '@/components/ui/Card';
+import { PageHero } from '@/components/dashboard/PageHero';
+import { KpiCard } from '@/components/dashboard/KpiCard';
+import { MiniCover } from '@/components/dashboard/MiniCover';
+import { IconAlert, IconBank, IconCash, IconCheck } from '@/components/dashboard/icons';
+import { propertiesDb } from '@/lib/properties/data';
 import { Field, FormRow, Input, Select } from '@/components/ui/Forms';
 import { Progress } from '@/components/ui/Feedback';
 import { requireManagerRole } from '@/lib/auth/access';
@@ -72,6 +77,7 @@ const shortDate = (date: Date) =>
 function filterRows(rows: RentRollRow[], filter: string) {
   if (filter === 'paid') return rows.filter((r) => r.status === 'PAID');
   if (filter === 'open') return rows.filter((r) => r.status !== 'PAID');
+  if (filter === 'late') return rows.filter((r) => r.status === 'LATE');
   return rows;
 }
 
@@ -80,11 +86,17 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
   const params = await searchParams;
   const now = new Date();
   const month = /^\d{4}-\d{2}$/.test(params.month ?? '') ? (params.month as string) : monthKey(now);
-  const filter = ['paid', 'open'].includes(params.filter ?? '') ? (params.filter as string) : 'all';
+  const filter = ['paid', 'open', 'late'].includes(params.filter ?? '') ? (params.filter as string) : 'all';
 
   // Idempotent: only creates rent charges that do not exist yet.
   await ensureRentCharges(session.organizationId, now);
-  const overview = await loadPaymentsOverview(session.organizationId, month, now);
+  const [overview, propertyList] = await Promise.all([
+    loadPaymentsOverview(session.organizationId, month, now),
+    propertiesDb(session.organizationId).listProperties(),
+  ]);
+  const covers = new Map(propertyList.properties.map((p) => [p.id, p]));
+  const dueCents = overview.collectedCents + overview.outstandingCents;
+  const collectedPercent = dueCents ? Math.round((overview.collectedCents / dueCents) * 100) : 0;
   const rows = filterRows(overview.rows, filter);
   const notice = params.notice ? notices[params.notice] : undefined;
   const recording = params.record !== undefined;
@@ -112,6 +124,10 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
           { label: '+ Record payment', href: `/payments?month=${month}&record=1`, primary: true },
         ]}
       />
+      <PageHero eyebrow={monthLabel(month)} title="Collections at a glance">
+        {formatUsd(overview.collectedCents)} collected of {formatUsd(dueCents)} due ·{' '}
+        {overview.openCount} open {overview.openCount === 1 ? 'balance' : 'balances'}.
+      </PageHero>
       {notice ? (
         <Alert tone={notice.tone}>
           <div>{notice.text}</div>
@@ -137,22 +153,35 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
       )}
 
       <div className="grid-4">
-        <Stat label="Collected this month" value={formatUsd(overview.collectedCents)} />
-        <Stat
+        <KpiCard
+          label="Collected this month"
+          value={formatUsd(overview.collectedCents)}
+          note={`${collectedPercent}% of ${formatUsd(dueCents)}`}
+          icon={<IconCash />}
+          tone="green"
+          ring={collectedPercent}
+          ringLabel={`${collectedPercent}% of rent collected`}
+        />
+        <KpiCard
           label="Outstanding"
           value={formatUsd(overview.outstandingCents)}
-          delta={`${overview.openCount} open ${overview.openCount === 1 ? 'balance' : 'balances'}`}
+          note={`${overview.openCount} open ${overview.openCount === 1 ? 'balance' : 'balances'}`}
+          icon={<IconCheck />}
         />
-        <Stat
+        <KpiCard
           label="Late"
           value={formatUsd(overview.lateCents)}
-          delta={`${overview.lateCount} past-due ${overview.lateCount === 1 ? 'payment' : 'payments'}`}
-          tone={overview.lateCount ? 'down' : 'neutral'}
+          note={`${overview.lateCount} past-due ${overview.lateCount === 1 ? 'payment' : 'payments'}`}
+          icon={<IconAlert />}
+          tone={overview.lateCount ? 'coral' : 'green'}
+          trend={overview.lateCount ? `${overview.lateCount} late` : 'On track'}
+          trendWarm={overview.lateCount > 0}
         />
-        <Stat
+        <KpiCard
           label="Next owner payout"
           value={formatUsd(overview.payoutReadyCents)}
-          delta={overview.payoutReadyCents ? 'Ready to transfer' : 'Nothing waiting'}
+          note={overview.payoutReadyCents ? 'Ready to transfer' : 'Nothing waiting'}
+          icon={<IconBank />}
         />
       </div>
 
@@ -205,13 +234,15 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
               {chip('all', 'All')}
               {chip('paid', 'Paid')}
               {chip('open', 'Open')}
+              {chip('late', 'Late')}
             </div>
           </div>
         </div>
         <table className="table">
           <thead>
             <tr>
-              <th>Tenant / property</th>
+              <th>Tenant</th>
+              <th>Property</th>
               <th>Due</th>
               <th className="num">Rent</th>
               <th>Status</th>
@@ -221,7 +252,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5}>
+                <td colSpan={6}>
                   <EmptyState title="No rent charges in this view" description="Choose another status or create a lease to start collecting rent." action="View leases" href="/leases" />
                 </td>
               </tr>
@@ -243,11 +274,19 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                             row.tenantName
                           )}
                         </strong>
-                        <small>
-                          <Link href={`/properties/${row.propertyId}`}>{row.propertyName}</Link>
-                          {' · '}
-                          {row.singleUnit ? 'Single-unit' : row.unitLabel}
-                        </small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="cell-main">
+                      <MiniCover cover={covers.get(row.propertyId)} />
+                      <div>
+                        <strong>
+                          <Link href={`/properties/${row.propertyId}`} style={{ color: 'inherit' }}>
+                            {row.propertyName}
+                          </Link>
+                        </strong>
+                        <small>{row.singleUnit ? 'Single-unit' : row.unitLabel}</small>
                       </div>
                     </div>
                   </td>
@@ -313,7 +352,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
           <div className="stack">
             {overview.payouts.map((payout) => (
               <div className="row between" key={payout.propertyId}>
-                <div>
+                <div className="cell-main">
+                  <MiniCover cover={covers.get(payout.propertyId)} />
+                  <div>
                   <strong>
                     <Link href={`/properties/${payout.propertyId}`} style={{ color: 'inherit' }}>
                       {payout.propertyName}
@@ -323,6 +364,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                     {payout.ownerName ?? 'No owner assigned'} · {formatUsd(payout.collectedCents)}{' '}
                     collected
                   </p>
+                  </div>
                 </div>
                 <strong>{formatUsd(payout.readyCents)}</strong>
               </div>
@@ -385,3 +427,4 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
     </>
   );
 }
+

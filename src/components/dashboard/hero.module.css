@@ -1,0 +1,63 @@
+﻿.hero {
+  align-items: center;
+  background: linear-gradient(135deg, #f3f6ff 0%, #ffffff 60%);
+  border: 1px solid #dbe4fb;
+  border-radius: var(--design-radius);
+  box-shadow: var(--rr-shadow);
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  padding: 22px 26px;
+}
+
+.eyebrow {
+  color: var(--design-primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.hero h2 {
+  color: var(--design-text);
+  font-family: var(--design-heading-font);
+  font-size: 22px;
+}
+
+.lede {
+  color: var(--design-muted);
+  font-size: 14px;
+  margin-top: 4px;
+  max-width: 640px;
+}
+
+.aside {
+  align-items: center;
+  display: flex;
+  flex: none;
+  gap: 12px;
+}
+
+@media (max-width: 700px) {
+  .hero {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 18px;
+  }
+}
+
+.mini {
+  border-radius: 8px;
+  display: inline-block;
+  flex: none;
+  height: 34px;
+  overflow: hidden;
+  width: 52px;
+}
+
+.mini > div {
+  aspect-ratio: auto;
+  height: 100%;
+  width: 100%;
+}

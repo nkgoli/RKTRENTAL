@@ -1,5 +1,6 @@
 import { MaintenancePriority, MaintenanceStatus } from '@prisma/client';
 import { db } from '@/lib/db/client';
+import { directScopeWhere, type ScopeFilter } from '@/lib/workspace/scope';
 import type { AuthSession } from '@/lib/auth/session';
 import { actorFromSession } from '@/lib/storage/http';
 import { createPrismaFileService } from '@/lib/storage/service';
@@ -33,9 +34,9 @@ async function publishStatusWithoutBlocking(organizationId: string, eventId: str
   }
 }
 
-export async function listMaintenanceBoard(organizationId: string) {
+export async function listMaintenanceBoard(organizationId: string, scope: ScopeFilter = {}) {
   return db.maintenanceRequest.findMany({
-    where: { organizationId },
+    where: { organizationId, ...directScopeWhere(scope) },
     include: {
       property: { select: { id: true, name: true } },
       unit: { select: { id: true, number: true } },

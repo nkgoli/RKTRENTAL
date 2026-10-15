@@ -52,7 +52,7 @@ export function PropertyOverview({ property, returns, leaseFacts = [] }: {
   const activeUnits = property.units.filter((unit) => unit.status !== 'ARCHIVED');
   const steps = [
     ...(property.stats.openRepairs ? [{ label: `${property.stats.openRepairs} repair${property.stats.openRepairs === 1 ? '' : 's'} need attention`, href: `/maintenance?propertyId=${property.id}` }] : []),
-    ...(property.stats.expiringLeases ? [{ label: `${property.stats.expiringLeases} lease${property.stats.expiringLeases === 1 ? '' : 's'} expiring soon`, href: `/leases?q=${encodeURIComponent(property.name)}` }] : []),
+    ...(property.stats.expiringLeases ? [{ label: `${property.stats.expiringLeases} lease${property.stats.expiringLeases === 1 ? '' : 's'} expiring soon`, href: `/leases?propertyId=${property.id}&tab=expiring` }] : []),
     ...(activeUnits.some((unit) => unit.status === 'VACANT') ? [{ label: 'Review vacant units and pricing', href: `/properties/${property.id}?tab=listing` }] : []),
   ];
 
@@ -60,7 +60,7 @@ export function PropertyOverview({ property, returns, leaseFacts = [] }: {
     <div className={styles.page}>
       <div className={styles.primary}>
         <Card flush>
-          <CardHeader title="Lease timeline" action={<Link href={`/leases?q=${encodeURIComponent(property.name)}`}>View leases</Link>} />
+          <CardHeader title="Lease timeline" action={<Link href={`/leases?propertyId=${property.id}`}>View leases</Link>} />
           <div className={styles.timeline}>
             {activeUnits.map((unit) => {
               const lease = leaseFacts.find((fact) => fact.id === unit.id);
@@ -134,7 +134,7 @@ export function PropertyOverview({ property, returns, leaseFacts = [] }: {
 function UnitLeaseTimeline({ unit }: { unit: UnitDetail }) {
   return (
     <Card>
-      <CardHeader title="Lease timeline" action={unit.currentLease ? <Link href={`/leases/${unit.currentLease.id}`}>View lease</Link> : <Link href={`/leases/new?unit=${unit.id}`}>Create lease</Link>} />
+      <CardHeader title="Lease timeline" action={unit.currentLease ? <Link href={`/leases/${unit.currentLease.id}?propertyId=${unit.property.id}&unitId=${unit.id}`}>View lease</Link> : <Link href={`/leases/new?unit=${unit.id}`}>Create lease</Link>} />
       {unit.leaseHistory.length ? <div className={styles.leaseTimeline}>{unit.leaseHistory.map((lease) => <div className={styles.leaseTimelineRow} key={lease.id}>
         <span className={styles.timelineDot} data-status={lease.status === 'ACTIVE' ? 'OCCUPIED' : 'VACANT'} />
         <span className={styles.timelineMain}><strong>{lease.tenantName}</strong><small>{formatDate(lease.startDate)} – {formatDate(lease.endDate)}</small></span>
@@ -150,7 +150,7 @@ export function UnitOverview({ unit, returns, canDelete }: { unit: UnitDetail; r
   const rentGap = unit.marketRent != null && unit.listedRent != null ? unit.marketRent - unit.listedRent : null;
   const steps = [
     ...(!currentLease ? [{ label: 'Create a lease for this unit', href: `/leases/new?unit=${unit.id}` }] : []),
-    ...(unit.openRepairs ? [{ label: `${unit.openRepairs} open maintenance request${unit.openRepairs === 1 ? '' : 's'}`, href: `/maintenance?unitId=${unit.id}` }] : []),
+    ...(unit.openRepairs ? [{ label: `${unit.openRepairs} open maintenance request${unit.openRepairs === 1 ? '' : 's'}`, href: `/maintenance?propertyId=${unit.property.id}&unitId=${unit.id}` }] : []),
     ...(rentGap != null && rentGap > 0 ? [{ label: `${formatMoney(rentGap)} below market rent`, href: `/properties/${unit.property.id}/units/${unit.id}?tab=listing` }] : []),
   ];
 
@@ -183,7 +183,7 @@ export function UnitOverview({ unit, returns, canDelete }: { unit: UnitDetail; r
             <Sparkline values={returns.monthly.map((row) => row.incomeCents)} tone="ok" label="Monthly unit income trend" />
           </Card>
           <Card>
-            <CardHeader title="Payments by the numbers" action={<Link href={`/payments?unitId=${unit.id}`}>View payments</Link>} />
+            <CardHeader title="Payments by the numbers" action={<Link href={`/payments?propertyId=${unit.property.id}&unitId=${unit.id}`}>View payments</Link>} />
             <div className={styles.paymentNumbers}><div><p className="eyebrow">Collected · 12 mo</p><strong>{moneyCents(returns.collectedCents)}</strong></div><div><p className="eyebrow">Due · 12 mo</p><strong>{moneyCents(returns.dueCents)}</strong></div></div>
             <div className={styles.progressTrack}><span style={{ width: `${returns.dueCents ? Math.min(100, (returns.collectedCents / returns.dueCents) * 100) : 0}%` }} /></div>
             <p className="muted" style={{ fontSize: 12 }}>Collected rent compared with active lease rent scheduled for this period.</p>

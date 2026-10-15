@@ -14,6 +14,8 @@ import { propertiesDb } from '@/lib/properties/data';
 import { Field, FormRow, Input, Select } from '@/components/ui/Forms';
 import { Progress } from '@/components/ui/Feedback';
 import { requireManagerRole } from '@/lib/auth/access';
+import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
+import { scopeFilterFrom, scopeQuery } from '@/lib/workspace/scope';
 import {
   addMonths,
   ensureRentCharges,
@@ -38,6 +40,8 @@ type SearchParams = Promise<{
   filter?: string;
   record?: string;
   notice?: string;
+  propertyId?: string;
+  unitId?: string;
 }>;
 
 const notices: Record<string, { tone: 'success' | 'warning'; text: string }> = {
@@ -86,12 +90,15 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
   const params = await searchParams;
   const now = new Date();
   const month = /^\d{4}-\d{2}$/.test(params.month ?? '') ? (params.month as string) : monthKey(now);
+  const scope = scopeFilterFrom(params);
+  const scopeParams = scopeQuery(scope).toString();
+  const scopeSuffix = scopeParams ? `&${scopeParams}` : '';
   const filter = ['paid', 'open', 'late'].includes(params.filter ?? '') ? (params.filter as string) : 'all';
 
   // Idempotent: only creates rent charges that do not exist yet.
   await ensureRentCharges(session.organizationId, now);
   const [overview, propertyList] = await Promise.all([
-    loadPaymentsOverview(session.organizationId, month, now),
+    loadPaymentsOverview(session.organizationId, month, now, undefined, scope),
     propertiesDb(session.organizationId).listProperties(),
   ]);
   const covers = new Map(propertyList.properties.map((p) => [p.id, p]));
@@ -104,7 +111,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
     <Link
       key={value}
       className={`chip${filter === value ? ' active' : ''}`}
-      href={`/payments?month=${month}${value === 'all' ? '' : `&filter=${value}`}`}
+      href={`/payments?month=${month}${value === 'all' ? '' : `&filter=${value}`}${scopeSuffix}`}
     >
       {label}
     </Link>
@@ -116,12 +123,13 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
 
   return (
     <>
+      <ScopedWorkspace organizationId={session.organizationId} filter={scope} activeTab="payments" />
       <PageHeader
         eyebrow="Money"
         title="Payments"
         actions={[
           { label: 'Payment settings', href: '/integrations' },
-          { label: '+ Record payment', href: `/payments?month=${month}&record=1`, primary: true },
+          { label: '+ Record payment', href: `/payments?month=${month}&record=1${scopeSuffix}`, primary: true },
         ]}
       />
       <PageHero eyebrow={monthLabel(month)} title="Collections at a glance">
@@ -190,7 +198,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
           <CardHeader
             title="Record payment"
             action={
-              <Button href={`/payments?month=${month}`} size="sm" variant="ghost">
+              <Button href={`/payments?month=${month}${scopeSuffix}`} size="sm" variant="ghost">
                 Cancel
               </Button>
             }
@@ -227,7 +235,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
             <h3>Rent roll</h3>
           </div>
           <div className="row">
-            <Link className="chip" href={`/payments?month=${addMonths(month, -1)}`}>
+            <Link className="chip" href={`/payments?month=${addMonths(month, -1)}${scopeSuffix}`}>
               ‹ Prev
             </Link>
             <div className="chips">
@@ -318,7 +326,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                         <Button
                           size="sm"
                           variant="ghost"
-                          href={`/payments?month=${month}&record=${row.leaseId}#record-payment`}
+                          href={`/payments?month=${month}&record=${row.leaseId}${scopeSuffix}#record-payment`}
                         >
                           Record payment
                         </Button>
@@ -407,7 +415,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                 <strong>Late fees</strong>
                 <p className="muted">Review overdue rent before applying a fee.</p>
               </div>
-              <Button size="sm" href={`/payments?month=${month}&filter=open`}>
+              <Button size="sm" href={`/payments?month=${month}&filter=open${scopeSuffix}`}>
                 Review
               </Button>
             </div>
@@ -416,7 +424,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                 <strong>Record offline payment</strong>
                 <p className="muted">Keep the ledger current for checks or cash.</p>
               </div>
-              <Button size="sm" href={`/payments?month=${month}&record=1#record-payment`}>
+              <Button size="sm" href={`/payments?month=${month}&record=1${scopeSuffix}#record-payment`}>
                 Record
               </Button>
             </div>

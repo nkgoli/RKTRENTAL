@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
+import { scopeFilterFrom } from '@/lib/workspace/scope';
 import { EmptyState } from '@/components/RouteStates';
 import {
   Alert,
@@ -165,10 +167,15 @@ function RequestTicket({
   );
 }
 
-export default async function MaintenancePage() {
-  const session = await requireManagerRole();
+export default async function MaintenancePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ propertyId?: string; unitId?: string }>;
+}) {
+  const [session, params] = await Promise.all([requireManagerRole(), searchParams]);
+  const scope = scopeFilterFrom(params);
   const [requests, { properties, vendors }] = await Promise.all([
-    listMaintenanceBoard(session.organizationId),
+    listMaintenanceBoard(session.organizationId, scope),
     listMaintenanceOptions(session.organizationId),
   ]);
   const open = requests.filter((request) => !['DONE', 'CANCELLED'].includes(request.status));
@@ -179,7 +186,11 @@ export default async function MaintenancePage() {
   );
   return (
     <>
-      {/* Property workspace header and tabs attach above this page header. */}
+      <ScopedWorkspace
+        organizationId={session.organizationId}
+        filter={scope}
+        activeTab="maintenance"
+      />
       <PageHeader
         actions={[
           { label: 'Assign vendor', href: '#requests' },

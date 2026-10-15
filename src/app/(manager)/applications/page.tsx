@@ -4,13 +4,22 @@ import { Avatar, Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { AvatarStack, KpiIcon, TrendChip } from '@/components/ui';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
+import { scopeFilterFrom, unitScopeWhere } from '@/lib/workspace/scope';
 import { db } from '@/lib/db/client';
 import { requireManagerRole } from '@/lib/auth/access';
 import { hasCurrentConsent, type ApplicationStatus } from '@/lib/screening/policy';
 import { recordDecision, requestScreening } from './actions';
 import styles from './applications.module.css';
 
-type SearchParams = { applicant?: string; notice?: string; q?: string; status?: string };
+type SearchParams = {
+  applicant?: string;
+  notice?: string;
+  q?: string;
+  status?: string;
+  propertyId?: string;
+  unitId?: string;
+};
 const statuses: ApplicationStatus[] = ['SUBMITTED', 'SCREENING', 'REVIEW', 'APPROVED', 'DECLINED'];
 const labels: Record<ApplicationStatus, string> = {
   SUBMITTED: 'Awaiting consent',
@@ -59,8 +68,11 @@ export default async function ApplicationsPage({
   const status = statuses.includes(params.status as ApplicationStatus)
     ? (params.status as ApplicationStatus)
     : undefined;
+  const scope = scopeFilterFrom(params);
+  const scopeWhere = unitScopeWhere(scope);
   const where = {
     organizationId: session.organizationId,
+    ...scopeWhere,
     ...(status ? { status } : {}),
     ...(q
       ? {
@@ -85,10 +97,10 @@ export default async function ApplicationsPage({
     }),
     db.application.groupBy({
       by: ['status'],
-      where: { organizationId: session.organizationId },
+      where: { organizationId: session.organizationId, ...scopeWhere },
       _count: { _all: true },
     }),
-    db.application.count({ where: { organizationId: session.organizationId } }),
+    db.application.count({ where: { organizationId: session.organizationId, ...scopeWhere } }),
     db.providerConnection.findMany({
       where: { organizationId: session.organizationId, kind: 'SCREENING' },
       orderBy: { updatedAt: 'desc' },
@@ -155,7 +167,11 @@ export default async function ApplicationsPage({
 
   return (
     <section className={styles.applications} aria-label="Applications and screening">
-      {/* Property workspace header and tabs attach above this page header. */}
+      <ScopedWorkspace
+        organizationId={session.organizationId}
+        filter={scope}
+        activeTab="applications"
+      />
       <PageHeader
         title="Applications"
         eyebrow="Leasing"
@@ -192,6 +208,8 @@ export default async function ApplicationsPage({
               </option>
             ))}
           </select>
+          {scope.propertyId && <input type="hidden" name="propertyId" value={scope.propertyId} />}
+          {scope.unitId && <input type="hidden" name="unitId" value={scope.unitId} />}
           <Button type="submit" variant="secondary">
             Search
           </Button>
@@ -272,6 +290,8 @@ export default async function ApplicationsPage({
                 const paramsForApplicant = new URLSearchParams();
                 if (q) paramsForApplicant.set('q', q);
                 if (status) paramsForApplicant.set('status', status);
+                if (scope.propertyId) paramsForApplicant.set('propertyId', scope.propertyId);
+                if (scope.unitId) paramsForApplicant.set('unitId', scope.unitId);
                 paramsForApplicant.set('applicant', application.id);
                 return (
                   <li key={application.id}>

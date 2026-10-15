@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
 import { paymentsProvider } from '@/lib/providers';
+import { unitScopeWhere, type ScopeFilter } from '@/lib/workspace/scope';
 import type { PaymentsProvider } from '@/lib/providers/types';
 import {
   assertCents,
@@ -472,11 +473,18 @@ export async function loadPaymentsOverview(
   month: string,
   asOf: Date,
   client: Client = db,
+  scope: ScopeFilter = {},
 ): Promise<PaymentsOverview> {
   const start = monthStart(month);
   const end = monthStart(addMonths(month, 1));
   const leases = await client.lease.findMany({
-    where: { organizationId, status: 'ACTIVE', startDate: { lt: end }, endDate: { gte: start } },
+    where: {
+      organizationId,
+      status: 'ACTIVE',
+      startDate: { lt: end },
+      endDate: { gte: start },
+      ...unitScopeWhere(scope),
+    },
     include: {
       unit: { include: { property: true } },
       tenants: { include: { tenant: true }, orderBy: { isPrimary: 'desc' } },
@@ -552,7 +560,9 @@ export async function loadPaymentsOverview(
     (a, b) => order[a.status] - order[b.status] || a.tenantName.localeCompare(b.tenantName),
   );
 
-  const payouts = await payoutPlans(organizationId, month, client);
+  const payouts = (await payoutPlans(organizationId, month, client)).filter(
+    (plan) => !scope.propertyId || plan.propertyId === scope.propertyId,
+  );
   const recent = await client.payout.findMany({
     where: { organizationId },
     orderBy: { createdAt: 'desc' },

@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
+import { scopeFilterFrom, scopeQuery, type ScopeFilter } from '@/lib/workspace/scope';
 import { Avatar, AvatarStack, Badge, Card, KpiIcon, Tabs, TrendChip } from '@/components/ui';
 import styles from './leases.module.css';
 import { requireManagerRole } from '@/lib/auth/access';
@@ -20,24 +22,36 @@ function visible(lease: LeaseListItem, tab: Tab, today: Date, in60: Date) {
   return lease.status === 'ACTIVE';
 }
 
-function tabHref(tab: Tab, q: string, page = 1) {
-  const query = new URLSearchParams();
+function tabHref(tab: Tab, q: string, page = 1, scope: ScopeFilter = {}) {
+  const query = scopeQuery(scope);
   if (tab !== 'active') query.set('tab', tab);
   if (q) query.set('q', q);
   if (page > 1) query.set('page', String(page));
   return query.size ? `/leases?${query}` : '/leases';
 }
 
+function leaseHref(id: string, scope: ScopeFilter) {
+  const query = scopeQuery(scope).toString();
+  return query ? `/leases/${id}?${query}` : `/leases/${id}`;
+}
+
 export default async function LeasesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; q?: string; page?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    q?: string;
+    page?: string;
+    propertyId?: string;
+    unitId?: string;
+  }>;
 }) {
   const session = await requireManagerRole();
   const params = await searchParams;
   const tab: Tab = tabs.includes(params.tab as Tab) ? (params.tab as Tab) : 'active';
   const q = (params.q ?? '').trim();
-  const { leases, counts, today, in60 } = await leasesDb(session.organizationId).list();
+  const scope = scopeFilterFrom(params);
+  const { leases, counts, today, in60 } = await leasesDb(session.organizationId).list(scope);
   const rows = leases.filter((lease) => {
     if (!visible(lease, tab, today, in60)) return false;
     if (!q) return true;
@@ -64,6 +78,11 @@ export default async function LeasesPage({
 
   return (
     <>
+      <ScopedWorkspace
+        organizationId={session.organizationId}
+        filter={scope}
+        activeTab="leases"
+      />
       <PageHeader
         eyebrow="Leasing"
         actions={[
@@ -122,6 +141,8 @@ export default async function LeasesPage({
             </div>
             <form role="search" action="/leases" method="get">
               {tab !== 'active' && <input type="hidden" name="tab" value={tab} />}
+              {scope.propertyId && <input type="hidden" name="propertyId" value={scope.propertyId} />}
+              {scope.unitId && <input type="hidden" name="unitId" value={scope.unitId} />}
               <label className="search" style={{ minWidth: 230 }}>
                 <span aria-hidden="true">⌕</span>
                 <input
@@ -136,7 +157,7 @@ export default async function LeasesPage({
           <Tabs
             items={tabs.map((key) => ({
               label: `${{ active: 'Active', expiring: 'Expiring soon', drafts: 'Drafts', ended: 'Ended' }[key]} ${values[key]}`,
-              href: tabHref(key, q),
+              href: tabHref(key, q, 1, scope),
               active: tab === key,
             }))}
           />
@@ -212,7 +233,7 @@ export default async function LeasesPage({
                       )}
                     </td>
                     <td>
-                      <Link href={`/leases/${lease.id}`}>
+                      <Link href={leaseHref(lease.id, scope)}>
                         {term(lease.startDate, lease.endDate)}
                       </Link>
                     </td>
@@ -235,7 +256,7 @@ export default async function LeasesPage({
                       </Badge>
                     </td>
                     <td>
-                      <Link className="btn btn-ghost btn-sm" href={`/leases/${lease.id}`}>
+                      <Link className="btn btn-ghost btn-sm" href={leaseHref(lease.id, scope)}>
                         View
                       </Link>
                     </td>
@@ -260,12 +281,12 @@ export default async function LeasesPage({
             : 'No leases match this view.'}
           <span className="row" style={{ marginLeft: 'auto' }}>
             {page > 1 && (
-              <Link className="btn btn-secondary btn-sm" href={tabHref(tab, q, page - 1)}>
+              <Link className="btn btn-secondary btn-sm" href={tabHref(tab, q, page - 1, scope)}>
                 ‹ Previous
               </Link>
             )}
             {page * PAGE_SIZE < rows.length && (
-              <Link className="btn btn-secondary btn-sm" href={tabHref(tab, q, page + 1)}>
+              <Link className="btn btn-secondary btn-sm" href={tabHref(tab, q, page + 1, scope)}>
                 Next ›
               </Link>
             )}

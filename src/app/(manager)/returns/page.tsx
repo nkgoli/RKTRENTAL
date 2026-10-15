@@ -271,11 +271,9 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
               const width = Math.max(0, (property.metrics.noiCents / maxNoi) * 220);
               return (
                 <g key={property.propertyId}>
-                  <a href={returnsHref(property.propertyId)}>
-                    <text x={0} y={y} fontSize={12} fontWeight={600} fill="var(--design-text)">
-                      {property.propertyName}
-                    </text>
-                  </a>
+                  <text x={0} y={y} fontSize={12} fontWeight={600} fill="var(--design-text)">
+                    {property.propertyName}
+                  </text>
                   <rect x={0} y={y + 6} width={width} height={24} rx={6} fill="var(--design-primary)" />
                   <text x={width + 8} y={y + 23} fontSize={12} fill="var(--design-muted)">
                     {formatUsd(property.metrics.noiCents)}

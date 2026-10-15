@@ -15,7 +15,7 @@ ROCKETRENTAL_DB_PORT=5432
 # HTTP port for the Next.js server.
 PORT=3000
 # Local-only cookie-signing placeholder; generate a unique long secret for deployment.
-ROCKETRENTAL_AUTH_SECRET="change-me-local-dev-only-secret"
+ROCKETRENTAL_AUTH_SECRET="local-dev-only-secret-not-for-production-0123456789"
 # Enables built-in mock providers and signing in local demos.
 ROCKETRENTAL_SANDBOX=true
 # Allows session cookies over local HTTP; use true when serving over HTTPS.

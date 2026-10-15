@@ -53,6 +53,7 @@ lists everything.
 | `-Seed`         | Re-run the demo seed (otherwise once per embedded database)                    |
 | `-SkipInstall`  | Skip `npm ci`; `-Rebuild` forces a rebuild                                    |
 | `-Docker`       | Postgres from `docker compose` instead of embedded Postgres                   |
+| `-ResetDatabase`| Delete and re-create this checkout's embedded data dir for `-DbPort` (opt-in)  |
 | `-SkipDatabase` | Use the database already named in `DATABASE_URL`                              |
 
 If port 3000 or 5432 is busy, the script reports the holding process (and the
@@ -60,6 +61,15 @@ scheduled task, if that is the cause) and exits without stopping anything.
 Re-run with `-StopExisting` to stop the old copy, or use `-Port` / `-DbPort`.
 For example, `powershell -ExecutionPolicy Bypass -File scripts\start.ps1 -Port 3100 -DbPort 5433`
 starts the app on 3100 and embedded Postgres on 5433.
+
+`start.ps1` keeps its embedded data in `.data\postgres-<port>` inside the checkout
+(git-ignored), so it never shares a directory with another copy such as
+`RocketRentalPreview`; an inherited `ROCKETRENTAL_DB_DIR` is ignored. A stale
+`postmaster.pid` (no live process) is removed automatically. A half-initialised
+data dir is never deleted silently: the script stops with the reason and the
+tail of `%TEMP%\rocketrental\postgres.err.log` / `postgres.out.log`, and exits
+non-zero. Add `-ResetDatabase` to wipe and re-initialise that data dir (all local
+data in it is lost).
 
 ## Demo accounts (dev only)
 

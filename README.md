@@ -82,7 +82,7 @@ shorter ones make sign-in fail with a server error. Each override is printed as
 use that one database.
 
 The Next.js server's stdout and stderr are shown in the console prefixed with
-`[next]` and also written to `%TEMP%ocketrentalpp-<port>.log`. The path is
+`[next]` and also written to `%TEMP%\rocketrental\app-<port>.log`. The path is
 printed at start-up and again if the app fails to start, so a server-side
 "Application error" page can be matched to its real error (look for the `Digest`).
 

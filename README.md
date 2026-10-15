@@ -28,6 +28,37 @@ database ever falls out of sync with the migrations, stop the database and
 run `npm run db:reset`, then start again. `db:migrate` is non-interactive;
 use `npm run db:migrate:dev` when authoring a new migration.
 
+## Start on Windows
+
+One command starts everything (prerequisite check, `npm ci` when needed,
+`.env`, database, migrations, demo seed on first run, build, app):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\start.ps1
+```
+
+`-ExecutionPolicy Bypass` applies to that one process only and avoids the
+"running scripts is disabled" error; it works in Windows PowerShell 5.1 and
+PowerShell 7 (`pwsh`). The script prints `http://localhost:3000` once the app
+responds; press Ctrl+C to stop the app and its database. Needs Node 22+ and
+npm; Docker is only needed with `-Docker`. `Get-Help .\scripts\start.ps1 -Full`
+lists everything.
+
+| Option          | Effect                                                                        |
+| --------------- | ----------------------------------------------------------------------------- |
+| `-Dev`          | Next.js dev server instead of a production build                              |
+| `-Port 3100`    | App port (default 3000)                                                       |
+| `-DbPort 5433`  | Postgres port (default 5432)                                                  |
+| `-StopExisting` | Stop an old copy holding the ports (the `RocketRentalPreview` scheduled task) |
+| `-Seed`         | Re-run the demo seed (otherwise only on first database creation)              |
+| `-SkipInstall`  | Skip `npm ci`; `-Rebuild` forces a rebuild                                    |
+| `-Docker`       | Postgres from `docker compose` instead of embedded Postgres                   |
+| `-SkipDatabase` | Use the database already named in `DATABASE_URL`                              |
+
+If port 3000 or 5432 is busy, the script reports the holding process (and the
+scheduled task, if that is the cause) and exits without stopping anything.
+Re-run with `-StopExisting` to stop the old copy, or use `-Port` / `-DbPort`.
+
 ## Demo accounts (dev only)
 
 | Account | Email                               | Password          |
@@ -82,12 +113,12 @@ is irreconcilable, run `npm run db:reset` and start the preview again.
 
 ## Documentation
 
-- [Environment configuration](docs/environment.md) — local template and variable explanations.
-- [Deployment guide](docs/deployment.md) — environment variables, Postgres,
+- [Environment configuration](docs/environment.md) â€” local template and variable explanations.
+- [Deployment guide](docs/deployment.md) â€” environment variables, Postgres,
   S3-compatible storage, sandbox vs live providers, webhooks, Docker.
-- [Manager help](docs/managers.md) — day-to-day work for property managers.
-- [Tenant help](docs/tenants.md) — paying rent and requesting repairs.
-- [Changelog](CHANGELOG.md) — release notes, including v1.0.0.
+- [Manager help](docs/managers.md) â€” day-to-day work for property managers.
+- [Tenant help](docs/tenants.md) â€” paying rent and requesting repairs.
+- [Changelog](CHANGELOG.md) â€” release notes, including v1.0.0.
 
 ## Folder layout
 

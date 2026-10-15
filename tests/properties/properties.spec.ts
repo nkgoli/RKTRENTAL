@@ -74,9 +74,10 @@ test('add a property, add a unit, open the unit', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: `${name} · Unit 6A` })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Current lease' })).toBeVisible();
   await expect(page.getByText('No active lease on this unit.')).toBeVisible();
+  const unitId = page.url().split('/').pop();
   await expect(page.getByRole('link', { name: 'Rent comps' }).first()).toHaveAttribute(
     'href',
-    '/rent-comps',
+    `/rent-comps?unit=${unitId}`,
   );
 
   // Edit the unit.

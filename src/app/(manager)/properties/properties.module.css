@@ -1,0 +1,23 @@
+.propertyCard { overflow: hidden; min-width: 0; color: var(--design-text); text-decoration: none; transition: transform .18s ease, box-shadow .18s ease; }
+.propertyCard:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(30, 58, 138, .12); }
+.cover { overflow: hidden; }
+.cover > :global(.cover) { min-height: 180px; border-radius: 0; }
+.cover :global(.cover-name) { left: 20px; bottom: 18px; max-width: calc(100% - 40px); }
+.cover :global(.cover-name h3) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 21px; }
+.cover :global(.cover-name span) { font-size: 12px; }
+.cover :global(.cover-pill) { top: 14px; right: 14px; }
+.details { display: grid; gap: 15px; padding: 17px 18px 18px; }
+.propertyMeta { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--design-muted); font-size: 12px; font-weight: 650; }
+.kpis { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.rent { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
+.rent strong { font-size: 22px; letter-spacing: -.03em; color: var(--design-text); }
+.rent small, .kpis > div:first-child > span { color: var(--design-muted); font-size: 11px; }
+.occupancy { display: flex; align-items: center; gap: 8px; }
+.occupancy > span { display: grid; gap: 1px; }
+.occupancy strong { color: var(--design-text); font-size: 13px; }
+.occupancy small { color: var(--design-muted); font-size: 10px; }
+.details :global(.spark) { width: 100%; height: 24px; color: var(--design-primary); opacity: .78; }
+
+@media (max-width: 760px) {
+  .cover > :global(.cover) { min-height: 155px; }
+}

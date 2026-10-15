@@ -1,0 +1,61 @@
+.page { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, .9fr); gap: 20px; align-items: start; }
+.primary, .side { display: grid; gap: 20px; min-width: 0; }
+.twoCards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.tableWrap { overflow-x: auto; }
+.tableWrap table { min-width: 650px; }
+.timeline { padding: 2px 18px 14px; }
+.timelineItem, .leaseTimelineRow { display: flex; align-items: center; gap: 12px; padding: 13px 2px; color: var(--design-text); text-decoration: none; border-bottom: 1px solid var(--rr-border); }
+.timelineItem:last-child, .leaseTimelineRow:last-child { border-bottom: 0; }
+.timelineItem:hover .timelineMain strong { color: var(--design-primary); }
+.timelineDot { width: 10px; height: 10px; flex: 0 0 auto; border-radius: 50%; background: var(--design-muted); box-shadow: 0 0 0 4px #f1f5f9; }
+.timelineDot[data-status="OCCUPIED"], .timelineDot[data-status="ACTIVE"] { background: #16a36a; box-shadow: 0 0 0 4px #e4f5ed; }
+.timelineDot[data-status="VACANT"] { background: var(--design-accent); box-shadow: 0 0 0 4px #fff2e9; }
+.timelineDot[data-status="TURNOVER"] { background: #d98a40; box-shadow: 0 0 0 4px #fbf0e4; }
+.timelineMain { display: grid; min-width: 0; flex: 1; gap: 3px; }
+.timelineMain strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.timelineMain small, .timelineValue small { color: var(--design-muted); font-size: 12px; }
+.timelineValue { white-space: nowrap; font-size: 14px; font-weight: 750; }
+.facts { display: grid; grid-template-columns: minmax(84px, .7fr) minmax(0, 1.3fr); gap: 10px 14px; margin: 0; font-size: 13px; }
+.facts dt { color: var(--design-muted); }
+.facts dd { min-width: 0; margin: 0; color: var(--design-text); font-weight: 600; overflow-wrap: anywhere; }
+.facts dd :global(.badge) { margin: 0 4px 4px 0; }
+.steps { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.steps li { display: flex; gap: 9px; align-items: flex-start; padding: 10px 11px; border-radius: 10px; background: #f6f8fc; color: var(--design-primary); }
+.steps li a { color: var(--design-text); font-size: 13px; font-weight: 600; text-decoration: none; }
+.steps li a:hover { color: var(--design-primary); }
+.clearState { display: grid; justify-items: center; gap: 5px; padding: 15px 6px 8px; text-align: center; }
+.clearState p { margin: 3px 0 0; font-weight: 700; }
+.clearState small { color: var(--design-muted); }
+.subheading { margin: 11px 0 6px; color: var(--design-muted); font-size: 11px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.subheading:first-of-type { margin-top: 0; }
+.photoGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.photoGrid :global(.photo) { min-height: 104px; }
+.documentHint { margin: 10px 0 0; color: var(--design-muted); font-size: 12px; }
+.uploadControls { display: grid; gap: 9px; margin-top: 12px; }
+.kpiRows { display: grid; gap: 11px; margin-bottom: 12px; }
+.kpiRows > div, .paymentNumbers { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.kpiRows span { color: var(--design-muted); font-size: 13px; }
+.kpiRows strong { font-size: 15px; }
+.paymentNumbers { align-items: flex-start; margin: 8px 0 14px; }
+.paymentNumbers > div { min-width: 0; }
+.paymentNumbers .eyebrow { margin: 0 0 6px; }
+.paymentNumbers strong { font-size: 20px; letter-spacing: -.02em; }
+.progressTrack { height: 7px; overflow: hidden; border-radius: 8px; background: #edf0f6; }
+.progressTrack span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--design-primary), #6683d0); }
+.leaseTimeline { padding: 4px 18px 10px; }
+.emptyLease { display: grid; justify-items: start; gap: 8px; padding: 7px 20px 18px; }
+.emptyLease p { margin: 0 0 4px; }
+.tenantLine { display: flex; align-items: center; gap: 11px; margin-bottom: 15px; }
+.tenantLine > div { display: grid; gap: 3px; }
+.tenantLine small { color: var(--design-muted); }
+.deleteHint { margin: 14px 0 0; color: var(--design-muted); font-size: 12px; }
+
+@media (max-width: 1020px) {
+  .page { grid-template-columns: minmax(0, 1.3fr) minmax(250px, .8fr); gap: 16px; }
+  .primary, .side, .twoCards { gap: 16px; }
+}
+@media (max-width: 780px) {
+  .page, .twoCards { grid-template-columns: minmax(0, 1fr); }
+  .timelineItem, .leaseTimelineRow { flex-wrap: wrap; }
+  .timelineItem > :global(.badge), .leaseTimelineRow > :global(.badge) { margin-left: 22px; }
+}

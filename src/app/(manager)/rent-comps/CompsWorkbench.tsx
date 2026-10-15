@@ -339,7 +339,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
             {rows.length === 0 && (
               <tr>
                 <td colSpan={10}>
-                  <EmptyState title="No comparable rentals match" description="Widen the search filters to see more nearby rentals." action="Reset filters" href="/rent-comps" />
+                  <EmptyState title="No comparable rentals match" description="Widen the search filters to see more nearby rentals." action="Reset filters" href={`/rent-comps?unit=${props.unitId}`} />
                 </td>
               </tr>
             )}

@@ -14,7 +14,7 @@ async function signIn(page: Page) {
 test('unit detail shows floor, market rent and amenities', async ({ page }) => {
   await signIn(page);
   await page.goto('/properties/seed-property-maple/units/seed-unit-maple-11');
-  const facts = page.locator('dl.kv').first();
+  const facts = page.locator('dl').filter({ hasText: 'Listed rent' });
   await expect(facts.getByText('Floor', { exact: true })).toBeVisible();
   await expect(facts.getByText('Market rent', { exact: true })).toBeVisible();
   await expect(facts.getByText('In-unit laundry')).toBeVisible();
@@ -24,10 +24,18 @@ test('unit detail shows floor, market rent and amenities', async ({ page }) => {
 test('create-lease links open the wizard prefilled', async ({ page }) => {
   await signIn(page);
   await page.goto('/properties/seed-property-maple/units/seed-unit-maple-7');
-  await expect(page.getByRole('link', { name: 'Create lease' }).first()).toHaveAttribute(
-    'href',
-    '/leases/new?unit=seed-unit-maple-7',
-  );
+  // 3A is vacant until the lease-create suite fills it; then the unit links to its lease instead.
+  const createLease = page.getByRole('link', { name: 'Create lease' }).first();
+  const viewLease = page.getByRole('link', { name: 'View lease' });
+  await expect(createLease.or(viewLease)).toBeVisible();
+  if (await createLease.isVisible()) {
+    await expect(createLease).toHaveAttribute('href', '/leases/new?unit=seed-unit-maple-7');
+  } else {
+    await expect(viewLease).toHaveAttribute(
+      'href',
+      /^\/leases\/[^/?]+\?propertyId=seed-property-maple&unitId=seed-unit-maple-7$/,
+    );
+  }
 
   await page.goto('/leases/new?unit=seed-unit-maple-7');
   await expect(page.getByLabel('Property / unit')).toHaveValue('seed-unit-maple-7');
@@ -42,7 +50,7 @@ test('create-lease links open the wizard prefilled', async ({ page }) => {
     /^\/leases\/new\?renew=.+/,
   );
 
-  await page.goto('/tenants');
+  await page.goto('/tenants?view=directory');
   await page.locator('select[name=propertyId]').selectOption({ label: 'Cedar Row Townhomes' });
   await page.locator('select[name=unitId]').selectOption({ index: 1 });
   await expect(page.getByRole('link', { name: 'Create lease' })).toHaveAttribute(

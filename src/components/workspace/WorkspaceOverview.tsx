@@ -209,7 +209,7 @@ export function UnitOverview({ unit, returns, canDelete }: { unit: UnitDetail; r
         <Card>
           <CardHeader title="Current lease" action={<Badge tone={currentLease ? 'success' : undefined}>{currentLease ? 'Active' : 'None'}</Badge>} />
           {currentLease ? <>
-            <div className={styles.tenantLine}><Avatar initials={initials(currentLease.tenant?.name ?? 'Tenant')} /><div><strong>{currentLease.tenant?.name ?? 'Tenant not assigned'}</strong><small>{formatDate(currentLease.startDate)} – {formatDate(currentLease.endDate)}</small></div></div>
+            <div className={styles.tenantLine}><Avatar initials={initials(currentLease.tenant?.name ?? 'Tenant')} /><div><strong>{currentLease.tenant ? <Link href={`/tenants/${currentLease.tenant.id}`}>{currentLease.tenant.name}</Link> : 'Tenant not assigned'}</strong><small>{formatDate(currentLease.startDate)} – {formatDate(currentLease.endDate)}</small></div></div>
             <dl className={styles.facts}><dt>Rent</dt><dd>{formatMoney(currentLease.monthlyRent)} / month</dd><dt>Deposit</dt><dd>{formatMoney(currentLease.deposit)}</dd></dl>
           </> : <><p className="muted">No active lease on this unit.</p><Link className="btn btn-primary btn-sm" href={`/leases/new?unit=${unit.id}`}>Create lease</Link></>}
         </Card>

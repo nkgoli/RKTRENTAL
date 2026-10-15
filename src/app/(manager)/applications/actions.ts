@@ -6,6 +6,8 @@ import { redirect } from 'next/navigation';
 import { requireManagerWriteRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
 import { screeningProvider } from '@/lib/providers';
+import { applicationsRedirectUrl } from '@/lib/screening/redirect';
+import { scopeFilterFrom } from '@/lib/workspace/scope';
 import { recordDecision as recordScreeningDecisionAudit } from '@/lib/screening/decision-audit';
 import {
   applicationStatusForReport,
@@ -16,6 +18,13 @@ import {
 
 async function requireManager() {
   return requireManagerWriteRole();
+}
+
+function scopeFrom(formData: FormData) {
+  return scopeFilterFrom({
+    propertyId: value(formData, 'propertyId'),
+    unitId: value(formData, 'unitId'),
+  });
 }
 
 function value(formData: FormData, key: string) {
@@ -123,7 +132,7 @@ export async function requestScreening(formData: FormData) {
   ]);
 
   revalidatePath('/applications');
-  redirect('/applications?applicant=' + encodeURIComponent(applicationId) + '&notice=screening');
+  redirect(applicationsRedirectUrl(applicationId, 'screening', scopeFrom(formData)));
 }
 
 const decisionReasons = new Set([
@@ -183,10 +192,5 @@ export async function recordDecision(formData: FormData) {
   });
 
   revalidatePath('/applications');
-  redirect(
-    '/applications?applicant=' +
-      encodeURIComponent(applicationId) +
-      '&notice=' +
-      decision.toLowerCase(),
-  );
+  redirect(applicationsRedirectUrl(applicationId, decision.toLowerCase(), scopeFrom(formData)));
 }

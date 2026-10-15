@@ -51,7 +51,7 @@ test('manager reviews comps, filters them, and applies a market rent', async ({
   await signIn(page);
   await open(page, `/rent-comps?unit=${unitId}`);
 
-  await expect(page.getByRole('heading', { name: 'Maple Court · Unit 3A' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Maple Court · Unit 3A', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Comparable rentals map' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Market summary' })).toBeVisible();
   const table = page.getByRole('table', { name: 'Comparable rentals' });
@@ -107,7 +107,7 @@ test('manager reviews comps, filters them, and applies a market rent', async ({
   expect(unit.marketRentSetAt!.getTime()).toBeGreaterThan(Date.now() - 60_000);
 
   await open(page, `/properties/${propertyId}/units/${unitId}`);
-  const facts = page.locator('dl.kv').first();
+  const facts = page.locator('dl').filter({ hasText: 'Listed rent' });
   await expect(facts.getByText('Market rent', { exact: true })).toBeVisible();
   await expect(facts).toContainText('$1,725');
   await page.screenshot({ path: 'test-results/rent-comps-unit-detail.png', fullPage: true });
@@ -130,5 +130,5 @@ test('unit picker switches the subject unit', async ({ page }) => {
   await open(page, '/rent-comps');
   await page.locator('select[name="unit"]').selectOption(unitId);
   await expect(page).toHaveURL(new RegExp(`unit=${unitId}`));
-  await expect(page.getByRole('heading', { name: 'Maple Court · Unit 3A' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Maple Court · Unit 3A', level: 1 })).toBeVisible();
 });

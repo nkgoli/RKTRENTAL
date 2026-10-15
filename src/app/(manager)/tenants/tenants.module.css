@@ -64,18 +64,18 @@
 .statusTable {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1080px;
+  min-width: 960px;
   font-size: 13px;
 }
 .statusTable th {
   text-align: left;
   color: var(--design-muted);
   font-weight: 600;
-  padding: 13px 12px;
+  padding: 13px 8px;
   border-bottom: 1px solid var(--rr-border);
 }
 .statusTable td {
-  padding: 13px 12px;
+  padding: 13px 8px;
   border-bottom: 1px solid var(--rr-border);
   vertical-align: middle;
 }
@@ -84,10 +84,10 @@
   white-space: nowrap;
 }
 .statusTable td:first-child {
-  min-width: 150px;
+  min-width: 120px;
 }
 .statusTable td:nth-child(2) {
-  min-width: 190px;
+  min-width: 170px;
 }
 .statusTable small {
   display: block;
@@ -105,7 +105,7 @@
 .groupRow td span {
   color: var(--design-muted);
 }
-.groupRow td a:last-child {
+.groupRow td > a:last-child {
   float: right;
 }
 .checkCell {
@@ -148,7 +148,7 @@
   .statusSearch {
     width: 100%;
   }
-  .groupRow td a:last-child {
+  .groupRow td > a:last-child {
     float: none;
     margin-left: 12px;
   }

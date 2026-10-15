@@ -1,4 +1,4 @@
-export type IconName =
+﻿export type IconName =
   | 'dashboard'
   | 'properties'
   | 'tenants'
@@ -20,13 +20,23 @@ export type ManagerNavItem = {
   /** Topbar heading when it differs from the nav label. */
   title?: string;
   actions?: ManagerAction[];
+  /** Route stays reachable and titled, but has no sidebar link. */
+  hidden?: boolean;
 };
 
-export type ManagerNavGroup = { label: string; items: ManagerNavItem[] };
+export type ManagerNavGroup = {
+  label: string;
+  items: ManagerNavItem[];
+  /** Sidebar heading is omitted (the label still feeds the page eyebrow). */
+  hideLabel?: boolean;
+  /** Rendered at the bottom of the sidebar, below the other groups. */
+  pinned?: boolean;
+};
 
 export const managerNav: ManagerNavGroup[] = [
   {
     label: 'Overview',
+    hideLabel: true,
     items: [
       {
         label: 'Dashboard',
@@ -54,17 +64,22 @@ export const managerNav: ManagerNavGroup[] = [
         icon: 'tenants',
         actions: [{ label: '+ Add tenant', href: '/tenants', primary: true }],
       },
+    ],
+  },
+  {
+    label: 'Leasing',
+    items: [
+      { label: 'Applications', href: '/applications', icon: 'applications' },
       {
         label: 'Leases',
         href: '/leases',
         icon: 'leases',
         actions: [{ label: '+ Create lease', href: '/leases', primary: true }],
       },
-      { label: 'Applications', href: '/applications', icon: 'applications' },
     ],
   },
   {
-    label: 'Finance',
+    label: 'Money',
     items: [
       { label: 'Payments', href: '/payments', icon: 'payments' },
       {
@@ -74,7 +89,7 @@ export const managerNav: ManagerNavGroup[] = [
         title: 'Returns and metrics',
         actions: [{ label: 'Export report', href: '/returns' }],
       },
-      { label: 'Rent comps', href: '/rent-comps', icon: 'rent-comps' },
+      { label: 'Rent comps', href: '/rent-comps', icon: 'rent-comps', hidden: true },
     ],
   },
   {
@@ -86,10 +101,11 @@ export const managerNav: ManagerNavGroup[] = [
   },
   {
     label: 'Settings',
+    hideLabel: true,
+    pinned: true,
     items: [{ label: 'Integrations', href: '/integrations', icon: 'integrations' }],
   },
 ];
-
 export type TenantTab = { label: string; href: string };
 
 export const tenantTabs: TenantTab[] = [

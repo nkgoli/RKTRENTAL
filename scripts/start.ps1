@@ -49,6 +49,10 @@ Force a production rebuild (ignored with -Dev).
 .PARAMETER Docker
 Start Postgres with `docker compose up -d --wait db` instead of embedded Postgres.
 
+.PARAMETER ResetDatabase
+Delete and re-initialise this checkout's embedded Postgres data dir for the
+chosen -DbPort (.data\postgres-<port>). Opt-in; all local data in it is lost.
+
 .PARAMETER SkipDatabase
 Do not start a database; use whatever DATABASE_URL points at.
 
@@ -82,7 +86,8 @@ param(
     [switch]$SkipInstall,
     [switch]$Rebuild,
     [switch]$Docker,
-    [switch]$SkipDatabase
+    [switch]$SkipDatabase,
+    [switch]$ResetDatabase
 )
 
 $ErrorActionPreference = 'Stop'
@@ -422,7 +427,14 @@ try {
         $env:ROCKETRENTAL_DB_PORT = "$DbPort"
         Invoke-Step 'Starting Postgres with docker compose' 'docker compose up -d --wait db'
     } else {
-        $dbDir = if ($env:ROCKETRENTAL_DB_DIR) { $env:ROCKETRENTAL_DB_DIR } elseif ($dotenv['ROCKETRENTAL_DB_DIR']) { $dotenv['ROCKETRENTAL_DB_DIR'] } else { Join-Path $Root 'prisma\.local-postgres' }
+        # One data dir per checkout and per port, so it can't collide with the
+        # RocketRentalPreview copy (which uses its own dir on 5432). An inherited
+        # ROCKETRENTAL_DB_DIR is deliberately ignored.
+        $dbDir = Join-Path $Root ".data\postgres-$DbPort"
+        if ($env:ROCKETRENTAL_DB_DIR) { Warn "Ignoring ROCKETRENTAL_DB_DIR=$($env:ROCKETRENTAL_DB_DIR); embedded Postgres uses $dbDir" }
+        $env:ROCKETRENTAL_DB_DIR = $dbDir
+        $env:ROCKETRENTAL_DB_RESET = if ($ResetDatabase) { '1' } else { '0' }
+        if ($ResetDatabase) { Warn "-ResetDatabase: deleting $dbDir and re-initialising." }
         $seedMarker = Join-Path $dbDir '.demo-seeded'
         New-Item -ItemType Directory -Force -Path $dbDir | Out-Null
         if (-not (Test-Path (Join-Path $Root 'prisma\node_modules\embedded-postgres'))) {
@@ -432,14 +444,21 @@ try {
         $dbOut = Join-Path $LogDir 'postgres.out.log'
         $dbErr = Join-Path $LogDir 'postgres.err.log'
         Remove-Item $dbOut, $dbErr -ErrorAction SilentlyContinue
-        $dbProc = Start-Process -FilePath node -ArgumentList '--import', './prisma/os-userinfo.mjs', 'prisma/local-postgres.mjs' `
+        New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+        $dbProc = Start-Process -FilePath node -ArgumentList '--import', './prisma/os-userinfo.mjs', 'scripts/embedded-postgres.mjs' `
             -WorkingDirectory $Root -NoNewWindow -PassThru -RedirectStandardOutput $dbOut -RedirectStandardError $dbErr
+        $null = $dbProc.Handle   # cache the handle so ExitCode is readable after exit
         $deadline = (Get-Date).AddSeconds(120)
         while ($true) {
             if ($dbProc.HasExited) {
-                Get-Content $dbErr -ErrorAction SilentlyContinue | Select-Object -Last 15 | ForEach-Object { Write-Host $_ }
-                $dbExit = if ($null -eq $dbProc.ExitCode) { 'unavailable' } else { $dbProc.ExitCode }
-                Fail "Embedded Postgres exited early (exit $dbExit). See $dbErr"
+                $dbProc.WaitForExit()
+                $dbExit = $dbProc.ExitCode
+                foreach ($l in @($dbErr, $dbOut)) {
+                    Write-Host "---- last 40 lines of $l ----" -ForegroundColor Yellow
+                    if (Test-Path $l) { Get-Content $l -ErrorAction SilentlyContinue | Select-Object -Last 40 | ForEach-Object { Write-Host $_ } }
+                }
+                $dbExitText = if ($null -eq $dbExit) { 'unknown' } else { "$dbExit" }
+                Fail "Embedded Postgres exited early (exit $dbExitText). Logs: $dbErr and $dbOut. If the data dir is damaged, re-run with -ResetDatabase." $(if ($dbExit) { $dbExit } else { 1 })
             }
             if ((Test-Path $dbOut) -and (Select-String -Path $dbOut -Pattern 'Local PostgreSQL ready' -Quiet)) { break }
             if ((Get-Date) -gt $deadline) { Fail "Timed out waiting for Postgres. See $dbOut / $dbErr" }

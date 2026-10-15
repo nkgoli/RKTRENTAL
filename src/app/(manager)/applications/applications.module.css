@@ -3,7 +3,12 @@
   flex-direction: column;
   gap: 20px;
   color: var(--design-text);
-  font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
 }
 
 .applications h2,
@@ -577,4 +582,27 @@
   .decisionButtons :global(.btn) {
     flex: 1;
   }
+}
+
+.introPeople {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.statHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  color: var(--design-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.stat {
+  box-shadow: var(--rr-shadow-lg);
+  border-color: #e2e8f0;
+  border-radius: 18px;
+}
+.stat :global(.trend) {
+  margin-top: 8px;
 }

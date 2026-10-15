@@ -1,0 +1,155 @@
+.viewTabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid var(--rr-border);
+  margin-bottom: 8px;
+}
+.viewTabs a {
+  display: inline-block;
+  padding: 10px 2px;
+  color: var(--design-muted);
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+}
+.viewTabs .selectedTab {
+  color: var(--design-primary);
+  border-color: var(--design-primary);
+}
+.statusSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.statusHeading,
+.statusControls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.statusHeading h2 {
+  font-size: 22px;
+}
+.statusHeading p:last-child {
+  margin-top: 4px;
+}
+.headingPeople {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.statusSearch {
+  min-width: 250px;
+}
+.propertyFilters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.legend {
+  display: flex;
+  gap: 18px;
+  color: var(--design-muted);
+  font-size: 12px;
+}
+.legend span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.tableScroll {
+  overflow-x: auto;
+}
+.statusTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1080px;
+  font-size: 13px;
+}
+.statusTable th {
+  text-align: left;
+  color: var(--design-muted);
+  font-weight: 600;
+  padding: 13px 12px;
+  border-bottom: 1px solid var(--rr-border);
+}
+.statusTable td {
+  padding: 13px 12px;
+  border-bottom: 1px solid var(--rr-border);
+  vertical-align: middle;
+}
+.statusTable th:nth-child(n + 3):nth-child(-n + 8) {
+  text-align: center;
+  white-space: nowrap;
+}
+.statusTable td:first-child {
+  min-width: 150px;
+}
+.statusTable td:nth-child(2) {
+  min-width: 190px;
+}
+.statusTable small {
+  display: block;
+  color: var(--design-muted);
+}
+.groupRow {
+  background: #f7f9fd;
+}
+.groupRow td {
+  padding: 11px 16px !important;
+}
+.groupRow td strong {
+  margin-right: 14px;
+}
+.groupRow td span {
+  color: var(--design-muted);
+}
+.groupRow td a:last-child {
+  float: right;
+}
+.checkCell {
+  text-align: center;
+}
+.complete,
+.incomplete,
+.na {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-style: normal;
+}
+.complete {
+  background: #ecfdf3;
+  color: #067647;
+}
+.incomplete {
+  background: #fffaeb;
+  color: #b54708;
+}
+.na {
+  background: #f1f5f9;
+  color: #64748b;
+}
+.actions {
+  white-space: nowrap;
+}
+.actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (max-width: 700px) {
+  .statusHeading,
+  .statusControls {
+    align-items: flex-start;
+  }
+  .statusSearch {
+    width: 100%;
+  }
+  .groupRow td a:last-child {
+    float: none;
+    margin-left: 12px;
+  }
+}

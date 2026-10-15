@@ -101,3 +101,49 @@
     grid-template-columns: 1fr;
   }
 }
+
+.headingPeople {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.stat {
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: var(--rr-shadow-lg);
+  min-width: 0;
+}
+.statTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  color: #4b5568;
+  font-size: 13px;
+  font-weight: 600;
+}
+.stat strong {
+  display: block;
+  font-family: var(--design-heading-font);
+  font-size: 32px;
+  color: var(--design-text);
+  line-height: 1.1;
+  margin: 7px 0;
+}
+.stat :global(.trend) {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 800px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+}

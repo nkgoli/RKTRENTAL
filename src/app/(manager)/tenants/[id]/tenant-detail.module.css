@@ -1,0 +1,11 @@
+.identityCard {
+  box-shadow: var(--rr-shadow-lg);
+}
+.identityPeople {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.identityPeople :global(.avatar-stack) {
+  margin-left: 4px;
+}

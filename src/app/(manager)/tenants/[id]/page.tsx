@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/shell/PageHeader';
 import {
   Avatar,
+  AvatarStack,
+  TrendChip,
   Badge,
   Button,
   Card,
@@ -12,6 +14,8 @@ import {
   TableHead,
 } from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
+import { db } from '@/lib/db/client';
+import styles from './tenant-detail.module.css';
 import { formatBytes, formatDate, formatMoney, initials } from '@/lib/tenants/format';
 import { organizationTenants, type TenantDetail } from '@/lib/tenants/queries';
 import { STATUS_LABEL, STATUS_TONE } from '@/lib/tenants/status';
@@ -116,6 +120,16 @@ export default async function TenantDetailPage({
     .map((l) => l.startDate)
     .sort((a, b) => a.getTime() - b.getTime())[0];
   const docLeases = leases.filter((l) => l.documents.length > 0);
+  const autopayOn = currentLease
+    ? (await db.autopaySetting.count({
+        where: {
+          organizationId: session.organizationId,
+          leaseId: currentLease.id,
+          tenantId: tenant.id,
+          enabled: true,
+        },
+      })) > 0
+    : false;
 
   return (
     <>
@@ -151,7 +165,7 @@ export default async function TenantDetailPage({
         />
       )}
 
-      <div className="hero">
+      <div className={`hero ${styles.identityCard}`}>
         <div className="row" style={{ gap: 20 }}>
           <Avatar initials={initials(tenant.name)} size="lg" />
           <div>
@@ -174,6 +188,12 @@ export default async function TenantDetailPage({
         <div className="row">
           <Badge tone={STATUS_TONE[detail.status]}>{STATUS_LABEL[detail.status]}</Badge>
           {activeLease?.noticeGivenAt && <Badge tone="warning">Notice given</Badge>}
+          {autopayOn && <TrendChip>Autopay on</TrendChip>}
+          {currentLease && (
+            <AvatarStack
+              initials={currentLease.tenants.map(({ tenant: coTenant }) => initials(coTenant.name))}
+            />
+          )}
           {detail.balanceCents > 0 && (
             <Badge tone="danger">{formatMoney(detail.balanceCents / 100)} due</Badge>
           )}

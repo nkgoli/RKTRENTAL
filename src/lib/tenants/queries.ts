@@ -3,6 +3,7 @@ import { db } from '@/lib/db/client';
 import { todayUtc, toCents } from './format';
 import {
   balanceCents,
+  deriveSetupChecklist,
   deriveStatus,
   matchesStatusFilter,
   type StatusFilter,
@@ -167,6 +168,43 @@ export function organizationTenants(
 
   return {
     loadRows,
+
+    async setupRows() {
+      const leases = await client.lease.findMany({
+        where: { organizationId, status: { in: ['ACTIVE', 'DRAFT'] } },
+        include: {
+          unit: { include: { property: true } },
+          tenants: {
+            include: {
+              tenant: { include: { paymentMethods: { where: { organizationId } } } },
+            },
+          },
+          autopaySettings: { where: { organizationId, enabled: true } },
+        },
+        orderBy: [
+          { unit: { property: { name: 'asc' } } },
+          { unit: { number: 'asc' } },
+          { startDate: 'asc' },
+        ],
+      });
+      return leases.flatMap((lease) => {
+        const upcoming = lease.status === 'DRAFT' && lease.startDate > today;
+        if (lease.status === 'DRAFT' && !upcoming) return [];
+        return lease.tenants.map(({ tenant }) => ({
+          leaseId: lease.id,
+          leaseStatus: lease.status,
+          startDate: lease.startDate,
+          endDate: lease.endDate,
+          property: { id: lease.unit.property.id, name: lease.unit.property.name },
+          unit: { id: lease.unit.id, number: lease.unit.number, isImplicit: lease.unit.isImplicit },
+          tenant: { id: tenant.id, name: tenant.name, email: tenant.email, phone: tenant.phone },
+          checklist: deriveSetupChecklist(
+            tenant.paymentMethods,
+            lease.autopaySettings.some((setting) => setting.tenantId === tenant.id),
+          ),
+        }));
+      });
+    },
 
     async list(filters: TenantFilters = {}) {
       const status = filters.status ?? 'all';

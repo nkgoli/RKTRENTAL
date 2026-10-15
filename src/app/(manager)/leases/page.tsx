@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
-import { Avatar, Badge, Card, Stat, Tabs } from '@/components/ui';
+import { Avatar, AvatarStack, Badge, Card, KpiIcon, Tabs, TrendChip } from '@/components/ui';
+import styles from './leases.module.css';
 import { requireManagerRole } from '@/lib/auth/access';
 import { formatMoney, initials } from '@/lib/properties/format';
 import { leaseName, signLabel, term } from '@/lib/leases/format';
@@ -70,20 +71,50 @@ export default async function LeasesPage({
           { label: '+ New lease', href: '/leases/new', primary: true },
         ]}
       />
-      <section className="grid-3">
-        <Stat
-          label="Active leases"
-          value={counts.active}
-          delta="Current leases in your portfolio"
-        />
-        <Stat label="Expiring in 60 days" value={counts.expiring} delta="Renewal reminders ready" />
-        <Stat label="Awaiting e-signature" value={counts.awaiting} delta="Pending signatures" />
+      <section className={styles.kpis} aria-label="Lease portfolio stats">
+        <article className={styles.kpi}>
+          <div className={styles.kpiTop}>
+            <span>Active leases</span>
+            <KpiIcon>⌂</KpiIcon>
+          </div>
+          <strong>{counts.active}</strong>
+          <div className={styles.kpiFooter}>
+            <TrendChip>Current</TrendChip> Current leases in your portfolio
+          </div>
+        </article>
+        <article className={styles.kpi}>
+          <div className={styles.kpiTop}>
+            <span>Expiring in 60 days</span>
+            <KpiIcon tone="coral">◷</KpiIcon>
+          </div>
+          <strong>{counts.expiring}</strong>
+          <div className={styles.kpiFooter}>
+            <TrendChip warm>{counts.expiring} expiring</TrendChip> Renewal reminders ready
+          </div>
+        </article>
+        <article className={styles.kpi}>
+          <div className={styles.kpiTop}>
+            <span>Awaiting e-signature</span>
+            <KpiIcon tone="green">✎</KpiIcon>
+          </div>
+          <strong>{counts.awaiting}</strong>
+          <div className={styles.kpiFooter}>Pending signatures</div>
+        </article>
       </section>
       <Card flush>
         <div style={{ padding: '20px 20px 0' }}>
           <div className="row between" style={{ marginBottom: 14, flexWrap: 'wrap' }}>
             <div>
-              <h2 style={{ fontSize: 20 }}>Lease portfolio</h2>
+              <div className={styles.portfolioIntro}>
+                <h2 style={{ fontSize: 20 }}>Lease portfolio</h2>
+                <AvatarStack
+                  initials={shown
+                    .slice(0, 4)
+                    .map((lease) =>
+                      initials(lease.tenants[0]?.tenant.name ?? lease.unit.property.name),
+                    )}
+                />
+              </div>
               <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
                 Each lease covers one property: a single unit, or the whole home for single-unit
                 properties.
@@ -124,14 +155,22 @@ export default async function LeasesPage({
             </thead>
             <tbody>
               {shown.length === 0 && (
-                <tr><td colSpan={6}>
-                  <EmptyState
-                    title={q || tab !== 'active' ? 'No leases match this view' : 'No active leases yet'}
-                    description={q || tab !== 'active' ? 'Try another search or view to find a lease.' : 'Create a lease to connect a tenant with a property.'}
-                    action={q || tab !== 'active' ? 'View active leases' : 'Create a lease'}
-                    href={q || tab !== 'active' ? '/leases' : '/leases/new'}
-                  />
-                </td></tr>
+                <tr>
+                  <td colSpan={6}>
+                    <EmptyState
+                      title={
+                        q || tab !== 'active' ? 'No leases match this view' : 'No active leases yet'
+                      }
+                      description={
+                        q || tab !== 'active'
+                          ? 'Try another search or view to find a lease.'
+                          : 'Create a lease to connect a tenant with a property.'
+                      }
+                      action={q || tab !== 'active' ? 'View active leases' : 'Create a lease'}
+                      href={q || tab !== 'active' ? '/leases' : '/leases/new'}
+                    />
+                  </td>
+                </tr>
               )}
               {shown.map((lease) => {
                 const tenant =

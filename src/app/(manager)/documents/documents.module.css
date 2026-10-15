@@ -113,3 +113,18 @@
     padding: 4px 8px;
   }
 }
+
+.libraryIntro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.libraryIntro h2 {
+  font-size: 22px;
+}
+.storageHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}

@@ -40,3 +40,30 @@ export function parseStatusFilter(value: string | undefined): StatusFilter {
 export function matchesStatusFilter(status: TenantStatus, filter: StatusFilter): boolean {
   return filter === 'all' || status.toLowerCase() === filter;
 }
+
+export type SetupState = 'complete' | 'incomplete' | 'not-applicable';
+export type SetupChecklist = Record<
+  'invited' | 'accepted' | 'bankAdded' | 'bankVerified' | 'autopayOn' | 'cardOnFile',
+  SetupState
+>;
+
+/** These values describe persisted setup only. Invitation and bank verification are not stored. */
+export function deriveSetupChecklist(
+  methods: ReadonlyArray<{ type: string }>,
+  autopayEnabled: boolean,
+): SetupChecklist {
+  const bankAdded = methods.some((method) => method.type.toLowerCase() === 'ach');
+  const cardAdded = methods.some((method) => method.type.toLowerCase() === 'card');
+  return {
+    invited: 'not-applicable',
+    accepted: 'not-applicable',
+    bankAdded: bankAdded ? 'complete' : 'incomplete',
+    bankVerified: 'not-applicable',
+    autopayOn: autopayEnabled ? 'complete' : 'incomplete',
+    cardOnFile: cardAdded
+      ? 'complete'
+      : bankAdded && autopayEnabled
+        ? 'not-applicable'
+        : 'incomplete',
+  };
+}

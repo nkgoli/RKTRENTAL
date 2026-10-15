@@ -1,0 +1,190 @@
+.backLink {
+  display: inline-block;
+  margin: 0 0 10px;
+  color: var(--design-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+.summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 22px 24px;
+  border: 1px solid var(--rr-border);
+  border-radius: var(--design-radius);
+  background: var(--design-surface);
+  box-shadow: var(--rr-shadow-lg);
+}
+.summary h2 {
+  font-size: 23px;
+  margin: 6px 0 15px;
+}
+.summaryItems {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  flex-wrap: wrap;
+}
+.summaryItem span {
+  display: block;
+  color: var(--design-muted);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.summaryItem strong {
+  font-size: 15px;
+}
+.tenantFaces {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.amendment {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  background: #eef3ff;
+  border: 1px solid #dce5fb;
+  border-radius: var(--design-radius);
+  padding: 18px 22px;
+}
+.amendment h2 {
+  font-size: 17px;
+}
+.amendment p {
+  color: var(--design-muted);
+  margin-top: 4px;
+}
+.documentGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+}
+.documentCard {
+  border: 1px solid var(--rr-border);
+  border-radius: 14px;
+  padding: 16px;
+  background: #fff;
+  min-width: 0;
+  box-shadow: var(--rr-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.documentIcon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 48px;
+  background: #e8eefc;
+  border-radius: 8px;
+  color: var(--design-primary);
+  font-size: 11px;
+  font-weight: 800;
+}
+.documentTitle {
+  min-width: 0;
+  flex: 1;
+}
+.documentTitle strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.documentTitle small {
+  display: block;
+  color: var(--design-muted);
+  margin-top: 5px;
+  font-size: 12px;
+}
+.documentControls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.documentMenu {
+  position: relative;
+}
+.documentMenu > summary {
+  list-style: none;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--rr-border);
+  border-radius: 8px;
+  font-size: 22px;
+  line-height: 1;
+}
+.documentMenu > summary::-webkit-details-marker {
+  display: none;
+}
+.menuPanel {
+  position: absolute;
+  right: 0;
+  top: 35px;
+  z-index: 3;
+  width: 215px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--rr-border);
+  border-radius: 10px;
+  box-shadow: var(--rr-shadow-lg);
+  padding: 5px;
+}
+.menuPanel > a,
+.menuPanel > button,
+.rename > summary {
+  border: 0;
+  background: none;
+  padding: 9px 10px;
+  text-align: left;
+  font: inherit;
+  color: var(--design-text);
+  cursor: pointer;
+  border-radius: 7px;
+}
+.menuPanel > a:hover,
+.menuPanel > button:hover:not(:disabled),
+.rename > summary:hover {
+  background: var(--rr-hover);
+}
+.menuPanel button:disabled {
+  color: var(--design-muted);
+  cursor: not-allowed;
+}
+.menuPanel .deleteAction {
+  color: var(--design-danger);
+}
+.rename > summary {
+  list-style: none;
+}
+.rename > summary::-webkit-details-marker {
+  display: none;
+}
+.rename form {
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rename input {
+  width: 100%;
+  padding: 7px;
+  border: 1px solid var(--rr-border-strong);
+  border-radius: 7px;
+}
+.rename button {
+  border: 0;
+  background: var(--design-primary);
+  color: white;
+  padding: 7px;
+  border-radius: 7px;
+  cursor: pointer;
+}

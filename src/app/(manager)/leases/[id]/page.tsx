@@ -1,13 +1,16 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/shell/PageHeader';
-import { Avatar, Badge, Card, CardHeader, FileRow } from '@/components/ui';
+import { Avatar, AvatarStack, Badge, Card, CardHeader } from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
+import { db } from '@/lib/db/client';
+import { LeaseDocumentGrid } from './LeaseDocumentGrid';
+import styles from './lease-detail.module.css';
 import { dateInput } from '@/lib/leases/core';
 import { EVENT_LABEL } from '@/lib/leases/events';
 import { leaseName, money, signLabel, statusLabel, term } from '@/lib/leases/format';
 import { leasesDb } from '@/lib/leases/queries';
-import { formatAddress, formatBytes, formatDate, initials } from '@/lib/properties/format';
+import { formatAddress, formatDate, initials } from '@/lib/properties/format';
 import { EditTermsForm, LeaseStatusActions, LeaseUploader, NoticeForm } from '../LeaseForms';
 
 export default async function LeaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -17,6 +20,12 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
   if (!lease) notFound();
   const property = lease.unit.property;
   const name = leaseName(lease);
+  const title =
+    property.name + (lease.unit.isImplicit ? '' : ' · Unit ' + lease.unit.number) + ' Lease';
+  const onlinePaymentsEnabled =
+    (await db.providerConnection.count({
+      where: { organizationId: session.organizationId, kind: 'PAYMENTS', status: 'CONNECTED' },
+    })) > 0;
   const charges = lease.charges.filter((c) => c.dueDate <= new Date());
   const charged = charges.reduce((sum, c) => sum + Number(c.amount), 0);
   const paid = lease.payments
@@ -55,8 +64,9 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
   const noticeGiven = lease.noticeGivenAt != null;
   return (
     <>
+      {/* Property workspace header and tabs attach above this page header. */}
       <PageHeader
-        title={name}
+        title={title}
         eyebrow="Lease"
         actions={[
           ...(lease.status === 'ACTIVE'
@@ -89,6 +99,69 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
         )}
         <span className="muted">{signLabel(lease.eSignStatus)}</span>
       </div>
+      <Link
+        className={styles.backLink}
+        href={
+          lease.unit.isImplicit
+            ? `/properties/${property.id}`
+            : `/properties/${property.id}/units/${lease.unitId}`
+        }
+      >
+        ← Back to unit
+      </Link>
+      <section className={styles.summary} aria-label="Lease summary">
+        <div>
+          <p className="eyebrow">Lease agreement</p>
+          <h2>
+            {title}{' '}
+            <Badge
+              tone={
+                lease.status === 'ACTIVE'
+                  ? 'success'
+                  : lease.status === 'DRAFT'
+                    ? 'info'
+                    : 'neutral'
+              }
+            >
+              {statusLabel(lease.status)}
+            </Badge>
+          </h2>
+          <div className={styles.summaryItems}>
+            <div className={styles.summaryItem}>
+              <span>Lease dates</span>
+              <strong>{term(lease.startDate, lease.endDate)}</strong>
+            </div>
+            <div className={styles.summaryItem}>
+              <span>Monthly rent</span>
+              <strong>{money(lease.monthlyRent)} / month</strong>
+            </div>
+            <div className={styles.summaryItem}>
+              <span>Online payments</span>
+              <strong>{onlinePaymentsEnabled ? 'Enabled' : 'Not connected'}</strong>
+            </div>
+          </div>
+        </div>
+        <div className={styles.tenantFaces}>
+          <AvatarStack initials={lease.tenants.map(({ tenant }) => initials(tenant.name))} />
+          <span>
+            {lease.tenants.map(({ tenant }) => tenant.name).join(', ') || 'No tenants yet'}
+          </span>
+        </div>
+      </section>
+      <section className={styles.amendment} aria-label="Amendment or addendum">
+        <div>
+          <h2>Add an amendment or addendum</h2>
+          <p>Keep every lease change documented and easy to share.</p>
+        </div>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          disabled
+          title="Templates are not available"
+        >
+          Browse templates
+        </button>
+      </section>
       <div className="split">
         <div className="stack">
           <Card>
@@ -167,39 +240,26 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
               </div>
             )}
           </Card>
-          <Card>
+          <Card id="documents">
             <div className="card-header">
               <div>
-                <h3>Documents</h3>
+                <h3>Lease documents</h3>
                 <p className="muted" style={{ fontSize: 13 }}>
                   Files owned by this lease
                 </p>
               </div>
               <LeaseUploader leaseId={lease.id} />
             </div>
-            {lease.documents.length ? (
-              lease.documents.map((file) => (
-                <FileRow
-                  key={file.id}
-                  kind={
-                    file.mimeType === 'application/pdf'
-                      ? 'pdf'
-                      : file.mimeType.startsWith('image/')
-                        ? 'img'
-                        : 'doc'
-                  }
-                  name={file.name}
-                  meta={`Uploaded ${formatDate(file.createdAt)} · ${formatBytes(Number(file.sizeBytes))}`}
-                  action={
-                    <a className="btn btn-secondary btn-sm" href={`/api/files/${file.id}/download`}>
-                      ↓ Download
-                    </a>
-                  }
-                />
-              ))
-            ) : (
-              <p className="muted">No lease documents yet.</p>
-            )}
+            <LeaseDocumentGrid
+              leaseId={lease.id}
+              documents={lease.documents.map((file) => ({
+                id: file.id,
+                name: file.name,
+                kind: file.kind.toLowerCase(),
+                uploaded: formatDate(file.createdAt),
+                mimeType: file.mimeType,
+              }))}
+            />
           </Card>
           {(lease.status === 'ACTIVE' || lease.status === 'DRAFT') && (
             <Card id="edit-terms">

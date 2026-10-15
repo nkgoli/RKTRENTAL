@@ -1,7 +1,17 @@
 import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { EmptyState } from '@/components/RouteStates';
-import { Alert, Avatar, Badge, KanbanBoard, KanbanColumn, Stat, Ticket } from '@/components/ui';
+import {
+  Alert,
+  Avatar,
+  AvatarStack,
+  Badge,
+  KanbanBoard,
+  KanbanColumn,
+  KpiIcon,
+  Ticket,
+  TrendChip,
+} from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import {
   listMaintenanceBoard,
@@ -169,6 +179,7 @@ export default async function MaintenancePage() {
   );
   return (
     <>
+      {/* Property workspace header and tabs attach above this page header. */}
       <PageHeader
         actions={[
           { label: 'Assign vendor', href: '#requests' },
@@ -178,33 +189,52 @@ export default async function MaintenancePage() {
       <div className="row between">
         <div>
           <p className="eyebrow">Work orders</p>
-          <h2>Repairs at a glance</h2>
+          <div className={styles.headingPeople}>
+            <h2>Repairs at a glance</h2>
+            <AvatarStack initials={vendors.slice(0, 4).map((vendor) => initials(vendor.name))} />
+          </div>
           <p className="muted">From tenant photo to completed work, keep every request moving.</p>
         </div>
         <span className="chip active">All properties</span>
       </div>
-      <div className="grid-3">
-        <Stat
-          label="Open requests"
-          value={open.length}
-          delta={`Across ${new Set(open.map((request) => request.propertyId)).size} properties`}
-        />
-        <Stat
-          label="Urgent attention"
-          value={urgent.length}
-          delta={
-            urgent[0] ? `${urgent[0].title} · ${urgent[0].property.name}` : 'No urgent requests'
-          }
-          tone={urgent.length ? 'down' : 'up'}
-        />
-        <Stat
-          label="Completed this week"
-          value={completed.length}
-          delta="Requests resolved"
-          tone="up"
-        />
+      <div className={styles.stats}>
+        <article className={styles.stat}>
+          <div className={styles.statTop}>
+            <span>Open requests</span>
+            <KpiIcon>⚒</KpiIcon>
+          </div>
+          <strong>{open.length}</strong>
+          <TrendChip>
+            Across {new Set(open.map((request) => request.propertyId)).size} properties
+          </TrendChip>
+        </article>
+        <article className={styles.stat}>
+          <div className={styles.statTop}>
+            <span>Urgent attention</span>
+            <KpiIcon tone="coral">!</KpiIcon>
+          </div>
+          <strong>{urgent.length}</strong>
+          <TrendChip warm>
+            {urgent[0] ? `${urgent[0].title} · ${urgent[0].property.name}` : 'No urgent requests'}
+          </TrendChip>
+        </article>
+        <article className={styles.stat}>
+          <div className={styles.statTop}>
+            <span>Completed this week</span>
+            <KpiIcon tone="green">✓</KpiIcon>
+          </div>
+          <strong>{completed.length}</strong>
+          <TrendChip>Requests resolved</TrendChip>
+        </article>
       </div>
-      {requests.length === 0 && <EmptyState title="No repair requests yet" description="Create a repair request to track work from start to finish." action="Create a request" href="#new-request" />}
+      {requests.length === 0 && (
+        <EmptyState
+          title="No repair requests yet"
+          description="Create a repair request to track work from start to finish."
+          action="Create a request"
+          href="#new-request"
+        />
+      )}
       <div id="requests" className={styles.board}>
         <KanbanBoard>
           {columns.map((column) => {

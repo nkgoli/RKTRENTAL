@@ -3,7 +3,19 @@ import { EmptyState } from '@/components/RouteStates';
 import { db } from '@/lib/db/client';
 import { requireManagerRole } from '@/lib/auth/access';
 import { PageHeader } from '@/components/shell/PageHeader';
-import { Badge, Card, CardHeader, Chip, Chips, FileRow, Gallery, Progress } from '@/components/ui';
+import {
+  AvatarStack,
+  Badge,
+  Card,
+  CardHeader,
+  Chip,
+  Chips,
+  FileRow,
+  Gallery,
+  KpiIcon,
+  Progress,
+  TrendChip,
+} from '@/components/ui';
 import { PhotoImage, fileKind } from '@/app/(manager)/properties/_components/Media';
 import { formatBytes, formatDate } from '@/lib/properties/format';
 import {
@@ -221,11 +233,28 @@ export default async function DocumentsPage({
 
   return (
     <>
+      {/* Property workspace header and tabs attach above this page header. */}
       <PageHeader
         title="Documents and photos"
         eyebrow="Files"
         actions={[{ label: 'Upload files', href: '#upload', primary: true }]}
       />
+      <div className={styles.libraryIntro}>
+        <div>
+          <p className="eyebrow">Portfolio files</p>
+          <h2>Documents and photos</h2>
+        </div>
+        <AvatarStack
+          initials={leaseTargets.slice(0, 4).map((lease) =>
+            (lease.tenants[0]?.tenant.name ?? 'Tenant')
+              .split(' ')
+              .map((part) => part[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase(),
+          )}
+        />
+      </div>
       <div className="stack">
         <section className="split">
           <Card id="upload">
@@ -237,12 +266,19 @@ export default async function DocumentsPage({
             />
           </Card>
           <Card>
-            <div className="eyebrow">Storage</div>
+            <div className={styles.storageHeading}>
+              <span className="eyebrow">Storage</span>
+              <KpiIcon>▣</KpiIcon>
+            </div>
             <div className="row between" style={{ marginTop: 4 }}>
               <strong>{formatBytes(usedBytes)} of 10 GB</strong>
-              <span className="muted">{libraryFiles.length} files</span>
+              <TrendChip>{libraryFiles.length} files</TrendChip>
             </div>
-            <Progress value={storagePercent} label="Portfolio storage used" style={{ marginTop: 10 }} />
+            <Progress
+              value={storagePercent}
+              label="Portfolio storage used"
+              style={{ marginTop: 10 }}
+            />
             <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
               Documents and photos stored for your portfolio
             </p>
@@ -360,7 +396,12 @@ export default async function DocumentsPage({
               );
             })
           ) : (
-            <EmptyState title="No lease documents in this view" description="Lease documents will appear here after they are added." action="View leases" href="/leases" />
+            <EmptyState
+              title="No lease documents in this view"
+              description="Lease documents will appear here after they are added."
+              action="View leases"
+              href="/leases"
+            />
           )}
         </Card>
 
@@ -386,7 +427,12 @@ export default async function DocumentsPage({
               return <DocumentRow key={file.id} file={file} owner={owner} />;
             })
           ) : (
-            <EmptyState title="Nothing uploaded for properties yet" description="Upload a file from a property to keep it with the portfolio." action="View properties" href="/properties" />
+            <EmptyState
+              title="Nothing uploaded for properties yet"
+              description="Upload a file from a property to keep it with the portfolio."
+              action="View properties"
+              href="/properties"
+            />
           )}
         </Card>
 
@@ -431,7 +477,12 @@ export default async function DocumentsPage({
               })}
             </Gallery>
           ) : (
-            <EmptyState title="No photos in this view" description="Add property or unit photos to make them available here." action="View properties" href="/properties" />
+            <EmptyState
+              title="No photos in this view"
+              description="Add property or unit photos to make them available here."
+              action="View properties"
+              href="/properties"
+            />
           )}
         </Card>
         <Badge tone="info">{matchingFiles.length} matching files</Badge>

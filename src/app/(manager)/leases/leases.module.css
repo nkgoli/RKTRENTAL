@@ -1,0 +1,48 @@
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.kpi {
+  position: relative;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: var(--rr-shadow-lg);
+  padding: 20px;
+  min-height: 143px;
+}
+.kpiTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  color: #4b5568;
+  font-size: 13px;
+  font-weight: 600;
+}
+.kpi strong {
+  display: block;
+  margin: 7px 0;
+  font-family: var(--design-heading-font);
+  font-size: 32px;
+  line-height: 1.1;
+  color: var(--design-text);
+}
+.kpiFooter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--design-muted);
+  font-size: 12px;
+}
+.portfolioIntro {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+@media (max-width: 800px) {
+  .kpis {
+    grid-template-columns: 1fr;
+  }
+}

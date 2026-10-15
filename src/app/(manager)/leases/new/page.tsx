@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db/client';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { KpiIcon } from '@/components/ui';
+import styles from './lease-create.module.css';
 import { requireManagerRole } from '@/lib/auth/access';
 import { dateInput } from '@/lib/leases/core';
 import { leaseName } from '@/lib/leases/format';
@@ -76,9 +78,12 @@ export default async function NewLeasePage({
       <nav className="breadcrumbs" aria-label="Breadcrumb">
         <Link href="/leases">Leases</Link> / {source ? 'Renew lease' : 'Create lease'}
       </nav>
-      <div style={{ marginBottom: 16 }}>
+      <div className={styles.intro}>
         <p className="eyebrow">{source ? 'Renewal' : 'New residential lease'}</p>
-        <h2 style={{ fontSize: 22 }}>{source ? 'Renew this lease' : 'Set the terms'}</h2>
+        <div className={styles.introLine}>
+          <KpiIcon>✎</KpiIcon>
+          <h2>{source ? 'Renew this lease' : 'Set the terms'}</h2>
+        </div>
         <p className="muted" style={{ marginTop: 4 }}>
           {source
             ? 'Confirm the renewal dates, rent and clauses before sending for e-signature.'

@@ -10,3 +10,14 @@ export { KanbanBoard, KanbanColumn, Ticket } from './Kanban';
 export { CellMain, Table, TableHead } from './Table';
 export { Tabs } from './Tabs';
 export { cx } from './cx';
+export {
+  AvatarStack,
+  Cover,
+  CoverName,
+  CoverPill,
+  KpiIcon,
+  OccupancyRing,
+  Sparkline,
+  TrendChip,
+} from './Flair';
+export type { CoverKind, KpiTone, SparklineTone } from './Flair';

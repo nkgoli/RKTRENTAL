@@ -1,4 +1,4 @@
-.scope :global(a:focus-visible),
+﻿.scope :global(a:focus-visible),
 .scope :global(button:focus-visible),
 .scope :global(input:focus-visible),
 .scope :global(select:focus-visible),
@@ -9,7 +9,9 @@
   border-radius: 3px;
 }
 .scope { --design-muted: #526176; --design-danger: #b42318; }
-.scope :global(.nav-label) { color: var(--design-muted); }
+.scope :global(.nav-label) { color: #9fb3d1; }
+.scope :global(.sidebar a:focus-visible),
+.scope :global(.sidebar button:focus-visible) { outline-color: #fff; }
 .scope :global(.alert a) { text-decoration: underline; text-underline-offset: 2px; }
 .skip {
   position: fixed;

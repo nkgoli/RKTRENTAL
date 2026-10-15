@@ -71,6 +71,21 @@ tail of `%TEMP%\rocketrental\postgres.err.log` / `postgres.out.log`, and exits
 non-zero. Add `-ResetDatabase` to wipe and re-initialise that data dir (all local
 data in it is lost).
 
+An existing `.env` is never rewritten, but for the run the script overrides stale
+values with the ones from `-Port` / `-DbPort`: `PORT`, `ROCKETRENTAL_DB_PORT`,
+`DATABASE_URL` (and `DIRECT_URL` / `SHADOW_DATABASE_URL` when set, all pointing at
+the bundled Postgres on `-DbPort`), and `NEXTAUTH_URL` / `AUTH_URL` / `APP_URL`
+when set. A `ROCKETRENTAL_AUTH_SECRET` shorter than 32 characters (the old
+31-character placeholder) is replaced by a built-in local-dev secret, because
+shorter ones make sign-in fail with a server error. Each override is printed as
+`Stale .env value overridden: NAME=old -> new`. Migrations, seed and the app all
+use that one database.
+
+The Next.js server's stdout and stderr are shown in the console prefixed with
+`[next]` and also written to `%TEMP%ocketrentalpp-<port>.log`. The path is
+printed at start-up and again if the app fails to start, so a server-side
+"Application error" page can be matched to its real error (look for the `Digest`).
+
 ## Demo accounts (dev only)
 
 | Account | Email                               | Password          |

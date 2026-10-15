@@ -216,18 +216,66 @@ if ($DbPort -le 0) {
     $DbPort = if ($env:ROCKETRENTAL_DB_PORT) { [int]$env:ROCKETRENTAL_DB_PORT }
               elseif ($dotenv['ROCKETRENTAL_DB_PORT']) { [int]$dotenv['ROCKETRENTAL_DB_PORT'] } else { 5432 }
 }
-$env:PORT = "$Port"
-$env:ROCKETRENTAL_DB_PORT = "$DbPort"
 if (-not $env:ROCKETRENTAL_AUTH_COOKIE_SECURE -and -not $dotenv['ROCKETRENTAL_AUTH_COOKIE_SECURE']) { $env:ROCKETRENTAL_AUTH_COOKIE_SECURE = 'false' }
 if (-not $env:ROCKETRENTAL_SANDBOX -and -not $dotenv['ROCKETRENTAL_SANDBOX']) { $env:ROCKETRENTAL_SANDBOX = 'true' }
-if (-not $env:ROCKETRENTAL_AUTH_SECRET -and -not $dotenv['ROCKETRENTAL_AUTH_SECRET']) {
+
+# Values for this run come from the script's parameters and override whatever an
+# older .env (or inherited environment) says. The .env file itself is never
+# rewritten; each override is announced. Process environment variables win over
+# .env for Next.js, Prisma and `node --env-file`, so setting them here is enough.
+function Get-Configured($name) {
+    $fromEnv = [Environment]::GetEnvironmentVariable($name, 'Process')
+    if ($fromEnv) { return @{ Value = $fromEnv; Source = 'environment' } }
+    if ($dotenv[$name]) { return @{ Value = $dotenv[$name]; Source = '.env' } }
+    return $null
+}
+function Set-Effective($name, $value, $reason) {
+    $cur = Get-Configured $name
+    if ($cur -and $cur.Value -ne $value) {
+        Warn "Stale $($cur.Source) value overridden: $name=$(Hide-Secret $name $cur.Value) -> $(Hide-Secret $name $value) ($reason)"
+    }
+    [Environment]::SetEnvironmentVariable($name, $value, 'Process')
+}
+function Hide-Secret($name, $value) {
+    if ($name -match 'SECRET|PASSWORD|TOKEN|KEY') { return "<$($value.Length) chars>" }
+    if ($name -match 'URL$') { return [regex]::Replace($value, '(://[^:/@]+):[^@]*@', '$1:***@') }
+    return $value
+}
+
+$cur = Get-Configured 'PORT'
+if ($cur -and $cur.Value -ne "$Port") { Warn "Stale $($cur.Source) value overridden: PORT=$($cur.Value) -> $Port (-Port)" }
+$cur = Get-Configured 'ROCKETRENTAL_DB_PORT'
+if ($cur -and $cur.Value -ne "$DbPort") { Warn "Stale $($cur.Source) value overridden: ROCKETRENTAL_DB_PORT=$($cur.Value) -> $DbPort (-DbPort)" }
+$appUrl = "http://localhost:$Port"
+foreach ($n in 'NEXTAUTH_URL', 'AUTH_URL', 'APP_URL', 'NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_BASE_URL', 'SITE_URL') {
+    $cur = Get-Configured $n
+    if ($cur) { Set-Effective $n $appUrl "app is served on port $Port" }
+}
+$env:PORT = "$Port"
+$env:ROCKETRENTAL_DB_PORT = "$DbPort"
+
+# Session signing needs at least 32 characters (src/lib/auth/session.ts); older
+# .env templates shipped a 31-character placeholder, which makes sign-in fail.
+$secret = Get-Configured 'ROCKETRENTAL_AUTH_SECRET'
+if (-not $secret) {
+    $env:ROCKETRENTAL_AUTH_SECRET = 'local-dev-only-secret-not-for-production-0123456789'
+} elseif ($secret.Value.Length -lt 32) {
+    Warn "Stale $($secret.Source) value overridden: ROCKETRENTAL_AUTH_SECRET is only $($secret.Value.Length) characters (32 required to sign sessions) -> built-in local-dev secret for this run. Put a longer secret in .env to silence this."
     $env:ROCKETRENTAL_AUTH_SECRET = 'local-dev-only-secret-not-for-production-0123456789'
 }
-# Keep DATABASE_URL aligned with the chosen Postgres port.
+
+# The database the app, migrations and seed all use. For the embedded or Docker
+# database it is always the bundled instance on -DbPort; with -SkipDatabase the
+# URL is the user's own and is left alone.
 if (-not $SkipDatabase) {
-    $url = if ($env:DATABASE_URL) { $env:DATABASE_URL } elseif ($dotenv['DATABASE_URL']) { $dotenv['DATABASE_URL'] } else {
-        'postgresql://rocketrental:rocketrental@localhost:5432/rocketrental?schema=public' }
-    $env:DATABASE_URL = [regex]::Replace($url, '(@(?:localhost|127\.0\.0\.1)):\d+', "`$1:$DbPort")
+    $dbUrl = "postgresql://rocketrental:rocketrental@localhost:$DbPort/rocketrental?schema=public"
+    foreach ($n in 'DATABASE_URL', 'DIRECT_URL', 'DIRECT_DATABASE_URL', 'SHADOW_DATABASE_URL') {
+        $cur = Get-Configured $n
+        if ($n -eq 'DATABASE_URL' -or $cur) {
+            $v = if ($n -eq 'SHADOW_DATABASE_URL') { $dbUrl -replace '/rocketrental\?', '/rocketrental_shadow?' } else { $dbUrl }
+            Set-Effective $n $v "bundled Postgres on port $DbPort"
+        }
+    }
 }
 Info "Using app port $Port and database port $DbPort."
 
@@ -485,40 +533,77 @@ try {
     $nextBin = Join-Path $Root 'node_modules\next\dist\bin\next'
     $mode = if ($Dev) { 'dev' } else { 'start' }
     $env:NODE_ENV = if ($Dev) { 'development' } else { 'production' }
-    $appOut = Join-Path $LogDir 'app.out.log'
-    $appErr = Join-Path $LogDir 'app.err.log'
-    Remove-Item $appOut, $appErr -ErrorAction SilentlyContinue
-    Info "Starting Next.js ($mode) on port $Port"
+    $appOut = Join-Path $LogDir "app-$Port.out.log"
+    $appErr = Join-Path $LogDir "app-$Port.err.log"
+    $appLog = Join-Path $LogDir "app-$Port.log"
+    Remove-Item $appOut, $appErr, $appLog -ErrorAction SilentlyContinue
+    Set-Content -Path $appLog -Value "# RocketRental server log, started $(Get-Date -Format s), port $Port, mode $mode" -Encoding UTF8
+    Info "Starting Next.js ($mode) on port $Port. Server log: $appLog"
     $app = Start-Process -FilePath node -ArgumentList "`"$nextBin`"", $mode, '-p', "$Port" `
         -WorkingDirectory $Root -NoNewWindow -PassThru -RedirectStandardOutput $appOut -RedirectStandardError $appErr
+    $null = $app.Handle
+    $pumpPos = @{ $appOut = 0L; $appErr = 0L }
+
+    # Copy new server output to the console and to the combined log file.
+    function Receive-AppLogs {
+        foreach ($f in @($appOut, $appErr)) {
+            if (-not (Test-Path $f)) { continue }
+            try {
+                $fs = [System.IO.File]::Open($f, 'Open', 'Read', 'ReadWrite')
+                try {
+                    [void]$fs.Seek($pumpPos[$f], 'Begin')
+                    $text = (New-Object System.IO.StreamReader($fs)).ReadToEnd()
+                    $pumpPos[$f] = $fs.Position
+                } finally { $fs.Dispose() }
+            } catch { continue }
+            if ($text) {
+                $prefix = if ($f -eq $appErr) { '[stderr] ' } else { '' }
+                foreach ($line in ($text -split "`r?`n")) {
+                    if ($line -eq '') { continue }
+                    Write-Host "[next] $prefix$line"
+                    Add-Content -Path $appLog -Value "$prefix$line" -Encoding UTF8
+                }
+            }
+        }
+    }
 
     $url = "http://localhost:$Port"
     $deadline = (Get-Date).AddSeconds(180)
     $ok = $false
     while (-not $ok) {
+        Receive-AppLogs
         if ($app.HasExited) {
-            Get-Content $appErr, $appOut -ErrorAction SilentlyContinue | Select-Object -Last 20 | ForEach-Object { Write-Host $_ }
+            $app.WaitForExit()
+            Receive-AppLogs
             $appExit = if ($null -eq $app.ExitCode) { 'unavailable' } else { $app.ExitCode }
-            Fail "Next.js exited early (exit $appExit)."
+            Fail "Next.js exited early (exit $appExit). Server log: $appLog"
         }
-        if ((Get-Date) -gt $deadline) { Fail "App did not respond at $url within 180s. See $appOut / $appErr" }
+        if ((Get-Date) -gt $deadline) { Fail "App did not respond at $url within 180s. Server log: $appLog" }
         try {
             $r = Invoke-WebRequest -Uri "$url/sign-in" -UseBasicParsing -TimeoutSec 5
             if ($r.StatusCode -eq 200) { $ok = $true }
-        } catch { Start-Sleep -Seconds 1 }
+        } catch {
+            $status = $null
+            if ($_.Exception.Response) { $status = [int]$_.Exception.Response.StatusCode }
+            if ($status -ge 500) { Receive-AppLogs; Warn "GET /sign-in returned HTTP $status. Server log: $appLog" }
+            Start-Sleep -Seconds 1
+        }
     }
 
     Write-Host ''
     Info "RocketRental is running at $url (sign in at $url/sign-in)"
     Write-Host '  Manager: jordan.mills@rocketrental.example / JordanDemo#2026'
     Write-Host '  Tenant:  alex.rivera@email.com / AlexDemo#2026'
-    Write-Host "  Logs:    $LogDir"
+    Write-Host "  Server log: $appLog"
+    Write-Host "  Other logs: $LogDir"
     Write-Host '  Press Ctrl+C to stop.'
     Write-Host ''
+    while (-not $app.HasExited) { Receive-AppLogs; Start-Sleep -Milliseconds 500 }
     $app.WaitForExit()
+    Receive-AppLogs
     $appExit = if ($null -eq $app.ExitCode) { 'unavailable' } else { $app.ExitCode }
     Info "App exited (code $appExit)."
-    if ($appExit -ne 0) { Fail "App exited with code $appExit." }
+    if ($appExit -ne 0) { Fail "App exited with code $appExit. Server log: $appLog" }
 } finally {
     Stop-All
 }

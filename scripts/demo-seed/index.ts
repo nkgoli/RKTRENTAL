@@ -1,5 +1,5 @@
 import {
-  ApplicationStatus, Prisma, PrismaClient, type ChargeKind, type MaintenancePriority,
+  Prisma, PrismaClient, type ChargeKind, type MaintenancePriority,
   type MaintenanceStatus,
 } from '@prisma/client';
 import { hashPassword } from '../../src/lib/auth/password';
@@ -13,9 +13,10 @@ import { ensureStandardTemplate, toDefinition } from '../../src/lib/lease-create
 import { STANDARD_V2_ITEMS } from '../../src/lib/lease-create/standard-v2';
 import { createStorageAdapter } from '../../src/lib/storage/config';
 import { buildingPng } from './image';
+import { planApplications } from './applications';
 import { assertDemoTarget } from './guard';
 import {
-  assertNoLeaseOverlap, fakePerson, pickInt, planPortfolio, prng, properties,
+  assertNoLeaseOverlap, pickInt, planPortfolio, prng, properties,
   propertyId,
 } from './plan';
 
@@ -249,40 +250,11 @@ async function seedDatabase() {
     }
   }
 
-  const applicationStatuses: ApplicationStatus[] = ['SUBMITTED', 'SCREENING', 'REVIEW', 'APPROVED', 'DECLINED'];
-  const applications: Prisma.ApplicationCreateManyInput[] = [];
-  const consents: Prisma.ScreeningConsentCreateManyInput[] = [];
-  const reports: Prisma.ScreeningReportCreateManyInput[] = [];
-  let applicantIndex = 0;
-  const applicationUnits = [...new Map(plan.units.filter((unit, index) => index % 13 === 0 ||
-    !plan.leases.some((lease) => lease.unitId === unit.id && lease.startDate <= now && lease.endDate >= now && lease.status === 'ACTIVE'))
-    .map((unit) => [unit.id, unit] as const)).values()];
-  for (const unit of applicationUnits) {
-    for (let index = 0, count = pickInt(random, 1, 3); index < count; index++) {
-      applicantIndex++;
-      const person = fakePerson(random, applicantIndex + 10_000);
-      const id = `demo-application-${applicantIndex}`;
-      const status = applicationStatuses[applicantIndex % applicationStatuses.length]!;
-      applications.push({ id, organizationId, unitId: unit.id, applicantName: person.name,
-        applicantEmail: person.email, status, appliedAt: day(now, -pickInt(random, 1, 90)),
-        ...(status === 'APPROVED' || status === 'DECLINED' ? { decidedAt: day(now, -1),
-          decidedBy: 'Jordan Mills', decisionReason: status === 'APPROVED' ? 'Demo approval' : 'Demo screening decision' } : {}) });
-      if (status !== 'SUBMITTED') {
-        consents.push({ id: `demo-consent-${id}`, organizationId, applicationId: id, provider: 'demo-screening',
-          consentedAt: day(now, -5), consentVersion: 'demo-1' });
-      }
-      const reportStatus = status === 'SUBMITTED' ? 'invited' : status === 'SCREENING' ? 'in_progress'
-        : status === 'DECLINED' ? 'archived' : 'completed';
-      reports.push({ id: `demo-report-${id}`, organizationId, applicationId: id, provider: 'demo-screening',
-        providerReference: `demo-screening:${id}`, status: reportStatus,
-        summary: reportStatus === 'invited' || reportStatus === 'in_progress' ? Prisma.JsonNull
-          : { creditScore: 640 + applicantIndex % 120, background: 'clear', eviction: 'clear' },
-        completedAt: reportStatus === 'invited' || reportStatus === 'in_progress' ? null : day(now, -2) });
-    }
-  }
-  await prisma.application.createMany({ data: applications });
-  if (consents.length) await prisma.screeningConsent.createMany({ data: consents });
-  if (reports.length) await prisma.screeningReport.createMany({ data: reports });
+  const applicationPlan = planApplications(seed, now, plan.units, plan.leases, plan.tenants);
+  const { groups, applications, consents, reports } = applicationPlan;
+  await createManyInChunks(applications, (data) => prisma.application.createMany({ data }));
+  await createManyInChunks(consents, (data) => prisma.screeningConsent.createMany({ data }));
+  await createManyInChunks(reports, (data) => prisma.screeningReport.createMany({ data }));
 
   const vendors = [
     { id: 'demo-vendor-northstar', name: 'Northstar Repairs', trade: 'General repairs' },
@@ -377,8 +349,29 @@ async function seedDatabase() {
   if (photoAttachments.length) await prisma.maintenancePhoto.createMany({ data: photoAttachments });
 
   const elapsed = Math.round(performance.now() - started);
-  console.log(`Demo seed ${seed}: ${properties.length} properties, ${plan.units.length} units, ${plan.leases.length} leases, ${payments.length} payments, ${applications.length} applicants, ${maintenance.length} maintenance requests, ${photos.length} photos in ${elapsed} ms.`);
+  console.log(`Demo seed ${seed}: ${properties.length} properties, ${plan.units.length} units, ${plan.leases.length} leases, ${payments.length} payments, ${groups.length} application groups, ${applications.length} applicants, ${maintenance.length} maintenance requests, ${photos.length} photos in ${elapsed} ms.`);
   console.log(`Charges: ${charges.length}; expenses: ${expenses.length}; partial deposit refunds: ${Math.min(refunds.length, 8)}.`);
+  console.log('Property | Year | Leases | Charges | Payments | Groups | Applicants');
+  const unitProperty = new Map(plan.units.map((unit) => [unit.id, unit.propertySlug]));
+  const leaseProperty = new Map(plan.leases.map((lease) => [lease.id, unitProperty.get(lease.unitId)]));
+  for (const property of properties) {
+    const yearOf = (value: string | Date | null | undefined) => value == null ? undefined : new Date(value).getUTCFullYear();
+    const years = new Set([
+      ...plan.leases.filter((lease) => leaseProperty.get(lease.id) === property.slug).map((lease) => yearOf(lease.startDate)),
+      ...charges.filter((charge) => leaseProperty.get(charge.leaseId) === property.slug).map((charge) => yearOf(charge.dueDate)),
+      ...payments.filter((payment) => leaseProperty.get(payment.leaseId) === property.slug).map((payment) => yearOf(payment.paidAt ?? payment.createdAt)),
+      ...groups.filter((group) => unitProperty.get(group.unitId) === property.slug).map((group) => yearOf(group.at)),
+    ]);
+    for (const year of [...years].filter((value): value is number => value !== undefined).sort()) {
+      const inYear = (date: string | Date | null | undefined) => yearOf(date) === year;
+      const leaseCount = plan.leases.filter((lease) => leaseProperty.get(lease.id) === property.slug && inYear(lease.startDate)).length;
+      const chargeCount = charges.filter((charge) => leaseProperty.get(charge.leaseId) === property.slug && inYear(charge.dueDate)).length;
+      const paymentCount = payments.filter((payment) => leaseProperty.get(payment.leaseId) === property.slug && inYear(payment.paidAt ?? payment.createdAt)).length;
+      const groupCount = groups.filter((group) => unitProperty.get(group.unitId) === property.slug && inYear(group.at)).length;
+      const applicantCount = applications.filter((application) => unitProperty.get(application.unitId) === property.slug && inYear(application.appliedAt)).length;
+      console.log(`${property.name} | ${year} | ${leaseCount} | ${chargeCount} | ${paymentCount} | ${groupCount} | ${applicantCount}`);
+    }
+  }
 }
 
 seedDatabase().catch((error) => { console.error(error); process.exitCode = 1; }).finally(() => prisma.$disconnect());

@@ -36,6 +36,7 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')('lease template persiste
         sortOrder: 0, required: true, includeWhen: 'ALWAYS' } } } });
     const prior = await prisma.lease.create({ data: { organizationId, unitId,
       startDate: new Date('2026-01-01'), endDate: new Date('2026-12-31'), monthlyRent: 1000, deposit: 1000,
+      status: 'ACTIVE', eSignStatus: 'SIGNED', signedAt: new Date('2026-01-01'),
       templateId: legacy.id, templateVersion: 1,
       termsSnapshot: { template: { version: 1 }, items: [{ body: 'Original sent text.' }] } } });
     const standard = await ensureStandardTemplate(organizationId, prisma);

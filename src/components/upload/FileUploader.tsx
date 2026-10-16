@@ -37,6 +37,23 @@ export interface ExistingUploadedFile {
   isCover?: boolean;
 }
 
+function ItemThumbnail({ item }: { item: FileUploaderItem }) {
+  const [broken, setBroken] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    const image = imageRef.current;
+    if (image?.complete && image.naturalWidth === 0) setBroken(true);
+  }, [item.previewUrl]);
+  return item.previewUrl && !broken ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img ref={imageRef} className={styles.thumbnail} src={item.previewUrl} alt="" onError={() => setBroken(true)} />
+  ) : (
+    <span className={styles.fileIcon} role="img" aria-label={item.previewUrl ? `Preview unavailable for ${item.name}` : `${item.name} file type`}>
+      {item.previewUrl ? 'Preview unavailable' : (extensionOf(item.name).replace('.', '') || 'file').toUpperCase()}
+    </span>
+  );
+}
+
 export interface UploadProgressContext {
   target: FileTarget;
   kind: FileUploaderKind;
@@ -51,6 +68,8 @@ export type UploadFileFn = (
 ) => Promise<UploadedDocument>;
 
 export interface FileUploaderProps {
+  /** Hide the inline count when a parent upload area presents its own photo counter. */
+  showCounter?: boolean;
   accept?: string;
   kind: FileUploaderKind | 'PHOTO' | 'DOCUMENT';
   /** Where files are stored. Omit with formField to submit files with an enclosing form. */
@@ -415,7 +434,7 @@ export function FileUploader(props: FileUploaderProps) {
         ) : null}
       </div>
 
-      {kind === 'photo' && max !== undefined ? (
+      {kind === 'photo' && max !== undefined && props.showCounter !== false ? (
         <p className={styles.counter} aria-label={`${used} of ${max} photos`}>
           {used} of {max} photos
         </p>
@@ -434,14 +453,7 @@ export function FileUploader(props: FileUploaderProps) {
         <ul className={styles.list}>
           {items.map((item, index) => (
             <li key={item.id} className={styles.item}>
-              {item.previewUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img className={styles.thumbnail} src={item.previewUrl} alt="" />
-              ) : (
-                <span className={styles.fileIcon} aria-hidden="true">
-                  {(extensionOf(item.name).replace('.', '') || 'file').toUpperCase()}
-                </span>
-              )}
+              <ItemThumbnail item={item} />
               <div className={styles.details}>
                 <span className={styles.name}>{item.name}</span>
                 <span className={styles.meta}>

@@ -17,3 +17,7 @@ export function legacyTabDestination(propertyId: string, query: WorkspaceSearch,
   const path = workspaceTabHref(propertyId, valid);
   return `${path}${search.size ? `?${search}` : ''}`;
 }
+
+export function documentsDestination(propertyId: string, query: WorkspaceSearch) {
+  return legacyTabDestination(propertyId, { ...query, tab: 'overview' });
+}

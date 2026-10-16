@@ -15,6 +15,7 @@ vi.mock('@/components/units/DeleteUnitControl', () => ({
 vi.mock('next/navigation', () => ({
   usePathname: () => '/unscoped',
   useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ refresh: () => undefined }),
 }));
 
 import { PropertyOverview, UnitOverview } from '@/components/workspace/WorkspaceOverview';
@@ -83,7 +84,8 @@ describe('property and unit workspace render', () => {
 
     expect(html).toContain('Property details');
     expect(html).toContain('Next steps');
-    expect(html).toContain('Documents and photos');
+    expect(html).toContain('Photos &amp; documents');
+    expect(html).toContain('Property documents');
     expect(html).not.toContain('Lease timeline');
     expect(html).not.toContain('Returns at a glance');
     expect(html).not.toContain('Payments by the numbers');
@@ -103,7 +105,8 @@ describe('property and unit workspace render', () => {
     expect(html).toContain('Unit facts');
     expect(html).toContain('Balcony');
     expect(html).toContain('Create a lease for this unit');
-    expect(html).toContain('Unit documents and photos');
+    expect(html).toContain('Photos &amp; documents');
+    expect(html).toContain('Unit documents');
     expect(html).toContain('No active lease on this unit.');
   });
 });

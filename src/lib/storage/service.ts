@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { PrismaClient } from '@prisma/client';
 import type { FileAccess } from './access';
 import { assertDocumentAccess, assertTargetAccess } from './access';
 import type {
@@ -55,6 +56,39 @@ export function targetMatches(doc: StoredDocument, target: FileTarget): boolean 
     : target.kind === 'property'
       ? doc.propertyId === target.id
       : doc.unitId === target.id;
+}
+
+/** Photos attached to a repair belong to its maintenance request, not the workspace gallery. */
+export async function listWorkspacePhotos(
+  organizationId: string,
+  target: FileTarget,
+  client?: PrismaClient,
+): Promise<{ id: string; name: string; kind: string; mimeType: string; sizeBytes: number; createdAt: Date; isCover: boolean; caption: string | null }[]> {
+  if (target.kind === 'lease') return [];
+  const db = client ?? (await import('@/lib/db/client')).db;
+  const rows = await db.document.findMany({
+    where: {
+      organizationId,
+      ...(target.kind === 'property' ? { propertyId: target.id } : { unitId: target.id }),
+      kind: 'PHOTO',
+      maintenancePhoto: { is: null },
+    },
+    orderBy: [
+      { isCover: 'desc' },
+      { sortOrder: { sort: 'asc', nulls: 'last' } },
+      { createdAt: 'asc' },
+    ],
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    kind: row.kind,
+    mimeType: row.mimeType,
+    sizeBytes: Number(row.sizeBytes),
+    createdAt: row.createdAt,
+    isCover: row.isCover,
+    caption: row.caption,
+  }));
 }
 
 /** Cover first, then sortOrder ascending (nulls last), then creation order. */
@@ -442,6 +476,14 @@ export async function createPrismaFileService(): Promise<FileService> {
       : target.kind === 'property'
         ? { organizationId: orgId, propertyId: target.id }
         : { organizationId: orgId, unitId: target.id };
+  const galleryPhotoWhere = (target: FileTarget) =>
+    target.kind === 'lease' ? {} : { maintenancePhoto: { is: null as null } };
+  const visibleTargetWhere = (orgId: string, target: FileTarget) => ({
+    ...targetWhere(orgId, target),
+    ...(target.kind === 'lease' ? {} : {
+      OR: [{ kind: { not: 'PHOTO' as const } }, { maintenancePhoto: { is: null as null } }],
+    }),
+  });
   const repo: DocumentRepository = {
     async create(input) {
       const row = await db.document.create({
@@ -450,7 +492,7 @@ export async function createPrismaFileService(): Promise<FileService> {
       return { ...row, sizeBytes: Number(row.sizeBytes) };
     },
     async countPhotos(orgId, target) {
-      return db.document.count({ where: { ...targetWhere(orgId, target), kind: 'PHOTO' } });
+      return db.document.count({ where: { ...targetWhere(orgId, target), kind: 'PHOTO', ...galleryPhotoWhere(target) } });
     },
     async createPhotoWithinLimit(input, max) {
       const target: FileTarget = input.propertyId
@@ -463,7 +505,7 @@ export async function createPrismaFileService(): Promise<FileService> {
         // Serialize concurrent photo inserts for this target across processes;
         // the count and insert below then cannot race past the limit.
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
-        const where = { ...targetWhere(input.organizationId, target), kind: 'PHOTO' as const };
+        const where = { ...targetWhere(input.organizationId, target), kind: 'PHOTO' as const, ...galleryPhotoWhere(target) };
         const used = await tx.document.count({ where });
         assertPhotoWithinLimit(target, used, max);
         const top = await tx.document.findFirst({
@@ -480,7 +522,7 @@ export async function createPrismaFileService(): Promise<FileService> {
     },
     async listByTarget(orgId, target) {
       const rows = await db.document.findMany({
-        where: targetWhere(orgId, target),
+        where: visibleTargetWhere(orgId, target),
         orderBy: [
           { isCover: 'desc' },
           { sortOrder: { sort: 'asc', nulls: 'last' } },
@@ -494,7 +536,7 @@ export async function createPrismaFileService(): Promise<FileService> {
       return { ...row, sizeBytes: Number(row.sizeBytes) };
     },
     async reorderPhotos(orgId, target, orderedIds) {
-      const where = targetWhere(orgId, target);
+      const where = { ...targetWhere(orgId, target), ...galleryPhotoWhere(target) };
       const rows = await db.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`photo-target:${orgId}:${target.kind}:${target.id}`}))`;
         const existing = await tx.document.findMany({
@@ -510,7 +552,7 @@ export async function createPrismaFileService(): Promise<FileService> {
       return rows.map((r) => ({ ...r, sizeBytes: Number(r.sizeBytes) }));
     },
     async setCover(orgId, target, documentId) {
-      const where = targetWhere(orgId, target);
+      const where = { ...targetWhere(orgId, target), ...galleryPhotoWhere(target) };
       const rows = await db.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`photo-target:${orgId}:${target.kind}:${target.id}`}))`;
         const doc = await tx.document.findFirst({

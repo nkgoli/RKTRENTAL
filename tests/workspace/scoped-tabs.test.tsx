@@ -18,9 +18,10 @@ describe('workspace tabs on leasing and ops pages', () => {
     expect(html).toContain('href="/properties/p1?unit=u1"');
     expect(html).toContain('href="/properties/p1/listing?unit=u1"');
     expect(html).toContain('href="/properties/p1/returns?unit=u1"');
-    for (const page of ['applications', 'leases', 'payments', 'maintenance', 'documents']) {
+    for (const page of ['applications', 'leases', 'payments', 'maintenance']) {
       expect(html).toContain(`href="/properties/p1/${page}?unit=u1"`);
     }
+    expect(html).not.toContain('/properties/p1/documents');
     expect(html.match(/aria-current="page"/g)).toHaveLength(2); // breadcrumb + active tab
     expect(html).toMatch(/aria-current="page"[^>]*>Maintenance</);
   });

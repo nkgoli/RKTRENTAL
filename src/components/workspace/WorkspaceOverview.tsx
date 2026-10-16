@@ -2,12 +2,10 @@ import Link from 'next/link';
 import { Avatar, Badge, Card, CardHeader, KpiIcon } from '@/components/ui';
 import { formatAddress, formatDate, formatMoney, initials } from '@/lib/properties/format';
 import type { PropertyDetail, UnitDetail } from '@/lib/properties/data';
-import { FileList } from '@/app/(manager)/properties/_components/Media';
-import { FilesUploader } from '@/app/(manager)/properties/_components/ManagedUploads';
 import { ArchiveButton } from '@/app/(manager)/properties/_components/PropertyForm';
-import { photoLimitForTarget } from '@/lib/storage/photo-limits';
 import { DeleteUnitControl } from '@/components/units/DeleteUnitControl';
 import { PropertyFactsCard, UnitFactsCard } from './InlineFacts';
+import { WorkspaceMedia } from './WorkspaceMedia';
 import styles from './WorkspaceOverview.module.css';
 
 type LeaseFact = { id: string; leaseStartDate: Date | null; leaseEndDate: Date | null; tenantName: string | null };
@@ -93,15 +91,13 @@ export function PropertyOverview({ property, owners = [], leaseFacts = [] }: {
           footer={<ArchiveButton propertyId={property.id} archived={property.archived} />}
         />
         <NextSteps steps={steps} />
-        <Card>
-          <CardHeader title="Documents and photos" action={<Link href={`/properties/${property.id}/documents`}>View all</Link>} />
-          <FileList files={property.files} empty="No property files yet." />
-          {property.leaseDocuments.length > 0 && <p className={styles.documentHint}>{property.leaseDocuments.length} lease document{property.leaseDocuments.length === 1 ? '' : 's'} on file</p>}
-          <div className={styles.uploadControls} id="photos">
-            <FilesUploader target={target} photos={property.photos} max={photoLimitForTarget(target)} />
-          </div>
-        </Card>
       </aside>
+      <div className={styles.mediaCard}>
+        <Card>
+          <CardHeader title="Photos & documents" />
+          <WorkspaceMedia target={target} photos={property.photos} files={property.files} />
+        </Card>
+      </div>
     </div>
   );
 }
@@ -163,11 +159,8 @@ export function UnitOverview({ unit, canDelete }: { unit: UnitDetail; canDelete:
       <aside className={styles.side}>
         <NextSteps steps={steps} />
         <Card>
-          <CardHeader title="Unit documents and photos" action={<Link href={`/properties/${unit.property.id}/documents?unit=${unit.id}`}>View all</Link>} />
-          <FileList files={unit.files} empty="No unit documents yet." />
-          <div className={styles.uploadControls} id="photos">
-            <FilesUploader target={target} photos={unit.photos} max={photoLimitForTarget(target)} />
-          </div>
+          <CardHeader title="Photos & documents" />
+          <WorkspaceMedia target={target} photos={unit.photos} files={unit.files} />
         </Card>
       </aside>
     </div>

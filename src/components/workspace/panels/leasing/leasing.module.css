@@ -1,0 +1,40 @@
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+.stat {
+  display: grid;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: var(--radius, 16px);
+  background: var(--surface, #fff);
+}
+.stat span,
+.stat small {
+  color: var(--muted, #64748b);
+  font-size: 0.8125rem;
+}
+.stat strong {
+  font-family: var(--font-heading, inherit);
+  font-size: 1.5rem;
+}
+.panel {
+  display: grid;
+  gap: 16px;
+}
+.listHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 16px 0;
+}
+.listHeader h3 {
+  margin: 0;
+}
+.empty {
+  padding: 24px 16px;
+  color: var(--muted, #64748b);
+}

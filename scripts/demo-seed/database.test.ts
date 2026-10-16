@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
 import { computeBalance, toCents } from '../../src/lib/ledger/core';
+import { applicationGroupId } from './applications';
 
 describe('seeded database audit', () => {
   const verify = process.env.DEMO_SEED_VERIFY === '1' ? it : it.skip;
@@ -11,7 +12,8 @@ describe('seeded database audit', () => {
       const [properties, units, leases, tenants, applications, documents] = await Promise.all([
         db.property.findMany({ where: { organizationId } }),
         db.unit.findMany({ where: { organizationId } }),
-        db.lease.findMany({ where: { organizationId }, include: { charges: true, payments: true } }),
+        db.lease.findMany({ where: { organizationId }, include: { charges: true, payments: true,
+          tenants: { include: { tenant: true } } } }),
         db.tenant.findMany({ where: { organizationId } }),
         db.application.findMany({ where: { organizationId } }),
         db.document.findMany({ where: { organizationId, kind: 'PHOTO' } }),
@@ -57,11 +59,49 @@ describe('seeded database audit', () => {
       }
       expect(tenants.every((tenant) => tenant.email?.endsWith('@example.com') && /555-01\d\d/.test(tenant.phone ?? ''))).toBe(true);
       expect(applications.every((application) => application.applicantEmail.endsWith('@example.com'))).toBe(true);
-      const applicantCounts = new Map<string, number>();
-      for (const application of applications) applicantCounts.set(application.unitId, (applicantCounts.get(application.unitId) ?? 0) + 1);
-      expect([...applicantCounts.values()].every((count) => count >= 1 && count <= 3)).toBe(true);
+      expect(new Set(applications.map((application) => application.status))).toEqual(
+        new Set(['SUBMITTED', 'SCREENING', 'REVIEW', 'APPROVED', 'DECLINED']));
+      const groups = new Map<string, typeof applications>();
+      for (const application of applications) {
+        const key = applicationGroupId(application.id);
+        expect(key).not.toBe(application.id);
+        groups.set(key, [...(groups.get(key) ?? []), application]);
+      }
+      expect(groups.size).toBeGreaterThan(200);
+      for (const members of groups.values()) {
+        expect(members.length).toBeGreaterThanOrEqual(1);
+        expect(members.length).toBeLessThanOrEqual(3);
+        expect(new Set(members.map((member) => member.unitId)).size).toBe(1);
+        expect(new Set(members.map((member) => member.appliedAt.getTime())).size).toBe(1);
+      }
+      const now = new Date();
+      for (const rows of byUnit.values()) {
+        for (const [index, lease] of rows.entries()) {
+          const prior = rows[index - 1];
+          if (prior && prior.tenants.map((member) => member.tenantId).join(',') ===
+            lease.tenants.map((member) => member.tenantId).join(',')) continue;
+          const approved = groups.get(`demo-group-${lease.id}-approved`);
+          expect(approved, `Missing approved group for ${lease.id}`).toBeDefined();
+          expect(approved?.every((member) => member.status === 'APPROVED')).toBe(true);
+          expect(approved?.map((member) => member.applicantEmail).sort()).toEqual(
+            lease.tenants.map((member) => member.tenant.email).sort());
+          expect(approved?.map((member) => member.applicantName).sort()).toEqual(
+            lease.tenants.map((member) => member.tenant.name).sort());
+          if (lease.startDate >= new Date(now.getTime() - 730 * 86_400_000)) {
+            expect(groups.get(`demo-group-${lease.id}-other`)).toBeDefined();
+          }
+        }
+      }
       for (const unit of units.filter((candidate) => candidate.status === 'VACANT')) {
-        expect(applicantCounts.get(unit.id)).toBeGreaterThanOrEqual(1);
+        const open = groups.get(`demo-group-${unit.id}-vacant`);
+        expect(open?.length).toBeGreaterThanOrEqual(1);
+        expect(open?.every((member) => member.status === 'SUBMITTED' || member.status === 'SCREENING')).toBe(true);
+      }
+      for (const lease of leases.filter((candidate) => candidate.status === 'ACTIVE' &&
+        candidate.endDate <= new Date(now.getTime() + 90 * 86_400_000))) {
+        const open = groups.get(`demo-group-${lease.id}-upcoming`);
+        expect(open?.length).toBeGreaterThanOrEqual(1);
+        expect(open?.every((member) => member.status === 'SUBMITTED' || member.status === 'SCREENING')).toBe(true);
       }
       for (const property of properties) {
         expect(documents.filter((document) => document.propertyId === property.id).length).toBeLessThanOrEqual(20);

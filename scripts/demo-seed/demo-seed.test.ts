@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { assessLateFee, computeBalance, rentDueDate, rentKey, type LedgerCharge, type LedgerPayment } from '../../src/lib/ledger/core';
 import { assertDemoTarget } from './guard';
 import { assertNoLeaseOverlap, planPortfolio, properties } from './plan';
+import { applicationGroupId, planApplications } from './applications';
 
 const today = new Date('2026-10-16T00:00:00.000Z');
 
@@ -30,6 +31,22 @@ describe('demo seed', () => {
     const plan = planPortfolio(42, today);
     expect(() => assertNoLeaseOverlap(plan.leases)).not.toThrow();
     expect(() => assertNoLeaseOverlap([plan.leases[0]!, { ...plan.leases[0]!, id: 'overlap' }])).toThrow(/Overlapping/);
+  });
+
+  it('plans stable households for turnovers and open vacancies', () => {
+    const portfolio = planPortfolio(42, today);
+    const first = planApplications(42, today, portfolio.units, portfolio.leases, portfolio.tenants);
+    expect(planApplications(42, today, portfolio.units, portfolio.leases, portfolio.tenants)).toEqual(first);
+    expect(first.groups.length).toBeGreaterThan(200);
+    expect(first.groups.every((group) => group.applicantIds.length >= 1 && group.applicantIds.length <= 3)).toBe(true);
+    for (const group of first.groups) {
+      expect(group.applicantIds.every((id) => applicationGroupId(id) === group.id)).toBe(true);
+      if (!group.nextLeaseId || !group.id.endsWith('-approved')) continue;
+      const lease = portfolio.leases.find((candidate) => candidate.id === group.nextLeaseId)!;
+      const tenant = portfolio.tenants.find((candidate) => candidate.id === lease.tenantId)!;
+      expect(group.applicantIds.map((id) => first.applications.find((row) => row.id === id)?.applicantEmail))
+        .toEqual([tenant.email]);
+    }
   });
 
   it('uses ledger rules for fees and reconciled balances', () => {

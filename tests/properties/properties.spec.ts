@@ -76,7 +76,7 @@ test('add a property, add a unit, open the unit', async ({ page }) => {
   await page.locator('#units').getByRole('link', { name: '6A', exact: true }).click();
   await expect(page).toHaveURL(/\/properties\/[^/?]+(\/units\/[^/?]+|\?unit=[^/]+)$/);
   await expect(page.getByRole('heading', { level: 1, name: `${name} · Unit 6A` })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Lease', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lease timeline' })).toBeVisible();
   await expect(page.getByText('No active lease on this unit.')).toBeVisible();
   // Rent comps live under the workspace Listing tab, scoped to this unit.
   const unitUrl = new URL(page.url());
@@ -109,12 +109,10 @@ test('single-unit property links straight to its one unit; archive hides it', as
   await addProperty(page, name, 'Single-unit home');
 
   await expect(page.getByRole('link', { name: '+ Add unit' })).toHaveCount(0);
-  await page
-    .locator('#units')
-    .getByRole('link', { name: /Whole property|Open/ })
-    .first()
-    .click();
-  await expect(page).toHaveURL(/\/properties\/[^/?]+(\/units\/[^/?]+|\?unit=[^/]+)$/);
+  // A single-family property has no unit list: its overview is the one unit.
+  await expect(page.locator('#units')).toHaveCount(0);
+  await expect(page.getByRole('combobox', { name: 'Switch unit' })).toHaveCount(0);
+  await expect(page.getByTestId('lease-timeline')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
   // The implicit unit is the whole property: its page has no unit facts card, so there is
   // no Delete control at all. The property is removed with Archive property instead.
@@ -148,7 +146,7 @@ test('seeded Maple Court shows its units and the 4B lease', async ({ page }) => 
   await expect(
     page.getByRole('heading', { level: 1, name: 'Maple Court · Unit 4B' }),
   ).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Alex Rivera' }).first()).toHaveAttribute(
+  await expect(page.locator('a[href^="/tenants/"]', { hasText: 'Alex Rivera' }).first()).toHaveAttribute(
     'href',
     /\/tenants\//,
   );
@@ -160,4 +158,56 @@ test('seeded Maple Court shows its units and the 4B lease', async ({ page }) => 
   // A unit with linked records (lease, requests) cannot be deleted.
   await expect(page.locator('#unit-facts').getByRole('button', { name: 'Delete' })).toBeDisabled();
   await expect(page.getByText('A unit with linked records cannot be deleted.')).toBeVisible();
+});
+
+test('unit switcher keeps the tab; timeline, applications, leases and maintenance states', async ({ page }) => {
+  const tab = (p: Page, label: string) => p.getByRole('navigation', { name: 'Workspace sections' }).getByRole('link', { name: label, exact: true });
+  await signIn(page);
+  await page.goto('/properties');
+  await page.getByRole('link', { name: /Maple Court/ }).click();
+  const switcher = page.getByRole('combobox', { name: 'Switch unit' });
+  await expect(switcher).toBeVisible();
+
+  // Property overview: one timeline row per unit, today marker, payments strip.
+  const timeline = page.getByTestId('lease-timeline');
+  await expect(timeline).toBeVisible();
+  expect(await timeline.locator('[data-unit-row]').count()).toBeGreaterThan(1);
+  await expect(timeline.getByTestId('timeline-today')).toHaveCount(await timeline.locator('[data-unit-row]').count());
+  await expect(page.getByLabel('Payments this month')).toBeVisible();
+
+  // Switch to a unit on the Leases tab: same tab, ?unit= set.
+  await tab(page, 'Leases').click();
+  await expect(page).toHaveURL(/\/leases$/);
+  await switcher.selectOption({ label: 'Unit 4B' });
+  await expect(page).toHaveURL(/\/leases\?unit=/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Maple Court · Unit 4B' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Set up lease' })).toHaveAttribute('href', /\/leases\/new\?unit=/);
+  await expect(page.getByRole('heading', { name: /^Current/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Drafts/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Past/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Alex Rivera' }).first()).toBeVisible();
+
+  // Unit overview: a single timeline row for the unit.
+  await tab(page, 'Overview').click();
+  await expect(page).toHaveURL(/\?unit=/);
+  await expect(page.getByTestId('lease-timeline').locator('[data-unit-row]')).toHaveCount(1);
+
+  // Applications: share link, settings, groups.
+  await tab(page, 'Applications').click();
+  await expect(page).toHaveURL(/\/applications\?unit=/);
+  await expect(page.getByLabel('Application link')).toHaveValue(/\/apply\//);
+  await expect(page.getByRole('form', { name: 'Application settings' })).toBeVisible();
+  await switcher.selectOption({ label: 'Maple Court · all units' });
+  await expect(page).toHaveURL(/\/applications$/);
+
+  // Maintenance: a new property shows the friendly empty state and the create flow works.
+  const name = `Elm Row ${Date.now()}`;
+  await addProperty(page, name, 'Single-unit home');
+  await tab(page, 'Maintenance').click();
+  await expect(page.getByRole('heading', { name: 'No repair requests yet' })).toBeVisible();
+  await page.getByRole('button', { name: 'Create your first request' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New repair request' });
+  await dialog.getByLabel('Request title').fill('Kitchen sink leak');
+  await dialog.getByRole('button', { name: 'Create request' }).click();
+  await expect(page.getByText('Kitchen sink leak')).toBeVisible();
 });

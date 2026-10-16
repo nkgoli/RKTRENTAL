@@ -45,6 +45,7 @@ export default async function PropertyMaintenancePage({
             propertyName={property.name}
             units={selectableUnits}
             selectedUnitId={unitId}
+            triggerLabel={requests.length === 0 ? 'Create your first request' : undefined}
           />
         }
       />

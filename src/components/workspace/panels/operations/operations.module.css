@@ -97,3 +97,22 @@
     padding: 20px;
   }
 }
+
+.emptyState {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 36px 20px;
+  text-align: center;
+}
+.emptyState h2 { margin: 0; font-size: 18px; }
+.emptyState p { max-width: 380px; margin: 0 0 8px; }
+.emptyIcon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff2e9;
+  font-size: 22px;
+}

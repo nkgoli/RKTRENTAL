@@ -5,6 +5,7 @@ import { Workspace } from '@/components/workspace/Workspace';
 vi.mock('next/navigation', () => ({
   usePathname: () => '/maintenance',
   useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push: () => undefined }),
 }));
 
 const scope = {

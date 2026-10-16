@@ -28,3 +28,5 @@
   .cover :global(.cover) { min-height: 88px; }
   .tab { padding: 11px 10px; font-size: 13px; }
 }
+.switcher { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; color: var(--design-muted); font-size: 13px; }
+.switcher select { min-width: 190px; max-width: 100%; padding: 6px 28px 6px 10px; border: 1px solid var(--rr-border); border-radius: 10px; background-color: #fff; color: var(--design-text); font: inherit; font-weight: 600; }

@@ -5,20 +5,14 @@ import { leaseName, signLabel, statusLabel, term } from '@/lib/leases/format';
 import { leasesDb } from '@/lib/leases/queries';
 import { formatMoney, initials } from '@/lib/properties/format';
 import type { ScopeFilter } from '@/lib/workspace/scope';
-import { LeasingStats } from './LeasingStats';
 import styles from './leasing.module.css';
 
 /** Leases for one property (and optionally one unit); rows open the existing lease detail page. */
 export async function LeasesPanel({ organizationId, scope }: { organizationId: string; scope: ScopeFilter }) {
-  const { leases, counts } = await leasesDb(organizationId).list(scope);
+  const { leases } = await leasesDb(organizationId).list(scope);
   const newLease = scope.unitId ? `/leases/new?unit=${encodeURIComponent(scope.unitId)}` : '/leases/new';
 
   return <section className={styles.panel} aria-label="Leases">
-    <LeasingStats label="Lease stats" stats={[
-      { label: 'Active leases', value: counts.active },
-      { label: 'Expiring in 60 days', value: counts.expiring },
-      { label: 'Awaiting e-signature', value: counts.awaiting },
-    ]} />
     <div className="card flush">
       <div className={styles.listHeader}>
         <h3>Leases</h3>

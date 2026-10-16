@@ -29,17 +29,6 @@ export default async function PropertyMaintenancePage({
     propertyId,
     ...(unitId ? { unitId } : {}),
   });
-  const openRequests = requests.filter(
-    (request) => request.status !== 'DONE' && request.status !== 'CANCELLED',
-  );
-  const urgentRequests = openRequests.filter((request) => request.priority === 'URGENT');
-  const weekStart = new Date();
-  weekStart.setHours(0, 0, 0, 0);
-  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
-  const doneThisWeek = requests.filter(
-    (request) =>
-      request.status === 'DONE' && request.completedAt && request.completedAt >= weekStart,
-  ).length;
   const selectableUnits = property.units
     .filter((unit) => unit.status !== 'ARCHIVED')
     .map(({ id, number }) => ({ id, number }));
@@ -50,9 +39,6 @@ export default async function PropertyMaintenancePage({
       <PropertyMaintenanceList
         propertyId={propertyId}
         requests={requests}
-        openCount={openRequests.length}
-        urgentCount={urgentRequests.length}
-        doneThisWeekCount={doneThisWeek}
         createRequestControl={
           <NewMaintenanceRequestDialog
             action={createAction}

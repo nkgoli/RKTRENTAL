@@ -28,7 +28,7 @@ export async function PropertyListing({
   }
 
   return <Card flush>
-    <CardHeader title="Market rent by unit" action={<Badge tone="info">Multi-unit property</Badge>} />
+    <CardHeader title="Market rent by unit" />
     <div className={styles.tableWrap}>
       <table className="table" aria-label="Market rent by unit">
         <thead><tr><th>Unit</th><th>Configuration</th><th className="num">Current rent</th><th className="num">Market rent</th><th className="num">Gap</th><th>Status</th><th /></tr></thead>

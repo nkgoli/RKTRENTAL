@@ -61,7 +61,7 @@ test('add a property, add a unit, open the unit', async ({ page }) => {
   await expect(page.getByText('already has a unit with that number')).toBeVisible();
 
   // Upload a property photo through the storage API.
-  await page.getByTestId('upload-property-photo').setInputFiles({
+  await page.locator('#photos input[type="file"]').first().setInputFiles({
     name: 'front.png',
     mimeType: 'image/png',
     buffer: PNG,
@@ -72,7 +72,7 @@ test('add a property, add a unit, open the unit', async ({ page }) => {
   await page.locator('#units').getByRole('link', { name: '6A', exact: true }).click();
   await expect(page).toHaveURL(/\/properties\/[^/]+\/units\/[^/]+$/);
   await expect(page.getByRole('heading', { level: 1, name: `${name} · Unit 6A` })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Current lease' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lease', exact: true })).toBeVisible();
   await expect(page.getByText('No active lease on this unit.')).toBeVisible();
   const unitId = page.url().split('/').pop();
   await expect(page.getByRole('link', { name: 'Rent comps' }).first()).toHaveAttribute(
@@ -81,12 +81,15 @@ test('add a property, add a unit, open the unit', async ({ page }) => {
   );
 
   // Edit the unit.
-  await page.locator('#edit-unit-form').getByLabel('Bedrooms').fill('3');
-  await page.locator('#edit-unit-form').getByRole('button', { name: 'Save unit' }).click();
-  await expect(page.getByText('Unit saved.')).toBeVisible();
+  const facts = page.locator('#unit-facts');
+  await facts.getByRole('button', { name: 'Edit' }).click();
+  await facts.getByLabel('Bedrooms').fill('3');
+  await facts.getByRole('button', { name: 'Save' }).click();
+  await expect(facts.getByRole('button', { name: 'Edit' })).toBeVisible();
+  await expect(facts.getByText('3', { exact: true })).toBeVisible();
 
   // Unit photo upload.
-  await page.getByTestId('upload-unit-photo').setInputFiles({
+  await page.locator('#photos input[type="file"]').first().setInputFiles({
     name: 'kitchen.png',
     mimeType: 'image/png',
     buffer: PNG,
@@ -115,9 +118,11 @@ test('single-unit property links straight to its one unit; archive hides it', as
   // Edit then archive from the property page.
   await page.getByRole('link', { name: 'Properties', exact: true }).first().click();
   await page.getByRole('link', { name: new RegExp(name) }).click();
-  await page.locator('#edit-property').getByLabel('Year built').fill('2011');
-  await page.locator('#edit-property').getByRole('button', { name: 'Save changes' }).click();
-  await expect(page.getByText('Property saved.')).toBeVisible();
+  const details = page.locator('#property-facts');
+  await details.getByRole('button', { name: 'Edit' }).click();
+  await details.getByLabel('Year built').fill('2011');
+  await details.getByRole('button', { name: 'Save' }).click();
+  await expect(details.getByText('2011')).toBeVisible();
 
   await page.getByRole('button', { name: 'Archive property' }).click();
   await expect(page).toHaveURL(/\/properties$/);

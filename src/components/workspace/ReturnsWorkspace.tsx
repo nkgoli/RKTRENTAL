@@ -54,7 +54,6 @@ export function ReturnsWorkspace({ returns, propertyId, propertyName }: {
       <ReturnMetric label="Net operating income" value={moneyCents(returns.metrics.noiCents)} icon="↗" tone="green" note="12 months" />
       <ReturnMetric label="Cash flow" value={moneyCents(returns.metrics.cashFlowCents)} icon="↔" tone="blue" note="After debt" />
       <ReturnMetric label="Cap rate" value={percent(returns.metrics.capRate)} icon="%" tone="coral" note="12 months" />
-      <ReturnMetric label="Collected vs due" value={`${moneyCents(returns.collectedCents)} / ${moneyCents(returns.dueCents)}`} icon="$" tone="green" note="12 months" />
     </div>
     <div className={styles.contentGrid}>
       <Card>

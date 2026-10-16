@@ -35,7 +35,6 @@ export function WorkspaceHeader({ scope, units, coverKind, coverSrc }: {
   const title = current.unitId && !current.unitIsImplicit
     ? `${current.propertyName} · Unit ${current.unitNumber}` : current.propertyName;
   const status = statusLabel(current);
-  const overview = `/properties/${scope.propertyId}${current.unitId ? `?unit=${encodeURIComponent(current.unitId)}` : ''}`;
 
   return <header className={styles.header} data-workspace-header="true">
     <div className={styles.headerCopy}>
@@ -48,7 +47,6 @@ export function WorkspaceHeader({ scope, units, coverKind, coverSrc }: {
         <span aria-hidden="true">/</span>
         <span aria-current="page">{current.unitId && !current.unitIsImplicit ? `Unit ${current.unitNumber}` : title}</span>
       </nav>
-      <p className={styles.eyebrow}>Property workspace</p>
       <div className={styles.titleLine}>
         <div>
           <h1>{title}</h1>
@@ -58,11 +56,6 @@ export function WorkspaceHeader({ scope, units, coverKind, coverSrc }: {
           <Badge tone={status === 'Occupied' || status === 'Active' ? 'success' : 'info'}>{status}</Badge>
           <Badge tone="info">{propertyTypeLabel(scope)}</Badge>
         </div>
-      </div>
-      <div className={styles.actions}>
-        <Link className="btn btn-secondary" href={`${overview}#${current.unitId ? 'edit-unit' : 'edit-property'}`}>
-          Edit {current.unitId ? 'unit' : 'property'}
-        </Link>
       </div>
     </div>
     <div className={styles.cover}><Cover kind={coverKind ?? (scope.activeUnitCount === 1 ? 'house' : 'apartment')} src={coverSrc} /></div>

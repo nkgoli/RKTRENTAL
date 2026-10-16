@@ -30,11 +30,11 @@ function PropertyUnits({ property }: { property: PropertyDetail }) {
             {property.units.filter((unit) => unit.status !== 'ARCHIVED').length === 0 && <tr><td colSpan={5} className="muted">No active units yet.</td></tr>}
             {property.units.filter((unit) => unit.status !== 'ARCHIVED').map((unit) => (
               <tr key={unit.id}>
-                <td><Link href={`/properties/${property.id}/units/${unit.id}`}><strong>{unit.isImplicit ? 'Whole property' : unit.number}</strong></Link></td>
+                <td><Link href={`/properties/${property.id}?unit=${unit.id}`}><strong>{unit.isImplicit ? 'Whole property' : unit.number}</strong></Link></td>
                 <td>{unit.tenant?.name ?? <span className="muted">None</span>}</td>
                 <td className="num">{formatMoney(unit.rent ?? unit.listedRent)}</td>
                 <td><Badge tone={statusTone(unit.status)}>{unit.status === 'OCCUPIED' ? 'Occupied' : unit.status === 'VACANT' ? 'Vacant' : 'Turnover'}</Badge></td>
-                <td><Link className="btn btn-ghost btn-sm" href={`/properties/${property.id}/units/${unit.id}`}>Open</Link></td>
+                <td><Link className="btn btn-ghost btn-sm" href={`/properties/${property.id}?unit=${unit.id}`}>Open</Link></td>
               </tr>
             ))}
           </tbody>
@@ -51,23 +51,23 @@ export function PropertyOverview({ property, returns, leaseFacts = [] }: {
 }) {
   const activeUnits = property.units.filter((unit) => unit.status !== 'ARCHIVED');
   const steps = [
-    ...(property.stats.openRepairs ? [{ label: `${property.stats.openRepairs} repair${property.stats.openRepairs === 1 ? '' : 's'} need attention`, href: `/maintenance?propertyId=${property.id}` }] : []),
-    ...(property.stats.expiringLeases ? [{ label: `${property.stats.expiringLeases} lease${property.stats.expiringLeases === 1 ? '' : 's'} expiring soon`, href: `/leases?propertyId=${property.id}&tab=expiring` }] : []),
-    ...(activeUnits.some((unit) => unit.status === 'VACANT') ? [{ label: 'Review vacant units and pricing', href: `/properties/${property.id}?tab=listing` }] : []),
+    ...(property.stats.openRepairs ? [{ label: `${property.stats.openRepairs} repair${property.stats.openRepairs === 1 ? '' : 's'} need attention`, href: `/properties/${property.id}/maintenance` }] : []),
+    ...(property.stats.expiringLeases ? [{ label: `${property.stats.expiringLeases} lease${property.stats.expiringLeases === 1 ? '' : 's'} expiring soon`, href: `/properties/${property.id}/leases` }] : []),
+    ...(activeUnits.some((unit) => unit.status === 'VACANT') ? [{ label: 'Review vacant units and pricing', href: `/properties/${property.id}/listing` }] : []),
   ];
 
   return (
     <div className={styles.page}>
       <div className={styles.primary}>
         <Card flush>
-          <CardHeader title="Lease timeline" action={<Link href={`/leases?propertyId=${property.id}`}>View leases</Link>} />
+          <CardHeader title="Lease timeline" action={<Link href={`/properties/${property.id}/leases`}>View leases</Link>} />
           <div className={styles.timeline}>
             {activeUnits.map((unit) => {
               const lease = leaseFacts.find((fact) => fact.id === unit.id);
               const term = lease?.leaseStartDate && lease.leaseEndDate
                 ? `${formatDate(lease.leaseStartDate)} - ${formatDate(lease.leaseEndDate)}`
                 : unit.status === 'VACANT' ? 'Available · no active lease' : 'No current tenant';
-              return <Link className={styles.timelineItem} key={unit.id} href={`/properties/${property.id}/units/${unit.id}`}>
+              return <Link className={styles.timelineItem} key={unit.id} href={`/properties/${property.id}?unit=${unit.id}`}>
                 <span className={styles.timelineDot} data-status={unit.status} />
                 <span className={styles.timelineMain}><strong>{unit.isImplicit ? property.name : `Unit ${unit.number}`}</strong><small>{lease?.tenantName ?? unit.tenant?.name ?? term}{lease?.tenantName && lease?.leaseStartDate && lease.leaseEndDate ? ` · ${term}` : ''}</small></span>
                 <span className={styles.timelineValue}>{formatMoney(unit.rent ?? unit.listedRent)}<small>/mo</small></span>
@@ -79,7 +79,7 @@ export function PropertyOverview({ property, returns, leaseFacts = [] }: {
         </Card>
         <div className={styles.twoCards}>
           <Card>
-            <CardHeader title="Returns at a glance" action={<Link href={`/properties/${property.id}?tab=returns`}>View returns</Link>} />
+            <CardHeader title="Returns at a glance" action={<Link href={`/properties/${property.id}/returns`}>View returns</Link>} />
             <div className={styles.kpiRows}>
               <div><span>Net operating income</span><strong>{moneyCents(returns.metrics.noiCents)}</strong></div>
               <div><span>Cash flow</span><strong>{moneyCents(returns.metrics.cashFlowCents)}</strong></div>
@@ -88,7 +88,7 @@ export function PropertyOverview({ property, returns, leaseFacts = [] }: {
             <Sparkline values={returns.monthly.map((row) => row.incomeCents)} tone="ok" label="Monthly income trend" />
           </Card>
           <Card>
-            <CardHeader title="Payments by the numbers" action={<Link href={`/payments?propertyId=${property.id}`}>View payments</Link>} />
+            <CardHeader title="Payments by the numbers" action={<Link href={`/properties/${property.id}/payments`}>View payments</Link>} />
             <div className={styles.paymentNumbers}>
               <div><p className="eyebrow">Collected · 12 mo</p><strong>{moneyCents(returns.collectedCents)}</strong></div>
               <div><p className="eyebrow">Due · 12 mo</p><strong>{moneyCents(returns.dueCents)}</strong></div>
@@ -115,7 +115,7 @@ export function PropertyOverview({ property, returns, leaseFacts = [] }: {
           {steps.length ? <ul className={styles.steps}>{steps.map((step) => <li key={step.label}><span aria-hidden="true">↗</span><Link href={step.href}>{step.label}</Link></li>)}</ul> : <div className={styles.clearState}><KpiIcon tone="green">✓</KpiIcon><p>All caught up</p><small>No urgent items need attention.</small></div>}
         </Card>
         <Card>
-          <CardHeader title="Documents and photos" action={<Link href={`/documents?propertyId=${property.id}`}>View all</Link>} />
+          <CardHeader title="Documents and photos" action={<Link href={`/properties/${property.id}/documents`}>View all</Link>} />
           <p className={styles.subheading}>Property files</p>
           <FileList files={property.files} empty="No property files yet." />
           <p className={styles.subheading}>Photos</p>
@@ -150,8 +150,8 @@ export function UnitOverview({ unit, returns, canDelete }: { unit: UnitDetail; r
   const rentGap = unit.marketRent != null && unit.listedRent != null ? unit.marketRent - unit.listedRent : null;
   const steps = [
     ...(!currentLease ? [{ label: 'Create a lease for this unit', href: `/leases/new?unit=${unit.id}` }] : []),
-    ...(unit.openRepairs ? [{ label: `${unit.openRepairs} open maintenance request${unit.openRepairs === 1 ? '' : 's'}`, href: `/maintenance?propertyId=${unit.property.id}&unitId=${unit.id}` }] : []),
-    ...(rentGap != null && rentGap > 0 ? [{ label: `${formatMoney(rentGap)} below market rent`, href: `/properties/${unit.property.id}/units/${unit.id}?tab=listing` }] : []),
+    ...(unit.openRepairs ? [{ label: `${unit.openRepairs} open maintenance request${unit.openRepairs === 1 ? '' : 's'}`, href: `/properties/${unit.property.id}/maintenance?unit=${unit.id}` }] : []),
+    ...(rentGap != null && rentGap > 0 ? [{ label: `${formatMoney(rentGap)} below market rent`, href: `/properties/${unit.property.id}/listing?unit=${unit.id}` }] : []),
   ];
 
   return (
@@ -174,7 +174,7 @@ export function UnitOverview({ unit, returns, canDelete }: { unit: UnitDetail; r
         </Card>
         <div className={styles.twoCards}>
           <Card>
-            <CardHeader title="Returns at a glance" action={<Link href={`/properties/${unit.property.id}/units/${unit.id}?tab=returns`}>View returns</Link>} />
+            <CardHeader title="Returns at a glance" action={<Link href={`/properties/${unit.property.id}/returns?unit=${unit.id}`}>View returns</Link>} />
             <div className={styles.kpiRows}>
               <div><span>Net operating income</span><strong>{moneyCents(returns.metrics.noiCents)}</strong></div>
               <div><span>Cash flow</span><strong>{moneyCents(returns.metrics.cashFlowCents)}</strong></div>
@@ -183,7 +183,7 @@ export function UnitOverview({ unit, returns, canDelete }: { unit: UnitDetail; r
             <Sparkline values={returns.monthly.map((row) => row.incomeCents)} tone="ok" label="Monthly unit income trend" />
           </Card>
           <Card>
-            <CardHeader title="Payments by the numbers" action={<Link href={`/payments?propertyId=${unit.property.id}&unitId=${unit.id}`}>View payments</Link>} />
+            <CardHeader title="Payments by the numbers" action={<Link href={`/properties/${unit.property.id}/payments?unit=${unit.id}`}>View payments</Link>} />
             <div className={styles.paymentNumbers}><div><p className="eyebrow">Collected · 12 mo</p><strong>{moneyCents(returns.collectedCents)}</strong></div><div><p className="eyebrow">Due · 12 mo</p><strong>{moneyCents(returns.dueCents)}</strong></div></div>
             <div className={styles.progressTrack}><span style={{ width: `${returns.dueCents ? Math.min(100, (returns.collectedCents / returns.dueCents) * 100) : 0}%` }} /></div>
             <p className="muted" style={{ fontSize: 12 }}>Collected rent compared with active lease rent scheduled for this period.</p>
@@ -196,7 +196,7 @@ export function UnitOverview({ unit, returns, canDelete }: { unit: UnitDetail; r
           {steps.length ? <ul className={styles.steps}>{steps.map((step) => <li key={step.label}><span aria-hidden="true">↗</span><Link href={step.href}>{step.label}</Link></li>)}</ul> : <div className={styles.clearState}><KpiIcon tone="green">✓</KpiIcon><p>All caught up</p><small>No urgent items need attention.</small></div>}
         </Card>
         <Card>
-          <CardHeader title="Unit documents and photos" action={<Link href={`/documents?propertyId=${unit.property.id}&unitId=${unit.id}`}>View all</Link>} />
+          <CardHeader title="Unit documents and photos" action={<Link href={`/properties/${unit.property.id}/documents?unit=${unit.id}`}>View all</Link>} />
           <p className={styles.subheading}>Documents</p>
           <FileList files={unit.files} empty="No unit documents yet." />
           <p className={styles.subheading}>Photos</p>

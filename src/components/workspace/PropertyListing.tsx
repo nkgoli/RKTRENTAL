@@ -39,13 +39,13 @@ export async function PropertyListing({
             const gap = unit.marketRent != null && comparisonRent != null ? unit.marketRent - comparisonRent : null;
             const statusLabel = unit.status === 'OCCUPIED' ? 'Occupied' : unit.status === 'VACANT' ? 'Vacant' : 'Turnover';
             return <tr key={unit.id}>
-              <td><Link href={`/properties/${property.id}/units/${unit.id}`}><strong>{unit.number}</strong></Link></td>
+              <td><Link href={`/properties/${property.id}?unit=${unit.id}`}><strong>{unit.number}</strong></Link></td>
               <td>{unit.bedrooms ?? '—'} bd · {unit.bathrooms ?? '—'} ba{unit.squareFeet ? ` · ${unit.squareFeet.toLocaleString('en-US')} sqft` : ''}</td>
               <td className="num">{formatMoney(unit.currentRent ?? unit.listedRent)}</td>
               <td className="num">{formatMoney(unit.marketRent)}</td>
               <td className="num">{gap == null ? '—' : `${gap >= 0 ? '+' : '−'}${formatMoney(Math.abs(gap))}`}</td>
               <td><Badge tone={unit.status === 'OCCUPIED' ? 'success' : unit.status === 'VACANT' ? 'info' : 'warning'}>{statusLabel}</Badge></td>
-              <td><Link className="btn btn-secondary btn-sm" href={`/properties/${property.id}/units/${unit.id}?tab=listing`}>See comps</Link></td>
+              <td><Link className="btn btn-secondary btn-sm" href={`/properties/${property.id}/listing?unit=${unit.id}`}>See comps</Link></td>
             </tr>;
           })}
         </tbody>

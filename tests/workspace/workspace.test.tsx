@@ -12,6 +12,10 @@ vi.mock('@/app/(manager)/properties/_components/FileUploader', () => ({
 vi.mock('@/components/units/DeleteUnitControl', () => ({
   DeleteUnitControl: () => <button type="button">Delete</button>,
 }));
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/unscoped',
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 import { PropertyOverview, UnitOverview } from '@/components/workspace/WorkspaceOverview';
 
@@ -44,15 +48,14 @@ describe('property and unit workspace render', () => {
     const html = renderToStaticMarkup(<Workspace
       scope={{ propertyId: 'property-1', propertyName: 'Maple Court', propertyType: 'MULTI_UNIT', activeUnitCount: 4, propertyAddress: '214 Maple Ave, Austin, TX' }}
       activeTab="listing"
-      actions={[{ label: 'Edit property', href: '#edit-property' }]}
       coverKind="apartment"
     />);
 
     expect(html).toContain('<h1>Maple Court</h1>');
     expect(html).toContain('214 Maple Ave, Austin, TX');
     expect(html).toContain('aria-current="page"');
-    expect(html).toContain('href="/properties/property-1?tab=listing"');
-    expect(html).toContain('href="/properties/property-1?tab=returns"');
+    expect(html).toContain('href="/properties/property-1/listing"');
+    expect(html).toContain('href="/properties/property-1/returns"');
     expect(html).toContain('Applications');
   });
 
@@ -66,11 +69,11 @@ describe('property and unit workspace render', () => {
 
     expect(html).toContain('<h1>Maple Court · Unit 4B</h1>');
     expect(html).toContain('Net operating income');
-    expect(html).toContain('Cash-on-cash');
+    expect(html).toContain('Cash flow');
     expect(html).toContain('Collected vs due');
     expect(html).toContain('Unit 4B monthly income versus expenses over the last twelve months');
-    expect(html).toContain('Unit 4B monthly income versus expenses over the last twelve months');
     expect(html).toContain('Income statement');
+    expect(html).not.toContain('Expense breakdown');
   });
 
   it('renders the property overview grid from its supplied record', () => {

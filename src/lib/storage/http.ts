@@ -27,6 +27,18 @@ export function parseTarget(params: URLSearchParams): FileTarget | Response {
     );
   return { kind: kind as FileTargetKind, id };
 }
+export function parseJsonTarget(body: Record<string, unknown>): FileTarget | Response {
+  const nested = body.target as { kind?: unknown; type?: unknown; id?: unknown } | undefined;
+  const kind = body.targetType ?? body.targetKind ?? nested?.kind ?? nested?.type;
+  const id = body.targetId ?? nested?.id;
+  const kinds: FileTargetKind[] = ['lease', 'property', 'unit'];
+  if (!kinds.includes(kind as FileTargetKind) || typeof id !== 'string' || !id)
+    return Response.json(
+      { error: 'targetType (lease|property|unit) and targetId are required' },
+      { status: 400 },
+    );
+  return { kind: kind as FileTargetKind, id };
+}
 export function targetFromForm(form: FormData): FileTarget | Response {
   const p = new URLSearchParams();
   for (const k of ['targetType', 'targetId']) {
@@ -67,6 +79,8 @@ export function publicDocument(d: StoredDocument) {
     name: d.name,
     sizeBytes: d.sizeBytes,
     mimeType: d.mimeType,
+    isCover: d.isCover ?? false,
+    sortOrder: d.sortOrder ?? null,
     createdAt: d.createdAt.toISOString(),
     previewUrl: `/api/files/${d.id}/preview`,
     downloadUrl: `/api/files/${d.id}/download`,

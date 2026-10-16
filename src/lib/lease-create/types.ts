@@ -1,3 +1,5 @@
+import type { TemplateDefinition, TemplateItem, TermOverride } from './templates';
+
 export const WIZARD_STEPS = [
   'Lease term',
   'Rent, deposit & fees',
@@ -55,6 +57,13 @@ export type WizardDraft = {
   petDeposit: string;
   occupants: string;
   options: string[];
+  assignedParking: boolean;
+  tenantUtilities: string[];
+  propertyType: 'SINGLE_UNIT' | 'MULTI_UNIT';
+  yearBuilt: number | null;
+  template: TemplateDefinition | null;
+  termOverrides: Record<string, TermOverride>;
+  renewalTerms: TemplateItem[];
   clauses: string[];
   customClause: string;
   rules: string[];
@@ -100,6 +109,13 @@ export const emptyDraft = (overrides: Partial<WizardDraft> = {}): WizardDraft =>
   petDeposit: '',
   occupants: '',
   options: [],
+  assignedParking: false,
+  tenantUtilities: [],
+  propertyType: 'MULTI_UNIT',
+  yearBuilt: null,
+  template: null,
+  termOverrides: {},
+  renewalTerms: [],
   clauses: ['residential-use', 'utilities'],
   customClause: '',
   rules: [],

@@ -11,6 +11,28 @@ import {
 } from '@/lib/esign/service';
 import { EsignError } from '@/lib/esign/types';
 import { actorFromSession } from '@/lib/storage/http';
+import { getTemplate, saveTemplate } from '@/lib/lease-create/template-service';
+import { contextFromDraft, resolveTerms } from '@/lib/lease-create/templates';
+
+export async function saveTemplateFromDraftAction(input: { name: string; draft: unknown }) {
+  const session = await requireManagerRole();
+  try {
+    const draft = coerceDraft(input.draft);
+    if (!draft.template) return { error: 'Choose a template first.' };
+    const resolved = resolveTerms(draft.template, contextFromDraft(draft), draft.termOverrides)
+      .filter((item) => item.included)
+      .map((item, index) => ({ id: item.id, section: item.section, title: item.title,
+        body: item.body, order: index, required: item.required, includeWhen: item.includeWhen }));
+    const saved = await saveTemplate(session.organizationId, {
+      name: input.name, items: resolved, defaultFees: draft.template.defaultFees,
+    });
+    const template = await getTemplate(session.organizationId, saved.id);
+    if (!template) return { error: 'The new template could not be loaded.' };
+    return { template };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Could not save template.' };
+  }
+}
 
 export type WizardActionState = {
   ok?: boolean;

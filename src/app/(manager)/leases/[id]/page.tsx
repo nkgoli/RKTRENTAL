@@ -14,6 +14,7 @@ import { leaseName, money, signLabel, statusLabel, term } from '@/lib/leases/for
 import { leasesDb } from '@/lib/leases/queries';
 import { formatAddress, formatDate, initials } from '@/lib/properties/format';
 import { EditTermsForm, LeaseStatusActions, LeaseUploader, NoticeForm } from '../LeaseForms';
+import type { TemplateItem } from '@/lib/lease-create/templates';
 
 export default async function LeaseDetailPage({
   params,
@@ -28,6 +29,11 @@ export default async function LeaseDetailPage({
   if (!lease) notFound();
   const property = lease.unit.property;
   const name = leaseName(lease);
+  const signedTerms = lease.termsSnapshot && typeof lease.termsSnapshot === 'object' && !Array.isArray(lease.termsSnapshot)
+    ? lease.termsSnapshot as Record<string, unknown> : null;
+  const snapshotItems = Array.isArray(signedTerms?.items) ? signedTerms.items as TemplateItem[] : [];
+  const snapshotTemplate = signedTerms?.template && typeof signedTerms.template === 'object'
+    ? signedTerms.template as { name?: string } : null;
   const title =
     property.name + (lease.unit.isImplicit ? '' : ' · Unit ' + lease.unit.number) + ' Lease';
   const onlinePaymentsEnabled =
@@ -166,6 +172,15 @@ export default async function LeaseDetailPage({
           </span>
         </div>
       </section>
+      {signedTerms && <section className={styles.signedTerms} aria-labelledby="terms-as-signed">
+        <div className="row between"><div><p className="eyebrow">Signed agreement snapshot</p><h2 id="terms-as-signed">Terms as signed</h2></div>
+          <span className="muted">Locked at send</span></div>
+        <p className="muted">{snapshotTemplate?.name ?? 'Lease template'} · v{lease.templateVersion ?? 1}{lease.signedAt ? ` · Signed ${formatDate(lease.signedAt)}` : ' · Sent for signature'}</p>
+        <div className={styles.signedGrid}>{snapshotItems.map((item) => <article key={item.id}>
+          <h3>{item.section === 'CLAUSE' ? 'Clause' : item.section === 'RULE' ? 'Rule' : 'Disclosure'} · {item.title}</h3><p>{item.body}</p>
+        </article>)}</div>
+        <p className="muted">These words and the template version remain on this lease when a template changes.</p>
+      </section>}
       <section className={styles.amendment} aria-label="Amendment or addendum">
         <div>
           <h2>Add an amendment or addendum</h2>

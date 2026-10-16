@@ -87,6 +87,7 @@ export default async function LeasesPage({
         eyebrow="Leasing"
         actions={[
           { label: 'Review applications', href: '/applications' },
+          { label: 'Lease templates', href: '/leases/templates' },
           { label: '+ New lease', href: '/leases/new', primary: true },
         ]}
       />

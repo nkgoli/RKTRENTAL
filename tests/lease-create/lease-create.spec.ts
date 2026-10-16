@@ -28,10 +28,11 @@ test('manager builds a lease in the wizard, resumes it, and sends it for signing
   const unitId = (await option.getAttribute('value'))!;
   await page.getByLabel('Property / unit').selectOption(unitId);
   await page.getByRole('button', { name: 'Start lease' }).click();
+  await page.goto(`/leases/new?unit=${unitId}&fresh=1`);
 
   await expect(page.getByRole('heading', { name: 'Lease term', exact: true })).toBeVisible();
   // Unique term per run so reruns against a persistent database never overlap.
-  const year = 2030 + Math.floor(Math.random() * 8);
+  const year = 2100 + Math.floor(Date.now() / 1000) % 3000;
   await page.getByLabel('Start date').fill(`${year}-02-15`);
   await expect(page.getByText(`${year + 1}-02-14`)).toBeVisible();
   await expect(page.getByText(`${year}-02-${new Date(Date.UTC(year, 2, 0)).getUTCDate()}`)).toBeVisible();
@@ -62,7 +63,9 @@ test('manager builds a lease in the wizard, resumes it, and sends it for signing
   await page.goto(`/leases/new?unit=${unitId}`);
   await expect(page.getByRole('heading', { name: 'Clauses', exact: true })).toBeVisible();
 
-  await page.getByRole('checkbox', { name: /No smoking/ }).check();
+  await page.getByRole('button', { name: '+ Add clause' }).click();
+  await page.getByRole('textbox', { name: 'New clause title' }).fill('Move-in walkthrough');
+  await page.getByRole('textbox', { name: 'Move-in walkthrough wording' }).fill('The tenant and manager will document the home’s condition at move-in.');
   await next(page, 'Rules');
   await next(page, 'Disclosures');
   await next(page, 'Attachments');
@@ -97,8 +100,8 @@ test('manager builds a lease in the wizard, resumes it, and sends it for signing
   await page.getByRole('button', { name: 'Complete mock signing' }).click();
   await expect(page.getByText(/Mock signing complete/)).toBeVisible();
 
-  await page.goto('/properties/seed-property-maple/payments');
-  const leaseGroup = page.locator('details', { hasText: `${year}` });
+  await page.goto(`/properties/seed-property-maple/payments?unit=${unitId}`);
+  const leaseGroup = page.locator('tbody', { hasText: `${year}` }).first();
   await expect(leaseGroup).toBeVisible();
   await expect(leaseGroup.locator('tr', { hasText: 'Prorated February rent' })).toHaveCount(1);
   await expect(leaseGroup.locator('tr', { hasText: 'Security deposit' })).toHaveCount(1);

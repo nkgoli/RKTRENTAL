@@ -188,3 +188,10 @@
   border-radius: 7px;
   cursor: pointer;
 }
+.signedTerms { border: 1px solid #e2e8f0; border-radius: 16px; background: white; padding: 22px; margin: 20px 0; }
+.signedTerms h2 { font-size: 21px; margin: 0; }
+.signedGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 16px 0; }
+.signedGrid article { border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; }
+.signedGrid h3 { font-size: 14px; margin: 0 0 6px; }
+.signedGrid p { font-size: 13px; line-height: 1.5; margin: 0; white-space: pre-wrap; }
+@media(max-width: 800px) { .signedGrid { grid-template-columns: 1fr; } }

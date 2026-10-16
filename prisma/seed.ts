@@ -14,6 +14,7 @@ import { hashPassword } from '../src/lib/auth/password';
 import { buildLeasePdf } from '../src/lib/esign/pdf';
 import { addMonths, monthStart, rentKey } from '../src/lib/ledger/core';
 import { createStorageAdapter } from '../src/lib/storage/config';
+import { ensureStandardTemplate } from '../src/lib/lease-create/template-service';
 
 const prisma = new PrismaClient();
 const organizationId = 'seed-rocket-rental';
@@ -355,6 +356,8 @@ async function main() {
       });
     }
   }
+
+  await ensureStandardTemplate(organizationId, prisma);
 
   await prisma.maintenanceRequest.upsert({
     where: { id: 'seed-request-maple-4b' },

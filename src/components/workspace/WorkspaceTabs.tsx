@@ -14,7 +14,6 @@ const tabs: { label: string; key: WorkspaceTab }[] = [
   { label: 'Payments', key: 'payments' },
   { label: 'Returns', key: 'returns' },
   { label: 'Maintenance', key: 'maintenance' },
-  { label: 'Documents', key: 'documents' },
 ];
 
 export function WorkspaceTabs({ propertyId, unitId, activeTab }: { propertyId: string; unitId?: string; activeTab?: WorkspaceTab }) {

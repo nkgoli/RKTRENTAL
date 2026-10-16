@@ -1,5 +1,6 @@
 .page { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, .9fr); gap: 20px; align-items: start; }
 .primary, .side { display: grid; gap: 20px; min-width: 0; }
+.mediaCard { grid-column: 1 / -1; min-width: 0; }
 .tableWrap { overflow-x: auto; }
 .tableWrap table { min-width: 650px; }
 .leaseTimelineRow { display: flex; align-items: center; gap: 12px; padding: 13px 2px; color: var(--design-text); text-decoration: none; border-bottom: 1px solid var(--rr-border); }

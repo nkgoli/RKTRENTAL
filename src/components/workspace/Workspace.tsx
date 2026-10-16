@@ -2,6 +2,7 @@ import type { CoverKind } from '@/components/ui';
 import { WorkspaceHeader } from './WorkspaceHeader';
 import { WorkspaceTabs } from './WorkspaceTabs';
 
+/** Documents remains a legacy route value for scoped callers, but is not a visible tab. */
 export type WorkspaceTab = 'overview' | 'listing' | 'applications' | 'leases' | 'payments' | 'returns' | 'maintenance' | 'documents';
 
 export type WorkspaceScope = {

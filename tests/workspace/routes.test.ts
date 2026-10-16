@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { workspaceTabHref } from '@/components/workspace/routes';
-import { legacyTabDestination } from '@/app/(manager)/properties/[id]/routing';
+import { documentsDestination, legacyTabDestination } from '@/app/(manager)/properties/[id]/routing';
 import { findManagerItem } from '@/components/shell/nav';
 
 describe('property workspace routes', () => {
-  it('keeps all eight tabs under the property and preserves unit scope', () => {
-    const tabs = ['overview', 'listing', 'applications', 'leases', 'payments', 'returns', 'maintenance', 'documents'] as const;
+  it('keeps all seven tabs under the property and preserves unit scope', () => {
+    const tabs = ['overview', 'listing', 'applications', 'leases', 'payments', 'returns', 'maintenance'] as const;
     expect(tabs.map((tab) => workspaceTabHref('p1', tab, 'u 1'))).toEqual([
       '/properties/p1?unit=u%201',
       ...tabs.slice(1).map((tab) => `/properties/p1/${tab}?unit=u%201`),
     ]);
+  });
+
+  it('redirects old document URLs to the matching Overview, preserving unit scope', () => {
+    expect(documentsDestination('p1', {})).toBe('/properties/p1');
+    expect(documentsDestination('p1', { unit: 'u 1', period: '12M' })).toBe('/properties/p1?period=12M&unit=u+1');
   });
 
   it('maps legacy tab queries and unit paths to the child route convention', () => {
@@ -19,7 +24,7 @@ describe('property workspace routes', () => {
   });
 
   it('keeps Properties as the sidebar selection on every tab', () => {
-    for (const tab of ['overview', 'listing', 'applications', 'leases', 'payments', 'returns', 'maintenance', 'documents'] as const) {
+    for (const tab of ['overview', 'listing', 'applications', 'leases', 'payments', 'returns', 'maintenance'] as const) {
       const pathname = workspaceTabHref('p1', tab);
       expect(findManagerItem(pathname)?.item.label).toBe('Properties');
     }

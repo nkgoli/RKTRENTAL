@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Workspace } from '@/components/workspace/Workspace';
 import { requireManagerRole } from '@/lib/auth/access';
 import { propertiesDb } from '@/lib/properties/data';
+import { listWorkspacePhotos } from '@/lib/storage/service';
 import { formatAddress } from '@/lib/properties/format';
 import { previewUrl } from '../_components/Media';
 
@@ -18,7 +19,7 @@ export default async function PropertyWorkspaceLayout({ children, params }: {
     id: unit.id, number: unit.number, isImplicit: unit.isImplicit, status: unit.status,
   }));
   const activeUnitCount = units.filter((unit) => unit.status !== 'ARCHIVED').length;
-  const firstPhoto = property.photos[0];
+  const firstPhoto = (await listWorkspacePhotos(session.organizationId, { kind: 'property', id }))[0];
 
   return <>
     <Workspace

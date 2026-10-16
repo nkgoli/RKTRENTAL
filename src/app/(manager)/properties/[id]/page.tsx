@@ -5,6 +5,7 @@ import { AddUnitForm } from '../_components/UnitForm';
 import { requireManagerRole } from '@/lib/auth/access';
 import { loadPropertyWorkspaceReturns } from '@/lib/metrics';
 import { propertiesDb } from '@/lib/properties/data';
+import { listWorkspacePhotos } from '@/lib/storage/service';
 import { resolvePeriod, periodKeyFrom } from '@/lib/returns/period';
 import { first, legacyTabDestination, type WorkspaceSearch } from './routing';
 import styles from './workspace.module.css';
@@ -26,17 +27,19 @@ export default async function PropertyOverviewPage({ params, searchParams }: {
   ]);
   if (!property || !workspaceReturns || (unitId && !unit)) notFound();
 
-  if (unit) {
+  if (unit && !unit.isImplicit) {
+    const photos = await listWorkspacePhotos(session.organizationId, { kind: 'unit', id: unit.id });
     const canDelete = !unit.isImplicit && unit.leaseHistory.length === 0
       && unit.maintenance.length === 0 && unit.files.length === 0 && unit.photos.length === 0;
-    return <UnitOverview unit={unit} canDelete={canDelete} />;
+    return <UnitOverview unit={{ ...unit, photos }} canDelete={canDelete} />;
   }
 
+  const photos = await listWorkspacePhotos(session.organizationId, { kind: 'property', id: property.id });
   const notice = first(query.notice);
   return <>
     {notice === 'unit-deleted' && <Alert tone="success">Unit deleted.</Alert>}
     {notice === 'unit-delete-blocked' && <Alert tone="warning">This unit has linked records or is the single-family home unit, so it could not be deleted.</Alert>}
-    <PropertyOverview property={property} owners={owners} leaseFacts={workspaceReturns.unitFacts} />
+    <PropertyOverview property={{ ...property, photos }} owners={owners} leaseFacts={workspaceReturns.unitFacts} />
     {!property.archived && property.type !== 'SINGLE_UNIT' && <section className={styles.forms}>
       <AddUnitForm propertyId={property.id} />
     </section>}

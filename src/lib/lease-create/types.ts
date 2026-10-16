@@ -55,12 +55,18 @@ export type WizardDraft = {
   moveInFee: string;
   petDepositEnabled: boolean;
   petDeposit: string;
+  returnedPaymentFee: string;
+  keyFee: string;
   occupants: string;
   options: string[];
   assignedParking: boolean;
   tenantUtilities: string[];
   propertyType: 'SINGLE_UNIT' | 'MULTI_UNIT';
   yearBuilt: number | null;
+  balconyPatio: boolean;
+  sharedLaundry: boolean;
+  floodZone: boolean;
+  placeholderValues: Record<string, string>;
   template: TemplateDefinition | null;
   termOverrides: Record<string, TermOverride>;
   renewalTerms: TemplateItem[];
@@ -107,12 +113,18 @@ export const emptyDraft = (overrides: Partial<WizardDraft> = {}): WizardDraft =>
   moveInFee: '',
   petDepositEnabled: false,
   petDeposit: '',
+  returnedPaymentFee: '',
+  keyFee: '',
   occupants: '',
   options: [],
   assignedParking: false,
   tenantUtilities: [],
   propertyType: 'MULTI_UNIT',
   yearBuilt: null,
+  balconyPatio: false,
+  sharedLaundry: false,
+  floodZone: false,
+  placeholderValues: {},
   template: null,
   termOverrides: {},
   renewalTerms: [],

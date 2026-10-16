@@ -1,9 +1,10 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
 import {
-  INCLUDE_WHEN, STANDARD_FEES, STANDARD_ITEMS,
+  INCLUDE_WHEN, STANDARD_FEES,
   type IncludeWhen, type TemplateDefinition, type TemplateFees, type TemplateItem,
 } from './templates';
+import { STANDARD_V2_ITEMS } from './standard-v2';
 
 const include = { items: { orderBy: { sortOrder: 'asc' as const } } };
 const fees = (raw: unknown): TemplateFees => {
@@ -13,6 +14,8 @@ const fees = (raw: unknown): TemplateFees => {
     graceDays: Number(f.graceDays ?? STANDARD_FEES.graceDays),
     moveInFee: String(f.moveInFee ?? ''),
     petDeposit: String(f.petDeposit ?? ''),
+    returnedPaymentFee: String(f.returnedPaymentFee ?? ''),
+    keyFee: String(f.keyFee ?? ''),
   };
 };
 export function toDefinition(row: {
@@ -26,12 +29,25 @@ export function toDefinition(row: {
 }
 
 export async function ensureStandardTemplate(organizationId: string, client: PrismaClient = db) {
-  const first = await client.leaseTemplate.findFirst({ where: { organizationId }, include, orderBy: { createdAt: 'asc' } });
+  const first = await client.leaseTemplate.findFirst({ where: { organizationId, name: 'Standard residential lease' }, include, orderBy: { createdAt: 'asc' } });
+  if (first?.version === 1) {
+    const upgraded = await client.$transaction(async (tx) => {
+      await tx.leaseTemplateItem.deleteMany({ where: { templateId: first.id, organizationId } });
+      const result = await tx.leaseTemplate.update({ where: { id: first.id }, data: {
+        version: 2, defaultFees: STANDARD_FEES as unknown as Prisma.InputJsonValue,
+        items: { create: STANDARD_V2_ITEMS.map((i) => ({ section: i.section, title: i.title, body: i.body,
+          sortOrder: i.order, required: i.required, includeWhen: i.includeWhen })) },
+      }, include });
+      await tx.property.updateMany({ where: { organizationId, defaultLeaseTemplateId: null }, data: { defaultLeaseTemplateId: first.id } });
+      return result;
+    });
+    return toDefinition(upgraded);
+  }
   if (first) return toDefinition(first);
   const created = await client.leaseTemplate.create({ data: {
-    organization: { connect: { id: organizationId } }, name: 'Standard residential lease', version: 1,
+    organization: { connect: { id: organizationId } }, name: 'Standard residential lease', version: 2,
     defaultFees: STANDARD_FEES as unknown as Prisma.InputJsonValue,
-    items: { create: STANDARD_ITEMS.map((i) => ({ id: `${organizationId}-${i.id}`,
+    items: { create: STANDARD_V2_ITEMS.map((i) => ({
       section: i.section, title: i.title, body: i.body,
       sortOrder: i.order, required: i.required, includeWhen: i.includeWhen })) },
   }, include });
@@ -74,7 +90,7 @@ function validated(input: { name: string; items: TemplateItem[]; defaultFees: Te
     return { id: i.id, section, includeWhen, title, body, required: Boolean(i.required), sortOrder: index };
   });
   const defaultFees = fees(input.defaultFees);
-  if ([defaultFees.lateFee, defaultFees.moveInFee, defaultFees.petDeposit].some((v) => v && (!Number.isFinite(Number(v)) || Number(v) < 0))) throw new Error('Enter valid fee amounts.');
+  if ([defaultFees.lateFee, defaultFees.moveInFee, defaultFees.petDeposit, defaultFees.returnedPaymentFee, defaultFees.keyFee].some((v) => v && (!Number.isFinite(Number(v)) || Number(v) < 0))) throw new Error('Enter valid fee amounts.');
   if (!Number.isInteger(defaultFees.graceDays) || defaultFees.graceDays < 0 || defaultFees.graceDays > 31) throw new Error('Enter 0 to 31 grace days.');
   return { name, items, defaultFees };
 }

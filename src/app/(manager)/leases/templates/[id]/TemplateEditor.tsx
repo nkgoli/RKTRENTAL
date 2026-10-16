@@ -18,11 +18,15 @@ export function TemplateEditor({ initial, properties }: { initial: TemplateDefin
   const [fees, setFees] = useState(initial?.defaultFees ?? STANDARD_FEES);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [allExpanded, setAllExpanded] = useState(false);
   const edit = (id: string, patch: Partial<TemplateItem>) => setItems((all) => all.map((item) => item.id === id ? { ...item, ...patch } : item));
-  const add = (section: TemplateSection) => setItems((all) => [...all, {
-    id: `new-${crypto.randomUUID()}`, section, title: '', body: '', order: all.length,
-    required: false, includeWhen: 'ALWAYS',
-  }]);
+  const add = (section: TemplateSection) => {
+    const id = `new-${crypto.randomUUID()}`;
+    setExpanded((value) => ({ ...value, [id]: true }));
+    setItems((all) => [...all, { id, section, title: '', body: '', order: all.length,
+      required: false, includeWhen: 'ALWAYS' }]);
+  };
   const move = (id: string, delta: number) => setItems((all) => {
     const index = all.findIndex((item) => item.id === id);
     const next = index + delta;
@@ -65,9 +69,16 @@ export function TemplateEditor({ initial, properties }: { initial: TemplateDefin
     <div className={styles.layout}><div className={styles.panel}>
       <div className={styles.panelHead}><h2>{name}</h2><span>v{initial?.version ?? 1} · Saving changes creates a new version</span></div>
       <div className={styles.panelBody}><label className={styles.field}>Template name<input value={name} onChange={(e) => setName(e.target.value)} /></label>
+        <button type="button" className="btn btn-secondary" onClick={() => { setAllExpanded(!allExpanded); setExpanded({}); }}>{allExpanded ? 'Collapse all' : 'Expand all'}</button>
         {sections.map((section) => <section key={section} className={styles.section}>
           <div className={styles.sectionHead}><h3>{labels[section]}</h3><button type="button" className="btn btn-secondary" onClick={() => add(section)}>+ Add {section.toLowerCase()}</button></div>
           {items.filter((item) => item.section === section).map((item) => <article key={item.id} className={styles.item}>
+            <button type="button" className={styles.itemToggle} aria-expanded={expanded[item.id] ?? allExpanded} onClick={() => setExpanded((value) => ({ ...value, [item.id]: !(value[item.id] ?? allExpanded) }))}>
+              <strong>{items.filter((entry) => entry.section === section).findIndex((entry) => entry.id === item.id) + 1}. {item.title || 'New item'}</strong>
+              <span>{expanded[item.id] ?? allExpanded ? 'Collapse' : 'Expand'}</span>
+            </button>
+            <p className={styles.itemPreview}>{item.body.replace(/\{\{([a-z_]+)\}\}/g, '________ ($1)')}</p>
+            {(expanded[item.id] ?? allExpanded) && <><p className={styles.itemFull}>{item.body}</p>
             <div className={styles.itemHead}><button type="button" aria-label={`Move ${item.title} up`} onClick={() => move(item.id, -1)}>↑</button>
               <button type="button" aria-label={`Move ${item.title} down`} onClick={() => move(item.id, 1)}>↓</button>
               <input aria-label={`${item.title || 'New item'} title`} placeholder="Title" value={item.title} onChange={(e) => edit(item.id, { title: e.target.value })} /></div>
@@ -75,12 +86,12 @@ export function TemplateEditor({ initial, properties }: { initial: TemplateDefin
             <div className={styles.itemOptions}><label>Include when… <select aria-label={`${item.title || 'New item'} include when`} value={item.includeWhen} onChange={(e) => edit(item.id, { includeWhen: e.target.value as TemplateItem['includeWhen'] })}>
               {INCLUDE_WHEN.map((condition) => <option key={condition} value={condition}>{CONDITION_LABELS[condition]}</option>)}
             </select></label><label><input type="checkbox" checked={item.required} onChange={(e) => edit(item.id, { required: e.target.checked })} /> Required by template</label>
-            <button type="button" onClick={() => setItems((all) => all.filter((i) => i.id !== item.id))}>Remove</button></div>
+            <button type="button" onClick={() => setItems((all) => all.filter((i) => i.id !== item.id))}>Remove</button></div></>}
           </article>)}
         </section>)}
         <section className={styles.section}><h3>Default fees</h3><p className="muted">These prefill Rent, deposit &amp; fees.</p><div className={styles.feeGrid}>
-          {(['lateFee', 'graceDays', 'moveInFee', 'petDeposit'] as const).map((field) => <label key={field} className={styles.field}>{({ lateFee: 'Late fee', graceDays: 'Grace days', moveInFee: 'Move-in fee', petDeposit: 'Pet deposit' })[field]}
-            <input type="number" min="0" value={fees[field]} onChange={(e) => setFees({ ...fees, [field]: field === 'graceDays' ? Number(e.target.value) : e.target.value })} />
+          {(['lateFee', 'graceDays', 'moveInFee', 'petDeposit', 'returnedPaymentFee', 'keyFee'] as const).map((field) => <label key={field} className={styles.field}>{({ lateFee: 'Late fee', graceDays: 'Grace days', moveInFee: 'Move-in fee', petDeposit: 'Pet deposit', returnedPaymentFee: 'Returned payment fee', keyFee: 'Key replacement fee' })[field]}
+            <input type="number" min="0" value={fees[field] ?? ''} onChange={(e) => setFees({ ...fees, [field]: field === 'graceDays' ? Number(e.target.value) : e.target.value })} />
           </label>)}
         </div></section>
       </div>

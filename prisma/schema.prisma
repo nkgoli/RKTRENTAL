@@ -189,6 +189,8 @@ model Property {
   state               String
   postalCode          String
   yearBuilt           Int?
+  hasSharedLaundry    Boolean              @default(false)
+  isFloodZone         Boolean              @default(false)
   defaultLeaseTemplateId String?
   defaultLeaseTemplate LeaseTemplate? @relation("PropertyDefaultLeaseTemplate", fields: [defaultLeaseTemplateId, organizationId], references: [id, organizationId], onDelete: Restrict)
   purchasePrice       Decimal?             @db.Decimal(12, 2)
@@ -227,6 +229,7 @@ model Unit {
   marketRentSetAt     DateTime?
   floor               Int?
   amenities           String[]             @default([])
+  hasBalconyPatio      Boolean              @default(false)
   status              UnitStatus           @default(VACANT)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt

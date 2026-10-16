@@ -17,6 +17,8 @@ export function TemplateTermsStep({ section, draft, update, templates, isRenewal
 }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [allExpanded, setAllExpanded] = useState(false);
   const selected = draft.template ?? templates[0];
   const choices = selected && !templates.some((t) => t.id === selected.id && t.version === selected.version)
     ? [selected, ...templates] : templates;
@@ -26,6 +28,7 @@ export function TemplateTermsStep({ section, draft, update, templates, isRenewal
   } });
   const add = () => {
     const id = `custom-${crypto.randomUUID()}`;
+    setExpanded((value) => ({ ...value, [id]: true }));
     updateItem(id, { section, included: true, title: `New ${section.toLowerCase()}`, body: '' });
   };
   const saveAsTemplate = async () => {
@@ -42,6 +45,8 @@ export function TemplateTermsStep({ section, draft, update, templates, isRenewal
   const sectionTerms = terms.filter((t) => t.section === section);
   const applicable = sectionTerms.filter((t) => t.included || draft.termOverrides[t.id]?.included !== undefined);
   const notApplicable = sectionTerms.filter((t) => !applicable.includes(t));
+  const renderText = (body: string) => body.split(/(\{\{[a-z_]+\}\})/g).map((part, index) =>
+    /^\{\{[a-z_]+\}\}$/.test(part) ? <mark key={index} className={styles.termBlank} title={part.slice(2, -2)}>________ ({part.slice(2, -2).replaceAll('_', ' ')})</mark> : part);
   const renderItem = (item: (typeof terms)[number]) => <article key={item.id} className={styles.templateItem}>
     <div className={styles.templateItemTop}>
       <label><input type="checkbox" checked={item.included} onChange={(e) => updateItem(item.id, { included: e.target.checked })} /> Include</label>
@@ -49,8 +54,19 @@ export function TemplateTermsStep({ section, draft, update, templates, isRenewal
       {item.edited && <span className={styles.termBadge}>Edited</span>}
       {item.changed && <span className={styles.termBadge}>Changed</span>}
     </div>
-    <label>Title<input aria-label={`${item.title} title`} value={item.title} onChange={(e) => updateItem(item.id, { title: e.target.value })} /></label>
-    <label>Wording<textarea aria-label={`${item.title} wording`} value={item.body} onChange={(e) => updateItem(item.id, { body: e.target.value })} /></label>
+    <button type="button" className={styles.termToggle} aria-expanded={expanded[item.id] ?? allExpanded} onClick={() => setExpanded((value) => ({ ...value, [item.id]: !(value[item.id] ?? allExpanded) }))}>
+      <strong>{sectionTerms.findIndex((term) => term.id === item.id) + 1}. {item.title}</strong>
+      <span>{expanded[item.id] ?? allExpanded ? 'Collapse' : 'Expand'}</span>
+    </button>
+    <p className={styles.termPreview}>{renderText(item.body)}</p>
+    {(expanded[item.id] ?? allExpanded) && <div className={styles.termExpanded}>
+      <p className={styles.termFull}>{renderText(item.body)}</p>
+      {[...new Set([...item.body.matchAll(/\{\{([a-z_]+)\}\}/g)].map((match) => match[1]))].map((key) => <label key={key}>
+        Fill {key.replaceAll('_', ' ')}<input aria-label={`Fill ${key.replaceAll('_', ' ')}`} value={draft.placeholderValues[key] ?? ''} onChange={(e) => update({ placeholderValues: { ...draft.placeholderValues, [key]: e.target.value } })} />
+      </label>)}
+      <label>Title<input aria-label={`${item.title} title`} value={item.title} onChange={(e) => updateItem(item.id, { title: e.target.value })} /></label>
+      <label>Wording<textarea aria-label={`${item.title} wording`} value={item.body} onChange={(e) => updateItem(item.id, { body: e.target.value })} /></label>
+    </div>}
     <p className={styles.termReason}>{item.reason}</p>
   </article>;
   return <div className={styles.fields}>
@@ -74,7 +90,8 @@ export function TemplateTermsStep({ section, draft, update, templates, isRenewal
       <button type="button" className={styles.btn} onClick={saveAsTemplate} disabled={saving}>Save as new template</button>
     </div>
     {message && <p role="status">{message}</p>}
-    <div className={styles.templateHeading}><h3>{sectionNames[section]} in this lease</h3><p>Conditions are checked using the property and the choices in earlier steps. You can edit or uncheck each item.</p></div>
+    <div className={styles.templateHeading}><h3>{sectionNames[section]} in this lease</h3><p>Conditions are checked using the property and the choices in earlier steps. You can edit or uncheck each item.</p>
+      <button type="button" className={styles.btn} onClick={() => { setAllExpanded(!allExpanded); setExpanded({}); }}>{allExpanded ? 'Collapse all' : 'Expand all'}</button></div>
     {applicable.map(renderItem)}
     {notApplicable.length > 0 && <details>
       <summary>Not applicable to this lease ({notApplicable.length})</summary>

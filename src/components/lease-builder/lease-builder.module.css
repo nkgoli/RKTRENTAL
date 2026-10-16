@@ -636,3 +636,9 @@ button.step:hover .stepLabel {
 .templateItemTop label { margin-right: auto; font-weight: 700; }
 .termBadge { border-radius: 999px; background: #e8eefc; color: #1e3a8a; padding: 3px 9px; font-size: 11px; font-weight: 700; }
 .termReason { margin: 0; color: #536886; font-size: 12px; }
+.termToggle { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; border: 0; background: transparent; padding: 0; text-align: left; color: #17142b; cursor: pointer; }
+.termToggle span { color: #1e3a8a; font-size: 12px; white-space: nowrap; }
+.termPreview { margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #536886; font-size: 13px; }
+.termFull { margin: 0 0 12px; white-space: pre-wrap; line-height: 1.6; }
+.termExpanded { display: grid; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+.termBlank { background: #fff0ae; color: #503c00; padding: 1px 3px; border-radius: 3px; }

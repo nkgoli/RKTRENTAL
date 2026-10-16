@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PrismaClient } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { deleteUnusedTemplate, ensureStandardTemplate, getTemplate, saveTemplate, setPropertyTemplate } from '@/lib/lease-create/template-service';
-import { contextFromDraft, createTermsSnapshot } from '@/lib/lease-create/templates';
+import { contextFromDraft, createTermsSnapshot, STANDARD_FEES } from '@/lib/lease-create/templates';
 import { emptyDraft } from '@/lib/lease-create/types';
 
 describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')('lease template persistence', () => {
@@ -30,25 +30,40 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')('lease template persiste
   });
 
   it('seeds the default, bumps versions, enforces usage, and preserves the sent snapshot', async () => {
+    const legacy = await prisma.leaseTemplate.create({ data: { organizationId,
+      name: 'Standard residential lease', version: 1, defaultFees: STANDARD_FEES,
+      items: { create: { section: 'CLAUSE', title: 'Legacy rent', body: 'Original sent text.',
+        sortOrder: 0, required: true, includeWhen: 'ALWAYS' } } } });
+    const prior = await prisma.lease.create({ data: { organizationId, unitId,
+      startDate: new Date('2026-01-01'), endDate: new Date('2026-12-31'), monthlyRent: 1000, deposit: 1000,
+      status: 'ACTIVE', eSignStatus: 'SIGNED', signedAt: new Date('2026-01-01'),
+      templateId: legacy.id, templateVersion: 1,
+      termsSnapshot: { template: { version: 1 }, items: [{ body: 'Original sent text.' }] } } });
     const standard = await ensureStandardTemplate(organizationId, prisma);
+    expect(standard.version).toBe(2);
+    expect(standard.items).toHaveLength(71);
+    const priorAfterUpgrade = await prisma.lease.findUniqueOrThrow({ where: { id: prior.id } });
+    expect(priorAfterUpgrade.templateVersion).toBe(1);
+    expect(JSON.stringify(priorAfterUpgrade.termsSnapshot)).toContain('Original sent text.');
     templateId = standard.id;
     const property = await prisma.property.findUniqueOrThrow({ where: { id: propertyId } });
     expect(property.defaultLeaseTemplateId).toBe(standard.id);
     const draft = emptyDraft({ template: standard, propertyType: 'SINGLE_UNIT', yearBuilt: 1970 });
-    const snapshot = createTermsSnapshot(standard, contextFromDraft(draft), { deposit: { body: 'Exact agreed wording.' } });
+    const depositItem = standard.items.find((item) => item.title === 'Security Deposit');
+    expect(depositItem).toBeDefined();
+    const snapshot = createTermsSnapshot(standard, contextFromDraft(draft), { [depositItem!.id]: { body: 'Exact agreed wording.' } });
     const lease = await prisma.lease.create({ data: { organizationId, unitId,
       startDate: new Date('2027-01-01'), endDate: new Date('2027-12-31'), monthlyRent: 1500, deposit: 1500,
       templateId, templateVersion: standard.version, termsSnapshot: snapshot } });
     const updated = await saveTemplate(organizationId, { id: templateId, name: standard.name,
-      items: standard.items.map((item) => ({ ...item, body: item.id.endsWith('deposit') ? 'New wording.' : item.body })),
+      items: standard.items.map((item) => ({ ...item, body: item.id === depositItem!.id ? 'New wording.' : item.body })),
       defaultFees: standard.defaultFees }, prisma);
-    expect(updated.version).toBe(2);
+    expect(updated.version).toBe(3);
     const revised = await getTemplate(organizationId, templateId, prisma);
-    expect(revised?.items.find((item) => item.title === 'Security deposit')?.body).toBe('New wording.');
-    expect(revised?.items.find((item) => item.title === 'Security deposit')?.id)
-      .toBe(standard.items.find((item) => item.title === 'Security deposit')?.id);
+    expect(revised?.items.find((item) => item.title === 'Security Deposit')?.body).toBe('New wording.');
+    expect(revised?.items.find((item) => item.title === 'Security Deposit')?.id).toBe(depositItem?.id);
     const unchanged = await prisma.lease.findUniqueOrThrow({ where: { id: lease.id } });
-    expect(unchanged.templateVersion).toBe(1);
+    expect(unchanged.templateVersion).toBe(2);
     expect(JSON.stringify(unchanged.termsSnapshot)).toContain('Exact agreed wording.');
     expect(JSON.stringify(unchanged.termsSnapshot)).not.toContain('New wording.');
     await expect(deleteUnusedTemplate(organizationId, templateId, prisma)).rejects.toThrow('Remove this template');

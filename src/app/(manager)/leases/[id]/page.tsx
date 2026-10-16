@@ -16,6 +16,9 @@ import { formatAddress, formatDate, initials } from '@/lib/properties/format';
 import { EditTermsForm, LeaseStatusActions, LeaseUploader, NoticeForm } from '../LeaseForms';
 import type { TemplateItem } from '@/lib/lease-create/templates';
 
+const showSignedBody = (body: string) => body.split(/(\{\{[a-z_]+\}\})/g).map((part, index) =>
+  /^\{\{[a-z_]+\}\}$/.test(part) ? <mark key={index}>________ ({part.slice(2, -2).replaceAll('_', ' ')})</mark> : part);
+
 export default async function LeaseDetailPage({
   params,
   searchParams,
@@ -177,7 +180,7 @@ export default async function LeaseDetailPage({
           <span className="muted">Locked at send</span></div>
         <p className="muted">{snapshotTemplate?.name ?? 'Lease template'} · v{lease.templateVersion ?? 1}{lease.signedAt ? ` · Signed ${formatDate(lease.signedAt)}` : ' · Sent for signature'}</p>
         <div className={styles.signedGrid}>{snapshotItems.map((item) => <article key={item.id}>
-          <h3>{item.section === 'CLAUSE' ? 'Clause' : item.section === 'RULE' ? 'Rule' : 'Disclosure'} · {item.title}</h3><p>{item.body}</p>
+          <h3>{item.section === 'CLAUSE' ? 'Clause' : item.section === 'RULE' ? 'Rule' : 'Disclosure'} · {item.title}</h3><p>{showSignedBody(item.body)}</p>
         </article>)}</div>
         <p className="muted">These words and the template version remain on this lease when a template changes.</p>
       </section>}

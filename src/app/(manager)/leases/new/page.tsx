@@ -106,6 +106,9 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
         options: (priorContext?.petsAllowed ?? carriedItems.some((item) => item.includeWhen === 'PETS_ALLOWED')) ? ['pets-allowed'] : [],
         assignedParking: priorContext?.assignedParking ?? carriedItems.some((item) => item.includeWhen === 'ASSIGNED_PARKING'),
         tenantUtilities: priorContext?.tenantUtilities ?? [],
+        balconyPatio: priorContext?.balconyPatio ?? unit.hasBalconyPatio,
+        sharedLaundry: priorContext?.sharedLaundry ?? unit.property.hasSharedLaundry,
+        floodZone: priorContext?.floodZone ?? unit.property.isFloodZone,
         petDepositEnabled: Number(source.petDeposit) > 0,
         petDeposit: source.petDeposit.toString(),
       };
@@ -128,12 +131,17 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
           lessorName: org?.name ?? '',
           lessorAddress: `${unit.property.street}, ${unit.property.city}, ${unit.property.state} ${unit.property.postalCode}`,
           template: defaultTemplate,
+          balconyPatio: unit.hasBalconyPatio,
+          sharedLaundry: unit.property.hasSharedLaundry,
+          floodZone: unit.property.isFloodZone,
           lateFee: defaultTemplate.defaultFees.lateFee,
           graceDays: defaultTemplate.defaultFees.graceDays,
           moveInFeeEnabled: Number(defaultTemplate.defaultFees.moveInFee) > 0,
           moveInFee: defaultTemplate.defaultFees.moveInFee,
           petDepositEnabled: Number(defaultTemplate.defaultFees.petDeposit) > 0,
           petDeposit: defaultTemplate.defaultFees.petDeposit,
+          returnedPaymentFee: defaultTemplate.defaultFees.returnedPaymentFee ?? '',
+          keyFee: defaultTemplate.defaultFees.keyFee ?? '',
         }),
       );
     }

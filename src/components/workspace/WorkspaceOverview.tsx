@@ -4,7 +4,8 @@ import { formatAddress, formatDate, formatMoney, initials } from '@/lib/properti
 import type { PropertyDetail, UnitDetail } from '@/lib/properties/data';
 import type { ScopedReturns } from '@/lib/metrics/scoped';
 import { FileList, PhotoImage } from '@/app/(manager)/properties/_components/Media';
-import { FileUploader } from '@/app/(manager)/properties/_components/FileUploader';
+import { DocumentUploader, PhotoManager } from '@/app/(manager)/properties/_components/ManagedUploads';
+import { photoLimitForTarget } from '@/lib/storage/photo-limits';
 import { DeleteUnitControl } from '@/components/units/DeleteUnitControl';
 import styles from './WorkspaceOverview.module.css';
 
@@ -122,8 +123,8 @@ export function PropertyOverview({ property, returns, leaseFacts = [] }: {
           {property.photos.length ? <div className={styles.photoGrid} id="photos">{property.photos.slice(0, 4).map((photo, i) => <PhotoImage key={photo.id} photo={photo} index={i} />)}</div> : <p className="muted" id="photos">No photos uploaded yet.</p>}
           {property.leaseDocuments.length > 0 && <p className={styles.documentHint}>{property.leaseDocuments.length} lease document{property.leaseDocuments.length === 1 ? '' : 's'} on file</p>}
           <div className={styles.uploadControls}>
-            <FileUploader targetType="property" targetId={property.id} kind="PHOTO" label="+ Upload photos" hint="JPG, PNG up to 25 MB" compact />
-            <FileUploader targetType="property" targetId={property.id} kind="OTHER" label="Upload document" hint="PDF, JPG, PNG, DOC up to 25 MB" />
+            <PhotoManager target={{ kind: 'property', id: property.id }} photos={property.photos} max={photoLimitForTarget({ kind: 'property', id: property.id })} />
+            <DocumentUploader target={{ kind: 'property', id: property.id }} label="Upload document" />
           </div>
         </Card>
       </aside>
@@ -202,8 +203,8 @@ export function UnitOverview({ unit, returns, canDelete }: { unit: UnitDetail; r
           <p className={styles.subheading}>Photos</p>
           {unit.photos.length ? <div className={styles.photoGrid} id="photos">{unit.photos.slice(0, 4).map((photo, i) => <PhotoImage key={photo.id} photo={photo} index={i} />)}</div> : <p className="muted" id="photos">No photos uploaded yet.</p>}
           <div className={styles.uploadControls}>
-            <FileUploader targetType="unit" targetId={unit.id} kind="PHOTO" label="+ Upload photos" hint="JPG, PNG up to 25 MB" compact />
-            <FileUploader targetType="unit" targetId={unit.id} kind="OTHER" label="Upload document" hint="PDF, JPG, PNG, DOC up to 25 MB" />
+            <PhotoManager target={{ kind: 'unit', id: unit.id }} photos={unit.photos} max={photoLimitForTarget({ kind: 'unit', id: unit.id })} />
+            <DocumentUploader target={{ kind: 'unit', id: unit.id }} label="Upload document" />
           </div>
         </Card>
         <Card>

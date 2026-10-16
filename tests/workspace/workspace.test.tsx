@@ -6,8 +6,9 @@ import { computeScopedReturns } from '@/lib/metrics/scoped';
 import { resolvePeriod } from '@/lib/returns/period';
 import type { PropertyDetail, UnitDetail } from '@/lib/properties/data';
 
-vi.mock('@/app/(manager)/properties/_components/FileUploader', () => ({
-  FileUploader: () => <button type="button">Upload file</button>,
+vi.mock('@/app/(manager)/properties/_components/ManagedUploads', () => ({
+  PhotoManager: () => <button type="button">Upload photos</button>,
+  DocumentUploader: () => <button type="button">Upload file</button>,
 }));
 vi.mock('@/components/units/DeleteUnitControl', () => ({
   DeleteUnitControl: () => <button type="button">Delete</button>,

@@ -29,9 +29,19 @@ export interface FileUploaderItem {
   document?: UploadedDocument;
 }
 
+export interface ExistingUploadedFile {
+  id: string;
+  name: string;
+  sizeBytes?: number;
+  previewUrl?: string;
+  isCover?: boolean;
+}
+
 export interface UploadProgressContext {
   target: FileTarget;
   kind: FileUploaderKind;
+  /** Storage document kind sent to the API, e.g. LEASE or NOTICE. Defaults from kind. */
+  documentKind?: string;
   onProgress: (percent: number) => void;
 }
 
@@ -43,7 +53,21 @@ export type UploadFileFn = (
 export interface FileUploaderProps {
   accept?: string;
   kind: FileUploaderKind | 'PHOTO' | 'DOCUMENT';
-  target: FileUploaderTarget;
+  /** Where files are stored. Omit with formField to submit files with an enclosing form. */
+  target?: FileUploaderTarget;
+  /**
+   * Form-attached mode: files are not uploaded immediately. They are validated, previewed and
+   * attached to a hidden input with this name, so the enclosing form submits them.
+   */
+  formField?: string;
+  /** Accept several files (default) or a single replaceable file. */
+  multiple?: boolean;
+  /** Storage document kind sent to the API (LEASE, NOTICE, ...). Defaults from kind. */
+  documentKind?: string;
+  /** Files already stored on the target; shown as uploaded items that count toward the limit. */
+  initialFiles?: ExistingUploadedFile[];
+  /** Called before an already uploaded item is removed; throw to keep it. */
+  onRemove?: (item: FileUploaderItem) => void | Promise<void>;
   max?: number;
   /** Photos already stored on the target, counted toward the photo counter. */
   existingCount?: number;
@@ -60,7 +84,8 @@ export interface FileUploaderProps {
 const PHOTO_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.heic', '.heif'];
 const DOCUMENT_ACCEPT = '.pdf,.jpg,.jpeg,.png,.heic,.heif,.doc,.docx';
 
-function normalizeTarget(target: FileUploaderTarget): FileTarget {
+function normalizeTarget(target: FileUploaderTarget | undefined): FileTarget {
+  if (!target) return { kind: 'property', id: '' };
   if ('kind' in target) return target;
   return { kind: target.type, id: target.id };
 }
@@ -87,14 +112,14 @@ function matchesAccept(file: File, accept: string): boolean {
 
 function defaultUploadFile(
   file: File,
-  { target, kind, onProgress }: UploadProgressContext,
+  { target, kind, documentKind, onProgress }: UploadProgressContext,
 ): Promise<UploadedDocument> {
   return new Promise((resolve, reject) => {
     const body = new FormData();
     body.set('file', file);
     body.set('targetType', target.kind);
     body.set('targetId', target.id);
-    body.set('kind', kind === 'photo' ? 'PHOTO' : 'OTHER');
+    body.set('kind', documentKind ?? (kind === 'photo' ? 'PHOTO' : 'OTHER'));
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/files');
     xhr.upload.onprogress = (event) => {
@@ -126,17 +151,35 @@ export function FileUploader(props: FileUploaderProps) {
     String(props.kind).toLowerCase() === 'photo' ? 'photo' : 'document';
   const target = normalizeTarget(props.target);
   const existing = props.existingCount ?? props.initialUsed ?? 0;
-  const defaultMax = kind === 'photo' ? (photoLimitForTarget(target, {}) ?? undefined) : undefined;
+  const formField = props.formField;
+  const multiple = props.multiple ?? true;
+  const defaultMax =
+    kind === 'photo' && props.target && !formField
+      ? (photoLimitForTarget(target, {}) ?? undefined)
+      : undefined;
   const max = props.max ?? defaultMax;
   const accept = props.accept ?? (kind === 'photo' ? PHOTO_EXTENSIONS.join(',') : DOCUMENT_ACCEPT);
   const uploadFile = props.uploadFile ?? defaultUploadFile;
 
-  const [items, setItems] = useState<FileUploaderItem[]>([]);
+  const [items, setItems] = useState<FileUploaderItem[]>(() =>
+    (props.initialFiles ?? []).map((file) => ({
+      id: `existing-${file.id}`,
+      file: new File([], file.name),
+      name: file.name,
+      sizeBytes: file.sizeBytes ?? 0,
+      status: 'done' as const,
+      progress: 100,
+      previewUrl: file.previewUrl,
+      isCover: file.isCover ?? false,
+      document: { id: file.id, name: file.name },
+    })),
+  );
   const [isDragging, setIsDragging] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const [limitError, setLimitError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
-  const itemsRef = useRef<FileUploaderItem[]>([]);
+  const formInputRef = useRef<HTMLInputElement>(null);
+  const itemsRef = useRef<FileUploaderItem[]>(items);
   itemsRef.current = items;
   const callbacksRef = useRef(props);
   callbacksRef.current = props;
@@ -144,10 +187,18 @@ export function FileUploader(props: FileUploaderProps) {
   useEffect(() => {
     return () => {
       for (const item of itemsRef.current) {
-        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+        if (item.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(item.previewUrl);
       }
     };
   }, []);
+
+  useEffect(() => {
+    const input = formInputRef.current;
+    if (!formField || !input || typeof DataTransfer === 'undefined') return;
+    const transfer = new DataTransfer();
+    for (const item of items) if (item.status !== 'error') transfer.items.add(item.file);
+    input.files = transfer.files;
+  }, [items, formField]);
 
   const counted = items.filter((item) => item.status !== 'error').length;
   const used = existing + counted;
@@ -162,6 +213,7 @@ export function FileUploader(props: FileUploaderProps) {
       const document = await uploadFile(item.file, {
         target,
         kind,
+        documentKind: props.documentKind,
         onProgress: (percent) => updateItem(item.id, { progress: percent }),
       });
       const done: FileUploaderItem = { ...item, status: 'done', progress: 100, document };
@@ -196,6 +248,13 @@ export function FileUploader(props: FileUploaderProps) {
     const files = Array.from(fileList);
     if (!files.length) return;
     setLimitError('');
+    if (!multiple) {
+      files.splice(1);
+      for (const item of itemsRef.current) {
+        if (item.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(item.previewUrl);
+      }
+      itemsRef.current = [];
+    }
     let available = kind === 'photo' && max !== undefined ? Math.max(0, max - used) : files.length;
     let blocked = 0;
     const accepted: FileUploaderItem[] = [];
@@ -227,8 +286,8 @@ export function FileUploader(props: FileUploaderProps) {
         file,
         name: file.name,
         sizeBytes: file.size,
-        status: 'queued',
-        progress: 0,
+        status: formField ? 'done' : 'queued',
+        progress: formField ? 100 : 0,
         previewUrl:
           isImage && typeof URL.createObjectURL === 'function'
             ? URL.createObjectURL(file)
@@ -248,11 +307,19 @@ export function FileUploader(props: FileUploaderProps) {
     const next = [...itemsRef.current, ...rejected, ...accepted];
     itemsRef.current = next;
     setItems(next);
-    for (const item of accepted) void startUpload(item);
+    if (!formField) for (const item of accepted) void startUpload(item);
   }
 
-  function removeItem(item: FileUploaderItem) {
-    if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+  async function removeItem(item: FileUploaderItem) {
+    if (item.document?.id && callbacksRef.current.onRemove) {
+      try {
+        await callbacksRef.current.onRemove(item);
+      } catch (error) {
+        setLimitError(error instanceof Error ? error.message : 'The file could not be removed.');
+        return;
+      }
+    }
+    if (item.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(item.previewUrl);
     const next = itemsRef.current.filter((entry) => entry.id !== item.id);
     itemsRef.current = next;
     setItems(next);
@@ -266,14 +333,17 @@ export function FileUploader(props: FileUploaderProps) {
     const swap = index + direction;
     if (index < 0 || swap < 0 || swap >= current.length) return;
     [current[index], current[swap]] = [current[swap], current[index]];
-    itemsRef.current = current;
-    setItems(current);
-    callbacksRef.current.onOrderChange?.(current);
+    // The cover always sorts first, matching how the saved order is read back.
+    const ordered = [...current.filter((e) => e.isCover), ...current.filter((e) => !e.isCover)];
+    itemsRef.current = ordered;
+    setItems(ordered);
+    callbacksRef.current.onOrderChange?.(ordered);
     setAnnouncement(`${item.name} moved ${direction < 0 ? 'earlier' : 'later'}.`);
   }
 
   function setAsCover(item: FileUploaderItem) {
-    const next = itemsRef.current.map((entry) => ({ ...entry, isCover: entry.id === item.id }));
+    const marked = itemsRef.current.map((entry) => ({ ...entry, isCover: entry.id === item.id }));
+    const next = [...marked.filter((e) => e.isCover), ...marked.filter((e) => !e.isCover)];
     itemsRef.current = next;
     setItems(next);
     const cover = next.find((entry) => entry.id === item.id) ?? null;
@@ -324,14 +394,25 @@ export function FileUploader(props: FileUploaderProps) {
           ref={inputRef}
           className={styles.input}
           type="file"
-          multiple
+          multiple={multiple}
           accept={accept}
-          aria-label="Choose files"
+          aria-label={multiple ? 'Choose files' : 'Choose a file'}
           onChange={(event) => {
             if (event.currentTarget.files) addFiles(event.currentTarget.files);
             event.currentTarget.value = '';
           }}
         />
+        {formField ? (
+          <input
+            ref={formInputRef}
+            type="file"
+            name={formField}
+            multiple={multiple}
+            hidden
+            tabIndex={-1}
+            aria-hidden="true"
+          />
+        ) : null}
       </div>
 
       {kind === 'photo' && max !== undefined ? (
@@ -365,7 +446,9 @@ export function FileUploader(props: FileUploaderProps) {
                 <span className={styles.name}>{item.name}</span>
                 <span className={styles.meta}>
                   {item.status === 'done'
-                    ? 'Uploaded'
+                    ? formField
+                      ? 'Ready to submit'
+                      : 'Uploaded'
                     : item.status === 'uploading'
                       ? `Uploading ${item.progress}%`
                       : item.status === 'error'
@@ -434,7 +517,7 @@ export function FileUploader(props: FileUploaderProps) {
                 ) : null}
                 <button
                   type="button"
-                  onClick={() => removeItem(item)}
+                  onClick={() => void removeItem(item)}
                   aria-label={`Remove ${item.name}`}
                 >
                   Remove

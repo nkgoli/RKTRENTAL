@@ -1,7 +1,9 @@
 'use client';
 
-import { useActionState, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useActionState, useState } from 'react';
 import { Alert, Button } from '@/components/ui';
+import { FileUploader } from '@/components/upload';
 import {
   activateLeaseAction,
   editTermsAction,
@@ -258,54 +260,15 @@ export function NoticeForm({
 }
 
 export function LeaseUploader({ leaseId }: { leaseId: string }) {
-  const input = useRef<HTMLInputElement>(null);
-  const [message, setMessage] = useState('');
-  const [busy, setBusy] = useState(false);
-  async function upload(file?: File) {
-    if (!file) return;
-    setBusy(true);
-    setMessage('');
-    try {
-      const form = new FormData();
-      form.set('file', file);
-      form.set('targetType', 'lease');
-      form.set('targetId', leaseId);
-      form.set('kind', 'LEASE');
-      const response = await fetch('/api/files', { method: 'POST', body: form });
-      if (!response.ok) {
-        const body = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? 'Upload failed.');
-      }
-      window.location.reload();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Upload failed.');
-      setBusy(false);
-    }
-  }
+  const router = useRouter();
   return (
-    <>
-      <button
-        type="button"
-        className="btn btn-secondary btn-sm"
-        disabled={busy}
-        onClick={() => input.current?.click()}
-      >
-        {busy ? 'Uploading…' : '+ Upload document'}
-      </button>
-      <input
-        ref={input}
-        type="file"
-        hidden
-        aria-label="Upload lease document"
-        data-testid="upload-lease-document"
-        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-        onChange={(event) => void upload(event.target.files?.[0])}
-      />
-      {message && (
-        <span role="alert" style={{ color: 'var(--design-danger)' }}>
-          {message}
-        </span>
-      )}
-    </>
+    <FileUploader
+      kind="document"
+      target={{ kind: 'lease', id: leaseId }}
+      documentKind="LEASE"
+      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+      label="Upload lease document"
+      onUploaded={() => router.refresh()}
+    />
   );
 }

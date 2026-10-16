@@ -93,7 +93,7 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
     const photos = ids.length
       ? await client.document.findMany({
           where: { organizationId, kind: 'PHOTO', propertyId: { in: ids } },
-          orderBy: [{ isCover: 'desc' }, { createdAt: 'asc' }],
+          orderBy: [{ isCover: 'desc' }, { sortOrder: { sort: 'asc', nulls: 'last' } }, { createdAt: 'asc' }],
           select: { id: true, propertyId: true },
         })
       : [];
@@ -165,7 +165,7 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
     const [documents, leaseDocuments, repairs, expiring] = await Promise.all([
       client.document.findMany({
         where: { organizationId, propertyId: id },
-        orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
+        orderBy: [{ isCover: 'desc' }, { sortOrder: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }],
       }),
       client.document.findMany({
         where: { organizationId, lease: { unit: { propertyId: id } } },
@@ -256,7 +256,7 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
 
     const documents = await client.document.findMany({
       where: { organizationId, unitId },
-      orderBy: [{ isCover: 'desc' }, { createdAt: 'desc' }],
+      orderBy: [{ isCover: 'desc' }, { sortOrder: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }],
     });
     const current = unit.leases.find((l) => l.status === 'ACTIVE') ?? null;
     const primary = (l: (typeof unit.leases)[number]) => l.tenants[0]?.tenant ?? null;

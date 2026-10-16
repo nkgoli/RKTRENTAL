@@ -70,11 +70,19 @@ export function memoryRepo(): DocumentRepository & { rows: StoredDocument[] } {
     rows,
     async create(input) {
       const doc: StoredDocument = {
+        isCover: false,
+        sortOrder: null,
         ...input,
         id: `doc-${++n}`,
         createdAt: new Date(1700000000000 + n),
       };
       rows.push(doc);
+      return doc;
+    },
+    async update(id, patch) {
+      const doc = rows.find((r) => r.id === id);
+      if (!doc) throw new Error(`Document ${id} not found`);
+      Object.assign(doc, patch);
       return doc;
     },
     async listByTarget(orgId, target) {

@@ -8,7 +8,7 @@ import type {
   StorageAdapter,
   StoredDocument,
 } from './types';
-import { notFoundError, StorageError } from './types';
+import { notFoundError, StorageError, validationError } from './types';
 import { sanitizeFileName, validateUpload, validateUploadMeta } from './validation';
 import {
   assertPhotoWithinLimit,
@@ -34,6 +34,48 @@ export interface DocumentRepository {
     input: Omit<StoredDocument, 'id' | 'createdAt'>,
     max: number,
   ): Promise<StoredDocument>;
+  /** Optional single-row update used by photo ordering/cover fallbacks. */
+  update?(
+    id: string,
+    patch: Partial<Pick<StoredDocument, 'sortOrder' | 'isCover'>>,
+  ): Promise<StoredDocument>;
+  /** Optional transactional reorder; must persist the given order for the target. */
+  reorderPhotos?(
+    orgId: string,
+    target: FileTarget,
+    orderedIds: string[],
+  ): Promise<StoredDocument[]>;
+  /** Optional transactional cover switch; must leave exactly one cover per target. */
+  setCover?(orgId: string, target: FileTarget, documentId: string): Promise<StoredDocument[]>;
+}
+
+export function targetMatches(doc: StoredDocument, target: FileTarget): boolean {
+  return target.kind === 'lease'
+    ? doc.leaseId === target.id
+    : target.kind === 'property'
+      ? doc.propertyId === target.id
+      : doc.unitId === target.id;
+}
+
+/** Cover first, then sortOrder ascending (nulls last), then creation order. */
+export function comparePhotoOrder(a: StoredDocument, b: StoredDocument): number {
+  if (a.kind !== 'PHOTO' || b.kind !== 'PHOTO') {
+    if (a.kind === 'PHOTO') return -1;
+    if (b.kind === 'PHOTO') return 1;
+    return b.createdAt.getTime() - a.createdAt.getTime();
+  }
+  const cover = Number(b.isCover ?? false) - Number(a.isCover ?? false);
+  if (cover !== 0) return cover;
+  const ao = a.sortOrder ?? null;
+  const bo = b.sortOrder ?? null;
+  if (ao !== null && bo !== null && ao !== bo) return ao - bo;
+  if (ao !== null && bo === null) return -1;
+  if (ao === null && bo !== null) return 1;
+  return a.createdAt.getTime() - b.createdAt.getTime();
+}
+
+export function sortPhotos<T extends StoredDocument>(docs: T[]): T[] {
+  return [...docs].sort(comparePhotoOrder);
 }
 
 export type { PhotoUsage };
@@ -119,19 +161,33 @@ export class FileService {
     assertPhotoWithinLimit(target, used, max);
   }
 
+  private async nextSortOrder(orgId: string, target: FileTarget): Promise<number> {
+    const docs = await this.repo.listByTarget(orgId, target);
+    const photos = docs.filter((d) => d.kind === 'PHOTO');
+    const max = photos.reduce<number | null>(
+      (acc, d) => (d.sortOrder != null && (acc === null || d.sortOrder > acc) ? d.sortOrder : acc),
+      null,
+    );
+    return max !== null ? max + 1 : photos.length;
+  }
+
   private async createDocument(
     actor: FileActor,
     target: FileTarget,
     kind: DocumentKindValue,
     input: Omit<StoredDocument, 'id' | 'createdAt'>,
   ): Promise<StoredDocument> {
-    const max = kind === 'PHOTO' ? photoLimitForTarget(target, this.env) : null;
-    if (max === null) return this.repo.create(input);
-    if (this.repo.createPhotoWithinLimit) return this.repo.createPhotoWithinLimit(input, max);
+    if (kind !== 'PHOTO') return this.repo.create(input);
+    const max = photoLimitForTarget(target, this.env);
+    if (max !== null && this.repo.createPhotoWithinLimit)
+      return this.repo.createPhotoWithinLimit(input, max);
     return this.withPhotoLock(actor.organizationId, target, async () => {
-      const used = await this.countPhotos(actor.organizationId, target);
-      assertPhotoWithinLimit(target, used, max);
-      return this.repo.create(input);
+      if (max !== null) {
+        const used = await this.countPhotos(actor.organizationId, target);
+        assertPhotoWithinLimit(target, used, max);
+      }
+      const sortOrder = await this.nextSortOrder(actor.organizationId, target);
+      return this.repo.create({ ...input, sortOrder });
     });
   }
   private keyFor(actor: FileActor, target: FileTarget, fileName: string): string {
@@ -259,7 +315,93 @@ export class FileService {
   async list(actor: FileActor, target: FileTarget): Promise<StoredDocument[]> {
     await assertTargetAccess(this.access, actor, target);
     const documents = await this.repo.listByTarget(actor.organizationId, target);
-    return actor.role === 'TENANT' ? documents.filter((doc) => doc.kind !== 'ID') : documents;
+    const visible =
+      actor.role === 'TENANT' ? documents.filter((doc) => doc.kind !== 'ID') : documents;
+    return sortPhotos(visible);
+  }
+
+  private async photosForTarget(
+    actor: FileActor,
+    target: FileTarget,
+  ): Promise<StoredDocument[]> {
+    const docs = await this.repo.listByTarget(actor.organizationId, target);
+    return docs.filter((d) => targetMatches(d, target));
+  }
+
+  private async assertPhotosBelong(
+    actor: FileActor,
+    target: FileTarget,
+    ids: string[],
+  ): Promise<StoredDocument[]> {
+    const docs = await this.photosForTarget(actor, target);
+    const byId = new Map(docs.map((d) => [d.id, d]));
+    for (const id of ids) {
+      const doc = byId.get(id);
+      if (!doc) {
+        const elsewhere = await this.repo.findById(actor.organizationId, id).catch(() => null);
+        if (elsewhere) throw validationError('Photo does not belong to this target');
+        throw notFoundError('Photo not found');
+      }
+      if (doc.kind !== 'PHOTO') throw validationError('Only photos can be ordered');
+    }
+    return docs;
+  }
+
+  async reorderPhotos(
+    actor: FileActor,
+    target: FileTarget,
+    orderedIds: string[],
+  ): Promise<StoredDocument[]> {
+    await assertTargetAccess(this.access, actor, target);
+    assertUploadAllowed(actor, 'PHOTO');
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0)
+      throw validationError('orderedIds must be a non-empty array');
+    if (orderedIds.some((id) => typeof id !== 'string' || !id))
+      throw validationError('orderedIds must contain photo ids');
+    if (new Set(orderedIds).size !== orderedIds.length)
+      throw validationError('orderedIds must not contain duplicates');
+    const docs = await this.assertPhotosBelong(actor, target, orderedIds);
+    if (docs.filter((d) => d.kind === 'PHOTO').length !== orderedIds.length)
+      throw validationError('orderedIds must include every photo on this target');
+    if (this.repo.reorderPhotos) {
+      const updated = await this.repo.reorderPhotos(actor.organizationId, target, orderedIds);
+      return sortPhotos(updated.filter((d) => d.kind === 'PHOTO'));
+    }
+    if (!this.repo.update) throw new StorageError('Photo ordering is unavailable', 'CONFIG', 501);
+    const byId = new Map(docs.map((d) => [d.id, d]));
+    for (const [index, id] of orderedIds.entries()) {
+      const doc = byId.get(id)!;
+      doc.sortOrder = index;
+      await this.repo.update(id, { sortOrder: index });
+    }
+    return sortPhotos(docs.filter((d) => d.kind === 'PHOTO'));
+  }
+
+  async setCover(
+    actor: FileActor,
+    target: FileTarget,
+    documentId: string,
+  ): Promise<StoredDocument[]> {
+    await assertTargetAccess(this.access, actor, target);
+    assertUploadAllowed(actor, 'PHOTO');
+    if (typeof documentId !== 'string' || !documentId)
+      throw validationError('documentId is required');
+    await this.assertPhotosBelong(actor, target, [documentId]);
+    if (this.repo.setCover) {
+      const updated = await this.repo.setCover(actor.organizationId, target, documentId);
+      return sortPhotos(updated.filter((d) => d.kind === 'PHOTO'));
+    }
+    if (!this.repo.update) throw new StorageError('Cover selection is unavailable', 'CONFIG', 501);
+    const docs = await this.photosForTarget(actor, target);
+    for (const doc of docs) {
+      if (doc.kind !== 'PHOTO') continue;
+      const isCover = doc.id === documentId;
+      if ((doc.isCover ?? false) !== isCover) {
+        doc.isCover = isCover;
+        await this.repo.update(doc.id, { isCover });
+      }
+    }
+    return sortPhotos(docs.filter((d) => d.kind === 'PHOTO'));
   }
   async getDocument(actor: FileActor, id: string): Promise<StoredDocument> {
     const doc = await this.repo.findById(actor.organizationId, id);
@@ -316,27 +458,74 @@ export async function createPrismaFileService(): Promise<FileService> {
         : input.unitId
           ? { kind: 'unit', id: input.unitId }
           : { kind: 'lease', id: input.leaseId ?? '' };
-      const lockKey = `photo-limit:${input.organizationId}:${target.kind}:${target.id}`;
+      const lockKey = `photo-target:${input.organizationId}:${target.kind}:${target.id}`;
       const row = await db.$transaction(async (tx) => {
         // Serialize concurrent photo inserts for this target across processes;
         // the count and insert below then cannot race past the limit.
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
-        const used = await tx.document.count({
-          where: { ...targetWhere(input.organizationId, target), kind: 'PHOTO' },
-        });
+        const where = { ...targetWhere(input.organizationId, target), kind: 'PHOTO' as const };
+        const used = await tx.document.count({ where });
         assertPhotoWithinLimit(target, used, max);
-        return tx.document.create({ data: { ...input, sizeBytes: BigInt(input.sizeBytes) } });
+        const top = await tx.document.findFirst({
+          where,
+          orderBy: { sortOrder: 'desc' },
+          select: { sortOrder: true },
+        });
+        const sortOrder = top?.sortOrder != null ? top.sortOrder + 1 : used;
+        return tx.document.create({
+          data: { ...input, sortOrder, sizeBytes: BigInt(input.sizeBytes) },
+        });
       });
       return { ...row, sizeBytes: Number(row.sizeBytes) };
     },
     async listByTarget(orgId, target) {
-      const where =
-        target.kind === 'lease'
-          ? { organizationId: orgId, leaseId: target.id }
-          : target.kind === 'property'
-            ? { organizationId: orgId, propertyId: target.id }
-            : { organizationId: orgId, unitId: target.id };
-      const rows = await db.document.findMany({ where, orderBy: { createdAt: 'desc' } });
+      const rows = await db.document.findMany({
+        where: targetWhere(orgId, target),
+        orderBy: [
+          { isCover: 'desc' },
+          { sortOrder: { sort: 'asc', nulls: 'last' } },
+          { createdAt: 'asc' },
+        ],
+      });
+      return rows.map((r) => ({ ...r, sizeBytes: Number(r.sizeBytes) }));
+    },
+    async update(id, patch) {
+      const row = await db.document.update({ where: { id }, data: patch });
+      return { ...row, sizeBytes: Number(row.sizeBytes) };
+    },
+    async reorderPhotos(orgId, target, orderedIds) {
+      const where = targetWhere(orgId, target);
+      const rows = await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`photo-target:${orgId}:${target.kind}:${target.id}`}))`;
+        const existing = await tx.document.findMany({
+          where: { ...where, kind: 'PHOTO' },
+          select: { id: true, kind: true },
+        });
+        if (existing.length !== orderedIds.length || existing.some((r) => !orderedIds.includes(r.id)))
+          throw validationError('orderedIds must include every photo on this target');
+        for (const [index, id] of orderedIds.entries())
+          await tx.document.update({ where: { id }, data: { sortOrder: index } });
+        return tx.document.findMany({ where });
+      });
+      return rows.map((r) => ({ ...r, sizeBytes: Number(r.sizeBytes) }));
+    },
+    async setCover(orgId, target, documentId) {
+      const where = targetWhere(orgId, target);
+      const rows = await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`photo-target:${orgId}:${target.kind}:${target.id}`}))`;
+        const doc = await tx.document.findFirst({
+          where: { ...where, id: documentId },
+          select: { id: true, kind: true },
+        });
+        if (!doc || doc.kind !== 'PHOTO')
+          throw validationError('Photo does not belong to this target');
+        await tx.document.updateMany({
+          where: { ...where, kind: 'PHOTO', isCover: true },
+          data: { isCover: false },
+        });
+        await tx.document.update({ where: { id: documentId }, data: { isCover: true } });
+        return tx.document.findMany({ where });
+      });
       return rows.map((r) => ({ ...r, sizeBytes: Number(r.sizeBytes) }));
     },
     async findById(orgId, id) {

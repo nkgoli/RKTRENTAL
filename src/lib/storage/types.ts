@@ -56,6 +56,9 @@ export interface StoredDocument {
   storageKey: string;
   sizeBytes: number;
   mimeType: string;
+  isCover?: boolean;
+  sortOrder?: number | null;
+  caption?: string | null;
   createdAt: Date;
 }
 

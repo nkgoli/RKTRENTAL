@@ -8,6 +8,7 @@ import { db } from '@/lib/db/client';
 import { screeningProvider } from '@/lib/providers';
 import { applicationsRedirectUrl } from '@/lib/screening/redirect';
 import { scopeFilterFrom } from '@/lib/workspace/scope';
+import { syncApplicationGroupStatus } from '@/lib/screening/groups';
 import { recordDecision as recordScreeningDecisionAudit } from '@/lib/screening/decision-audit';
 import {
   applicationStatusForReport,
@@ -130,6 +131,7 @@ export async function requestScreening(formData: FormData) {
     }),
     db.application.update({ where: { id: applicationId }, data: { status: nextStatus } }),
   ]);
+  await syncApplicationGroupStatus(db, applicationId);
 
   revalidatePath('/applications');
   redirect(applicationsRedirectUrl(applicationId, 'screening', scopeFrom(formData)));

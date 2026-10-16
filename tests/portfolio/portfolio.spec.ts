@@ -37,12 +37,17 @@ test('create-lease links open the wizard prefilled', async ({ page }) => {
     );
   }
 
-  await page.goto('/leases/new?unit=seed-unit-maple-7');
-  await expect(page.getByLabel('Property / unit')).toHaveValue('seed-unit-maple-7');
+  // `fresh` starts a new wizard instead of resuming a draft another suite left on this unit.
+  await page.goto('/leases/new?unit=seed-unit-maple-7&fresh=1');
+  await expect(page.getByText('Build the agreement for Maple Court · Unit 3A')).toBeVisible();
 
-  await page.goto('/leases/new?unit=seed-unit-maple-7&applicant=seed-application-olivia');
-  await expect(page.getByLabel('Property / unit')).toHaveValue('seed-unit-maple-7');
-  await expect(page.getByRole('status')).toContainText('Olivia Reed');
+  await page.goto('/leases/new?unit=seed-unit-maple-7&applicant=seed-application-olivia&fresh=1');
+  await expect(page.getByText('Build the agreement for Maple Court · Unit 3A')).toBeVisible();
+  // Olivia is an applicant, not a tenant yet; the Tenants step says so.
+  const wizard = page.getByRole('region', { name: 'Create lease' });
+  await wizard.getByRole('button', { name: 'Next', exact: true }).click();
+  await wizard.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(page.getByText('Olivia Reed (olivia.reed@example.com) isn’t a tenant yet.')).toBeVisible();
 
   await page.goto('/tenants/seed-tenant-maple-11');
   await expect(page.getByRole('link', { name: 'Renew lease' })).toHaveAttribute(

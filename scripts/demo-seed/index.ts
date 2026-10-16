@@ -252,6 +252,9 @@ async function seedDatabase() {
 
   const applicationPlan = planApplications(seed, now, plan.units, plan.leases, plan.tenants);
   const { groups, applications, consents, reports } = applicationPlan;
+  await createManyInChunks(groups.map((group) => ({ id: group.id, organizationId, unitId: group.unitId,
+    status: group.status, archivedAt: group.archivedAt, createdAt: group.at })),
+    (data) => prisma.applicationGroup.createMany({ data }));
   await createManyInChunks(applications, (data) => prisma.application.createMany({ data }));
   await createManyInChunks(consents, (data) => prisma.screeningConsent.createMany({ data }));
   await createManyInChunks(reports, (data) => prisma.screeningReport.createMany({ data }));

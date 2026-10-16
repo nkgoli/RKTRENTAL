@@ -64,7 +64,7 @@ test('Alex submits a repair with a photo, then follows the manager status change
   await page.getByLabel('Category').selectOption('Electrical');
   await page.getByLabel('What needs fixing?').fill(`${title}. It started on Monday.`);
   await page
-    .getByLabel('Photos')
+    .getByLabel('Choose files')
     .setInputFiles({ name: 'fan.png', mimeType: 'image/png', buffer: PNG });
   await page.getByLabel('I need to be home — call first').check();
   await page.getByLabel('Urgency').selectOption('HIGH');

@@ -192,10 +192,10 @@ test('unit switcher keeps the tab; timeline, applications, leases and maintenanc
   await expect(page).toHaveURL(/\?unit=/);
   await expect(page.getByTestId('lease-timeline').locator('[data-unit-row]')).toHaveCount(1);
 
-  // Applications: share link, settings, groups.
+  // Applications: settings and groups; no public apply page exists, so no share link is offered.
   await tab(page, 'Applications').click();
   await expect(page).toHaveURL(/\/applications\?unit=/);
-  await expect(page.getByLabel('Application link')).toHaveValue(/\/apply\//);
+  await expect(page.getByLabel('Application link')).toHaveCount(0);
   await expect(page.getByRole('form', { name: 'Application settings' })).toBeVisible();
   await switcher.selectOption({ label: 'Maple Court · all units' });
   await expect(page).toHaveURL(/\/applications$/);

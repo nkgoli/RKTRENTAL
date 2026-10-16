@@ -185,7 +185,7 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
       }
       notice={
         applicant && !applicantTenant
-          ? ` () isn’t a tenant yet. Add them as a tenant, then return here to select them.`
+          ? `${applicant.applicantName} (${applicant.applicantEmail}) isn’t a tenant yet. Add them as a tenant, then return here to select them.`
           : undefined
       }
       backHref={`/properties/${unit.propertyId}/leases`}

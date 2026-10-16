@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { assessLateFee, computeBalance, rentDueDate, rentKey, type LedgerCharge, type LedgerPayment } from '../../src/lib/ledger/core';
 import { assertDemoTarget } from './guard';
 import { assertNoLeaseOverlap, planPortfolio, properties } from './plan';
-import { applicationGroupId, planApplications } from './applications';
+import { planApplications } from './applications';
 
 const today = new Date('2026-10-16T00:00:00.000Z');
 
@@ -40,7 +40,8 @@ describe('demo seed', () => {
     expect(first.groups.length).toBeGreaterThan(200);
     expect(first.groups.every((group) => group.applicantIds.length >= 1 && group.applicantIds.length <= 3)).toBe(true);
     for (const group of first.groups) {
-      expect(group.applicantIds.every((id) => applicationGroupId(id) === group.id)).toBe(true);
+      expect(group.applicantIds.every((id) =>
+        first.applications.find((row) => row.id === id)?.applicationGroupId === group.id)).toBe(true);
       if (!group.nextLeaseId || !group.id.endsWith('-approved')) continue;
       const lease = portfolio.leases.find((candidate) => candidate.id === group.nextLeaseId)!;
       const tenant = portfolio.tenants.find((candidate) => candidate.id === lease.tenantId)!;

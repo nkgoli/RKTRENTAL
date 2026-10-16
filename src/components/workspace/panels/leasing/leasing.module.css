@@ -41,9 +41,6 @@
 .pageHeader { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .pageHeader h2 { margin: 0; font-size: 20px; }
 .pageHeader p { margin: 2px 0 0; font-size: 13px; }
-.shareRow { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #e8ecf3; border-radius: 14px; background: #fff; }
-.shareRow label { flex: 0 0 auto; color: var(--design-muted); font-size: 13px; font-weight: 600; }
-.shareRow input { flex: 1; min-width: 0; padding: 6px 10px; border: 1px solid #e8ecf3; border-radius: 10px; background: #f8fafc; color: var(--design-text); font-size: 13px; }
 .settings { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
 .settingLabel { margin: 0 0 8px; color: var(--design-muted); font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .settingField { display: grid; align-content: start; gap: 6px; }
@@ -65,8 +62,6 @@
 .groupActions { display: flex; justify-content: flex-end; margin-top: 12px; }
 @media (max-width: 720px) {
   .settings { grid-template-columns: minmax(0, 1fr); }
-  .shareRow { flex-wrap: wrap; }
-  .shareRow input { flex-basis: 100%; order: 3; }
 }
 .emptyCard { display: grid; gap: 4px; justify-items: start; }
 .emptyCard p { margin: 0; }

@@ -148,6 +148,7 @@ model Organization {
   autopaySettings     AutopaySetting[]
   payouts             Payout[]
   applications        Application[]
+  applicationGroups   ApplicationGroup[]
   screeningConsents   ScreeningConsent[]
   screeningReports    ScreeningReport[]
   tenantNotes         TenantNote[]
@@ -156,20 +157,20 @@ model Organization {
 }
 
 model User {
-  id                String             @id @default(cuid())
-  organizationId    String
-  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  email             String
-  name              String
-  phone             String?
-  passwordHash      String?
-  role              UserRole
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  ownedProperties   Property[]         @relation("PropertyOwner")
-  tenant            Tenant?
-  maintenanceEvents MaintenanceEvent[]
-  emailNotificationsEnabled Boolean @default(true)
+  id                        String             @id @default(cuid())
+  organizationId            String
+  organization              Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email                     String
+  name                      String
+  phone                     String?
+  passwordHash              String?
+  role                      UserRole
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
+  ownedProperties           Property[]         @relation("PropertyOwner")
+  tenant                    Tenant?
+  maintenanceEvents         MaintenanceEvent[]
+  emailNotificationsEnabled Boolean            @default(true)
 
   @@unique([organizationId, email])
   @@unique([id, organizationId])
@@ -177,34 +178,34 @@ model User {
 }
 
 model Property {
-  id                  String               @id @default(cuid())
-  organizationId      String
-  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  ownerId             String?
-  owner               User?                @relation("PropertyOwner", fields: [ownerId, organizationId], references: [id, organizationId])
-  name                String
-  type                PropertyType
-  street              String
-  city                String
-  state               String
-  postalCode          String
-  yearBuilt           Int?
-  hasSharedLaundry    Boolean              @default(false)
-  isFloodZone         Boolean              @default(false)
+  id                     String               @id @default(cuid())
+  organizationId         String
+  organization           Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ownerId                String?
+  owner                  User?                @relation("PropertyOwner", fields: [ownerId, organizationId], references: [id, organizationId])
+  name                   String
+  type                   PropertyType
+  street                 String
+  city                   String
+  state                  String
+  postalCode             String
+  yearBuilt              Int?
+  hasSharedLaundry       Boolean              @default(false)
+  isFloodZone            Boolean              @default(false)
   defaultLeaseTemplateId String?
-  defaultLeaseTemplate LeaseTemplate? @relation("PropertyDefaultLeaseTemplate", fields: [defaultLeaseTemplateId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  purchasePrice       Decimal?             @db.Decimal(12, 2)
-  downPayment         Decimal?             @db.Decimal(12, 2)
-  loanAmount          Decimal?             @db.Decimal(12, 2)
-  annualDebtService   Decimal              @default(0) @db.Decimal(12, 2)
-  archivedAt          DateTime?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  units               Unit[]
-  documents           Document[]
-  maintenanceRequests MaintenanceRequest[]
-  payouts             Payout[]
-  expenses            Expense[]
+  defaultLeaseTemplate   LeaseTemplate?       @relation("PropertyDefaultLeaseTemplate", fields: [defaultLeaseTemplateId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  purchasePrice          Decimal?             @db.Decimal(12, 2)
+  downPayment            Decimal?             @db.Decimal(12, 2)
+  loanAmount             Decimal?             @db.Decimal(12, 2)
+  annualDebtService      Decimal              @default(0) @db.Decimal(12, 2)
+  archivedAt             DateTime?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  units                  Unit[]
+  documents              Document[]
+  maintenanceRequests    MaintenanceRequest[]
+  payouts                Payout[]
+  expenses               Expense[]
 
   @@unique([id, organizationId])
   @@index([organizationId, archivedAt])
@@ -229,7 +230,7 @@ model Unit {
   marketRentSetAt     DateTime?
   floor               Int?
   amenities           String[]             @default([])
-  hasBalconyPatio      Boolean              @default(false)
+  hasBalconyPatio     Boolean              @default(false)
   status              UnitStatus           @default(VACANT)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -237,6 +238,7 @@ model Unit {
   documents           Document[]
   maintenanceRequests MaintenanceRequest[]
   applications        Application[]
+  applicationGroups   ApplicationGroup[]
 
   @@unique([propertyId, number])
   @@unique([id, organizationId])
@@ -271,40 +273,40 @@ model Tenant {
 }
 
 model Lease {
-  id              String           @id @default(cuid())
-  organizationId  String
-  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  unitId          String
-  unit            Unit             @relation(fields: [unitId, organizationId], references: [id, organizationId])
-  startDate       DateTime         @db.Date
-  endDate         DateTime         @db.Date
-  monthlyRent     Decimal          @db.Decimal(12, 2)
-  deposit         Decimal          @db.Decimal(12, 2)
-  lateFee         Decimal          @default(0) @db.Decimal(12, 2)
-  graceDays       Int              @default(0)
-  rentDueDay      Int              @default(1)
-  prorateFirstMonth Boolean        @default(true)
-  moveInFee       Decimal          @default(0) @db.Decimal(12, 2)
-  petDeposit      Decimal          @default(0) @db.Decimal(12, 2)
-  status          LeaseStatus      @default(DRAFT)
-  eSignStatus     ESignStatus      @default(NOT_SENT)
-  signedAt        DateTime?
-  templateId      String?
-  templateVersion Int?
-  termsSnapshot   Json?
-  template        LeaseTemplate? @relation(fields: [templateId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  occupants       String?
-  noticeGivenAt   DateTime?        @db.Date
-  moveOutDate     DateTime?        @db.Date
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  events          LeaseEvent[]
-  tenants         LeaseTenant[]
-  documents       Document[]
-  charges         Charge[]
-  payments        Payment[]
-  autopaySettings AutopaySetting[]
-  draft           LeaseDraft?
+  id                String           @id @default(cuid())
+  organizationId    String
+  organization      Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  unitId            String
+  unit              Unit             @relation(fields: [unitId, organizationId], references: [id, organizationId])
+  startDate         DateTime         @db.Date
+  endDate           DateTime         @db.Date
+  monthlyRent       Decimal          @db.Decimal(12, 2)
+  deposit           Decimal          @db.Decimal(12, 2)
+  lateFee           Decimal          @default(0) @db.Decimal(12, 2)
+  graceDays         Int              @default(0)
+  rentDueDay        Int              @default(1)
+  prorateFirstMonth Boolean          @default(true)
+  moveInFee         Decimal          @default(0) @db.Decimal(12, 2)
+  petDeposit        Decimal          @default(0) @db.Decimal(12, 2)
+  status            LeaseStatus      @default(DRAFT)
+  eSignStatus       ESignStatus      @default(NOT_SENT)
+  signedAt          DateTime?
+  templateId        String?
+  templateVersion   Int?
+  termsSnapshot     Json?
+  template          LeaseTemplate?   @relation(fields: [templateId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  occupants         String?
+  noticeGivenAt     DateTime?        @db.Date
+  moveOutDate       DateTime?        @db.Date
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  events            LeaseEvent[]
+  tenants           LeaseTenant[]
+  documents         Document[]
+  charges           Charge[]
+  payments          Payment[]
+  autopaySettings   AutopaySetting[]
+  draft             LeaseDraft?
 
   @@unique([id, organizationId])
   @@index([organizationId, unitId, status])
@@ -312,16 +314,16 @@ model Lease {
 }
 
 model LeaseTemplate {
-  id             String @id @default(cuid())
+  id             String              @id @default(cuid())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   name           String
-  version        Int @default(1)
+  version        Int                 @default(1)
   defaultFees    Json
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
   items          LeaseTemplateItem[]
-  defaultFor     Property[] @relation("PropertyDefaultLeaseTemplate")
+  defaultFor     Property[]          @relation("PropertyDefaultLeaseTemplate")
   leases         Lease[]
 
   @@unique([id, organizationId])
@@ -329,16 +331,16 @@ model LeaseTemplate {
 }
 
 model LeaseTemplateItem {
-  id             String @id @default(cuid())
+  id             String        @id @default(cuid())
   organizationId String
   templateId     String
   template       LeaseTemplate @relation(fields: [templateId, organizationId], references: [id, organizationId], onDelete: Cascade)
   section        String
   title          String
-  body           String @db.Text
+  body           String        @db.Text
   sortOrder      Int
-  required       Boolean @default(false)
-  includeWhen    String @default("ALWAYS")
+  required       Boolean       @default(false)
+  includeWhen    String        @default("ALWAYS")
 
   @@index([organizationId, templateId, section, sortOrder])
 }
@@ -638,25 +640,45 @@ model Payout {
 }
 
 model Application {
-  id             String             @id @default(cuid())
-  organizationId String
-  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  unitId         String
-  unit           Unit               @relation(fields: [unitId, organizationId], references: [id, organizationId])
-  applicantName  String
-  applicantEmail String
-  status         ApplicationStatus  @default(SUBMITTED)
-  decisionReason String?
-  decidedBy      String?
-  decidedAt      DateTime?
-  appliedAt      DateTime           @default(now())
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  consents       ScreeningConsent[]
-  reports        ScreeningReport[]
+  id                 String             @id @default(cuid())
+  organizationId     String
+  organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  unitId             String
+  unit               Unit               @relation(fields: [unitId, organizationId], references: [id, organizationId])
+  applicationGroupId String?
+  applicationGroup   ApplicationGroup?  @relation(fields: [applicationGroupId, organizationId], references: [id, organizationId])
+  applicantName      String
+  applicantEmail     String
+  status             ApplicationStatus  @default(SUBMITTED)
+  decisionReason     String?
+  decidedBy          String?
+  decidedAt          DateTime?
+  appliedAt          DateTime           @default(now())
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  consents           ScreeningConsent[]
+  reports            ScreeningReport[]
 
   @@unique([id, organizationId])
   @@index([organizationId, status, appliedAt])
+  @@index([applicationGroupId])
+}
+
+/// A household applying together for one unit; status mirrors its furthest-along application.
+model ApplicationGroup {
+  id             String            @id @default(cuid())
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  unitId         String
+  unit           Unit              @relation(fields: [unitId, organizationId], references: [id, organizationId])
+  status         ApplicationStatus @default(SUBMITTED)
+  archivedAt     DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  applications   Application[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId, unitId, createdAt])
 }
 
 model ScreeningConsent {

@@ -386,15 +386,8 @@ export function FileUploader(props: FileUploaderProps) {
           setIsDragging(false);
           addFiles(event.dataTransfer.files);
         }}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            inputRef.current?.click();
-          }
-        }}
-        role="button"
-        tabIndex={0}
-        aria-label="Upload files: drag and drop files here, or press Enter to browse"
+        role="group"
+        aria-label={props.label ? `${props.label}: drop files here` : 'Drop files here'}
       >
         <p className={styles.dropTitle}>Drag and drop files here or browse</p>
         <p className={styles.dropHint}>

@@ -11,11 +11,12 @@ export type PlannedApplicationGroup = {
   nextLeaseId?: string;
   open: boolean;
   applicantIds: string[];
+  status: ApplicationStatus;
+  archivedAt: Date | null;
 };
 
-export function applicationGroupId(applicationId: string) {
-  return applicationId.replace(/-applicant-\d+$/, '');
-}
+/** The furthest-along application speaks for its household. */
+const statusRank: ApplicationStatus[] = ['APPROVED', 'REVIEW', 'SCREENING', 'SUBMITTED', 'DECLINED'];
 
 export function planApplications(seed: number, now: Date, units: PlannedUnit[],
   leases: PlannedLease[], tenants: PlannedTenant[]) {
@@ -33,14 +34,16 @@ export function planApplications(seed: number, now: Date, units: PlannedUnit[],
     options: { nextLeaseId?: string; open?: boolean; tenant?: PlannedTenant; archived?: boolean } = {}) {
     const id = `demo-group-${key}`;
     const group: PlannedApplicationGroup = { id, unitId, at, nextLeaseId: options.nextLeaseId,
-      open: options.open ?? false, applicantIds: [] };
+      open: options.open ?? false, applicantIds: [],
+      status: statusRank.find((candidate) => statuses.includes(candidate)) ?? 'SUBMITTED',
+      archivedAt: options.archived ? day(at, 30) : null };
     for (const [index, status] of statuses.entries()) {
       const person = options.tenant ?? fakePerson(random, ++personIndex);
       const applicationId = `${id}-applicant-${index + 1}`;
       group.applicantIds.push(applicationId);
       const decided = status === 'APPROVED' || status === 'DECLINED';
       applications.push({ id: applicationId, organizationId, unitId,
-        applicantName: person.name, applicantEmail: person.email, status, appliedAt: at,
+        applicationGroupId: id, applicantName: person.name, applicantEmail: person.email, status, appliedAt: at,
         createdAt: at,
         ...(decided ? { decidedAt: day(at, 7), decidedBy: 'Jordan Mills',
           decisionReason: status === 'APPROVED' ? 'Demo household selected for next lease'

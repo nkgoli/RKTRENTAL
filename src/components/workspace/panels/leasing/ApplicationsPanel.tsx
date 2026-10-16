@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { headers } from 'next/headers';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Feedback';
@@ -9,7 +8,6 @@ import { SCREENING_PACKAGES } from '@/lib/integrations/settings';
 import type { ApplicationStatus } from '@/lib/screening/policy';
 import { unitScopeWhere, scopeQuery, type ScopeFilter } from '@/lib/workspace/scope';
 import { saveApplicationSettingsAction } from './actions';
-import { ShareLinkRow } from './ShareLinkRow';
 import { withUnit } from './scope';
 import styles from './leasing.module.css';
 
@@ -23,8 +21,6 @@ const labels: Record<ApplicationStatus, string> = {
 const tones: Record<ApplicationStatus, 'neutral' | 'success' | 'warning' | 'danger'> = {
   SUBMITTED: 'neutral', SCREENING: 'warning', REVIEW: 'success', APPROVED: 'success', DECLINED: 'danger',
 };
-/** Which status speaks for a group: the furthest-along application wins. */
-const rank: ApplicationStatus[] = ['APPROVED', 'REVIEW', 'SCREENING', 'SUBMITTED', 'DECLINED'];
 const collected = ['Contact details', 'Employment and income', 'Rental history', 'Photo ID', 'Consent to screening'];
 const notices: Record<string, { tone: 'success' | 'warning'; text: string }> = {
   'settings-saved': { tone: 'success', text: 'Application settings saved.' },
@@ -33,41 +29,42 @@ const notices: Record<string, { tone: 'success' | 'warning'; text: string }> = {
 const date = (value: Date) =>
   new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(value);
 
-/** Applications for one property (and optionally one unit), grouped by unit; applicants open the existing review page. */
+/** Applications for one property (and optionally one unit), grouped by household; applicants open the existing review page. */
 export async function ApplicationsPanel({ organizationId, scope, hideArchived = false, notice }: {
   organizationId: string;
   scope: ScopeFilter;
-  /** Archived applications are the declined ones: closed out and no longer in play. */
+  /** Archived households (archivedAt set) are closed out and no longer in play. */
   hideArchived?: boolean;
   notice?: string;
 }) {
-  const [applications, integrations, requestHeaders] = await Promise.all([
+  const [applications, integrations] = await Promise.all([
     db.application.findMany({
       where: { organizationId, ...unitScopeWhere(scope) },
-      include: { unit: true },
+      include: { unit: true, applicationGroup: true },
       orderBy: { appliedAt: 'desc' },
     }),
     loadIntegrations(organizationId, db.providerConnection),
-    headers(),
   ]);
   const screening = integrations.settings.screening;
-  const archivedCount = applications.filter((a) => a.status === 'DECLINED').length;
-  const visible = hideArchived ? applications.filter((a) => a.status !== 'DECLINED') : applications;
+  const archivedCount = new Set(applications.filter((a) => a.applicationGroup?.archivedAt).map((a) => a.applicationGroupId)).size;
+  const visible = hideArchived ? applications.filter((a) => !a.applicationGroup?.archivedAt) : applications;
 
-  const groups = new Map<string, { unitId: string; label: string; items: typeof applications }>();
+  // An application without a household is its own group.
+  type Group = { key: string; unitId: string; label: string; status: ApplicationStatus; items: typeof applications };
+  const groups = new Map<string, Group>();
   for (const application of visible) {
-    const group = groups.get(application.unitId) ?? {
+    const key = application.applicationGroupId ?? `solo:${application.id}`;
+    const group = groups.get(key) ?? {
+      key,
       unitId: application.unitId,
       label: application.unit.isImplicit ? 'Whole property' : `Unit ${application.unit.number}`,
+      status: (application.applicationGroup?.status ?? application.status) as ApplicationStatus,
       items: [],
     };
     group.items.push(application);
-    groups.set(application.unitId, group);
+    groups.set(key, group);
   }
 
-  const host = requestHeaders.get('x-forwarded-host') ?? requestHeaders.get('host') ?? 'localhost:3000';
-  const proto = requestHeaders.get('x-forwarded-proto') ?? (host.startsWith('localhost') || host.startsWith('127.') ? 'http' : 'https');
-  const shareUrl = `${proto}://${host}/apply/${scope.propertyId}${scope.unitId ? `?unit=${encodeURIComponent(scope.unitId)}` : ''}`;
   const reviewHref = (id: string) => {
     const query = scopeQuery(scope);
     query.set('applicant', id);
@@ -79,8 +76,6 @@ export async function ApplicationsPanel({ organizationId, scope, hideArchived = 
 
   return <section className={styles.panel} aria-label="Applications">
     {message && <Alert tone={message.tone}><div>{message.text}</div></Alert>}
-    <ShareLinkRow url={shareUrl} />
-
     <form action={saveApplicationSettingsAction} className="card" aria-label="Application settings">
       <input type="hidden" name="propertyId" value={scope.propertyId} />
       <input type="hidden" name="unitId" value={scope.unitId ?? ''} />
@@ -117,11 +112,11 @@ export async function ApplicationsPanel({ organizationId, scope, hideArchived = 
 
     {visible.length === 0 ? <div className={`card ${styles.emptyCard}`}>
       <strong>{applications.length === 0 ? 'No applications yet' : 'Nothing active'}</strong>
-      <p className="muted">{applications.length === 0 ? 'Share the application link above. Applications for this property will appear here.' : 'Only archived (declined) applications are left. Show archived to see them.'}</p>
+      <p className="muted">{applications.length === 0 ? 'Applications for this property will appear here.' : 'Only archived applications are left. Show archived to see them.'}</p>
     </div> : <div className={styles.groups}>{[...groups.values()].map((group) => {
-      const status = rank.find((s) => group.items.some((a) => a.status === s)) ?? 'SUBMITTED';
+      const status = group.status;
       const approved = group.items.find((a) => a.status === 'APPROVED');
-      return <article className="card" key={group.unitId} aria-label={`${group.label} applications`} data-application-group={group.unitId}>
+      return <article className="card" key={group.key} aria-label={`${group.label} applications`} data-application-group={group.key}>
         <div className={styles.groupHead}>
           <div>
             <h3>{group.label}</h3>

@@ -84,6 +84,9 @@ export default async function LeaseDetailPage({
         title={title}
         eyebrow="Lease"
         actions={[
+          ...(lease.status === 'DRAFT'
+            ? [{ label: 'Continue in lease wizard', href: `/leases/new?draft=${lease.id}`, primary: true }]
+            : []),
           ...(lease.status === 'ACTIVE'
             ? [{ label: 'Renew lease', href: `/leases/new?renew=${lease.id}`, primary: true }]
             : []),

@@ -288,10 +288,25 @@ model Lease {
   charges         Charge[]
   payments        Payment[]
   autopaySettings AutopaySetting[]
+  draft           LeaseDraft?
 
   @@unique([id, organizationId])
   @@index([organizationId, unitId, status])
   @@index([organizationId, endDate])
+}
+
+/// Wizard state for a DRAFT lease: the step to resume on and the fields the lease row cannot hold.
+model LeaseDraft {
+  leaseId        String   @id
+  organizationId String
+  lease          Lease    @relation(fields: [leaseId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  step           Int      @default(0)
+  furthestStep   Int      @default(0)
+  data           Json
+  updatedAt      DateTime @updatedAt
+
+  @@unique([leaseId, organizationId])
+  @@index([organizationId])
 }
 
 model LeaseTenant {

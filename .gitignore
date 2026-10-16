@@ -27,3 +27,6 @@ tests/**/*.png
 tests/**/*.jpg
 tests/**/*.jpeg
 .playwright-mcp/
+
+# screenshots dropped in the repo root
+/*.png

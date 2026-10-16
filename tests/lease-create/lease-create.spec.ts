@@ -11,78 +11,72 @@ async function signIn(page: import('@playwright/test').Page) {
   await expect(page).toHaveURL(/\/dashboard$/);
 }
 
-test('manager creates a lease for vacant Maple Court 3A and completes mock signing', async ({
+async function next(page: import('@playwright/test').Page, heading: string) {
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+}
+
+test('manager builds a lease in the wizard, resumes it, and sends it for signing', async ({
   page,
 }) => {
   await signIn(page);
   await page.goto('/leases/new');
-  await expect(page.getByRole('heading', { name: 'Create lease' })).toBeVisible();
-  await expect(page.getByText('Unit and tenants', { exact: true }).first()).toBeVisible();
+  const option = page.locator('select[name="unit"] option', { hasText: 'Maple Court · Unit 3A' });
+  await page.getByLabel('Property / unit').selectOption((await option.getAttribute('value'))!);
+  await page.getByRole('button', { name: 'Start lease' }).click();
 
-  const unitSelect = page.getByLabel('Property / unit');
-  const option = page.locator('select[aria-label="Property / unit"] option', {
-    hasText: 'Maple Court · Unit 3A',
-  });
-  await unitSelect.selectOption((await option.getAttribute('value'))!);
-  await page.getByRole('checkbox', { name: /Alex Rivera/ }).check();
-  await page.screenshot({
-    path: 'test-results/lease-create-step-1-unit-tenants.png',
-    fullPage: true,
-  });
-  await page.getByRole('button', { name: 'Continue' }).click();
-
-  await expect(page.getByRole('heading', { name: 'Lease terms' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lease term', exact: true })).toBeVisible();
   // Unique term per run so reruns against a persistent database never overlap.
   const year = 2100 + Math.floor(Math.random() * 800);
-  await page.getByLabel('Start date').fill(`${year}-02-01`);
-  await page.getByLabel('End date').fill(`${year + 1}-01-31`);
-  await page.screenshot({ path: 'test-results/lease-create-step-2-terms.png', fullPage: true });
-  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByLabel('Start date').fill(`${year}-02-15`);
+  await expect(page.getByText(`${year + 1}-02-14`)).toBeVisible();
+  await expect(page.getByText(`${year}-02-28`)).toBeVisible();
+  await next(page, 'Rent, deposit & fees');
 
-  await expect(page.getByRole('heading', { name: 'Rent and deposit' })).toBeVisible();
   await page.getByLabel('Monthly rent').fill('1600');
   await page.getByLabel('Security deposit').fill('1600');
-  await page.screenshot({ path: 'test-results/lease-create-step-3-rent.png', fullPage: true });
-  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByText('Scheduled charges preview')).toBeVisible();
+  await expect(page.getByText('Prorated February rent')).toBeVisible();
+  await next(page, 'Tenants');
 
-  await expect(page.getByRole('heading', { name: 'Clauses and documents', exact: true })).toBeVisible();
+  await page.getByRole('checkbox', { name: /Alex Rivera/ }).check();
+  await next(page, 'Options');
+  await next(page, 'Clauses');
+
+  // Save and exit, then come back: the wizard resumes on Clauses with finished steps checked.
+  await page.getByRole('button', { name: 'Save and exit' }).click();
+  await expect(page).toHaveURL(/\/leases\?tab=drafts/);
+  await page.goBack();
+  await expect(page.getByRole('heading', { name: 'Clauses', exact: true })).toBeVisible();
+
   await page.getByRole('checkbox', { name: /No smoking/ }).check();
-  await page.screenshot({ path: 'test-results/lease-create-step-4-clauses.png', fullPage: true });
-  await page.getByRole('button', { name: 'Continue' }).click();
-
-  await expect(page.getByRole('heading', { name: 'Review and send' })).toBeVisible();
-  await expect(page.getByText('Maple Court · Unit 3A').first()).toBeVisible();
-  await page.screenshot({ path: 'test-results/lease-create-step-5-review.png', fullPage: true });
+  await next(page, 'Rules');
+  await next(page, 'Disclosures');
+  await next(page, 'Attachments');
+  await next(page, 'Lessor info');
+  await next(page, 'Review & send');
   await page.getByRole('button', { name: 'Send for e-signature' }).click();
 
   await expect(page.getByText(/sent for e-signature/)).toBeVisible();
   await page.getByRole('button', { name: 'Complete mock signing' }).click();
   await expect(page.getByText(/Mock signing complete/)).toBeVisible();
-  await expect(page.getByText('Signed lease agreement.pdf stored')).toBeVisible();
-  await page.screenshot({ path: 'test-results/lease-create-signed.png', fullPage: true });
 
   await page.getByRole('link', { name: 'View lease detail' }).click();
   await expect(page).toHaveURL(/\/leases\/(?!new)[^/?]+$/);
   await expect(page.getByText('Signed lease agreement.pdf').first()).toBeVisible();
-  await expect(page.getByText('Signed', { exact: true }).first()).toBeVisible();
-  await page.screenshot({ path: 'test-results/lease-create-lease-detail.png', fullPage: true });
 });
 
-test('wizard blocks continuing without a unit and tenant, and saves a draft', async ({ page }) => {
+test('wizard blocks continuing past a step with missing values', async ({ page }) => {
   await signIn(page);
-  await page.goto('/leases/new');
-  await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page.getByText('Select a unit for this lease.')).toBeVisible();
-  await expect(page.getByText('Select at least one tenant.')).toBeVisible();
+  await page.goto('/leases/new?unit=seed-unit-cedar-8&fresh=1');
+  await page.getByLabel('Start date').fill('');
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByText('Enter a valid start date.')).toBeVisible();
 });
 
 test('renewal wizard prefills the following term', async ({ page }) => {
   await signIn(page);
-  await page.goto('/leases/new?renew=seed-lease-maple-11');
-  await expect(page.getByRole('heading', { name: 'Renew lease' })).toBeVisible();
-  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.goto('/leases/new?renew=seed-lease-maple-11&fresh=1');
   await expect(page.getByLabel('Start date')).toHaveValue('2026-12-01');
-  await expect(page.getByLabel('End date')).toHaveValue('2027-11-30');
+  await expect(page.getByText('2027-11-30').first()).toBeVisible();
 });
-
-

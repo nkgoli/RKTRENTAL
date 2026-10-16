@@ -8,6 +8,9 @@ import {
   describeCharge,
   formatMoney,
   isReservedDescription,
+  periodLabel,
+  summarizeUnits,
+  type LedgerGroup,
   loadPropertyLedger,
   scheduledRent,
   statementStatus,
@@ -83,14 +86,13 @@ describe('payment application and balance', () => {
 
   it('balance is charges due minus payments; scheduled rent does not count', () => {
     const charges = ['2026-09', '2026-10'].map((m) => rent(m));
-    const none = buildLeaseStatement({ lease, charges, payments: [], place: 'Elm', asOf });
+    const none = buildLeaseStatement({ lease, charges, payments: [], asOf });
     expect(none.balanceCents).toBe(685_000);
     expect(none.rows.filter((r) => r.status === 'SCHEDULED').length).toBe(6);
     const partial = buildLeaseStatement({
       lease,
       charges,
       payments: [pay('p1', 400_000, '2026-09-02')],
-      place: 'Elm',
       asOf,
     });
     expect(partial.balanceCents).toBe(285_000);
@@ -98,7 +100,6 @@ describe('payment application and balance', () => {
       lease,
       charges,
       payments: [pay('p1', 700_000, '2026-09-02')],
-      place: 'Elm',
       asOf,
     });
     expect(over.balanceCents).toBe(-15_000);
@@ -109,7 +110,6 @@ describe('payment application and balance', () => {
       lease: { ...lease, graceDays: 20 },
       charges: ['2026-08', '2026-09', '2026-10'].map((m) => rent(m)),
       payments: [pay('p1', 342_500 + 100_000, '2026-08-02')],
-      place: 'Elm',
       asOf,
     });
     const byMonth = Object.fromEntries(
@@ -134,10 +134,10 @@ describe('payment application and balance', () => {
   it('formats money with two places and describes generated charges', () => {
     expect(formatMoney(339_500)).toBe('$3,395.00');
     expect(formatMoney(-1_250)).toBe('-$12.50');
-    expect(describeCharge({ kind: 'RENT', description: 'rent:L1:2026-10' }, 'Elm')).toBe(
-      'October rent for Elm',
+    expect(describeCharge({ kind: 'RENT', description: 'rent:L1:2026-10' })).toBe(
+      'October rent',
     );
-    expect(describeCharge({ kind: 'OTHER', description: 'Pet fee' }, 'Elm')).toBe('Pet fee');
+    expect(describeCharge({ kind: 'OTHER', description: 'Pet fee' })).toBe('Pet fee');
   });
 });
 
@@ -215,8 +215,8 @@ describe('property ledger grouping', () => {
     } as unknown as PrismaClient;
     const ledger = await loadPropertyLedger('org1', { propertyId: 'P1' }, asOf, client);
     expect(ledger.groups.map((g) => [g.leaseId, g.active, g.label])).toEqual([
-      ['L1', true, 'May 2026 – Apr 2027'],
-      ['OLD', false, 'May 2025 – Apr 2026'],
+      ['L1', true, 'Oct 2026 – Apr 2027'],
+      ['OLD', false, 'May 2025'],
     ]);
     expect(ledger.groups[0].rows).toHaveLength(7); // 1 stored + 6 scheduled
     expect(ledger.groups[1].rows).toHaveLength(1);
@@ -291,5 +291,63 @@ describe('createCharge', () => {
     expect(findFirst).not.toHaveBeenCalled();
     expect(create).not.toHaveBeenCalled();
     expect(isReservedDescription('Pet rent: extra')).toBe(false);
+  });
+});
+
+describe('short charge descriptions', () => {
+  it('names the charge without the property or unit', () => {
+    expect(describeCharge({ kind: 'RENT', description: 'rent:L1:2026-08' })).toBe('August rent');
+    expect(describeCharge({ kind: 'RENT', description: 'prorated:L1:2026-05-10' })).toBe('Prorated May rent');
+    expect(describeCharge({ kind: 'LATE_FEE', description: 'late-fee:L1:2026-08' })).toBe('August late fee');
+    expect(describeCharge({ kind: 'DEPOSIT', description: 'setup:deposit:L1' })).toBe('Security deposit');
+    expect(describeCharge({ kind: 'OTHER', description: 'setup:move-in-fee:L1' })).toBe('Move-in fee');
+    expect(describeCharge({ kind: 'OTHER', description: null })).toBe('Fee');
+  });
+
+  it('keeps the stored de-duplication key untouched', () => {
+    const [row] = buildLeaseStatement({
+      lease,
+      charges: [{ id: 'c1', leaseId: 'L1', kind: 'RENT', amountCents: 100, dueDate: d('2026-10-01'), description: 'rent:L1:2026-10' }],
+      payments: [],
+      asOf,
+    }).rows;
+    expect(row.description).toBe('October rent');
+    expect(scheduledRent(lease, [{ leaseId: 'L1', kind: 'RENT', amountCents: 100, dueDate: d('2026-11-01'), description: 'rent:L1:2026-11' }], asOf).map((c) => c.description)).not.toContain('rent:L1:2026-11');
+  });
+});
+
+describe('periodLabel', () => {
+  const term = { start: d('2026-01-01'), end: d('2026-12-31') };
+  const rows = (...dates: string[]) => dates.map((x) => ({ dueDate: d(x) }));
+  it('uses the lease term only when the listed charges span it', () => {
+    expect(periodLabel(term, rows('2026-01-01', '2026-06-01', '2026-12-01'))).toBe('Jan 2026 – Dec 2026');
+  });
+  it('uses the range of listed charges otherwise', () => {
+    expect(periodLabel(term, rows('2026-08-01', '2026-12-01'))).toBe('Aug 2026 – Dec 2026');
+    expect(periodLabel(term, rows('2026-08-01'))).toBe('Aug 2026');
+  });
+  it('falls back to the term with no charges', () => {
+    expect(periodLabel(term, [])).toBe('Jan 2026 – Dec 2026');
+  });
+});
+
+describe('summarizeUnits', () => {
+  const row = (status: 'PAID' | 'LATE' | 'DUE' | 'SCHEDULED', due: string, balance: number) =>
+    ({ status, dueDate: d(due), balanceCents: balance }) as LedgerGroup['rows'][number];
+  const group = (over: Partial<LedgerGroup>): LedgerGroup => ({
+    leaseId: 'L', label: '', unitId: 'U', unitLabel: '1', balanceCents: 0, singleUnit: false,
+    active: true, tenants: [{ id: 't', name: 'T', initials: 'T' }], rows: [], ...over,
+  });
+  it('sorts late units first, picks the next unpaid charge and totals balances', () => {
+    const { units, totalBalanceCents } = summarizeUnits([
+      group({ leaseId: 'A', unitId: 'UA', unitLabel: '1', balanceCents: 0, rows: [row('PAID', '2026-10-01', 0), row('SCHEDULED', '2026-11-01', 100)] }),
+      group({ leaseId: 'B', unitId: 'UB', unitLabel: '2', balanceCents: 100, rows: [row('LATE', '2026-10-01', 100), row('SCHEDULED', '2026-11-01', 100)] }),
+      group({ leaseId: 'C', unitId: 'UC', unitLabel: '10', balanceCents: 50, rows: [row('DUE', '2026-10-15', 50)] }),
+      group({ leaseId: 'OLD', unitId: 'UD', unitLabel: '3', active: false, balanceCents: 999 }),
+    ]);
+    expect(units.map((u) => [u.unitLabel, u.status])).toEqual([['2', 'LATE'], ['10', 'DUE'], ['1', 'CURRENT']]);
+    expect(units[0].nextDue).toEqual({ dueDate: d('2026-11-01'), amountCents: 100 });
+    expect(units[1].nextDue?.amountCents).toBe(50);
+    expect(totalBalanceCents).toBe(150);
   });
 });

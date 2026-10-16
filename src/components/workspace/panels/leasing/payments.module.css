@@ -95,18 +95,6 @@
   background: var(--design-surface, #fff);
   overflow: hidden;
 }
-.group > summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  cursor: pointer;
-  list-style: none;
-}
-.group > summary::-webkit-details-marker {
-  display: none;
-}
 .groupMeta {
   margin-left: auto;
   color: var(--design-muted, #64748b);
@@ -120,8 +108,52 @@
   transform: rotate(45deg);
   transition: transform 0.15s;
 }
-.group:not([open]) .chevron {
+.chevronClosed {
   transform: rotate(-45deg);
+}
+.groupRow td {
+  padding: 0;
+  border-top: 1px solid var(--rr-border, #e5e7eb);
+  background: var(--rr-hover, #f8fafc);
+}
+.groupToggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.firstCol {
+  padding-left: 16px !important;
+}
+.unitLink {
+  color: var(--design-primary, #1e3a8a);
+  font-weight: 600;
+  text-decoration: none;
+}
+.unitLink:hover {
+  text-decoration: underline;
+}
+.go {
+  width: 40px;
+  text-align: center;
+}
+.chevronLink {
+  color: var(--design-muted, #64748b);
+  font-size: 1.25rem;
+  text-decoration: none;
+}
+.ledger tfoot th,
+.ledger tfoot td {
+  border-top: 2px solid var(--rr-border, #e5e7eb);
+  font-weight: 700;
 }
 .ledger {
   width: 100%;

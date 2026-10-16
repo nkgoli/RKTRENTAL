@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
 import { computeBalance, toCents } from '../../src/lib/ledger/core';
+import { createStorageAdapter } from '../../src/lib/storage/config';
+import { photoLimits } from '../../src/lib/storage/photo-limits';
 
 describe('seeded database audit', () => {
   const verify = process.env.DEMO_SEED_VERIFY === '1' ? it : it.skip;
@@ -15,7 +17,7 @@ describe('seeded database audit', () => {
           tenants: { include: { tenant: true } } } }),
         db.tenant.findMany({ where: { organizationId } }),
         db.application.findMany({ where: { organizationId } }),
-        db.document.findMany({ where: { organizationId, kind: 'PHOTO' } }),
+        db.document.findMany({ where: { organizationId } }),
       ]);
       expect(properties).toHaveLength(8);
       expect(units).toHaveLength(69);
@@ -26,7 +28,8 @@ describe('seeded database audit', () => {
         db.payment.count({ where: { organizationId, status: 'FAILED' } }),
         db.payment.count({ where: { organizationId, status: 'REFUNDED' } }),
         db.screeningReport.findMany({ where: { organizationId }, select: { status: true } }),
-        db.maintenanceRequest.findMany({ where: { organizationId }, select: { unitId: true } }),
+        db.maintenanceRequest.findMany({ where: { organizationId },
+          include: { photos: { include: { document: true } } } }),
       ]);
       expect(lateFees).toBeGreaterThan(0);
       expect(returned).toBeGreaterThan(0);
@@ -111,14 +114,57 @@ describe('seeded database audit', () => {
         expect(open?.length).toBeGreaterThanOrEqual(1);
         expect(open?.every((member) => member.status === 'SUBMITTED' || member.status === 'SCREENING')).toBe(true);
       }
+      const limits = photoLimits(process.env);
       for (const property of properties) {
-        expect(documents.filter((document) => document.propertyId === property.id).length).toBeLessThanOrEqual(20);
+        const gallery = documents.filter((document) => document.kind === 'PHOTO' && document.propertyId === property.id);
+        expect(gallery.length).toBeGreaterThanOrEqual(4);
+        expect(gallery.length).toBeLessThanOrEqual(7);
+        expect(gallery.length).toBeLessThanOrEqual(limits.perProperty);
+        expect(gallery.filter((photo) => photo.isCover)).toHaveLength(1);
+        expect(gallery.map((photo) => photo.sortOrder).sort((a, b) => (a ?? 0) - (b ?? 0)))
+          .toEqual(Array.from({ length: gallery.length }, (_, index) => index));
       }
       for (const unit of units) {
-        expect(documents.filter((document) => document.unitId === unit.id && !document.id.startsWith('demo-maintenance-photo')).length).toBeLessThanOrEqual(10);
+        const gallery = documents.filter((document) => document.kind === 'PHOTO' && document.unitId === unit.id);
+        expect(gallery.length).toBeGreaterThanOrEqual(1);
+        expect(gallery.length).toBeLessThanOrEqual(3);
+        expect(gallery.length).toBeLessThanOrEqual(limits.perUnit);
+        expect(gallery.filter((photo) => photo.isCover)).toHaveLength(1);
+        expect(gallery.map((photo) => photo.sortOrder).sort((a, b) => (a ?? 0) - (b ?? 0)))
+          .toEqual(Array.from({ length: gallery.length }, (_, index) => index));
       }
+      const pictured = maintenance.filter((request) => request.photos.length > 0);
+      expect(pictured.length / maintenance.length).toBeGreaterThanOrEqual(0.4);
+      expect(pictured.length / maintenance.length).toBeLessThanOrEqual(0.6);
+      expect(pictured.some((request) => request.tenantId)).toBe(true);
+      for (const request of pictured) {
+        expect(request.photos.length).toBeGreaterThanOrEqual(1);
+        expect(request.photos.length).toBeLessThanOrEqual(3);
+        for (const photo of request.photos) {
+          expect(photo.document?.caption).toBe(request.title);
+          expect(photo.document?.leaseId).toBeTruthy();
+          expect(photo.document?.storageKey).toBe(photo.storageKey);
+        }
+      }
+      const storage = createStorageAdapter(process.env);
+      let nextDocument = 0;
+      await Promise.all(Array.from({ length: 24 }, async () => {
+        while (nextDocument < documents.length) {
+          const document = documents[nextDocument++]!;
+          const file = await storage.get(document.storageKey);
+          expect(file, `Missing stored file for ${document.id}`).not.toBeNull();
+          expect(file!.body.byteLength).toBe(Number(document.sizeBytes));
+          if (document.kind === 'PHOTO') {
+            expect(Number(document.sizeBytes)).toBeGreaterThanOrEqual(20_000);
+            expect(Number(document.sizeBytes)).toBeLessThanOrEqual(60_000);
+            expect(document.mimeType).toBe('image/png');
+            expect(Array.from(file!.body.slice(0, 8))).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+          }
+        }
+      }));
+      console.log(`Photo audit: ${documents.filter((document) => document.propertyId).length} property, ${documents.filter((document) => document.unitId).length} unit, ${maintenance.reduce((sum, request) => sum + request.photos.length, 0)} maintenance across ${pictured.length}/${maintenance.length} requests; ${documents.length} stored files verified.`);
     } finally {
       await db.$disconnect();
     }
-  });
+  }, 30000);
 });

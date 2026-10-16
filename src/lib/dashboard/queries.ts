@@ -101,10 +101,22 @@ function utcDay(date: Date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
-function collectionMonths(leases: readonly CollectionLease[], now: Date): CollectionMonth[] {
+/** The trailing windows the rent collection chart can show, in months. */
+export const COLLECTION_RANGES = { '6M': 6, '12M': 12, '2Y': 24, '5Y': 60 } as const;
+export type CollectionRange = keyof typeof COLLECTION_RANGES;
+
+export function collectionRangeFrom(value: string | undefined | null): CollectionRange {
+  return value && value in COLLECTION_RANGES ? (value as CollectionRange) : '6M';
+}
+
+function collectionMonths(
+  leases: readonly CollectionLease[],
+  now: Date,
+  length = 6,
+): CollectionMonth[] {
   const currentMonth = monthKey(now);
-  return Array.from({ length: 6 }, (_, index) => {
-    const key = addMonths(currentMonth, index - 5);
+  return Array.from({ length }, (_, index) => {
+    const key = addMonths(currentMonth, index - (length - 1));
     const start = monthStart(key);
     const end = monthStart(addMonths(key, 1));
     const inMonth = leases.filter((lease) => lease.startDate < end && lease.endDate >= start);
@@ -130,6 +142,66 @@ function collectionMonths(leases: readonly CollectionLease[], now: Date): Collec
       collectedCents,
     };
   });
+}
+
+/**
+ * Rent due and collected for each of the last `length` months, summed in SQL
+ * so five years of payments cost one query and `length` rows. Same rules as
+ * collectionMonths: leases that overlap the month, settled payments paid in it.
+ */
+async function loadCollectionSeries(
+  organizationId: string,
+  now: Date,
+  length: number,
+  client: PrismaClient = db,
+): Promise<CollectionMonth[]> {
+  const first = addMonths(monthKey(now), -(length - 1));
+  const startIso = monthStart(first).toISOString().slice(0, 10);
+  const endIso = monthStart(addMonths(monthKey(now), 1)).toISOString().slice(0, 10);
+  const rows = await client.$queryRaw<{ month: string; due: bigint; collected: bigint }[]>`
+    WITH months AS (
+      SELECT generate_series(${startIso}::date, ${endIso}::date - 1, interval '1 month')::date AS m
+    ),
+    live AS (
+      SELECT l.id, l."startDate", l."endDate", l."monthlyRent"
+      FROM "Lease" l
+      JOIN "Unit" u ON u.id = l."unitId" AND u."organizationId" = l."organizationId"
+      JOIN "Property" pr ON pr.id = u."propertyId" AND pr."organizationId" = u."organizationId"
+      WHERE l."organizationId" = ${organizationId}
+        AND l.status IN ('ACTIVE', 'ENDED')
+        AND pr."archivedAt" IS NULL
+    ),
+    due AS (
+      SELECT m.m, (SUM(live."monthlyRent") * 100)::bigint AS cents
+      FROM months m
+      JOIN live ON live."startDate" < (m.m + interval '1 month') AND live."endDate" >= m.m
+      GROUP BY m.m
+    ),
+    paid AS (
+      SELECT date_trunc('month', p."paidAt")::date AS m, (SUM(p.amount) * 100)::bigint AS cents
+      FROM "Payment" p
+      JOIN live ON live.id = p."leaseId"
+      WHERE p."organizationId" = ${organizationId}
+        AND p.status = 'SUCCEEDED'
+        AND p."paidAt" >= ${startIso}::timestamp
+        AND p."paidAt" < ${endIso}::timestamp
+        AND live."startDate" < (date_trunc('month', p."paidAt") + interval '1 month')
+        AND live."endDate" >= date_trunc('month', p."paidAt")
+      GROUP BY 1
+    )
+    SELECT to_char(months.m, 'YYYY-MM') AS month,
+           COALESCE(due.cents, 0) AS due,
+           COALESCE(paid.cents, 0) AS collected
+    FROM months
+    LEFT JOIN due ON due.m = months.m
+    LEFT JOIN paid ON paid.m = months.m
+    ORDER BY months.m`;
+  return rows.map((row) => ({
+    key: row.month,
+    label: monthStart(row.month).toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }),
+    dueCents: Number(row.due),
+    collectedCents: Number(row.collected),
+  }));
 }
 
 function overdueSummary(leases: readonly LedgerLease[], asOf: Date) {
@@ -379,4 +451,4 @@ export async function loadDashboardData(
   };
 }
 
-export { collectionMonths, overdueSummary };
+export { collectionMonths, loadCollectionSeries, overdueSummary };

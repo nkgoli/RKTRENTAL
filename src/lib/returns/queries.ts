@@ -1,9 +1,16 @@
 import type { PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
-import { expensesDb, EXPENSE_CATEGORY_LABELS, type ExpenseCategoryValue } from '@/lib/expenses';
+import { EXPENSE_CATEGORY_LABELS, type ExpenseCategoryValue } from '@/lib/expenses';
 import { toCents } from '@/lib/ledger/core';
 import { computeReturns, type ReturnsMetrics } from './core';
-import { monthBucket, periodBuckets, type ResolvedPeriod } from './period';
+import {
+  bucketSeries,
+  periodKeyFrom,
+  resolvePeriod,
+  yearlyTotals,
+  type ResolvedPeriod,
+  type YearlyPoint,
+} from './period';
 
 export type PropertyReturns = {
   propertyId: string;
@@ -15,11 +22,106 @@ export type PropertyReturns = {
 
 export type MonthlyPoint = { month: string; incomeCents: number; expensesCents: number };
 
+const isoDay = (date: Date) => date.toISOString().slice(0, 10);
+
+type IncomeRow = { propertyId: string; month: string; cents: number };
+type ExpenseRow = { propertyId: string; category: ExpenseCategoryValue; month: string; cents: number };
+
+/**
+ * Settled rent per property and month, summed in SQL (never row by row in
+ * JS): a few hundred rows come back however many payments the ledger holds.
+ */
+async function aggregateIncome(
+  client: PrismaClient,
+  organizationId: string,
+  period: ResolvedPeriod,
+): Promise<IncomeRow[]> {
+  const rows = await client.$queryRaw<{ propertyId: string; month: string; cents: bigint }[]>`
+    SELECT u."propertyId" AS "propertyId",
+           to_char(date_trunc('month', p."paidAt"), 'YYYY-MM') AS month,
+           (SUM(p.amount) * 100)::bigint AS cents
+    FROM "Payment" p
+    JOIN "Lease" l ON l.id = p."leaseId" AND l."organizationId" = p."organizationId"
+    JOIN "Unit" u ON u.id = l."unitId" AND u."organizationId" = l."organizationId"
+    WHERE p."organizationId" = ${organizationId}
+      AND p.status = 'SUCCEEDED'
+      AND p."paidAt" >= ${isoDay(period.start)}::timestamp
+      AND p."paidAt" < ${isoDay(period.end)}::timestamp
+    GROUP BY 1, 2`;
+  return rows.map((row) => ({ ...row, cents: Number(row.cents) }));
+}
+
+async function aggregateExpenses(
+  client: PrismaClient,
+  organizationId: string,
+  period: ResolvedPeriod,
+): Promise<ExpenseRow[]> {
+  const rows = await client.$queryRaw<
+    { propertyId: string; category: ExpenseCategoryValue; month: string; cents: bigint }[]
+  >`
+    SELECT e."propertyId" AS "propertyId",
+           e.category::text AS category,
+           to_char(date_trunc('month', e."occurredOn"), 'YYYY-MM') AS month,
+           (SUM(e.amount) * 100)::bigint AS cents
+    FROM "Expense" e
+    WHERE e."organizationId" = ${organizationId}
+      AND e."occurredOn" >= ${isoDay(period.start)}::date
+      AND e."occurredOn" < ${isoDay(period.end)}::date
+    GROUP BY 1, 2, 3`;
+  return rows.map((row) => ({ ...row, cents: Number(row.cents) }));
+}
+
+/**
+ * Month of the oldest settled payment or expense, for the "All" range.
+ * Scoped to one property when given. Two index-backed MIN aggregates.
+ */
+export async function loadEarliestActivity(
+  organizationId: string,
+  propertyId?: string,
+  client: PrismaClient = db,
+): Promise<Date | null> {
+  const [payment, expense] = await Promise.all([
+    client.payment.aggregate({
+      _min: { paidAt: true },
+      where: {
+        organizationId,
+        status: 'SUCCEEDED',
+        ...(propertyId ? { lease: { unit: { propertyId } } } : {}),
+      },
+    }),
+    client.expense.aggregate({
+      _min: { occurredOn: true },
+      where: { organizationId, ...(propertyId ? { propertyId } : {}) },
+    }),
+  ]);
+  const dates = [payment._min.paidAt, expense._min.occurredOn].filter((d): d is Date => !!d);
+  if (!dates.length) return null;
+  const first = new Date(Math.min(...dates.map((d) => d.getTime())));
+  return new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), 1));
+}
+
+export type PeriodParams = { period?: string | null; from?: string | null; to?: string | null };
+
+/** Resolves the `period`, `from` and `to` URL params into a reporting period. */
+export async function resolveReturnsPeriod(
+  organizationId: string,
+  params: PeriodParams,
+  now: Date,
+  propertyId?: string,
+  client: PrismaClient = db,
+): Promise<ResolvedPeriod> {
+  const key = periodKeyFrom(params.period);
+  const earliest = key === 'ALL' ? await loadEarliestActivity(organizationId, propertyId, client) : null;
+  return resolvePeriod(key, now, { from: params.from, to: params.to, earliest });
+}
+
 export type ReturnsOverview = {
   period: ResolvedPeriod;
   properties: PropertyReturns[];
   portfolio: (PropertyReturns & { propertyName: 'Portfolio' }) | null;
+  /** Chart series: one point per month, or per quarter for ranges beyond two years. */
   monthly: MonthlyPoint[];
+  yearly: YearlyPoint[];
   expenseBreakdown: { category: ExpenseCategoryValue; label: string; amountCents: number }[];
   totalUnits: number;
   occupiedUnits: number;
@@ -44,20 +146,10 @@ export async function loadReturnsOverview(
     orderBy: { name: 'asc' },
   });
 
-  const payments = await client.payment.findMany({
-    where: {
-      organizationId,
-      status: 'SUCCEEDED',
-      paidAt: { gte: period.start, lt: period.end },
-    },
-    select: {
-      amount: true,
-      paidAt: true,
-      lease: { select: { unit: { select: { propertyId: true } } } },
-    },
-  });
-
-  const expenses = await expensesDb(organizationId, client).listExpenses(period);
+  const [incomeRows, expenseRows] = await Promise.all([
+    aggregateIncome(client, organizationId, period),
+    aggregateExpenses(client, organizationId, period),
+  ]);
 
   const leases = await client.lease.findMany({
     where: { organizationId, status: 'ACTIVE' },
@@ -69,30 +161,18 @@ export async function loadReturnsOverview(
 
   const incomeByProperty = new Map<string, number>();
   const monthlyIncome = new Map<string, number>();
-  for (const payment of payments) {
-    const cents = toCents(payment.amount);
-    const propertyId = payment.lease.unit.propertyId;
-    incomeByProperty.set(propertyId, (incomeByProperty.get(propertyId) ?? 0) + cents);
-    if (payment.paidAt) {
-      const bucket = monthBucket(payment.paidAt);
-      monthlyIncome.set(bucket, (monthlyIncome.get(bucket) ?? 0) + cents);
-    }
+  for (const row of incomeRows) {
+    incomeByProperty.set(row.propertyId, (incomeByProperty.get(row.propertyId) ?? 0) + row.cents);
+    monthlyIncome.set(row.month, (monthlyIncome.get(row.month) ?? 0) + row.cents);
   }
 
   const expensesByProperty = new Map<string, number>();
   const monthlyExpenses = new Map<string, number>();
   const expensesByCategory = new Map<ExpenseCategoryValue, number>();
-  for (const expense of expenses) {
-    expensesByProperty.set(
-      expense.propertyId,
-      (expensesByProperty.get(expense.propertyId) ?? 0) + expense.amountCents,
-    );
-    const bucket = monthBucket(expense.occurredOn);
-    monthlyExpenses.set(bucket, (monthlyExpenses.get(bucket) ?? 0) + expense.amountCents);
-    expensesByCategory.set(
-      expense.category,
-      (expensesByCategory.get(expense.category) ?? 0) + expense.amountCents,
-    );
+  for (const row of expenseRows) {
+    expensesByProperty.set(row.propertyId, (expensesByProperty.get(row.propertyId) ?? 0) + row.cents);
+    monthlyExpenses.set(row.month, (monthlyExpenses.get(row.month) ?? 0) + row.cents);
+    expensesByCategory.set(row.category, (expensesByCategory.get(row.category) ?? 0) + row.cents);
   }
 
   const scheduledByProperty = new Map<string, number>();
@@ -166,11 +246,8 @@ export async function loadReturnsOverview(
       occupied: occupiedUnits,
       metrics: portfolioMetrics,
     },
-    monthly: periodBuckets(period).map((month) => ({
-      month,
-      incomeCents: monthlyIncome.get(month) ?? 0,
-      expensesCents: monthlyExpenses.get(month) ?? 0,
-    })),
+    monthly: bucketSeries(period, monthlyIncome, monthlyExpenses),
+    yearly: yearlyTotals(monthlyIncome, monthlyExpenses),
     expenseBreakdown: [...expensesByCategory.entries()]
       .map(([category, amountCents]) => ({
         category,

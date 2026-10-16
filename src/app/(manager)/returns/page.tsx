@@ -26,17 +26,19 @@ import { formatUsd } from '@/lib/ledger';
 import {
   formatPercent,
   loadReturnsOverview,
-  periodKeyFrom,
-  resolvePeriod,
-  PERIOD_KEYS,
-  type PeriodKey,
+  periodParams,
+  resolveReturnsPeriod,
+  bucketLabel,
 } from '@/lib/returns';
+import { RangePicker, YearOverYear } from '@/components/returns/RangePicker';
 import { addExpenseAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
 type SearchParams = Promise<{
   period?: string;
+  from?: string;
+  to?: string;
   property?: string;
   notice?: string;
   add?: string;
@@ -55,8 +57,10 @@ const returnsHref = (propertyId: string) => `/properties/${propertyId}?tab=retur
 export default async function ReturnsPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireManagerRole();
   const params = await searchParams;
-  const periodKey: PeriodKey = periodKeyFrom(params.period);
-  const period = resolvePeriod(periodKey, new Date());
+  const now = new Date();
+  const period = await resolveReturnsPeriod(session.organizationId, params, now);
+  const periodKey = period.key;
+  const range = periodParams(period);
   const [overview, propertyList] = await Promise.all([
     loadReturnsOverview(session.organizationId, period),
     propertiesDb(session.organizationId).listProperties(),
@@ -67,9 +71,13 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
   const scope = selected ?? overview.portfolio;
   const notice = params.notice ? notices[params.notice] : undefined;
   const adding = params.add !== undefined;
-  const exportHref = `/returns/export?period=${periodKey}${selected ? `&property=${selected.propertyId}` : ''}`;
-  const periodHref = (key: PeriodKey) =>
-    `/returns?period=${key}${selected ? `&property=${selected.propertyId}` : ''}`;
+  const query = (extra: Record<string, string> = {}) =>
+    new URLSearchParams({
+      ...range,
+      ...(selected ? { property: selected.propertyId } : {}),
+      ...extra,
+    }).toString();
+  const exportHref = `/returns/export?${query()}`;
   const metrics = scope?.metrics;
   const occupancy =
     overview.totalUnits > 0
@@ -108,24 +116,16 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
       )}
 
       <section className="toolbar">
-        <div className="row" style={{ flexWrap: 'nowrap' }}>
-          <div className="chips" style={{ flexWrap: 'nowrap' }}>
-            {PERIOD_KEYS.map((key) => (
-              <Link
-                key={key}
-                className={`chip${periodKey === key ? ' active' : ''}`}
-                href={periodHref(key)}
-              >
-                {key}
-              </Link>
-            ))}
-          </div>
-          <span className="muted" style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
-            {period.label}
-          </span>
-        </div>
+        <RangePicker
+          period={period}
+          basePath="/returns"
+          extra={selected ? { property: selected.propertyId } : {}}
+          now={now}
+        />
         <form method="get" className="row">
-          <input type="hidden" name="period" value={periodKey} />
+          {Object.entries(range).map(([name, value]) => (
+            <input key={name} type="hidden" name={name} value={value} />
+          ))}
           <Field label="Property">
             <Select name="property" defaultValue={selected?.propertyId ?? 'all'}>
               <option value="all">All properties ({overview.properties.length})</option>
@@ -204,7 +204,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             <div>
               <h3>Income vs expenses</h3>
               <p className="muted" style={{ fontSize: 13, marginTop: 2 }}>
-                Monthly, portfolio total
+                {period.granularity === 'quarter' ? 'Quarterly' : 'Monthly'}, {selected ? selected.propertyName : 'portfolio total'}
               </p>
             </div>
           </div>
@@ -212,33 +212,38 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             viewBox="0 0 640 240"
             width="100%"
             role="img"
-            aria-label="Monthly income versus expenses for the selected period"
+            aria-label={`${period.granularity === 'quarter' ? 'Quarterly' : 'Monthly'} income versus expenses for the selected period`}
           >
             {overview.monthly.map((point, index) => {
-              const x = 50 + index * 48;
+              const slot = 600 / overview.monthly.length;
+              const barWidth = Math.min(16, slot * 0.4);
+              const x = 20 + index * slot + (slot - 2 * barWidth - 2) / 2;
               const incomeHeight = (point.incomeCents / maxMonthly) * 160;
               const expenseHeight = (point.expensesCents / maxMonthly) * 160;
+              const labelEvery = Math.ceil(overview.monthly.length / 12);
               return (
                 <g key={point.month}>
                   <rect
                     x={x}
                     y={210 - incomeHeight}
-                    width={16}
+                    width={barWidth}
                     height={incomeHeight}
-                    rx={4}
+                    rx={Math.min(4, barWidth / 3)}
                     fill="var(--design-primary)"
                   />
                   <rect
-                    x={x + 18}
+                    x={x + barWidth + 2}
                     y={210 - expenseHeight}
-                    width={16}
+                    width={barWidth}
                     height={expenseHeight}
-                    rx={4}
+                    rx={Math.min(4, barWidth / 3)}
                     fill="#94a3b8"
                   />
-                  <text x={x} y={230} fontSize={11} fill="var(--design-muted)">
-                    {point.month.slice(5)}
-                  </text>
+                  {index % labelEvery === 0 && (
+                    <text x={x} y={230} fontSize={10} fill="var(--design-muted)">
+                      {bucketLabel(point.month, overview.monthly.length > 12)}
+                    </text>
+                  )}
                 </g>
               );
             })}
@@ -248,6 +253,11 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
               <Badge tone="info">Income {formatUsd(metrics.incomeCents)}</Badge>
               <Badge>Expenses {formatUsd(metrics.expensesCents)}</Badge>
               <Badge>NOI {formatUsd(metrics.noiCents)}</Badge>
+            </div>
+          )}
+          {!selected && overview.yearly.length > 1 && (
+            <div style={{ marginTop: 12 }}>
+              <YearOverYear rows={overview.yearly} />
             </div>
           )}
         </Card>
@@ -261,7 +271,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             </div>
           </div>
           <svg
-            viewBox="0 0 320 220"
+            viewBox={`0 0 320 ${Math.max(220, 16 + overview.properties.length * 52)}`}
             width="100%"
             role="img"
             aria-label="Net operating income by property"
@@ -389,7 +399,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           />
           <div className="stack" style={{ gap: 14 }}>
             {overview.expenseBreakdown.length === 0 && (
-              <EmptyState title="No expenses this period" description="Record an expense to include it in your returns." action="Add expense" href={`/returns?period=${periodKey}&add=1`} />
+              <EmptyState title="No expenses this period" description="Record an expense to include it in your returns." action="Add expense" href={`/returns?${query({ add: '1' })}`} />
             )}
             {overview.expenseBreakdown.map((entry) => (
               <div key={entry.category}>
@@ -414,7 +424,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             ))}
           </div>
           <div style={{ marginTop: 16 }}>
-            <Button href={`/returns?period=${periodKey}&add=1`} variant="secondary" size="sm">
+            <Button href={`/returns?${query({ add: '1' })}`} variant="secondary" size="sm">
               + Add expense
             </Button>
           </div>
@@ -454,13 +464,15 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           <CardHeader
             title="Add expense"
             action={
-              <Button href={`/returns?period=${periodKey}`} size="sm" variant="ghost">
+              <Button href={`/returns?${query()}`} size="sm" variant="ghost">
                 Cancel
               </Button>
             }
           />
           <form action={addExpenseAction} className="form">
-            <input type="hidden" name="period" value={periodKey} />
+            {Object.entries(range).map(([name, value]) => (
+              <input key={name} type="hidden" name={name} value={value} />
+            ))}
             <input type="hidden" name="returnProperty" value={selected?.propertyId ?? 'all'} />
             <FormRow columns={3}>
               <Field label="Property">

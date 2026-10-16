@@ -12,7 +12,8 @@ import { createTermsSnapshot, STANDARD_ITEMS } from '../../src/lib/lease-create/
 import { ensureStandardTemplate, toDefinition } from '../../src/lib/lease-create/template-service';
 import { STANDARD_V2_ITEMS } from '../../src/lib/lease-create/standard-v2';
 import { createStorageAdapter } from '../../src/lib/storage/config';
-import { buildingPng } from './image';
+import { photoLimits } from '../../src/lib/storage/photo-limits';
+import { cardPng, type CardKind } from './image';
 import { planApplications } from './applications';
 import { assertDemoTarget } from './guard';
 import {
@@ -269,7 +270,8 @@ async function seedDatabase() {
   const statuses: MaintenanceStatus[] = ['NEW', 'ASSIGNED', 'IN_PROGRESS', 'DONE', 'CANCELLED'];
   const priorities: MaintenancePriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
   const maintenance: Prisma.MaintenanceRequestCreateManyInput[] = [];
-  const maintenancePhotoTargets: { requestId: string; unitId: string; at: Date; variant: number }[] = [];
+  const photoRandom = prng(seed ^ 0x145ab921);
+  const maintenancePhotoTargets: { requestId: string; leaseId: string; at: Date; title: string; count: number }[] = [];
   for (const unit of plan.units) {
     for (let year = 0; year < 5; year++) {
       const count = pickInt(random, 2, 6);
@@ -280,12 +282,22 @@ async function seedDatabase() {
           ? (random() < 0.94 ? 'DONE' : 'CANCELLED')
           : statuses[pickInt(random, 0, statuses.length - 1)]!;
         const vendor = vendors[pickInt(random, 0, vendors.length - 1)]!;
+        const title = topics[pickInt(random, 0, topics.length - 1)]!;
+        const matchingLease = plan.leases.find((lease) => lease.unitId === unit.id &&
+          lease.startDate <= at && lease.endDate >= at && lease.status !== 'DRAFT');
+        const tenantId = matchingLease && photoRandom() < 0.35 ? matchingLease.tenantId : null;
         maintenance.push({ id, organizationId, propertyId: propertyId(unit.propertySlug), unitId: unit.id,
-          title: topics[pickInt(random, 0, topics.length - 1)]!, description: 'Synthetic maintenance history for the demo.',
+          title, description: 'Synthetic maintenance history for the demo.', tenantId,
           priority: priorities[pickInt(random, 0, priorities.length - 1)]!, status,
           vendorId: status === 'NEW' ? null : vendor.id, vendorName: status === 'NEW' ? null : vendor.name,
           createdAt: at, completedAt: status === 'DONE' ? day(at, 4) : null });
-        if ((maintenance.length % 37) === 0) maintenancePhotoTargets.push({ requestId: id, unitId: unit.id, at, variant: maintenance.length });
+        if (photoRandom() < 0.5) {
+          // Repair uploads use the lease target, as tenant uploads do. Unit photo limits
+          // therefore count the unit gallery only, even across years of repair history.
+          const leaseId = matchingLease?.id ?? plan.leases.find((lease) => lease.unitId === unit.id)!.id;
+          maintenancePhotoTargets.push({ requestId: id, leaseId, at, title,
+            count: pickInt(photoRandom, 1, 3) });
+        }
       }
     }
   }
@@ -305,54 +317,79 @@ async function seedDatabase() {
   await createManyInChunks(expenses, (data) => prisma.expense.createMany({ data }));
 
   const storage = createStorageAdapter(process.env);
+  const limits = photoLimits(process.env);
+  if (limits.perProperty < 7 || limits.perUnit < 3)
+    throw new Error('Demo galleries require photo limits of at least 7 per property and 3 per unit.');
   const photos: Prisma.DocumentCreateManyInput[] = [];
   const photoAttachments: Prisma.MaintenancePhotoCreateManyInput[] = [];
-  const payloads: { key: string; variant: number }[] = [];
+  const payloads: { key: string; kind: CardKind; label: string; variant: number }[] = [];
+  const propertyLabels = ['Front exterior', 'Entryway', 'Living room', 'Kitchen', 'Courtyard', 'Laundry room', 'Parking'];
   for (const [index, property] of properties.entries()) {
-    for (let image = 0; image < 2; image++) {
+    const count = 4 + (index + seed) % 4;
+    for (let image = 0; image < count; image++) {
       const id = `demo-property-photo-${property.slug}-${image}`;
       const key = `demo/${id}.png`;
-      payloads.push({ key, variant: index + image * 3 });
+      const label = propertyLabels[image]!;
+      payloads.push({ key, kind: 'property', label, variant: seed + index + image * 3 });
       photos.push({ id, organizationId, propertyId: propertyId(property.slug), kind: 'PHOTO',
-        name: `${property.slug}-illustration-${image + 1}.png`, storageKey: key, sizeBytes: 0n,
+        name: `${property.slug}-${label.toLowerCase().replaceAll(' ', '-')}.png`, storageKey: key, sizeBytes: 0n,
         mimeType: 'image/png', isCover: image === 0, sortOrder: image,
-        caption: 'Original generated building illustration' });
+        caption: label });
     }
   }
-  for (const [index, unit] of plan.units.entries()) if (index % 7 === 0) {
-    const id = `demo-unit-photo-${index}`;
-    const key = `demo/${id}.png`;
-    payloads.push({ key, variant: index });
-    photos.push({ id, organizationId, unitId: unit.id, kind: 'PHOTO', name: `${unit.propertySlug}-${unit.number.replaceAll(' ', '-')}.png`,
-      storageKey: key, sizeBytes: 0n, mimeType: 'image/png', isCover: true, sortOrder: 0,
-      caption: 'Original generated unit illustration' });
+  for (const [index, unit] of plan.units.entries()) {
+    const count = 1 + (index + seed) % 3;
+    const labels = [`${unit.number} living room`, 'Kitchen', 'Bedroom'];
+    for (let image = 0; image < count; image++) {
+      const id = `demo-unit-photo-${index}-${image}`;
+      const key = `demo/${id}.png`;
+      const label = labels[image]!;
+      payloads.push({ key, kind: 'unit', label, variant: seed + index + image * 5 });
+      photos.push({ id, organizationId, unitId: unit.id, kind: 'PHOTO',
+        name: `${unit.propertySlug}-${unit.number.replaceAll(' ', '-')}-${image + 1}.png`,
+        storageKey: key, sizeBytes: 0n, mimeType: 'image/png', isCover: image === 0,
+        sortOrder: image, caption: label });
+    }
   }
-  for (const [index, target] of maintenancePhotoTargets.entries()) {
-    const id = `demo-maintenance-photo-${index}`;
-    const key = `demo/${id}.png`;
-    payloads.push({ key, variant: target.variant });
-    photos.push({ id, organizationId, unitId: target.unitId, kind: 'PHOTO', name: `repair-illustration-${index}.png`,
-      storageKey: key, sizeBytes: 0n, mimeType: 'image/png', createdAt: target.at });
-    photoAttachments.push({ id: `demo-maintenance-attachment-${index}`, organizationId,
-      maintenanceRequestId: target.requestId, documentId: id, storageKey: key,
-      sizeBytes: 0n, mimeType: 'image/png', createdAt: target.at });
+  for (const target of maintenancePhotoTargets) {
+    for (let image = 0; image < target.count; image++) {
+      const id = `demo-maintenance-photo-${target.requestId}-${image}`;
+      const key = `demo/${id}.png`;
+      payloads.push({ key, kind: 'repair', label: target.title, variant: seed + image + target.requestId.length });
+      photos.push({ id, organizationId, leaseId: target.leaseId, kind: 'PHOTO',
+        name: `${target.title.toLowerCase().replaceAll(' ', '-')}-${image + 1}.png`,
+        storageKey: key, sizeBytes: 0n, mimeType: 'image/png', sortOrder: image,
+        caption: target.title, createdAt: target.at });
+      photoAttachments.push({ id: `demo-maintenance-attachment-${target.requestId}-${image}`, organizationId,
+        maintenanceRequestId: target.requestId, documentId: id, storageKey: key,
+        sizeBytes: 0n, mimeType: 'image/png', createdAt: target.at });
+    }
   }
-  const pictureBytes = new Map<number, Uint8Array>();
-  await Promise.all(payloads.map(async (payload) => {
-    const variant = payload.variant % 8;
-    let bytes = pictureBytes.get(variant);
-    if (!bytes) { bytes = buildingPng(variant); pictureBytes.set(variant, bytes); }
-    await storage.put(payload.key, bytes, 'image/png');
-    const document = photos.find((photo) => photo.storageKey === payload.key)!;
-    document.sizeBytes = BigInt(bytes.byteLength);
-    const attachment = photoAttachments.find((photo) => photo.storageKey === payload.key);
-    if (attachment) attachment.sizeBytes = BigInt(bytes.byteLength);
+  const pictureBytes = new Map<string, Uint8Array>();
+  const documentsByKey = new Map(photos.map((photo) => [photo.storageKey, photo]));
+  const attachmentsByKey = new Map(photoAttachments.map((attachment) => [attachment.storageKey, attachment]));
+  let nextPayload = 0;
+  await Promise.all(Array.from({ length: 24 }, async () => {
+    while (nextPayload < payloads.length) {
+      const payload = payloads[nextPayload++]!;
+      const cacheKey = `${payload.kind}:${payload.label}:${payload.variant % 6}`;
+      let bytes = pictureBytes.get(cacheKey);
+      if (!bytes) {
+        bytes = cardPng(payload.kind, payload.label, payload.variant);
+        pictureBytes.set(cacheKey, bytes);
+      }
+      await storage.put(payload.key, bytes, 'image/png');
+      documentsByKey.get(payload.key)!.sizeBytes = BigInt(bytes.byteLength);
+      const attachment = attachmentsByKey.get(payload.key);
+      if (attachment) attachment.sizeBytes = BigInt(bytes.byteLength);
+    }
   }));
   await prisma.document.createMany({ data: photos });
   if (photoAttachments.length) await prisma.maintenancePhoto.createMany({ data: photoAttachments });
 
   const elapsed = Math.round(performance.now() - started);
   console.log(`Demo seed ${seed}: ${properties.length} properties, ${plan.units.length} units, ${plan.leases.length} leases, ${payments.length} payments, ${groups.length} application groups, ${applications.length} applicants, ${maintenance.length} maintenance requests, ${photos.length} photos in ${elapsed} ms.`);
+  console.log(`Pictures: ${photos.filter((photo) => photo.propertyId).length} property, ${photos.filter((photo) => photo.unitId).length} unit, ${photoAttachments.length} maintenance across ${maintenancePhotoTargets.length} requests (${Math.round(maintenancePhotoTargets.length / maintenance.length * 100)}%).`);
   console.log(`Charges: ${charges.length}; expenses: ${expenses.length}; partial deposit refunds: ${Math.min(refunds.length, 8)}.`);
   console.log('Property | Year | Leases | Charges | Payments | Groups | Applicants');
   const unitProperty = new Map(plan.units.map((unit) => [unit.id, unit.propertySlug]));

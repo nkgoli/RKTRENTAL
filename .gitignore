@@ -21,3 +21,9 @@ uploads/
 *.log
 
 output/
+
+# evidence screenshots
+tests/**/*.png
+tests/**/*.jpg
+tests/**/*.jpeg
+.playwright-mcp/

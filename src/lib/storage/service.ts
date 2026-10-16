@@ -10,13 +10,33 @@ import type {
 } from './types';
 import { notFoundError, StorageError } from './types';
 import { sanitizeFileName, validateUpload, validateUploadMeta } from './validation';
+import {
+  assertPhotoWithinLimit,
+  photoLimitForTarget,
+  type PhotoLimitEnv,
+  type PhotoUsage,
+} from './photo-limits';
 
 export interface DocumentRepository {
   create(input: Omit<StoredDocument, 'id' | 'createdAt'>): Promise<StoredDocument>;
   listByTarget(orgId: string, target: FileTarget): Promise<StoredDocument[]>;
   findById(orgId: string, id: string): Promise<StoredDocument | null>;
   delete(id: string): Promise<void>;
+  /** Optional fast photo count; falls back to listByTarget when omitted. */
+  countPhotos?(orgId: string, target: FileTarget): Promise<number>;
+  /**
+   * Optional atomic count-and-create for PHOTO documents. Implementations must
+   * count existing PHOTO rows and insert in one transaction (holding a lock on
+   * the target) and throw the photo-limit StorageError when full. FileService
+   * falls back to its own per-target lock when this is not implemented.
+   */
+  createPhotoWithinLimit?(
+    input: Omit<StoredDocument, 'id' | 'createdAt'>,
+    max: number,
+  ): Promise<StoredDocument>;
 }
+
+export type { PhotoUsage };
 export interface UploadInput {
   target: FileTarget;
   fileName: string;
@@ -45,11 +65,75 @@ function assertUploadAllowed(actor: FileActor, kind: DocumentKindValue): void {
 }
 
 export class FileService {
+  private photoLocks = new Map<string, Promise<void>>();
+
   constructor(
     private storage: StorageAdapter,
     private repo: DocumentRepository,
     private access: FileAccess,
+    private env: PhotoLimitEnv = process.env,
   ) {}
+
+  /** Serializes photo count-and-create per target within this process. */
+  private async withPhotoLock<T>(orgId: string, target: FileTarget, fn: () => Promise<T>): Promise<T> {
+    const key = `${orgId}:${target.kind}:${target.id}`;
+    const previous = this.photoLocks.get(key) ?? Promise.resolve();
+    let release!: () => void;
+    const current = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const chained = previous.then(() => current);
+    this.photoLocks.set(key, chained);
+    await previous;
+    try {
+      return await fn();
+    } finally {
+      release();
+      if (this.photoLocks.get(key) === chained) this.photoLocks.delete(key);
+    }
+  }
+
+  private async countPhotos(orgId: string, target: FileTarget): Promise<number> {
+    if (this.repo.countPhotos) return this.repo.countPhotos(orgId, target);
+    const documents = await this.repo.listByTarget(orgId, target);
+    return documents.filter((doc) => doc.kind === 'PHOTO').length;
+  }
+
+  /** Returns `{ used, max }` for PHOTO files on a target; `max` is null when unlimited. */
+  async getPhotoUsage(actor: FileActor, target: FileTarget): Promise<PhotoUsage> {
+    await assertTargetAccess(this.access, actor, target);
+    const max = photoLimitForTarget(target, this.env);
+    const used = await this.countPhotos(actor.organizationId, target);
+    return { used, max };
+  }
+
+  /** Alias for getPhotoUsage. */
+  async photoUsage(actor: FileActor, target: FileTarget): Promise<PhotoUsage> {
+    return this.getPhotoUsage(actor, target);
+  }
+
+  private async assertPhotoCapacity(actor: FileActor, target: FileTarget): Promise<void> {
+    const max = photoLimitForTarget(target, this.env);
+    if (max === null) return;
+    const used = await this.countPhotos(actor.organizationId, target);
+    assertPhotoWithinLimit(target, used, max);
+  }
+
+  private async createDocument(
+    actor: FileActor,
+    target: FileTarget,
+    kind: DocumentKindValue,
+    input: Omit<StoredDocument, 'id' | 'createdAt'>,
+  ): Promise<StoredDocument> {
+    const max = kind === 'PHOTO' ? photoLimitForTarget(target, this.env) : null;
+    if (max === null) return this.repo.create(input);
+    if (this.repo.createPhotoWithinLimit) return this.repo.createPhotoWithinLimit(input, max);
+    return this.withPhotoLock(actor.organizationId, target, async () => {
+      const used = await this.countPhotos(actor.organizationId, target);
+      assertPhotoWithinLimit(target, used, max);
+      return this.repo.create(input);
+    });
+  }
   private keyFor(actor: FileActor, target: FileTarget, fileName: string): string {
     return [
       'org',
@@ -90,11 +174,12 @@ export class FileService {
       sizeBytes: input.body.byteLength,
       body: input.body,
     });
+    if (kind === 'PHOTO') await this.assertPhotoCapacity(actor, input.target);
     const name = sanitizeFileName(input.fileName);
     const storageKey = this.keyFor(actor, input.target, name);
     await this.storage.put(storageKey, input.body, canonicalMime);
     try {
-      return await this.repo.create({
+      return await this.createDocument(actor, input.target, kind, {
         organizationId: actor.organizationId,
         ...this.targetFields(input.target),
         kind,
@@ -118,6 +203,7 @@ export class FileService {
     if (!KINDS.includes(kind)) throw new StorageError(`Unknown kind "${kind}"`, 'VALIDATION', 400);
     assertUploadAllowed(actor, kind);
     const { canonicalMime } = validateUploadMeta(input);
+    if (kind === 'PHOTO') await this.assertPhotoCapacity(actor, input.target);
     const name = sanitizeFileName(input.fileName);
     const storageKey = this.keyFor(actor, input.target, name);
     const uploadUrl = await this.storage.getSignedUrl(storageKey, {
@@ -156,7 +242,7 @@ export class FileService {
         body: object.body,
       });
       const name = sanitizeFileName(input.fileName);
-      return await this.repo.create({
+      return await this.createDocument(actor, input.target, kind, {
         organizationId: actor.organizationId,
         ...this.targetFields(input.target),
         kind,
@@ -208,10 +294,38 @@ export async function createPrismaFileService(): Promise<FileService> {
     import('./access'),
     import('./config'),
   ]);
+  const targetWhere = (orgId: string, target: FileTarget) =>
+    target.kind === 'lease'
+      ? { organizationId: orgId, leaseId: target.id }
+      : target.kind === 'property'
+        ? { organizationId: orgId, propertyId: target.id }
+        : { organizationId: orgId, unitId: target.id };
   const repo: DocumentRepository = {
     async create(input) {
       const row = await db.document.create({
         data: { ...input, sizeBytes: BigInt(input.sizeBytes) },
+      });
+      return { ...row, sizeBytes: Number(row.sizeBytes) };
+    },
+    async countPhotos(orgId, target) {
+      return db.document.count({ where: { ...targetWhere(orgId, target), kind: 'PHOTO' } });
+    },
+    async createPhotoWithinLimit(input, max) {
+      const target: FileTarget = input.propertyId
+        ? { kind: 'property', id: input.propertyId }
+        : input.unitId
+          ? { kind: 'unit', id: input.unitId }
+          : { kind: 'lease', id: input.leaseId ?? '' };
+      const lockKey = `photo-limit:${input.organizationId}:${target.kind}:${target.id}`;
+      const row = await db.$transaction(async (tx) => {
+        // Serialize concurrent photo inserts for this target across processes;
+        // the count and insert below then cannot race past the limit.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
+        const used = await tx.document.count({
+          where: { ...targetWhere(input.organizationId, target), kind: 'PHOTO' },
+        });
+        assertPhotoWithinLimit(target, used, max);
+        return tx.document.create({ data: { ...input, sizeBytes: BigInt(input.sizeBytes) } });
       });
       return { ...row, sizeBytes: Number(row.sizeBytes) };
     },

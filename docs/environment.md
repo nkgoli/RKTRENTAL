@@ -54,7 +54,17 @@ S3_ACCESS_KEY_ID=
 S3_SECRET_ACCESS_KEY=
 # Set true for S3-compatible services that require path-style URLs.
 S3_FORCE_PATH_STYLE=
+# Maximum PHOTO files per property (default 20); documents are not limited.
+PHOTO_LIMIT_PER_PROPERTY=20
+# Maximum PHOTO files per unit (default 10); documents are not limited.
+PHOTO_LIMIT_PER_UNIT=10
 ```
+
+Photo uploads (`PHOTO` kind) are limited to `PHOTO_LIMIT_PER_PROPERTY` photos
+per property (default 20) and `PHOTO_LIMIT_PER_UNIT` photos per unit
+(default 10). Uploads past the limit are rejected with a 400 error naming the
+limit. Documents and other non-photo kinds are not limited, and neither are
+photos attached to a lease.
 
 `npm run preview` and `npm run test:e2e` supply their own local sandbox and
 HTTP cookie settings, so those commands can run without creating `.env`.

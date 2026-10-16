@@ -30,7 +30,8 @@ describe('property operations panels', () => {
     const html = renderToStaticMarkup(
       <PropertyMaintenanceList
         propertyId="property-1"
-        requests={[request]}
+        list={{ requests: [request], isEmpty: false, total: 1, page: 1, pageCount: 1 }}
+        query={{ allHistory: false, page: 1 }}
         createRequestControl={<button type="button">+ New request</button>}
       />,
     );

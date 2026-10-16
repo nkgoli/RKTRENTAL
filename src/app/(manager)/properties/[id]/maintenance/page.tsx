@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { PropertyMaintenanceList } from '@/components/workspace/panels/operations/PropertyMaintenanceList';
 import { NewMaintenanceRequestDialog } from '@/components/workspace/panels/operations/NewMaintenanceRequestDialog';
 import { requireManagerRole } from '@/lib/auth/access';
-import { listMaintenanceBoard } from '@/lib/maintenance';
+import { listMaintenancePage, parseMaintenanceQuery } from '@/lib/maintenance';
 import { propertiesDb } from '@/lib/properties/data';
 import { first, type WorkspaceSearch } from '../routing';
 import { createPropertyMaintenanceAction } from './actions';
@@ -14,7 +14,7 @@ export default async function PropertyMaintenancePage({
   params: Promise<{ id: string }>;
   searchParams: Promise<WorkspaceSearch>;
 }) {
-  const [session, { id: propertyId }, query] = await Promise.all([
+  const [session, { id: propertyId }, queryParams] = await Promise.all([
     requireManagerRole(),
     params,
     searchParams,
@@ -22,13 +22,15 @@ export default async function PropertyMaintenancePage({
   const property = await propertiesDb(session.organizationId).getProperty(propertyId);
   if (!property) notFound();
 
-  const unitId = first(query.unit);
+  const unitId = first(queryParams.unit);
   if (unitId && !property.units.some((unit) => unit.id === unitId)) notFound();
 
-  const requests = await listMaintenanceBoard(session.organizationId, {
-    propertyId,
-    ...(unitId ? { unitId } : {}),
-  });
+  const query = parseMaintenanceQuery(queryParams);
+  const list = await listMaintenancePage(
+    session.organizationId,
+    { propertyId, ...(unitId ? { unitId } : {}) },
+    query,
+  );
   const selectableUnits = property.units
     .filter((unit) => unit.status !== 'ARCHIVED')
     .map(({ id, number }) => ({ id, number }));
@@ -38,14 +40,16 @@ export default async function PropertyMaintenancePage({
     <div className="stack">
       <PropertyMaintenanceList
         propertyId={propertyId}
-        requests={requests}
+        list={list}
+        query={query}
+        unitId={unitId}
         createRequestControl={
           <NewMaintenanceRequestDialog
             action={createAction}
             propertyName={property.name}
             units={selectableUnits}
             selectedUnitId={unitId}
-            triggerLabel={requests.length === 0 ? 'Create your first request' : undefined}
+            triggerLabel={list.isEmpty ? 'Create your first request' : undefined}
           />
         }
       />

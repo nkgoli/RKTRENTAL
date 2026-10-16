@@ -3,6 +3,7 @@ export type TemplateSection = 'CLAUSE' | 'RULE' | 'DISCLOSURE';
 export const INCLUDE_WHEN = [
   'ALWAYS', 'FIXED_TERM', 'MONTH_TO_MONTH', 'PETS_ALLOWED', 'NO_PETS',
   'ASSIGNED_PARKING', 'MULTI_UNIT', 'SINGLE_FAMILY', 'TENANT_UTILITIES', 'PRE_1978',
+  'BALCONY_PATIO', 'SHARED_LAUNDRY', 'FLOOD_ZONE', 'SECURITY_DEPOSIT',
 ] as const;
 export type IncludeWhen = (typeof INCLUDE_WHEN)[number];
 export type TemplateItem = {
@@ -19,6 +20,8 @@ export type TemplateFees = {
   graceDays: number;
   moveInFee: string;
   petDeposit: string;
+  returnedPaymentFee?: string;
+  keyFee?: string;
 };
 export type TemplateDefinition = {
   id: string;
@@ -41,6 +44,11 @@ export type TermsContext = {
   propertyType: 'SINGLE_UNIT' | 'MULTI_UNIT';
   tenantUtilities: string[];
   yearBuilt: number | null;
+  balconyPatio?: boolean;
+  sharedLaundry?: boolean;
+  floodZone?: boolean;
+  securityDeposit?: boolean;
+  values?: Record<string, string>;
 };
 export type ResolvedTerm = TemplateItem & {
   included: boolean;
@@ -53,10 +61,30 @@ export function contextFromDraft(draft: {
   leaseType: TermsContext['leaseType']; options: string[]; petDepositEnabled: boolean;
   assignedParking: boolean; propertyType: TermsContext['propertyType'];
   tenantUtilities: string[]; yearBuilt: number | null;
+  balconyPatio?: boolean; sharedLaundry?: boolean; floodZone?: boolean;
+  deposit?: string; monthlyRent?: string; rentDueDay?: number; startDate?: string; endDate?: string;
+  lateFee?: string; graceDays?: number; occupants?: string; petDeposit?: string;
+  returnedPaymentFee?: string; keyFee?: string;
+  lessorName?: string; lessorAddress?: string; lessorPhone?: string;
+  renewalNoticeDays?: number; placeholderValues?: Record<string, string>;
 }): TermsContext {
+  const amount = (value?: string) => value && Number.isFinite(Number(value)) ? `$${Number(value).toFixed(2)}` : '';
+  const values: Record<string, string> = {
+    monthly_rent: amount(draft.monthlyRent), rent_due_day: String(draft.rentDueDay ?? ''),
+    start_date: draft.startDate ?? '', end_date: draft.endDate ?? '',
+    security_deposit: amount(draft.deposit), late_fee: amount(draft.lateFee),
+    grace_period_days: String(draft.graceDays ?? ''), occupants: draft.occupants ?? '',
+    tenant_paid_utilities: draft.tenantUtilities.join(', '),
+    pet_deposit: amount(draft.petDeposit), nonrenewal_notice_days: String(draft.renewalNoticeDays ?? ''),
+    returned_payment_fee: amount(draft.returnedPaymentFee), key_fee: amount(draft.keyFee),
+    owner_agent_name: draft.lessorName ?? '', owner_agent_address: draft.lessorAddress ?? '',
+    lessor_notice_address: draft.lessorAddress ?? '', emergency_phone: draft.lessorPhone ?? '',
+  };
   return { leaseType: draft.leaseType, petsAllowed: draft.options.includes('pets-allowed'),
     petFee: draft.petDepositEnabled, assignedParking: draft.assignedParking,
-    propertyType: draft.propertyType, tenantUtilities: draft.tenantUtilities, yearBuilt: draft.yearBuilt };
+    propertyType: draft.propertyType, tenantUtilities: draft.tenantUtilities, yearBuilt: draft.yearBuilt,
+    balconyPatio: draft.balconyPatio, sharedLaundry: draft.sharedLaundry, floodZone: draft.floodZone,
+    securityDeposit: Number(draft.deposit) > 0, values: { ...values, ...draft.placeholderValues } };
 }
 
 export const CONDITION_LABELS: Record<IncludeWhen, string> = {
@@ -65,6 +93,8 @@ export const CONDITION_LABELS: Record<IncludeWhen, string> = {
   ASSIGNED_PARKING: 'Assigned parking', MULTI_UNIT: 'Multi-unit property',
   SINGLE_FAMILY: 'Single-family home', TENANT_UTILITIES: 'Tenant pays utilities',
   PRE_1978: 'Built before 1978',
+  BALCONY_PATIO: 'Unit has balcony or patio', SHARED_LAUNDRY: 'Shared laundry',
+  FLOOD_ZONE: 'Property is in a flood zone', SECURITY_DEPOSIT: 'Security deposit set',
 };
 
 export function conditionReason(condition: IncludeWhen, context: TermsContext): string | null {
@@ -79,6 +109,10 @@ export function conditionReason(condition: IncludeWhen, context: TermsContext): 
     case 'SINGLE_FAMILY': return context.propertyType === 'SINGLE_UNIT' ? 'Added because this is a single-family home' : null;
     case 'TENANT_UTILITIES': return context.tenantUtilities.length ? `Added because the tenant pays ${context.tenantUtilities.join(', ')}` : null;
     case 'PRE_1978': return context.yearBuilt !== null && context.yearBuilt < 1978 ? 'Added because the home was built before 1978' : null;
+    case 'BALCONY_PATIO': return context.balconyPatio ? 'Added because the unit has a balcony or patio' : null;
+    case 'SHARED_LAUNDRY': return context.sharedLaundry ? 'Added because the property has shared laundry' : null;
+    case 'FLOOD_ZONE': return context.floodZone ? 'Added because the property is in a flood zone' : null;
+    case 'SECURITY_DEPOSIT': return context.securityDeposit ? 'Added because a security deposit is set' : null;
   }
 }
 
@@ -99,9 +133,10 @@ export function resolveTerms(
     const reason = conditionReason(item.includeWhen, context);
     const included = override.included ?? Boolean(reason);
     const title = override.title ?? item.title;
-    const body = override.body ?? (item.includeWhen === 'TENANT_UTILITIES' && context.tenantUtilities.length
+    const sourceBody = override.body ?? (item.includeWhen === 'TENANT_UTILITIES' && !item.body.includes('{{tenant_paid_utilities}}') && context.tenantUtilities.length
       ? `The tenant will arrange and pay for ${context.tenantUtilities.join(', ')} and keep those services active during the tenancy.`
       : item.body);
+    const body = sourceBody.replace(/\{\{([a-z_]+)\}\}/g, (token, key: string) => context.values?.[key]?.trim() || token);
     const old = previous.find((entry) => entry.id === item.id);
     return { ...item, title, body, included,
       reason: override.included !== undefined ? 'Selected manually' : reason ?? 'Condition is not met',
@@ -123,7 +158,7 @@ export function createTermsSnapshot(
   return {
     template: { ...definition, defaultFees: { ...definition.defaultFees },
       items: definition.items.map((item) => ({ ...item })) },
-    context: { ...context, tenantUtilities: [...context.tenantUtilities] },
+    context: { ...context, tenantUtilities: [...context.tenantUtilities], values: { ...context.values } },
     items,
     overrides: Object.fromEntries(Object.entries(overrides).map(([id, value]) => [id, { ...value }])),
   };
@@ -152,4 +187,4 @@ export const STANDARD_ITEMS: TemplateItem[] = [
   item('alarms', 'DISCLOSURE', 'Smoke and carbon monoxide alarms', 'The tenant will tell the manager promptly if an alarm needs service.', 'ALWAYS', false, 15),
 ];
 
-export const STANDARD_FEES: TemplateFees = { lateFee: '75', graceDays: 5, moveInFee: '', petDeposit: '' };
+export const STANDARD_FEES: TemplateFees = { lateFee: '75', graceDays: 5, moveInFee: '', petDeposit: '', returnedPaymentFee: '', keyFee: '' };

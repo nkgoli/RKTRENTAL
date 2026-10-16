@@ -62,11 +62,19 @@ test('manager builds a lease in the wizard, resumes it, and sends it for signing
   await expect(page).toHaveURL(/\/leases\?tab=drafts/);
   await page.goto(`/leases/new?unit=${unitId}`);
   await expect(page.getByRole('heading', { name: 'Clauses', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Expand all' }).click();
+  await expect(page.locator('p[class*="termFull"]', { hasText: 'Rent is not considered paid until Lessor actually receives cleared funds.' })).toBeVisible();
+  await page.getByRole('textbox', { name: 'Fill returned payment fee' }).fill('$35.00');
+  await page.getByRole('textbox', { name: 'Fill deposit institution' }).fill('Example Bank');
+  await page.screenshot({ path: 'tests/lease-create/evidence/v2-clauses-expanded.png' });
 
   await page.getByRole('button', { name: '+ Add clause' }).click();
   await page.getByRole('textbox', { name: 'New clause title' }).fill('Move-in walkthrough');
   await page.getByRole('textbox', { name: 'Move-in walkthrough wording' }).fill('The tenant and manager will document the home’s condition at move-in.');
   await next(page, 'Rules');
+  await page.getByRole('button', { name: 'Expand all' }).click();
+  await expect(page.locator('p[class*="termFull"]', { hasText: 'No additional or changed locks on any door without Lessor\'s written consent.' })).toBeVisible();
+  await page.screenshot({ path: 'tests/lease-create/evidence/v2-rules-expanded.png' });
   await next(page, 'Disclosures');
   await next(page, 'Attachments');
   await page.getByLabel('Choose files').setInputFiles({
@@ -113,7 +121,24 @@ test('manager builds a lease in the wizard, resumes it, and sends it for signing
   await leaseGroup.screenshot({ path: 'tests/lease-create/evidence/payments-day-5.png' });
   await page.goto(`/leases/${leaseId}`);
   await expect(page).toHaveURL(/\/leases\/(?!new)[^/?]+$/);
+  await expect(page.getByRole('heading', { name: 'Terms as signed' })).toBeVisible();
+  await expect(page.getByText(/monthly rent of \$1600\.00 in advance/)).toBeVisible();
+  await expect(page.getByText(/returned-payment fee of \$35\.00/)).toBeVisible();
+  await expect(page.getByText(/held at Example Bank/).first()).toBeVisible();
+  await page.screenshot({ path: 'tests/lease-create/evidence/v2-terms-as-signed.png' });
   await expect(page.getByText('Signed lease agreement.pdf').first()).toBeVisible();
+});
+
+test('standard v2 template editor expands full paragraphs', async ({ page }) => {
+  await signIn(page);
+  await page.goto('/leases/templates');
+  const row = page.getByRole('row', { name: /Standard residential lease/ });
+  await expect(row).toContainText('v2');
+  await row.getByRole('link', { name: 'Edit template' }).click();
+  await page.getByRole('button', { name: 'Expand all' }).click();
+  await expect(page.locator('p[class*="itemFull"]', { hasText: 'Rent is not considered paid until Lessor actually receives cleared funds.' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Rent wording' })).toBeVisible();
+  await page.screenshot({ path: 'tests/lease-create/evidence/v2-template-editor-expanded.png' });
 });
 
 test('Clauses swap the no-pets clause and the pet agreement when pets change at a fixed term', async ({
@@ -137,17 +162,17 @@ test('Clauses swap the no-pets clause and the pet agreement when pets change at 
   await expect(page.getByRole('checkbox', { name: /Pets allowed/ })).not.toBeChecked();
   await next(page, 'Clauses');
 
-  const titles = page.locator('article input[aria-label$=" title"]:visible');
-  const noPets = page.locator('article', { has: page.getByRole('textbox', { name: 'No pets title' }) });
-  const petAgreement = page.locator('article', { has: page.getByRole('textbox', { name: 'Approved pets title' }) });
+  const titles = page.locator('article button[aria-expanded]:visible strong');
+  const noPets = page.locator('article', { has: page.getByRole('button', { name: /No Pets/ }) });
+  const petAgreement = page.locator('article', { has: page.getByRole('button', { name: /Pets — Approved Pets Only/ }) });
 
   // Fixed term, no pets: the no-pets clause is in, the pet agreement is not.
   await expect(titles.first()).toBeVisible();
-  const withoutPets = await titles.evaluateAll((els) => els.map((el) => (el as HTMLInputElement).value));
-  expect(withoutPets).toContain('No pets');
-  expect(withoutPets).toContain('Ending a fixed term early');
-  expect(withoutPets).not.toContain('Approved pets');
-  expect(withoutPets).not.toContain('Month-to-month notice');
+  const withoutPets = await titles.allTextContents();
+  expect(withoutPets.some((text) => text.includes('No Pets'))).toBe(true);
+  expect(withoutPets.some((text) => text.includes('Early Termination'))).toBe(true);
+  expect(withoutPets.some((text) => text.includes('Pets — Approved Pets Only'))).toBe(false);
+  expect(withoutPets.some((text) => text.includes('Month-to-Month Tenancy'))).toBe(false);
   await expect(noPets.getByText('Added because pets are not allowed')).toBeVisible();
   await page.screenshot({ path: 'tests/lease-create/evidence/fixed-no-pets-clauses.png' });
 
@@ -157,19 +182,22 @@ test('Clauses swap the no-pets clause and the pet agreement when pets change at 
   await page.getByRole('checkbox', { name: /Pets allowed/ }).check();
   await next(page, 'Clauses');
   await expect(titles.first()).toBeVisible();
-  const withPets = await titles.evaluateAll((els) => els.map((el) => (el as HTMLInputElement).value));
-  expect(withPets).toContain('Approved pets');
-  expect(withPets).toContain('Ending a fixed term early');
-  expect(withPets).not.toContain('No pets');
+  const withPets = await titles.allTextContents();
+  expect(withPets.some((text) => text.includes('Pets — Approved Pets Only'))).toBe(true);
+  expect(withPets.some((text) => text.includes('Early Termination'))).toBe(true);
+  expect(withPets.some((text) => text.includes('No Pets'))).toBe(false);
   await expect(petAgreement.getByText('Added because pets are allowed or a pet fee is set')).toBeVisible();
+  await page.getByRole('button', { name: 'Expand all' }).click();
+  await expect(petAgreement.locator('p[class*="termFull"]')).toContainText('Lessee may keep only the following pets:');
   await page.screenshot({ path: 'tests/lease-create/evidence/fixed-pets-clauses.png' });
+  await petAgreement.screenshot({ path: 'tests/lease-create/evidence/v2-pets-clause-reason.png' });
 
   // Turning pets off again restores the no-pets clause.
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.getByRole('checkbox', { name: /Pets allowed/ }).uncheck();
   await next(page, 'Clauses');
-  await expect(page.getByRole('textbox', { name: 'No pets title' })).toBeVisible();
-  await expect(page.getByRole('textbox', { name: 'Approved pets title' })).toBeHidden();
+  await expect(noPets).toBeVisible();
+  await expect(petAgreement).toBeHidden();
 });
 
 test('wizard blocks continuing past a step with missing values', async ({ page }) => {

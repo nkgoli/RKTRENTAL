@@ -94,7 +94,7 @@ test('manager starts a renewal and reviews re-evaluated template terms', async (
     await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
   }
   await expect(page.getByText('Carried over from the prior lease.')).toBeVisible();
-  await expect(page.getByText('Added because this is a fixed-term lease')).toBeVisible();
+  await expect(page.getByText('Added because this is a fixed-term lease').first()).toBeVisible();
   await page.getByRole('button', { name: 'Re-apply template' }).click();
-  await expect(page.getByRole('textbox', { name: 'Ending a fixed term early title' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Early Termination/ })).toBeVisible();
 });

@@ -308,6 +308,10 @@ export function RentStep({ draft, update, errors }: StepProps) {
       )}
       <hr className={styles.rule} />
       <h3 className={styles.sectionTitle}>Optional fees</h3>
+      <div className={styles.two}>
+        <Field label="Returned payment fee"><input inputMode="decimal" value={draft.returnedPaymentFee} onChange={(e) => update({ returnedPaymentFee: e.target.value })} /></Field>
+        <Field label="Key replacement fee"><input inputMode="decimal" value={draft.keyFee} onChange={(e) => update({ keyFee: e.target.value })} /></Field>
+      </div>
       <div className={styles.checks}>
         <label className={cx(styles.check, draft.moveInFeeEnabled && styles.checkOn)}>
           <input
@@ -480,6 +484,12 @@ export function OptionsStep({ draft, update, errors }: StepProps) {
         <input type="checkbox" checked={draft.assignedParking} onChange={(e) => update({ assignedParking: e.target.checked })} />
         <span className={styles.checkCopy}><strong>Assigned parking</strong><small>Add the parking rule when this lease includes a space.</small></span>
       </label>
+      <label className={styles.check}><input type="checkbox" checked={draft.balconyPatio} onChange={(e) => update({ balconyPatio: e.target.checked })} />
+        <span className={styles.checkCopy}><strong>Balcony or patio</strong><small>Include the outdoor space rule.</small></span></label>
+      <label className={styles.check}><input type="checkbox" checked={draft.sharedLaundry} onChange={(e) => update({ sharedLaundry: e.target.checked })} />
+        <span className={styles.checkCopy}><strong>Shared laundry</strong><small>Include the laundry rule.</small></span></label>
+      <label className={styles.check}><input type="checkbox" checked={draft.floodZone} onChange={(e) => update({ floodZone: e.target.checked })} />
+        <span className={styles.checkCopy}><strong>Flood zone</strong><small>Include the flood disclosure.</small></span></label>
       <fieldset className={styles.radios}>
         <legend>Utilities paid by tenant</legend>
         {['Electricity', 'Gas', 'Water', 'Trash', 'Internet'].map((utility) => <label key={utility} className={styles.radio}>

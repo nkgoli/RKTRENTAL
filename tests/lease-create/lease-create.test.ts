@@ -260,4 +260,12 @@ describe('mock e-signature provider', () => {
     expect(new TextDecoder().decode(pdf.slice(0, 5))).toBe('%PDF-');
     expect(new TextDecoder().decode(pdf)).toContain('Alex Rivera');
   });
+
+  it('keeps long wording and paginates the signed PDF', () => {
+    const wording = `Clause: ${'Every part of the agreed wording stays here. '.repeat(8)}Final agreed sentence.`;
+    const pdf = new TextDecoder().decode(buildLeasePdf([wording, ...Array.from({ length: 45 }, (_, i) => `Clause ${i}`)]));
+    expect(pdf).toContain('Final agreed sentence.');
+    expect(pdf).toContain('/Count 2');
+    expect(pdf).toContain('RocketRental lease agreement - continued');
+  });
 });

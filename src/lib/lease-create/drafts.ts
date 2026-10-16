@@ -1,9 +1,10 @@
-import type { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
 import { recordLeaseEvents } from '@/lib/leases/events';
 import { LeaseServiceError } from '@/lib/leases/service';
 import { parseLeaseDate, parseMoney } from '@/lib/leases/core';
 import { ensureLeaseSetupCharges } from '@/lib/ledger/lease-setup';
+import { contextFromDraft, createTermsSnapshot, type TemplateDefinition, type TemplateItem, type TermOverride } from './templates';
 import { STEP_COUNT, emptyDraft, type WizardDraft, type WizardErrors } from './types';
 import {
   endOptionDates,
@@ -53,6 +54,13 @@ export function coerceDraft(raw: unknown): WizardDraft {
     petDeposit: str(r.petDeposit),
     occupants: str(r.occupants),
     options: strings(r.options),
+    assignedParking: bool(r.assignedParking, false),
+    tenantUtilities: strings(r.tenantUtilities),
+    propertyType: r.propertyType === 'SINGLE_UNIT' ? 'SINGLE_UNIT' : 'MULTI_UNIT',
+    yearBuilt: typeof r.yearBuilt === 'number' && Number.isInteger(r.yearBuilt) ? r.yearBuilt : null,
+    template: r.template && typeof r.template === 'object' ? r.template as TemplateDefinition : null,
+    termOverrides: r.termOverrides && typeof r.termOverrides === 'object' && !Array.isArray(r.termOverrides) ? r.termOverrides as Record<string, TermOverride> : {},
+    renewalTerms: Array.isArray(r.renewalTerms) ? r.renewalTerms as TemplateItem[] : [],
     clauses: strings(r.clauses, d.clauses),
     customClause: str(r.customClause),
     rules: strings(r.rules),
@@ -391,9 +399,14 @@ export async function activateDraftLease(
         'This unit already has an active lease during those dates.',
         'startDate',
       );
+    const snapshot = draft.template ? createTermsSnapshot(draft.template, contextFromDraft(draft), draft.termOverrides) : null;
     await tx.lease.update({
       where: { id: leaseId },
-      data: { ...terms, status: 'ACTIVE' },
+      data: { ...terms, status: 'ACTIVE',
+        templateId: draft.template?.id ?? null,
+        templateVersion: draft.template?.version ?? null,
+        termsSnapshot: snapshot ? snapshot as unknown as Prisma.InputJsonValue : Prisma.JsonNull,
+      },
     });
     await tx.leaseTenant.deleteMany({ where: { leaseId, organizationId } });
     await tx.leaseTenant.createMany({

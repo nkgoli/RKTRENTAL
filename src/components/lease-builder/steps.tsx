@@ -20,6 +20,7 @@ import { parseLeaseDate } from '@/lib/leases/core';
 import { previewScheduledCharges, prorateFirstMonth } from '@/lib/ledger/lease-setup';
 import { formatMoney } from '@/lib/ledger/statement';
 import styles from './lease-builder.module.css';
+import { contextFromDraft, resolveTerms } from '@/lib/lease-create/templates';
 
 export type StepProps = {
   draft: WizardDraft;
@@ -475,6 +476,18 @@ export function OptionsStep({ draft, update, errors }: StepProps) {
         onChange={(options) => update({ options })}
       />
       <Err errors={errors} name="options" />
+      <label className={styles.check}>
+        <input type="checkbox" checked={draft.assignedParking} onChange={(e) => update({ assignedParking: e.target.checked })} />
+        <span className={styles.checkCopy}><strong>Assigned parking</strong><small>Add the parking rule when this lease includes a space.</small></span>
+      </label>
+      <fieldset className={styles.radios}>
+        <legend>Utilities paid by tenant</legend>
+        {['Electricity', 'Gas', 'Water', 'Trash', 'Internet'].map((utility) => <label key={utility} className={styles.radio}>
+          <input type="checkbox" checked={draft.tenantUtilities.includes(utility)} onChange={(e) => update({ tenantUtilities: e.target.checked
+            ? [...draft.tenantUtilities, utility] : draft.tenantUtilities.filter((u) => u !== utility) })} />
+          {utility}
+        </label>)}
+      </fieldset>
     </div>
   );
 }
@@ -720,17 +733,11 @@ export function ReviewStep({
         <dt>Options</dt>
         <dd>{list(optionLabels(draft.options))}</dd>
         <dt>Clauses</dt>
-        <dd>
-          {list(clauseLabels(draft.clauses))}
-          {draft.customClause.trim() ? `; ${draft.customClause.trim()}` : ''}
-        </dd>
+        <dd>{draft.template ? list(resolveTerms(draft.template, contextFromDraft(draft), draft.termOverrides).filter((t) => t.included && t.section === 'CLAUSE').map((t) => t.title)) : list(clauseLabels(draft.clauses))}</dd>
         <dt>Rules</dt>
-        <dd>
-          {list(ruleLabels(draft.rules))}
-          {draft.customRules.trim() ? `; ${draft.customRules.trim()}` : ''}
-        </dd>
+        <dd>{draft.template ? list(resolveTerms(draft.template, contextFromDraft(draft), draft.termOverrides).filter((t) => t.included && t.section === 'RULE').map((t) => t.title)) : list(ruleLabels(draft.rules))}</dd>
         <dt>Disclosures</dt>
-        <dd>{list(disclosureLabels(draft.disclosures))}</dd>
+        <dd>{draft.template ? list(resolveTerms(draft.template, contextFromDraft(draft), draft.termOverrides).filter((t) => t.included && t.section === 'DISCLOSURE').map((t) => t.title)) : list(disclosureLabels(draft.disclosures))}</dd>
         <dt>Attachments</dt>
         <dd>{attachments.length ? attachments.map((a) => a.name).join(', ') : 'None'}</dd>
       </dl>

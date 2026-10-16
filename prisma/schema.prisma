@@ -133,6 +133,7 @@ model Organization {
   units               Unit[]
   tenants             Tenant[]
   leases              Lease[]
+  leaseTemplates      LeaseTemplate[]
   documents           Document[]
   charges             Charge[]
   payments            Payment[]
@@ -188,6 +189,8 @@ model Property {
   state               String
   postalCode          String
   yearBuilt           Int?
+  defaultLeaseTemplateId String?
+  defaultLeaseTemplate LeaseTemplate? @relation("PropertyDefaultLeaseTemplate", fields: [defaultLeaseTemplateId, organizationId], references: [id, organizationId], onDelete: Restrict)
   purchasePrice       Decimal?             @db.Decimal(12, 2)
   downPayment         Decimal?             @db.Decimal(12, 2)
   loanAmount          Decimal?             @db.Decimal(12, 2)
@@ -283,6 +286,10 @@ model Lease {
   status          LeaseStatus      @default(DRAFT)
   eSignStatus     ESignStatus      @default(NOT_SENT)
   signedAt        DateTime?
+  templateId      String?
+  templateVersion Int?
+  termsSnapshot   Json?
+  template        LeaseTemplate? @relation(fields: [templateId, organizationId], references: [id, organizationId], onDelete: Restrict)
   occupants       String?
   noticeGivenAt   DateTime?        @db.Date
   moveOutDate     DateTime?        @db.Date
@@ -299,6 +306,38 @@ model Lease {
   @@unique([id, organizationId])
   @@index([organizationId, unitId, status])
   @@index([organizationId, endDate])
+}
+
+model LeaseTemplate {
+  id             String @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  version        Int @default(1)
+  defaultFees    Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  items          LeaseTemplateItem[]
+  defaultFor     Property[] @relation("PropertyDefaultLeaseTemplate")
+  leases         Lease[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId, name])
+}
+
+model LeaseTemplateItem {
+  id             String @id @default(cuid())
+  organizationId String
+  templateId     String
+  template       LeaseTemplate @relation(fields: [templateId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  section        String
+  title          String
+  body           String @db.Text
+  sortOrder      Int
+  required       Boolean @default(false)
+  includeWhen    String @default("ALWAYS")
+
+  @@index([organizationId, templateId, section, sortOrder])
 }
 
 /// Wizard state for a DRAFT lease: the step to resume on and the fields the lease row cannot hold.

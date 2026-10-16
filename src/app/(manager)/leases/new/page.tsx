@@ -15,6 +15,8 @@ import { dateInput } from '@/lib/leases/core';
 import { leaseName } from '@/lib/leases/format';
 import { leasesDb } from '@/lib/leases/queries';
 import { unitLabel } from '@/lib/properties/format';
+import { listTemplates } from '@/lib/lease-create/template-service';
+import type { TemplateDefinition, TemplateItem, TermOverride, TermsContext } from '@/lib/lease-create/templates';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,6 +83,10 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
     );
   }
 
+  const templateData = await listTemplates(organizationId);
+  const propertyDefaultId = templateData.properties.find((p) => p.id === unit.propertyId)?.defaultLeaseTemplateId;
+  const defaultTemplate = templateData.templates.find((t) => t.id === propertyDefaultId) ?? templateData.templates[0];
+
   let initial = snapshot?.draft;
   if (!initial) {
     const today = new Date();
@@ -89,6 +95,20 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
     );
     if (source) {
       initial = renewalDefaults(source);
+      const signed = source.termsSnapshot && typeof source.termsSnapshot === 'object' && !Array.isArray(source.termsSnapshot)
+        ? source.termsSnapshot as Record<string, unknown> : null;
+      const priorContext = signed?.context as TermsContext | undefined;
+      const carriedItems = Array.isArray(signed?.items) ? signed.items as TemplateItem[] : [];
+      initial = { ...initial,
+        template: signed?.template as TemplateDefinition ?? defaultTemplate,
+        termOverrides: signed?.overrides as Record<string, TermOverride> ?? {},
+        renewalTerms: carriedItems,
+        options: (priorContext?.petsAllowed ?? carriedItems.some((item) => item.includeWhen === 'PETS_ALLOWED')) ? ['pets-allowed'] : [],
+        assignedParking: priorContext?.assignedParking ?? carriedItems.some((item) => item.includeWhen === 'ASSIGNED_PARKING'),
+        tenantUtilities: priorContext?.tenantUtilities ?? [],
+        petDepositEnabled: Number(source.petDeposit) > 0,
+        petDeposit: source.petDeposit.toString(),
+      };
     } else {
       const org = await db.organization.findUnique({
         where: { id: organizationId },
@@ -107,11 +127,19 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
           primaryTenantId: preselected?.id ?? '',
           lessorName: org?.name ?? '',
           lessorAddress: `${unit.property.street}, ${unit.property.city}, ${unit.property.state} ${unit.property.postalCode}`,
+          template: defaultTemplate,
+          lateFee: defaultTemplate.defaultFees.lateFee,
+          graceDays: defaultTemplate.defaultFees.graceDays,
+          moveInFeeEnabled: Number(defaultTemplate.defaultFees.moveInFee) > 0,
+          moveInFee: defaultTemplate.defaultFees.moveInFee,
+          petDepositEnabled: Number(defaultTemplate.defaultFees.petDeposit) > 0,
+          petDeposit: defaultTemplate.defaultFees.petDeposit,
         }),
       );
     }
     initial = { ...initial, unitId: unit.id };
   }
+  initial = { ...initial, propertyType: unit.property.type, yearBuilt: unit.property.yearBuilt };
 
   const attachments = snapshot
     ? (
@@ -138,6 +166,7 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
       leaseId={snapshot?.leaseId ?? null}
       renewId={snapshot?.renewId ?? renewId ?? null}
       draft={initial}
+      templates={templateData.templates}
       step={snapshot?.step ?? 0}
       furthestStep={snapshot?.furthestStep ?? 0}
       attachments={attachments}

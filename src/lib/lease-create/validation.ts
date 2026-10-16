@@ -8,6 +8,7 @@ import {
 import { planSetupCharges } from '@/lib/ledger/lease-setup';
 import { CLAUSE_OPTIONS, DISCLOSURE_OPTIONS, OPTION_CHOICES, RULE_OPTIONS } from './clauses';
 import { feesFromDraft } from './fees';
+import { contextFromDraft, resolveTerms } from './templates';
 import {
   STEP,
   type EndDateOption,
@@ -127,11 +128,17 @@ export function validateRentAndDeposit(draft: WizardDraft): WizardErrors {
 
 export function validateClausesAndDocuments(draft: WizardDraft): WizardErrors {
   const errors: WizardErrors = {};
-  const known = new Set(CLAUSE_OPTIONS.map((c) => c.id));
-  if (!draft.clauses.length) errors.clauses = 'Include at least one lease clause.';
-  if (draft.clauses.some((id) => !known.has(id))) errors.clauses = 'Remove the unknown clause.';
-  if (draft.customClause.trim().length > 500)
-    errors.customClause = 'Keep the custom clause to 500 characters or fewer.';
+  if (draft.template) {
+    const included = resolveTerms(draft.template, contextFromDraft(draft), draft.termOverrides).filter((item) => item.included);
+    if (!included.some((item) => item.section === 'CLAUSE')) errors.clauses = 'Include at least one lease clause.';
+    if (included.some((item) => !item.title.trim() || !item.body.trim())) errors.clauses = 'Give each included term a title and wording.';
+  } else {
+    const known = new Set(CLAUSE_OPTIONS.map((c) => c.id));
+    if (!draft.clauses.length) errors.clauses = 'Include at least one lease clause.';
+    if (draft.clauses.some((id) => !known.has(id))) errors.clauses = 'Remove the unknown clause.';
+    if (draft.customClause.trim().length > 500)
+      errors.customClause = 'Keep the custom clause to 500 characters or fewer.';
+  }
   const names = draft.documentNames.map((n) => n.trim().toLowerCase()).filter(Boolean);
   if (new Set(names).size !== names.length)
     errors.documentNames = 'Each document can be listed only once.';
@@ -151,6 +158,7 @@ export function validateOptions(draft: WizardDraft): WizardErrors {
 
 export function validateRules(draft: WizardDraft): WizardErrors {
   const errors: WizardErrors = {};
+  if (draft.template) return errors;
   if (draft.rules.some((id) => !RULE_OPTIONS.some((r) => r.id === id)))
     errors.rules = 'Remove the unknown rule.';
   if (draft.customRules.trim().length > 1000)
@@ -160,6 +168,7 @@ export function validateRules(draft: WizardDraft): WizardErrors {
 
 export function validateDisclosures(draft: WizardDraft): WizardErrors {
   const errors: WizardErrors = {};
+  if (draft.template) return errors;
   if (draft.disclosures.some((id) => !DISCLOSURE_OPTIONS.some((d) => d.id === id)))
     errors.disclosures = 'Remove the unknown disclosure.';
   return errors;

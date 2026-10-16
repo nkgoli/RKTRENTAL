@@ -13,18 +13,17 @@ import {
 } from '@/app/(manager)/leases/new/actions';
 import {
   AttachmentsStep,
-  ClausesStep,
-  DisclosuresStep,
   LessorStep,
   OptionsStep,
   RentStep,
-  RulesStep,
   ReviewStep,
   TenantsStep,
   TermStep,
   type AttachmentFile,
 } from './steps';
 import styles from './lease-builder.module.css';
+import { TemplateTermsStep } from './TemplateTermsStep';
+import type { TemplateDefinition } from '@/lib/lease-create/templates';
 
 export type LeaseBuilderProps = {
   /** Property and unit shown in the top bar. */
@@ -33,6 +32,7 @@ export type LeaseBuilderProps = {
   leaseId: string | null;
   renewId: string | null;
   draft: WizardDraft;
+  templates: TemplateDefinition[];
   step: number;
   furthestStep: number;
   attachments: AttachmentFile[];
@@ -188,9 +188,9 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
       notice={props.notice}
     />,
     <OptionsStep key="options" draft={draft} update={update} errors={errors} />,
-    <ClausesStep key="clauses" draft={draft} update={update} errors={errors} />,
-    <RulesStep key="rules" draft={draft} update={update} errors={errors} />,
-    <DisclosuresStep key="disclosures" draft={draft} update={update} errors={errors} />,
+    <TemplateTermsStep key="clauses" section="CLAUSE" draft={draft} update={update} templates={props.templates} isRenewal={Boolean(props.renewId)} />,
+    <TemplateTermsStep key="rules" section="RULE" draft={draft} update={update} templates={props.templates} isRenewal={Boolean(props.renewId)} />,
+    <TemplateTermsStep key="disclosures" section="DISCLOSURE" draft={draft} update={update} templates={props.templates} isRenewal={Boolean(props.renewId)} />,
     <AttachmentsStep
       key="attachments"
       leaseId={leaseId}
@@ -230,7 +230,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
       <div className={styles.intro}>
         <div>
           <p className={styles.introKicker}>Leasing workspace / New lease</p>
-          <h1>Create lease</h1>
+          <h1>{props.renewId ? 'Renew lease' : 'Create lease'}</h1>
           <p>Build the agreement for {props.placeLabel}, one step at a time.</p>
         </div>
         <span className={styles.introDraft}><span aria-hidden="true" />{leaseId ? 'Draft saved' : 'New draft'}</span>

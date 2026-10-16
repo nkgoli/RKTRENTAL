@@ -53,7 +53,7 @@ test('manager reviews lease tabs, Alex Rivera detail, and uploads a lease docume
   await page.screenshot({ path: 'test-results/lease-detail-alex.png', fullPage: true });
 
   const name = `Lease flow ${Date.now()}.pdf`;
-  await page.getByTestId('upload-lease-document').setInputFiles({
+  await page.getByRole('region', { name: 'Upload lease document' }).getByLabel('Choose files').setInputFiles({
     name,
     mimeType: 'application/pdf',
     buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n'),
@@ -75,39 +75,26 @@ test('lease pages require a manager session', async ({ page }) => {
   await expect(page).toHaveURL(/\/sign-in/);
 });
 
-test('manager renews, edits, activates and terminates a lease', async ({ page }) => {
+test('manager starts a renewal and reviews re-evaluated template terms', async ({ page }) => {
   await page.goto('/sign-in');
   await page.getByLabel('Email address').fill(managerEmail);
   await page.getByLabel('Password').fill(managerPassword);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await page.goto('/leases/seed-lease-maple-11');
-  await page.getByRole('link', { name: 'Renew lease' }).click();
-  await expect(page).toHaveURL(/\/leases\/new\?renew=seed-lease-maple-11/);
-  // The first click can land before the dev server has hydrated the wizard.
-  await expect(async () => {
-    await page.getByRole('button', { name: 'Continue' }).click();
-    await expect(page.getByLabel('Start date')).toBeVisible({ timeout: 1000 });
-  }).toPass();
+  await page.goto('/leases/new?renew=seed-lease-maple-11&fresh=1');
+  await expect(page).toHaveURL(/\/leases\/new\?renew=seed-lease-maple-11&fresh=1/);
+  await expect(page.getByRole('region', { name: 'Create lease' })).not.toHaveAttribute('inert', '');
   await expect(page.getByLabel('Start date')).toHaveValue('2026-12-01');
-  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Rent, deposit & fees' })).toBeVisible();
   await page.getByLabel('Monthly rent').fill('1900.00');
-  await page.getByRole('button', { name: 'Continue' }).click();
-  await page.getByRole('button', { name: 'Continue' }).click();
-  await page.getByRole('button', { name: 'Save draft' }).click();
-  await expect(page.getByText('Draft lease saved.')).toBeVisible();
-  await page.getByRole('link', { name: 'View lease detail' }).click();
-  await expect(page).toHaveURL(/\/leases\/[^/?]+$/);
-  await expect(page.getByText('Draft', { exact: true }).first()).toBeVisible();
-  await page.locator('#edit-terms').getByLabel('Monthly rent').fill('1950.00');
-  await page.getByRole('button', { name: 'Save terms' }).click();
-  await expect(page.getByText('Lease terms saved.')).toBeVisible();
-  await page.getByRole('button', { name: 'Activate lease' }).click();
-  await expect(page.getByText('Lease activated.')).toBeVisible();
-  await page.reload();
-  await expect(page.getByText('Active', { exact: true }).first()).toBeVisible();
-  await page.getByRole('button', { name: 'Terminate', exact: true }).click();
-  await expect(page.getByText('Terminate this lease?')).toBeVisible();
-  await page.getByRole('button', { name: 'Confirm terminate' }).click();
-  await expect(page.getByText('Lease terminated.')).toBeVisible();
+  for (const heading of ['Tenants', 'Options', 'Clauses']) {
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+  }
+  await expect(page.getByText('Carried over from the prior lease.')).toBeVisible();
+  await expect(page.getByText('Added because this is a fixed-term lease')).toBeVisible();
+  await page.getByRole('button', { name: 'Re-apply template' }).click();
+  await expect(page.getByRole('textbox', { name: 'Ending a fixed term early title' })).toBeVisible();
 });

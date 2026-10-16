@@ -3,6 +3,7 @@ import { db } from '@/lib/db/client';
 import { unitLabel } from '@/lib/properties/format';
 import type { FileActor } from '@/lib/storage/types';
 import { clauseLabels } from '@/lib/lease-create/clauses';
+import type { TemplateItem } from '@/lib/lease-create/templates';
 import { recordLeaseEvents } from '@/lib/leases/events';
 import { MockEsignProvider, getEsignProvider } from './mock';
 import { isSandboxEnabled } from '@/lib/providers/sandbox';
@@ -127,6 +128,9 @@ export async function handleEsignCallback(
         year: 'numeric',
         timeZone: 'UTC',
       });
+    const snapshot = lease.termsSnapshot && typeof lease.termsSnapshot === 'object' && !Array.isArray(lease.termsSnapshot)
+      ? lease.termsSnapshot as Record<string, unknown> : null;
+    const items = Array.isArray(snapshot?.items) ? snapshot.items as TemplateItem[] : [];
     const lines = signedLeaseLines({
       leaseId: lease.id,
       unitLabel: unitLabel(lease.unit.property, lease.unit),
@@ -134,7 +138,8 @@ export async function handleEsignCallback(
       term: `${fmt(lease.startDate)} - ${fmt(lease.endDate)}`,
       monthlyRent: lease.monthlyRent.toString(),
       deposit: lease.deposit.toString(),
-      clauses: clauseLabels(['residential-use', 'utilities']),
+      templateLine: lease.templateVersion ? `Template version: ${lease.templateVersion}` : undefined,
+      clauses: items.length ? items.map((item) => `${item.section}: ${item.title} — ${item.body}`) : clauseLabels(['residential-use', 'utilities']),
       signedAt,
     });
     const { createPrismaFileService } = await import('@/lib/storage/service');

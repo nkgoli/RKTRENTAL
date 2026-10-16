@@ -21,6 +21,8 @@ async function audit(page: Page, path: string, testInfo: { attach: (name: string
   await page.goto(path);
   // /rent-comps redirects client-side to the first unit's Listing tab.
   if (path === '/rent-comps') await page.waitForURL(/\/properties\/[^/]+\/units\/[^/?]+\?tab=listing/);
+  // The dev server can finish a navigation after the first paint; let it settle before axe injects.
+  await page.waitForLoadState('networkidle');
   await expect(page.locator('main h1').first()).toBeVisible();
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   const severe = results.violations.filter((violation: { impact?: string | null }) => violation.impact === 'serious' || violation.impact === 'critical');

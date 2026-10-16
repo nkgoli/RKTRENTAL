@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
 import { computeBalance, toCents } from '../../src/lib/ledger/core';
-import { applicationGroupId } from './applications';
 
 describe('seeded database audit', () => {
   const verify = process.env.DEMO_SEED_VERIFY === '1' ? it : it.skip;
@@ -61,12 +60,21 @@ describe('seeded database audit', () => {
       expect(applications.every((application) => application.applicantEmail.endsWith('@example.com'))).toBe(true);
       expect(new Set(applications.map((application) => application.status))).toEqual(
         new Set(['SUBMITTED', 'SCREENING', 'REVIEW', 'APPROVED', 'DECLINED']));
+      const groupRows = await db.applicationGroup.findMany({ where: { organizationId } });
       const groups = new Map<string, typeof applications>();
       for (const application of applications) {
-        const key = applicationGroupId(application.id);
-        expect(key).not.toBe(application.id);
+        expect(application.applicationGroupId).toBeTruthy();
+        const key = application.applicationGroupId!;
         groups.set(key, [...(groups.get(key) ?? []), application]);
       }
+      expect(groupRows.map((group) => group.id).sort()).toEqual([...groups.keys()].sort());
+      for (const row of groupRows) {
+        const members = groups.get(row.id)!;
+        expect(row.unitId).toBe(members[0]!.unitId);
+        expect(members.some((member) => member.status === row.status)).toBe(true);
+      }
+      expect(groupRows.some((row) => row.archivedAt)).toBe(true);
+      expect(groupRows.some((row) => !row.archivedAt)).toBe(true);
       expect(groups.size).toBeGreaterThan(200);
       for (const members of groups.values()) {
         expect(members.length).toBeGreaterThanOrEqual(1);

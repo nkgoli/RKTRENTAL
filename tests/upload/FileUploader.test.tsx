@@ -166,7 +166,7 @@ describe('FileUploader', () => {
         uploadFile={okUpload}
       />,
     );
-    const zone = screen.getByRole('button', { name: /drag and drop files here/ });
+    const zone = screen.getByRole('group', { name: /drop files here/i });
     fireEvent.drop(zone, { dataTransfer: { files: [imageFile('dropped.jpg')] } });
     await waitFor(() => expect(screen.getByText('Uploaded')).toBeTruthy());
     expect(screen.getByText('1 of 5 photos')).toBeTruthy();

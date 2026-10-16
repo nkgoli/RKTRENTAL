@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { db } from '../db/client';
+import { syncApplicationGroupStatus } from './groups';
 import {
   applicationStatusForReport,
   requireApplicationTransition,
@@ -155,6 +156,7 @@ function createPrismaStore(client: PrismaClient): ScreeningWebhookStore {
             where: { id: event.applicationId },
             data: { status: transition.applicationStatus },
           });
+          await syncApplicationGroupStatus(transaction, event.applicationId);
         }
 
         return transition;

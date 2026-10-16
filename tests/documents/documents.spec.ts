@@ -20,13 +20,13 @@ test('manager uploads a lease file, finds it, previews and downloads it', async 
   const name = `Documents flow ${Date.now()}.pdf`;
   await page.getByLabel('Upload destination').selectOption('seed-lease-maple-11');
   await page.getByLabel('File type').selectOption('LEASE');
-  await page.getByLabel('Choose a file to upload').setInputFiles({
+  await page.getByLabel('Choose files').setInputFiles({
     name,
     mimeType: 'application/pdf',
     buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n'),
   });
-  await page.getByRole('button', { name: 'Upload file' }).click();
-  await expect(page.getByRole('status')).toContainText(`${name} uploaded.`);
+  // The uploader sends the file as soon as it is chosen.
+  await expect(page.getByRole('status').filter({ hasText: `${name} uploaded.` })).toBeVisible();
 
   const leaseGroup = page.getByRole('link', {
     name: /Lease: Maple Court · Unit 4B — Alex Rivera/,

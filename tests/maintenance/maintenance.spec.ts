@@ -35,7 +35,7 @@ test('manager creates a photographed request, assigns a vendor, and changes stat
   await create.getByLabel('Request title').fill(title);
   await create.getByLabel('Description').fill('E2E maintenance request');
   await create
-    .getByLabel('Photo')
+    .getByLabel('Choose a file')
     .setInputFiles({ name: 'repair.png', mimeType: 'image/png', buffer: PNG });
   await create.getByRole('button', { name: 'Create request' }).click();
 

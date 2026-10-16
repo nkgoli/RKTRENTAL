@@ -30,3 +30,9 @@ tests/**/*.jpeg
 
 # screenshots dropped in the repo root
 /*.png
+
+# check outputs and screenshots under scripts/
+scripts/**/*.txt
+scripts/**/*.png
+scripts/**/*.jpg
+scripts/**/*.jpeg

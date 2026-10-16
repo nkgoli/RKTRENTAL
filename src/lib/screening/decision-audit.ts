@@ -1,4 +1,5 @@
 import { db } from '@/lib/db/client';
+import { syncApplicationGroupStatus } from './groups';
 
 export type ApplicationDecision = 'APPROVED' | 'DECLINED';
 
@@ -44,6 +45,7 @@ const persistentDecisionAudit = createDecisionAuditRecorder(async (event) => {
     },
   });
   if (result.count !== 1) throw new Error('Application decision could not be recorded');
+  await syncApplicationGroupStatus(db, event.applicationId);
 });
 
 export function recordDecision(input: DecisionAuditInput): Promise<void> {

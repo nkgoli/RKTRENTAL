@@ -4,4 +4,3 @@ export { PropertyOverview, UnitOverview } from './WorkspaceOverview';
 export { PropertyListing } from './PropertyListing';
 export { propertyListingMode } from '@/components/properties/listing';
 export { ReturnsWorkspace } from './ReturnsWorkspace';
-export type { ReturnUnitRow } from './ReturnsWorkspace';

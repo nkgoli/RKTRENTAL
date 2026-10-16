@@ -22,6 +22,7 @@ export function ManagerShell({
   user?: ManagerUser;
 }) {
   const pathname = usePathname() ?? '';
+  const workspaceRoute = /^\/properties\/[^/]+(?:\/|$)/.test(pathname);
   const current = findManagerItem(pathname);
   const [override, setOverride] = useState<PageHeaderConfig | null>(null);
   const eyebrow = override?.eyebrow ?? current?.group.label ?? 'RocketRental';
@@ -130,7 +131,7 @@ export function ManagerShell({
           </a>
         </div>
       </aside>      <main className="main" id="main-content" tabIndex={-1}>
-        <header className="topbar">
+        <header className={cx('topbar', workspaceRoute && focus.workspaceTopbar)}>
           <button
             type="button"
             className="menu-btn"
@@ -144,11 +145,11 @@ export function ManagerShell({
               <path d="M4 7h16M4 12h16M4 17h16" />
             </svg>
           </button>
-          <div>
+          {!workspaceRoute && <div>
             <p className="eyebrow">{eyebrow}</p>
             <h1>{title}</h1>
-          </div>
-          <div className="topbar-actions">
+          </div>}
+          {!workspaceRoute && <div className="topbar-actions">
             {actions?.map((a) => (
               <a
                 key={a.label}
@@ -158,7 +159,7 @@ export function ManagerShell({
                 {a.label}
               </a>
             ))}
-          </div>
+          </div>}
         </header>
         <div className="page">
           <PageHeaderContext.Provider value={setOverride}>{children}</PageHeaderContext.Provider>

@@ -43,6 +43,8 @@ enum ESignStatus {
 
 enum DocumentKind {
   LEASE
+  ADDENDUM
+  DISCLOSURE
   NOTICE
   INSPECTION
   ID
@@ -274,6 +276,10 @@ model Lease {
   deposit         Decimal          @db.Decimal(12, 2)
   lateFee         Decimal          @default(0) @db.Decimal(12, 2)
   graceDays       Int              @default(0)
+  rentDueDay      Int              @default(1)
+  prorateFirstMonth Boolean        @default(true)
+  moveInFee       Decimal          @default(0) @db.Decimal(12, 2)
+  petDeposit      Decimal          @default(0) @db.Decimal(12, 2)
   status          LeaseStatus      @default(DRAFT)
   eSignStatus     ESignStatus      @default(NOT_SENT)
   signedAt        DateTime?

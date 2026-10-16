@@ -42,6 +42,11 @@ function fakeDb() {
   }> = [];
   const unitUpdates: Array<Record<string, unknown>> = [];
   const tx = {
+    $executeRaw: async () => 0,
+    charge: {
+      findMany: async () => [],
+      createMany: async () => ({ count: 1 }),
+    },
     unit: {
       updateMany: async ({
         where,

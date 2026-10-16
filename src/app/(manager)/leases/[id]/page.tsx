@@ -227,7 +227,7 @@ export default async function LeaseDetailPage({
               <dt>Lease term</dt>
               <dd>{term(lease.startDate, lease.endDate)}</dd>
               <dt>Monthly rent</dt>
-              <dd>{money(lease.monthlyRent)} · due on the 1st</dd>
+              <dd>{money(lease.monthlyRent)} · due on the {lease.rentDueDay}{[1, 21].includes(lease.rentDueDay) ? 'st' : [2, 22].includes(lease.rentDueDay) ? 'nd' : [3, 23].includes(lease.rentDueDay) ? 'rd' : 'th'}</dd>
               <dt>Security deposit</dt>
               <dd>{money(lease.deposit)}</dd>
               <dt>Late fee</dt>

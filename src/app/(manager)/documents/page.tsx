@@ -37,6 +37,8 @@ import styles from './documents.module.css';
 const STORAGE_LIMIT = 10 * 1024 ** 3;
 const KIND_LABELS: Record<LibraryDocumentKind, string> = {
   LEASE: 'Lease',
+  ADDENDUM: 'Addendum',
+  DISCLOSURE: 'Disclosure',
   NOTICE: 'Notice',
   INSPECTION: 'Inspection',
   ID: 'ID',

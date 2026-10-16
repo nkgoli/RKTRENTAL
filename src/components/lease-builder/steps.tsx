@@ -118,7 +118,7 @@ export function TermStep({ draft, update, errors }: StepProps) {
         <input
           type="date"
           value={draft.startDate}
-          onChange={(e) => update({ startDate: e.target.value })}
+          onInput={(e) => update({ startDate: e.currentTarget.value })}
         />
       </Field>
       <fieldset className={styles.radios}>
@@ -226,7 +226,7 @@ export function ChargesPreview({ draft }: { draft: WizardDraft }) {
         <div className={styles.ledgerRow}>
           <span>{shortDate(first.date)}</span>
           <span>
-            Monthly rent{preview.monthly.length > 1 ? ` · repeats on the 1st through ${monthYear(last.date)}` : ''}
+            Monthly rent{preview.monthly.length > 1 ? ` · repeats on the ${draft.rentDueDay}${[1, 21].includes(draft.rentDueDay) ? 'st' : [2, 22].includes(draft.rentDueDay) ? 'nd' : [3, 23].includes(draft.rentDueDay) ? 'rd' : 'th'} through ${monthYear(last.date)}` : ''}
           </span>
           <strong>{formatMoney(first.amountCents)}</strong>
         </div>
@@ -245,12 +245,12 @@ export function RentStep({ draft, update, errors }: StepProps) {
   const fees = feesFromDraft(draft);
   const proration =
     start && fees.monthlyRentCents > 0
-      ? prorateFirstMonth(start, fees.monthlyRentCents, end ?? undefined)
+      ? prorateFirstMonth(start, fees.monthlyRentCents, end ?? undefined, draft.rentDueDay)
       : null;
   const prorationText = proration
     ? `${shortDate(proration.from)}–${shortDate(proration.to)} · ${proration.days} of ${proration.daysInMonth} days · auto-calculated from monthly rent.`
     : start && fees.monthlyRentCents > 0
-      ? 'The lease starts on the 1st, so the first month is a full month of rent.'
+      ? 'The lease starts on the due day, so the first billing period is a full month.'
       : 'Enter the monthly rent and a start date to calculate this.';
   return (
     <div className={styles.fields}>
@@ -265,11 +265,13 @@ export function RentStep({ draft, update, errors }: StepProps) {
         </Field>
         <Field
           label="Rent due day"
-          hint="Rent charges post to the ledger on the 1st of each month."
+          hint="Choose any day from the 1st through the 28th. The first rent period ends before the next due date."
           error={errors.rentDueDay}
         >
-          <select value={1} onChange={() => update({ rentDueDay: 1 })}>
-            <option value={1}>1st of each month</option>
+          <select value={draft.rentDueDay} onChange={(e) => update({ rentDueDay: Number(e.target.value) })}>
+            {Array.from({ length: 28 }, (_, index) => index + 1).map((day) => (
+              <option key={day} value={day}>{day}{[1, 21].includes(day) ? 'st' : [2, 22].includes(day) ? 'nd' : [3, 23].includes(day) ? 'rd' : 'th'} of each month</option>
+            ))}
           </select>
         </Field>
       </div>
@@ -300,7 +302,7 @@ export function RentStep({ draft, update, errors }: StepProps) {
             checked={draft.prorateFirstMonth}
             onChange={(e) => update({ prorateFirstMonth: e.target.checked })}
           />
-          <span>Charge a prorated first month (otherwise a full month is due on the 1st)</span>
+          <span>Charge the prorated first period (otherwise the first full rent is due on the next due day)</span>
         </label>
       )}
       <hr className={styles.rule} />
@@ -535,18 +537,21 @@ export function DisclosuresStep({ draft, update, errors }: StepProps) {
 
 // ------------------------------------------------------------------------------------ 8. Attachments
 
-export type AttachmentFile = { id: string; name: string; sizeBytes: number };
+export type LeaseDocumentType = 'LEASE' | 'ADDENDUM' | 'DISCLOSURE' | 'OTHER';
+export type AttachmentFile = { id: string; name: string; sizeBytes: number; kind: LeaseDocumentType };
 
 export function AttachmentsStep({
   leaseId,
   files,
   onUploaded,
   onRemoved,
+  onKindChanged,
 }: {
   leaseId: string | null;
   files: AttachmentFile[];
   onUploaded: (file: AttachmentFile) => void;
   onRemoved: (id: string) => void;
+  onKindChanged: (id: string, kind: LeaseDocumentType) => void;
 }) {
   if (!leaseId)
     return <p className={styles.sub}>Save the lease term first, then add documents here.</p>;
@@ -561,12 +566,40 @@ export function AttachmentsStep({
         initialFiles={files}
         accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.heic,.heif"
         label="Lease documents"
+        renderItemAction={(item) => {
+          const id = item.document?.id;
+          if (typeof id !== 'string') return null;
+          const file = files.find((candidate) => candidate.id === id);
+          return (
+            <select
+              className={styles.documentType}
+              aria-label={`Type for ${item.name}`}
+              value={file?.kind ?? 'LEASE'}
+              onChange={async (event) => {
+                const kind = event.target.value as LeaseDocumentType;
+                const response = await fetch(`/api/files/${id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ kind }),
+                });
+                if (response.ok) onKindChanged(id, kind);
+                else window.alert('Document type could not be saved. Please try again.');
+              }}
+            >
+              <option value="LEASE">Lease agreement</option>
+              <option value="ADDENDUM">Addendum</option>
+              <option value="DISCLOSURE">Disclosure</option>
+              <option value="OTHER">Other</option>
+            </select>
+          );
+        }}
         onUploaded={(doc: UploadedDocument) => {
           if (typeof doc.id === 'string')
             onUploaded({
               id: doc.id,
               name: typeof doc.name === 'string' ? doc.name : 'Document',
               sizeBytes: typeof doc.sizeBytes === 'number' ? doc.sizeBytes : 0,
+              kind: 'LEASE',
             });
         }}
         onRemove={async (item) => {
@@ -579,8 +612,7 @@ export function AttachmentsStep({
         }}
       />
       <p className={styles.caption}>
-        These files are stored on the lease as documents for tenant review and signing. Required
-        disclosures should be included before sending.
+        Each file is stored as a lease document with the type selected above. Review required disclosures before sending.
       </p>
     </div>
   );
@@ -658,7 +690,7 @@ export function ReviewStep({
       <h3 className={styles.reviewSection}>Rent, deposit &amp; fees</h3>
       <dl className={styles.review}>
         <dt>Monthly rent</dt>
-        <dd>{money(draft.monthlyRent)}, due on the 1st</dd>
+        <dd>{money(draft.monthlyRent)}, due on the {draft.rentDueDay}{[1, 21].includes(draft.rentDueDay) ? 'st' : [2, 22].includes(draft.rentDueDay) ? 'nd' : [3, 23].includes(draft.rentDueDay) ? 'rd' : 'th'}</dd>
         <dt>Security deposit</dt>
         <dd>{money(draft.deposit)}</dd>
         {draft.moveInFeeEnabled && (

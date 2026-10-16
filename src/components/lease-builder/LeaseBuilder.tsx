@@ -45,14 +45,14 @@ export type LeaseBuilderProps = {
 };
 
 const SUBTITLES: Record<number, string> = {
-  [STEP.term]: 'Choose when the lease starts and how it ends.',
-  [STEP.rent]: 'Set recurring rent and move-in charges. Review what will appear in Payments.',
+  [STEP.term]: 'Set move-in day and the lease term. The next step aligns rent to your chosen due day.',
+  [STEP.rent]: 'Choose the rent due day and review every move-in and recurring charge before sending.',
   [STEP.tenants]: 'Choose who is on the lease and who signs as the primary tenant.',
   [STEP.options]: 'Renewal notice, occupants and other options for this lease.',
   [STEP.clauses]: 'Pick the clauses that belong in the agreement.',
   [STEP.rules]: 'Set the house rules tenants agree to.',
   [STEP.disclosures]: 'Include the disclosures this lease needs.',
-  [STEP.attachments]: 'Add the agreements, addenda and disclosures that belong in this lease packet.',
+  [STEP.attachments]: 'Add documents to the lease packet. Assign a type to each file so tenants know what they are reviewing.',
   [STEP.lessor]: 'Who the lessor is on the agreement.',
   [STEP.review]: 'Check everything, then send the lease for e-signature.',
 };
@@ -63,6 +63,8 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
   const router = useRouter();
   const { tenants } = props;
   const [draft, setDraft] = useState<WizardDraft>(props.draft);
+  const draftRef = useRef<WizardDraft>(props.draft);
+  const [hydrated, setHydrated] = useState(false);
   const [step, setStep] = useState(props.step);
   const [furthest, setFurthest] = useState(Math.max(props.furthestStep, props.step));
   const [leaseId, setLeaseId] = useState(props.leaseId);
@@ -76,6 +78,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
 
   // The builder replaces the app chrome; keep the covered sidebar and header out of reach.
   useEffect(() => {
+    setHydrated(true);
     const covered = Array.from(
       document.querySelectorAll<HTMLElement>('#manager-sidebar, .topbar, .skip, a[href="#main-content"]'),
     );
@@ -86,7 +89,8 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
   }, []);
 
   const update = (patch: Partial<WizardDraft>) => {
-    setDraft((d) => withResolvedEnd({ ...d, ...patch }));
+    draftRef.current = withResolvedEnd({ ...draftRef.current, ...patch });
+    setDraft(draftRef.current);
     setErrors({});
     setMessage('');
   };
@@ -100,7 +104,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
       renewId: props.renewId ?? undefined,
       step: from,
       nextStep: to,
-      draft,
+      draft: draftRef.current,
       strict,
     });
     if (!result.ok) {
@@ -121,7 +125,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
   }
 
   function next() {
-    const local = validateStep(step, draft, validationOptions);
+    const local = validateStep(step, draftRef.current, validationOptions);
     if (Object.keys(local).length) {
       setErrors(local);
       setMessage('Please fix the highlighted fields.');
@@ -148,7 +152,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
   }
 
   function send() {
-    const local = validateStep(STEP.review, draft, validationOptions);
+    const local = validateStep(STEP.review, draftRef.current, validationOptions);
     if (Object.keys(local).length) {
       setErrors(local);
       setMessage('Please fix the highlighted fields.');
@@ -159,7 +163,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
       const result = await sendWizardLeaseAction({
         leaseId,
         renewId: props.renewId ?? undefined,
-        draft,
+        draft: draftRef.current,
       });
       setSent(result);
       if (!result.ok) {
@@ -193,6 +197,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
       files={attachments}
       onUploaded={(file) => setAttachments((list) => [...list.filter((f) => f.id !== file.id), file])}
       onRemoved={(id) => setAttachments((list) => list.filter((f) => f.id !== id))}
+      onKindChanged={(id, kind) => setAttachments((list) => list.map((f) => f.id === id ? { ...f, kind } : f))}
     />,
     <LessorStep key="lessor" draft={draft} update={update} errors={errors} />,
     <ReviewStep
@@ -206,7 +211,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
   ][step];
 
   return (
-    <div className={styles.page} role="region" aria-label="Create lease">
+    <div className={styles.page} role="region" aria-label="Create lease" inert={!hydrated}>
       <header className={styles.topbar}>
         <Link className={styles.back} href={props.backHref} aria-label="Back">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -221,6 +226,15 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
           Save and exit
         </button>
       </header>
+
+      <div className={styles.intro}>
+        <div>
+          <p className={styles.introKicker}>Leasing workspace / New lease</p>
+          <h1>Create lease</h1>
+          <p>Build the agreement for {props.placeLabel}, one step at a time.</p>
+        </div>
+        <span className={styles.introDraft}><span aria-hidden="true" />{leaseId ? 'Draft saved' : 'New draft'}</span>
+      </div>
 
       <div className={styles.layout} ref={top}>
         <nav aria-label="Lease steps">

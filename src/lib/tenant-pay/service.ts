@@ -70,6 +70,7 @@ export type TenantPayView = {
   propertyName: string;
   unitLabel: string;
   monthlyRentCents: number;
+  rentDueDay: number;
   graceDays: number;
   amountDue: AmountDue;
   receipts: Receipt[];
@@ -209,6 +210,7 @@ export async function loadTenantPayView(
     propertyName: lease.unit.property.name,
     unitLabel: lease.unit.isImplicit ? '' : lease.unit.number,
     monthlyRentCents: terms.monthlyRentCents,
+    rentDueDay: terms.rentDueDay ?? 1,
     graceDays: terms.graceDays,
     amountDue: due,
     receipts: buildReceipts(ledger.payments),

@@ -172,6 +172,7 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
         enabled={view.autopay.enabled}
         paymentMethodId={autopayMethodId}
         monthlyRentCents={view.monthlyRentCents}
+        rentDueDay={view.rentDueDay}
       />
 
       <section className="card" aria-labelledby="receipts-title">

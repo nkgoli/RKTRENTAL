@@ -243,6 +243,10 @@ export type ParsedTerms = {
   deposit: string;
   lateFee: string;
   graceDays: number;
+  rentDueDay: number;
+  prorateFirstMonth: boolean;
+  moveInFee: string;
+  petDeposit: string;
   occupants: string | null;
 };
 
@@ -260,6 +264,10 @@ export function parseWizardTerms(draft: WizardDraft): ParsedTerms | null {
     deposit,
     lateFee,
     graceDays: draft.graceDays,
+    rentDueDay: draft.rentDueDay,
+    prorateFirstMonth: draft.prorateFirstMonth,
+    moveInFee: draft.moveInFeeEnabled ? parseMoney(draft.moveInFee) ?? '0.00' : '0.00',
+    petDeposit: draft.petDepositEnabled ? parseMoney(draft.petDeposit) ?? '0.00' : '0.00',
     occupants: draft.occupants.trim() || null,
   };
 }

@@ -246,7 +246,7 @@ export async function loadTenantLease(
     term: { start: lease.startDate, end: lease.endDate },
     monthlyRentCents: cents(lease.monthlyRent),
     depositCents: cents(lease.deposit),
-    rentDueDay: 1,
+    rentDueDay: lease.rentDueDay,
     autopayOn: autopay?.enabled ?? false,
     occupants: parseOccupants(lease.occupants),
     coTenants: lease.tenants.filter((t) => t.tenantId !== tenantId).map((t) => t.tenant.name),

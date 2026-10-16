@@ -1,9 +1,8 @@
 /**
- * Move-in charges a lease creates when it is sent or activated: the prorated first month, the
+ * Move-in charges a lease creates when it is sent or activated: the prorated first billing period, the
  * security deposit and the optional move-in fee and pet deposit. Everything here is idempotent:
- * each charge carries a deterministic key in Charge.description, and the prorated first month
- * reuses the monthly rent key (`rent:<lease>:<YYYY-MM>`), so the rent planner and the statement's
- * scheduled rent skip that month instead of adding it a second time.
+ * each charge carries a deterministic key in Charge.description. Proration has its own key, while
+ * regular rent begins at the first due day on or after the lease starts.
  */
 import type { Prisma } from '@prisma/client';
 import {
@@ -11,9 +10,9 @@ import {
   assertCents,
   centsToDecimal,
   monthKey,
-  monthStart,
-  rentKey,
+  rentDueDate,
   startOfUtcDay,
+  toCents,
   type Cents,
   type ChargeKindName,
 } from './core';
@@ -27,8 +26,9 @@ export type SetupFees = {
   depositCents: Cents;
   moveInFeeCents: Cents;
   petDepositCents: Cents;
-  /** Charge only the days left in the first month when the lease starts after the 1st. */
+  /** Charge only the days before the first selected rent due day. */
   prorateFirstMonth: boolean;
+  rentDueDay?: number;
 };
 
 export type FirstMonthProration = {
@@ -55,22 +55,24 @@ const monthLabel = (date: Date) =>
   date.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
 
 /**
- * Rent for the part of the first month a lease covers, or null when it starts on the 1st (the
- * normal monthly charge applies). The lease end caps the range when it falls in the same month.
+ * Rent from lease start through the day before its first regular due date, or null when the
+ * lease starts on the due day. The lease end caps the partial billing period.
  */
 export function prorateFirstMonth(
   startDate: Date,
   monthlyRentCents: Cents,
   endDate?: Date,
+  dueDay = 1,
 ): FirstMonthProration | null {
   assertCents(monthlyRentCents);
   const start = startOfUtcDay(startDate);
-  if (start.getUTCDate() === 1 || monthlyRentCents <= 0) return null;
-  const daysInMonth = new Date(
-    Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0),
-  ).getUTCDate();
-  const monthEnd = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), daysInMonth));
-  const to = endDate && startOfUtcDay(endDate) < monthEnd ? startOfUtcDay(endDate) : monthEnd;
+  if (start.getUTCDate() === dueDay || monthlyRentCents <= 0) return null;
+  const firstDueMonth = start.getUTCDate() < dueDay ? monthKey(start) : addMonths(monthKey(start), 1);
+  const nextDue = rentDueDate(firstDueMonth, dueDay);
+  const previousDue = rentDueDate(addMonths(firstDueMonth, -1), dueDay);
+  const cycleEnd = new Date(nextDue.getTime() - DAY_MS);
+  const daysInMonth = Math.round((nextDue.getTime() - previousDue.getTime()) / DAY_MS);
+  const to = endDate && startOfUtcDay(endDate) < cycleEnd ? startOfUtcDay(endDate) : cycleEnd;
   if (to < start) return null;
   const days = Math.round((to.getTime() - start.getTime()) / DAY_MS) + 1;
   return {
@@ -94,15 +96,15 @@ export function planSetupCharges(input: {
   const dueDate = startOfUtcDay(startDate);
   const out: SetupCharge[] = [];
   const proration = fees.prorateFirstMonth
-    ? prorateFirstMonth(startDate, fees.monthlyRentCents, endDate)
+    ? prorateFirstMonth(startDate, fees.monthlyRentCents, endDate, fees.rentDueDay)
     : null;
   if (proration)
     out.push({
       kind: 'RENT',
       amountCents: proration.cents,
       dueDate,
-      description: rentKey(leaseId, proration.month),
-      label: `Prorated ${monthLabel(proration.from)} rent`,
+      description: `prorated:${leaseId}:${proration.from.toISOString().slice(0, 10)}`,
+      label: `Prorated rent · ${monthLabel(proration.from)}`,
     });
   const one = (kind: ChargeKindName, key: SetupChargeKind, cents: Cents, label: string) => {
     assertCents(cents);
@@ -149,7 +151,7 @@ export function previewScheduledCharges(input: {
   const { startDate, endDate, fees, asOf } = input;
   const setup = planSetupCharges({ leaseId: 'preview', startDate, endDate, fees });
   const proration = fees.prorateFirstMonth
-    ? prorateFirstMonth(startDate, fees.monthlyRentCents, endDate)
+    ? prorateFirstMonth(startDate, fees.monthlyRentCents, endDate, fees.rentDueDay)
     : null;
   const moveIn = setup.map(
     (c): PreviewRow => ({
@@ -165,10 +167,11 @@ export function previewScheduledCharges(input: {
     const asOfMonth = monthKey(asOf);
     const last = monthKey(endDate);
     for (let month = first; month <= last; month = addMonths(month, 1)) {
-      if (proration && month === proration.month) continue;
       if (month < asOfMonth) continue;
+      const date = rentDueDate(month, fees.rentDueDay);
+      if (date < startOfUtcDay(startDate) || date > startOfUtcDay(endDate)) continue;
       monthly.push({
-        date: monthStart(month),
+        date,
         label: 'Monthly rent',
         amountCents: fees.monthlyRentCents,
         group: 'monthly',
@@ -218,4 +221,28 @@ export async function ensureSetupCharges(
     }));
   if (data.length) await tx.charge.createMany({ data });
   return data.length;
+}
+
+/** Persisted lease terms are the source for every activation path, including non-wizard drafts. */
+export async function ensureLeaseSetupCharges(
+  tx: Prisma.TransactionClient,
+  organizationId: string,
+  leaseId: string,
+): Promise<number> {
+  const lease = await tx.lease.findFirst({ where: { id: leaseId, organizationId } });
+  if (!lease) throw new Error('Lease not found for move-in charges');
+  return ensureSetupCharges(tx, {
+    organizationId,
+    leaseId,
+    startDate: lease.startDate,
+    endDate: lease.endDate,
+    fees: {
+      monthlyRentCents: toCents(lease.monthlyRent),
+      depositCents: toCents(lease.deposit),
+      moveInFeeCents: toCents(lease.moveInFee ?? '0'),
+      petDepositCents: toCents(lease.petDeposit ?? '0'),
+      prorateFirstMonth: lease.prorateFirstMonth ?? true,
+      rentDueDay: lease.rentDueDay ?? 1,
+    },
+  });
 }

@@ -3,7 +3,7 @@
  * database and never reads the clock, so every result is reproducible from its inputs.
  *
  * Conventions:
- * - Rent is due on the 1st of each month the lease overlaps. No proration.
+ * - Rent is due on the lease's selected day (1–28) for each billing cycle it covers.
  * - A charge is identified by a deterministic key (`rent:<lease>:<YYYY-MM>`, `late-fee:<lease>:<YYYY-MM>`)
  *   stored in Charge.description, so planning is idempotent.
  * - Only SUCCEEDED payments settle charges. PENDING payments are tracked separately; FAILED and
@@ -22,6 +22,7 @@ export type LeaseTerms = {
   monthlyRentCents: Cents;
   lateFeeCents: Cents;
   graceDays: number;
+  rentDueDay?: number;
   status: 'DRAFT' | 'ACTIVE' | 'ENDED' | 'TERMINATED';
 };
 
@@ -96,6 +97,13 @@ export function monthStart(key: string): Date {
   return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1));
 }
 
+export function rentDueDate(key: string, dueDay = 1): Date {
+  if (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 28)
+    throw new Error('Rent due day must be between 1 and 28');
+  const first = monthStart(key);
+  return new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), dueDay));
+}
+
 export function addMonths(key: string, count: number): string {
   const start = monthStart(key);
   return monthKey(new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + count, 1)));
@@ -165,13 +173,15 @@ export function planRentCharges(
     month <= last;
     month = addMonths(month, 1)
   ) {
+    const dueDate = rentDueDate(month, lease.rentDueDay);
+    if (dueDate < startOfUtcDay(lease.startDate) || dueDate > startOfUtcDay(lease.endDate)) continue;
     const description = rentKey(lease.id, month);
     if (have.has(description)) continue;
     out.push({
       leaseId: lease.id,
       kind: 'RENT',
       amountCents: lease.monthlyRentCents,
-      dueDate: monthStart(month),
+      dueDate,
       description,
     });
   }

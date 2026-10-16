@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   buildLeaseStatement,
   chargeTypeLabel,
@@ -7,6 +7,7 @@ import {
   paymentsProviderLabel,
   planRentCharges,
   planSetupCharges,
+  ensureLeaseSetupCharges,
   previewScheduledCharges,
   prorateFirstMonth,
   scheduledRent,
@@ -20,6 +21,19 @@ const d = (value: string) => new Date(`${value}T00:00:00.000Z`);
 const iso = (date: Date) => date.toISOString().slice(0, 10);
 
 describe('first-month proration', () => {
+  it('aligns proration to a 5th due day, including the cross-month billing period', () => {
+    const p = prorateFirstMonth(d('2027-05-15'), 185_000, d('2028-05-14'), 5)!;
+    expect(p).toMatchObject({ days: 21, daysInMonth: 31, cents: 125_323 });
+    expect(iso(p.to)).toBe('2027-06-04');
+    expect(prorateFirstMonth(d('2027-05-05'), 185_000, undefined, 5)).toBeNull();
+  });
+
+  it('handles a start before the selected due day and the 28th across February', () => {
+    expect(prorateFirstMonth(d('2027-05-01'), 180_000, undefined, 5)).toMatchObject({ days: 4, daysInMonth: 30, cents: 24_000 });
+    const feb = prorateFirstMonth(d('2028-02-27'), 290_000, undefined, 28)!;
+    expect(iso(feb.to)).toBe('2028-02-27');
+    expect(feb.days).toBe(1);
+  });
   it('charges the days left in the month, counting the move-in day', () => {
     const p = prorateFirstMonth(d('2027-05-15'), 185_000)!;
     expect(p).toMatchObject({ month: '2027-05', days: 17, daysInMonth: 31 });
@@ -60,7 +74,7 @@ describe('setup charges', () => {
 
   it('creates the prorated month, deposit, move-in fee and pet deposit due at move-in', () => {
     expect(plan.map((c) => [c.kind, c.amountCents, c.description])).toEqual([
-      ['RENT', 101_452, 'rent:L9:2027-05'],
+      ['RENT', 101_452, 'prorated:L9:2027-05-15'],
       ['DEPOSIT', 185_000, setupKey('deposit', 'L9')],
       ['OTHER', 15_000, setupKey('move-in-fee', 'L9')],
       ['DEPOSIT', 25_000, setupKey('pet-deposit', 'L9')],
@@ -90,6 +104,21 @@ describe('setup charges', () => {
 });
 
 describe('ledger rows after sending', () => {
+  it('previews and schedules rent on the 5th without repeating move-in charges', () => {
+    const fifthFees = { ...fees, rentDueDay: 5 };
+    const startDate = d('2027-05-15');
+    const endDate = d('2027-08-14');
+    const preview = previewScheduledCharges({ startDate, endDate, fees: fifthFees, asOf: d('2027-05-01') });
+    expect(preview.proration?.cents).toBe(125_323);
+    expect(preview.monthly.map((row) => iso(row.date))).toEqual(['2027-06-05', '2027-07-05', '2027-08-05']);
+    const fifthLease: LeaseTerms = { id: 'five', startDate, endDate, monthlyRentCents: 185_000, lateFeeCents: 0, graceDays: 5, rentDueDay: 5, status: 'ACTIVE' };
+    const setup = planSetupCharges({ leaseId: fifthLease.id, startDate, endDate, fees: fifthFees }).map((charge) => ({ leaseId: fifthLease.id, ...charge }));
+    const june = planRentCharges(fifthLease, setup, [], d('2027-06-10'));
+    const stored = [...june, ...planRentCharges(fifthLease, [...setup, ...june], [], d('2027-07-10'))];
+    const statement = buildLeaseStatement({ lease: fifthLease, charges: [...setup, ...stored], payments: [], place: 'Maple Court', asOf: d('2027-07-10') });
+    expect(statement.rows.filter((row) => row.kind === 'RENT').map((row) => iso(row.dueDate))).toEqual(['2027-05-15', '2027-06-05', '2027-07-05', '2027-08-05']);
+    expect(new Set(statement.rows.map((row) => row.description)).size).toBe(statement.rows.length);
+  });
   const lease: LeaseTerms = {
     id: 'L9',
     startDate: d('2027-05-15'),
@@ -148,6 +177,25 @@ describe('ledger rows after sending', () => {
       .map((r) => iso(r.dueDate));
     expect(preview.monthly.map((r) => iso(r.date))).toEqual(ledgerMonthly);
     expect(preview.monthly.map((r) => iso(r.date))).toEqual(['2027-06-01', '2027-07-01', '2027-08-01', '2027-09-01']);
+  });
+});
+
+describe('activation setup idempotency', () => {
+  it('creates each move-in charge once across repeated activation calls', async () => {
+    const charges: { description: string }[] = [];
+    const tx = {
+      $executeRaw: vi.fn().mockResolvedValue(0),
+      lease: { findFirst: vi.fn().mockResolvedValue({ id: 'once', startDate: d('2027-05-15'), endDate: d('2028-05-14'), monthlyRent: '1850.00', deposit: '1850.00', moveInFee: '150.00', petDeposit: '250.00', prorateFirstMonth: true, rentDueDay: 5 }) },
+      charge: {
+        findMany: vi.fn().mockImplementation(async () => charges),
+        createMany: vi.fn().mockImplementation(async ({ data }: { data: { description: string }[] }) => { charges.push(...data); }),
+      },
+    };
+    const client = tx as unknown as Parameters<typeof ensureLeaseSetupCharges>[0];
+    expect(await ensureLeaseSetupCharges(client, 'org', 'once')).toBe(4);
+    expect(await ensureLeaseSetupCharges(client, 'org', 'once')).toBe(0);
+    expect(charges.map((charge) => charge.description)).toEqual(['prorated:once:2027-05-15', 'setup:deposit:once', 'setup:move-in-fee:once', 'setup:pet-deposit:once']);
+    expect(tx.charge.createMany).toHaveBeenCalledTimes(1);
   });
 });
 

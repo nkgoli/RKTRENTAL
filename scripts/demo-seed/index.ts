@@ -329,7 +329,7 @@ async function seedDatabase() {
   }
   await createManyInChunks(expenses, (data) => prisma.expense.createMany({ data }));
 
-  const storage = createStorageAdapter({ ...process.env, STORAGE_DRIVER: 'local' });
+  const storage = createStorageAdapter(process.env);
   const photos: Prisma.DocumentCreateManyInput[] = [];
   const photoAttachments: Prisma.MaintenancePhotoCreateManyInput[] = [];
   const payloads: { key: string; variant: number }[] = [];

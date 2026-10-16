@@ -78,11 +78,13 @@ test('add a property, add a unit, open the unit', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: `${name} · Unit 6A` })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Lease', exact: true })).toBeVisible();
   await expect(page.getByText('No active lease on this unit.')).toBeVisible();
-  const unitId = new URL(page.url()).searchParams.get('unit') ?? page.url().split('/').pop();
-  await expect(page.getByRole('link', { name: 'Rent comps' }).first()).toHaveAttribute(
-    'href',
-    `/rent-comps?unit=${unitId}`,
-  );
+  // Rent comps live under the workspace Listing tab, scoped to this unit.
+  const unitUrl = new URL(page.url());
+  const propertyId = unitUrl.pathname.split('/')[2];
+  const unitId = unitUrl.searchParams.get('unit') ?? unitUrl.pathname.split('/').pop();
+  await expect(
+    page.getByRole('navigation', { name: 'Workspace sections' }).getByRole('link', { name: 'Listing' }),
+  ).toHaveAttribute('href', `/properties/${propertyId}/listing?unit=${unitId}`);
 
   // Edit the unit.
   const facts = page.locator('#unit-facts');
@@ -114,9 +116,10 @@ test('single-unit property links straight to its one unit; archive hides it', as
     .click();
   await expect(page).toHaveURL(/\/properties\/[^/?]+(\/units\/[^/?]+|\?unit=[^/]+)$/);
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
-  // The implicit unit is the whole property, so it cannot be deleted.
-  await expect(page.getByRole('button', { name: /^Delete/ })).toBeDisabled();
-  await expect(page.getByText('The single-family home unit cannot be deleted.')).toBeVisible();
+  // The implicit unit is the whole property: its page has no unit facts card, so there is
+  // no Delete control at all. The property is removed with Archive property instead.
+  await expect(page.getByRole('button', { name: /^Delete/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Archive property' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Listing' }).first()).toBeVisible();
 
   // Edit then archive from the property page.
@@ -154,4 +157,7 @@ test('seeded Maple Court shows its units and the 4B lease', async ({ page }) => 
     /\/leases\//,
   );
   await expect(page.getByRole('link', { name: '1 open maintenance request' })).toBeVisible();
+  // A unit with linked records (lease, requests) cannot be deleted.
+  await expect(page.locator('#unit-facts').getByRole('button', { name: 'Delete' })).toBeDisabled();
+  await expect(page.getByText('A unit with linked records cannot be deleted.')).toBeVisible();
 });

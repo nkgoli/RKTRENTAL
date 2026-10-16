@@ -1,4 +1,10 @@
 .viewBar { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
+/* Phones: stack the search above the chips and let the chips wrap instead of clipping. */
+@media (max-width: 640px) {
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar :global(.search) { min-width: 0; width: 100%; }
+  .toolbar :global(.chips) { flex-wrap: wrap; }
+}
 .viewToggle { display: inline-flex; padding: 3px; gap: 2px; border: 1px solid var(--rr-border-strong); border-radius: 10px; background: var(--design-surface); }
 .viewToggle a { padding: 4px 12px; border-radius: 7px; color: var(--design-muted); font-size: 13px; font-weight: 650; text-decoration: none; }
 .viewToggle a.viewActive { background: var(--design-primary); color: #fff; }

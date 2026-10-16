@@ -15,7 +15,7 @@ vi.mock('@/components/units/DeleteUnitControl', () => ({
 vi.mock('next/navigation', () => ({
   usePathname: () => '/unscoped',
   useSearchParams: () => new URLSearchParams(),
-  useRouter: () => ({ refresh: () => undefined }),
+  useRouter: () => ({ refresh: () => undefined, push: () => undefined }),
 }));
 
 import { PropertyOverview, UnitOverview } from '@/components/workspace/WorkspaceOverview';
@@ -62,6 +62,24 @@ describe('property and unit workspace render', () => {
     expect(html).toContain('Applications');
   });
 
+  it('offers a unit switcher on multi-unit properties only', () => {
+    const units = [
+      { id: 'unit-1', number: '4B', isImplicit: false, status: 'OCCUPIED' },
+      { id: 'unit-2', number: '5A', isImplicit: false, status: 'VACANT' },
+    ];
+    const multi = renderToStaticMarkup(<Workspace
+      scope={{ propertyId: 'property-1', propertyName: 'Maple Court', propertyType: 'MULTI_UNIT', activeUnitCount: 2 }}
+      units={units}
+    />);
+    expect(multi).toContain('aria-label="Switch unit"');
+    expect(multi).toContain('Unit 5A');
+    const single = renderToStaticMarkup(<Workspace
+      scope={{ propertyId: 'property-2', propertyName: '18 Elm Street', propertyType: 'SINGLE_UNIT', activeUnitCount: 1 }}
+      units={[{ id: 'home', number: 'Home', isImplicit: true, status: 'OCCUPIED' }]}
+    />);
+    expect(single).not.toContain('Switch unit');
+  });
+
   it('renders unit-specific scope and the returns chart and KPIs', () => {
     const header = renderToStaticMarkup(<Workspace
       scope={{ propertyId: 'property-1', propertyName: 'Maple Court', propertyType: 'MULTI_UNIT', activeUnitCount: 4, unitId: 'unit-1', unitNumber: '4B', unitStatus: 'OCCUPIED' }}
@@ -96,8 +114,7 @@ describe('property and unit workspace render', () => {
   it('renders one lease card, read-only unit facts and empty-state next steps', () => {
     const html = renderToStaticMarkup(<UnitOverview unit={unit} canDelete />);
 
-    expect(html).toContain('>Lease<');
-    expect(html).not.toContain('Lease timeline');
+    expect(html).toContain('Lease timeline');
     expect(html).not.toContain('Current lease');
     expect(html).not.toContain('Edit unit');
     expect(html).not.toContain('Maintenance at a glance');

@@ -11,11 +11,13 @@ export function NewMaintenanceRequestDialog({
   propertyName,
   units,
   selectedUnitId,
+  triggerLabel = '+ New request',
 }: {
   action: CreateAction;
   propertyName: string;
   units: Array<{ id: string; number: string }>;
   selectedUnitId?: string;
+  triggerLabel?: string;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const defaultUnitId = selectedUnitId ?? (units.length === 1 ? units[0]?.id : undefined);
@@ -28,7 +30,7 @@ export function NewMaintenanceRequestDialog({
         onClick={() => dialogRef.current?.showModal()}
         disabled={units.length === 0}
       >
-        + New request
+        {triggerLabel}
       </button>
       <dialog
         ref={dialogRef}

@@ -4,10 +4,33 @@ import { randomUUID } from 'node:crypto';
 import { redirect } from 'next/navigation';
 import { requireManagerRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
+import { saveGroupSettings } from '@/lib/integrations/service';
+import { SettingsError } from '@/lib/integrations/settings';
 import { ChargeInputError, createCharge, recordPayment, toCents } from '@/lib/ledger';
 import { withUnit } from './scope';
 
 const text = (data: FormData, name: string) => String(data.get(name) ?? '').trim();
+
+/** Saves the org-wide screening defaults from the property Applications tab and returns to it. */
+export async function saveApplicationSettingsAction(data: FormData) {
+  const session = await requireManagerRole();
+  const propertyId = text(data, 'propertyId');
+  const unitId = text(data, 'unitId') || undefined;
+  const back = (notice: string): never =>
+    redirect(withUnit(`/properties/${propertyId}/applications`, unitId, { notice }));
+  try {
+    await saveGroupSettings(
+      session.organizationId,
+      'screening',
+      { defaultPackage: text(data, 'defaultPackage'), applicantConsent: text(data, 'applicantConsent') },
+      db.providerConnection,
+    );
+  } catch (error) {
+    if (error instanceof SettingsError) return back('settings-invalid');
+    throw error;
+  }
+  return back('settings-saved');
+}
 
 /** Records a payment from the property Payments tab and returns to that tab. */
 export async function recordPropertyPaymentAction(data: FormData) {

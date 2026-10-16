@@ -40,6 +40,17 @@ export function PropertyMaintenanceList({
   requests: MaintenanceBoardRequest[];
   createRequestControl: ReactNode;
 }) {
+  if (requests.length === 0) {
+    return (
+      <section className={`card ${styles.emptyState}`} aria-labelledby="repair-requests-heading">
+        <span className={styles.emptyIcon} aria-hidden="true">+</span>
+        <h2 id="repair-requests-heading">No repair requests yet</h2>
+        <p className="muted">When something needs fixing, log it here and track it from new to done. Start with your first request.</p>
+        {createRequestControl}
+      </section>
+    );
+  }
+
   return (
     <>
       <section

@@ -1,6 +1,12 @@
-.page { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, .9fr); gap: 20px; align-items: start; }
-.primary, .side { display: grid; gap: 20px; min-width: 0; }
-.mediaCard { grid-column: 1 / -1; min-width: 0; }
+.page { display: grid; gap: 16px; min-width: 0; }
+.pair { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.strip h3 { margin: 0; font-size: 15px; }
+.stripHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 13px; }
+.stripNumbers { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; margin-bottom: 8px; font-size: 14px; }
+.owed { color: #b4694a; font-weight: 650; }
+.bar { height: 8px; overflow: hidden; border-radius: 99px; background: #eef2f7; }
+.bar span { display: block; height: 100%; border-radius: 99px; background: var(--design-primary); }
+.leaseLine { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--rr-border); font-size: 13px; }
 .tableWrap { overflow-x: auto; }
 .tableWrap table { min-width: 650px; }
 .leaseTimelineRow { display: flex; align-items: center; gap: 12px; padding: 13px 2px; color: var(--design-text); text-decoration: none; border-bottom: 1px solid var(--rr-border); }
@@ -39,12 +45,8 @@
 .tenantLine > div { display: grid; flex: 1; gap: 3px; }
 .tenantLine small { color: var(--design-muted); }
 
-@media (max-width: 1020px) {
-  .page { grid-template-columns: minmax(0, 1.3fr) minmax(250px, .8fr); gap: 16px; }
-  .primary, .side { gap: 16px; }
-}
 @media (max-width: 780px) {
-  .page { grid-template-columns: minmax(0, 1fr); }
+  .pair { grid-template-columns: minmax(0, 1fr); }
   .leaseTimelineRow { flex-wrap: wrap; }
   .leaseTimelineRow > :global(.badge) { margin-left: 22px; }
 }

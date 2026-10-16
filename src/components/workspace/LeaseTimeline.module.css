@@ -1,0 +1,27 @@
+.timeline { display: grid; gap: 10px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 0; list-style: none; color: var(--design-muted); font-size: 12px; }
+.legend li::before { content: ''; display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; vertical-align: -1px; background: var(--seg, #cbd5e1); }
+.legend li[data-kind="current"], .segment[data-kind="current"] { --seg: #1e3a8a; }
+.legend li[data-kind="next"], .segment[data-kind="next"] { --seg: #6d8bd6; }
+.legend li[data-kind="draft"], .segment[data-kind="draft"] { --seg: #cbd5e1; }
+.legend li[data-kind="past"], .segment[data-kind="past"] { --seg: #94a3b8; }
+.legend li[data-kind="vacant"], .segment[data-kind="vacant"] { --seg: #fff2e9; }
+.rows { display: grid; gap: 10px; }
+.row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: center; }
+.rowLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 650; }
+.rowLabel a { color: var(--design-text); text-decoration: none; }
+.rowLabel a:hover { color: var(--design-primary); }
+.track { position: relative; height: 34px; border-radius: 10px; background: #f6f8fc; overflow: hidden; }
+.segment { position: absolute; top: 4px; bottom: 4px; display: flex; align-items: center; overflow: hidden; padding: 0 8px; border-radius: 8px; background: var(--seg); color: #fff; font-size: 12px; font-weight: 600; text-decoration: none; box-sizing: border-box; min-width: 4px; }
+.segment[data-kind="draft"], .segment[data-kind="vacant"] { color: #6b4a35; }
+.segment[data-kind="draft"] { border: 1px dashed #94a3b8; color: #475569; background: #eef2f7; }
+.segment[data-kind="vacant"] { border: 1px dashed #e0a283; }
+.segmentText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.today { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--design-accent); z-index: 2; }
+.axis { position: relative; display: flex; justify-content: space-between; margin-left: 108px; color: var(--design-muted); font-size: 11px; }
+.todayLabel { position: absolute; transform: translateX(-50%); color: #b4694a; font-weight: 700; }
+@media (max-width: 640px) {
+  .row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .axis { margin-left: 0; }
+}
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Badge, Cover } from '@/components/ui';
 import type { CoverKind } from '@/components/ui';
 import type { WorkspaceScope, WorkspaceUnit } from './Workspace';
+import { UnitSwitcher } from './UnitSwitcher';
 import styles from './Workspace.module.css';
 
 function propertyTypeLabel(scope: WorkspaceScope) {
@@ -57,6 +58,7 @@ export function WorkspaceHeader({ scope, units, coverKind, coverSrc }: {
           <Badge tone="info">{propertyTypeLabel(scope)}</Badge>
         </div>
       </div>
+      {propertyTypeLabel(scope) === 'Multi-unit' && <UnitSwitcher propertyName={scope.propertyName} units={units} />}
     </div>
     <div className={styles.cover}><Cover kind={coverKind ?? (scope.activeUnitCount === 1 ? 'house' : 'apartment')} src={coverSrc} /></div>
   </header>;

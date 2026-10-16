@@ -6,6 +6,7 @@ import { propertiesDb } from '@/lib/properties/data';
 import { listWorkspacePhotos } from '@/lib/storage/service';
 import { formatAddress } from '@/lib/properties/format';
 import { previewUrl } from '../_components/Media';
+import styles from './workspace.module.css';
 
 /** Child routes select the tab; ?unit=<unitId> selects a unit within the same property workspace. */
 export default async function PropertyWorkspaceLayout({ children, params }: {
@@ -21,7 +22,7 @@ export default async function PropertyWorkspaceLayout({ children, params }: {
   const activeUnitCount = units.filter((unit) => unit.status !== 'ARCHIVED').length;
   const firstPhoto = (await listWorkspacePhotos(session.organizationId, { kind: 'property', id }))[0];
 
-  return <>
+  return <div className={styles.column}>
     <Workspace
       scope={{
         propertyId: property.id,
@@ -36,5 +37,5 @@ export default async function PropertyWorkspaceLayout({ children, params }: {
       coverSrc={firstPhoto ? previewUrl(firstPhoto.id) : undefined}
     />
     {children}
-  </>;
+  </div>;
 }

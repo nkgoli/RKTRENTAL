@@ -3,10 +3,7 @@
 import { useActionState, useState } from 'react';
 import {
   Alert,
-  Badge,
   Button,
-  Card,
-  CardHeader,
   Field,
   FormRow,
   Input,
@@ -22,14 +19,13 @@ import { FieldError } from './FieldError';
 export type OwnerOption = { id: string; name: string };
 const empty: FormState = {};
 
-export function AddPropertyForm({ owners }: { owners: OwnerOption[] }) {
+export function AddPropertyForm({ owners, onCancel }: { owners: OwnerOption[]; onCancel: () => void }) {
   const [state, action, pending] = useActionState(createPropertyAction, empty);
   const [type, setType] = useState('MULTI_UNIT');
   const e = state.errors ?? {};
 
   return (
-    <Card id="add-property" style={{ gridColumn: 'span 2' }}>
-      <CardHeader title="Add a property" action={<Badge tone="info">New</Badge>} />
+    <>
       <form className="form" action={action} noValidate>
         {state.message && !state.ok && <Alert tone="warning">{state.message}</Alert>}
         <FormRow>
@@ -108,12 +104,12 @@ export function AddPropertyForm({ owners }: { owners: OwnerOption[] }) {
           <Button type="submit" variant="primary" disabled={pending}>
             {pending ? 'Saving…' : 'Save property'}
           </Button>
-          <Button href="/properties" variant="ghost">
+          <Button variant="ghost" onClick={onCancel}>
             Cancel
           </Button>
         </div>
       </form>
-    </Card>
+    </>
   );
 }
 
@@ -130,3 +126,4 @@ export function ArchiveButton({ propertyId, archived }: { propertyId: string; ar
     </form>
   );
 }
+

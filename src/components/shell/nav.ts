@@ -44,7 +44,7 @@ export const managerNav: ManagerNavGroup[] = [
         icon: 'dashboard',
         actions: [
           { label: 'Export report', href: '/returns' },
-          { label: '+ Add property', href: '/properties', primary: true },
+          { label: '+ Add property', href: '/properties?add=1', primary: true },
         ],
       },
     ],
@@ -56,7 +56,7 @@ export const managerNav: ManagerNavGroup[] = [
         label: 'Properties',
         href: '/properties',
         icon: 'properties',
-        actions: [{ label: '+ Add property', href: '/properties', primary: true }],
+        actions: [{ label: '+ Add property', href: '/properties?add=1', primary: true }],
       },
       {
         label: 'Tenants',

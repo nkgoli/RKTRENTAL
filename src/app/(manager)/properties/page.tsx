@@ -1,10 +1,10 @@
 ﻿import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
-import { Chip, Chips, Cover, CoverName, CoverPill, OccupancyRing, Sparkline, Stat, TrendChip } from '@/components/ui';
+import { Card, Chip, Chips, Cover, Progress, Stat, Table, TableHead } from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import { propertiesDb, propertyFilterFrom, type PropertyFilter } from '@/lib/properties/data';
 import { formatAddress, formatMoney } from '@/lib/properties/format';
-import { AddPropertyForm } from './_components/PropertyForm';
+import { AddPropertyDialog } from './_components/AddPropertyDialog';
 import { EmptyState } from '@/components/RouteStates';
 import styles from './properties.module.css';
 
@@ -16,8 +16,29 @@ const FILTERS: { key: PropertyFilter; label: string }[] = [
   { key: 'archived', label: 'Archived' },
 ];
 
-function href(filter: PropertyFilter, q?: string) {
+type View = 'grid' | 'list';
+
+type Row = { type: string; archived: boolean; unitCount: number; occupied: number; vacant: number };
+
+/** One occupancy indicator per property: label, fill % (multi-unit only) and whether to flag vacancy. */
+function occupancyOf(p: Row): { label: string; pct?: number; warm: boolean } {
+  if (p.archived) return { label: 'Archived', warm: true };
+  const full = p.vacant === 0 && p.unitCount > 0;
+  if (p.type === 'SINGLE_UNIT') return { label: full ? 'Occupied' : 'Vacant', warm: !full };
+  if (p.unitCount === 0) return { label: 'No units yet', warm: true };
+  return {
+    label: `${p.occupied}/${p.unitCount} occupied`,
+    pct: Math.round((p.occupied / p.unitCount) * 100),
+    warm: !full,
+  };
+}
+
+const typeLabel = (p: Row) =>
+  p.type === 'SINGLE_UNIT' ? 'Single-family' : `${p.unitCount} ${p.unitCount === 1 ? 'unit' : 'units'}`;
+
+function href(filter: PropertyFilter, q?: string, view?: View) {
   const params = new URLSearchParams();
+  if (view === 'list') params.set('view', 'list');
   if (filter !== 'all') params.set('filter', filter);
   if (q) params.set('q', q);
   const qs = params.toString();
@@ -27,10 +48,11 @@ function href(filter: PropertyFilter, q?: string) {
 export default async function PropertiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; filter?: string }>;
+  searchParams: Promise<{ q?: string; filter?: string; view?: string }>;
 }) {
   const session = await requireManagerRole();
-  const { q, filter: filterParam } = await searchParams;
+  const { q, filter: filterParam, view: viewParam } = await searchParams;
+  const view: View = viewParam === 'list' ? 'list' : 'grid';
   const filter = propertyFilterFrom(filterParam);
   const data = propertiesDb(session.organizationId);
   const [{ properties, totals }, counts, owners] = await Promise.all([
@@ -44,11 +66,12 @@ export default async function PropertiesPage({
     <>
       <PageHeader
         title="Properties"
-        actions={[{ label: '+ Add property', href: '/properties#add-property', primary: true }]}
+        actions={[{ label: '+ Add property', href: '/properties?add=1', primary: true }]}
       />
       <section className="toolbar">
         <form role="search" action="/properties" method="get" style={{ display: 'contents' }}>
           {filter !== 'all' && <input type="hidden" name="filter" value={filter} />}
+          {view === 'list' && <input type="hidden" name="view" value="list" />}
           <label className="search">
             <span aria-hidden="true">⌕</span>
             <input
@@ -66,7 +89,7 @@ export default async function PropertiesPage({
                 ? counts[key]
                 : undefined;
             return (
-              <Link key={key} href={href(key, q)} style={{ display: 'contents' }}>
+              <Link key={key} href={href(key, q, view)} style={{ display: 'contents' }}>
                 <Chip active={key === filter}>{count == null ? label : `${label} ${count}`}</Chip>
               </Link>
             );
@@ -95,54 +118,98 @@ export default async function PropertiesPage({
         />
       </section>
 
-      <section className="grid-3">
-        {properties.length === 0 && (
-          <div style={{ gridColumn: 'span 3' }}>
-            <EmptyState
-              title={q || filter !== 'all' ? 'No properties match this view' : 'No properties yet'}
-              description={q || filter !== 'all' ? 'Clear the filters to see your full portfolio.' : 'Add your first property to start tracking units and leases.'}
-              action={q || filter !== 'all' ? 'Clear filters' : 'Add a property'}
-              href={q || filter !== 'all' ? '/properties' : '#add-property'}
-            />
-          </div>
-        )}
-        {properties.map((p) => {
-          const single = p.type === 'SINGLE_UNIT';
-          const full = p.vacant === 0 && p.unitCount > 0;
-          return (
+      <section className={styles.viewBar}>
+        <span className="muted">
+          {properties.length} {properties.length === 1 ? 'property' : 'properties'}
+        </span>
+        <div className={styles.viewToggle} role="group" aria-label="View">
+          {(['grid', 'list'] as const).map((v) => (
             <Link
-              key={p.id}
-              className={`card flush ${styles.propertyCard}`}
-              href={`/properties/${p.id}`}
+              key={v}
+              href={href(filter, q, v)}
+              aria-current={v === view ? 'true' : undefined}
+              className={v === view ? styles.viewActive : undefined}
+              scroll={false}
             >
-              <div className={styles.cover}>
-                <Cover
-                  kind={single ? 'house' : 'apartment'}
-                  src={p.coverPhotoId ? `/api/files/${p.coverPhotoId}/preview` : undefined}
-                >
-                  <CoverPill warm={!full || p.archived}>{p.archived ? 'Archived' : single ? (full ? 'Occupied' : 'Vacant') : `${p.occupied} / ${p.unitCount} occupied`}</CoverPill>
-                  <CoverName title={p.name} subtitle={formatAddress(p)} />
-                </Cover>
-              </div>
-              <div className={styles.details}>
-                <div className={styles.propertyMeta}>
-                  <span>{single ? 'Single-family' : `${p.unitCount} ${p.unitCount === 1 ? 'unit' : 'units'}`}</span>
-                  <TrendChip warm={!full && !p.archived}>{p.archived ? 'Archived' : full ? 'Fully occupied' : `${p.vacant} vacant`}</TrendChip>
+              {v === 'grid' ? 'Grid' : 'List'}
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {properties.length === 0 && (
+        <EmptyState
+          title={q || filter !== 'all' ? 'No properties match this view' : 'No properties yet'}
+          description={q || filter !== 'all' ? 'Clear the filters to see your full portfolio.' : 'Add your first property to start tracking units and leases.'}
+          action={q || filter !== 'all' ? 'Clear filters' : 'Add a property'}
+          href={q || filter !== 'all' ? '/properties' : '/properties?add=1'}
+        />
+      )}
+
+      {properties.length > 0 && view === 'grid' && (
+        <section className={styles.grid}>
+          {properties.map((p) => {
+            const single = p.type === 'SINGLE_UNIT';
+            const occ = occupancyOf(p);
+            return (
+              <Link
+                key={p.id}
+                className={`card flush ${styles.propertyCard}`}
+                href={`/properties/${p.id}`}
+              >
+                <div className={styles.cover}>
+                  <Cover
+                    kind={single ? 'house' : 'apartment'}
+                    src={p.coverPhotoId ? `/api/files/${p.coverPhotoId}/preview` : undefined}
+                  />
                 </div>
-                <div className={styles.kpis}>
-                  <div><div className={styles.rent}><strong>{formatMoney(p.monthlyRent)}</strong><small>/ mo</small></div><span className="muted">Monthly rent</span></div>
-                  <div className={styles.occupancy}>
-                    <OccupancyRing value={p.unitCount ? (p.occupied / p.unitCount) * 100 : 0} label={`${p.name} occupancy`} />
-                    <span><strong>{p.unitCount ? Math.round((p.occupied / p.unitCount) * 100) : 0}%</strong><small>occupancy</small></span>
+                <div className={styles.details}>
+                  <h3 className={styles.name} title={p.name}>{p.name}</h3>
+                  <span className={styles.address}>{formatAddress(p)}</span>
+                  <div className={styles.propertyMeta}>
+                    <span>{typeLabel(p)}</span>
+                    <span className={styles.rent}>
+                      <strong>{formatMoney(p.monthlyRent)}</strong>
+                      <small>/ mo</small>
+                    </span>
+                  </div>
+                  <div className={`${styles.occupancy} ${occ.warm ? styles.warm : ''}`}>
+                    <span>{occ.label}</span>
+                    {occ.pct != null && <Progress value={occ.pct} label={`${p.name} occupancy`} />}
                   </div>
                 </div>
-                <Sparkline values={[p.occupied, Math.max(p.occupied, p.unitCount)]} tone={full ? 'ok' : 'warm'} label={`${p.name} occupancy trend`} />
-              </div>
-            </Link>
-          );
-        })}
-        <AddPropertyForm owners={owners} />
-      </section>
+              </Link>
+            );
+          })}
+        </section>
+      )}
+
+      {properties.length > 0 && view === 'list' && (
+        <Card flush>
+          <Table>
+            <TableHead columns={['Property', 'Address', 'Type', 'Units', 'Occupancy', 'Monthly rent']} />
+            <tbody>
+              {properties.map((p) => {
+                const occ = occupancyOf(p);
+                return (
+                  <tr key={p.id}>
+                    <td>
+                      <Link className={styles.rowLink} href={`/properties/${p.id}`}>{p.name}</Link>
+                    </td>
+                    <td>{formatAddress(p)}</td>
+                    <td>{p.type === 'SINGLE_UNIT' ? 'Single-family' : 'Multi-unit'}</td>
+                    <td>{p.unitCount}</td>
+                    <td className={occ.warm ? styles.warm : undefined}>{occ.label}</td>
+                    <td>{formatMoney(p.monthlyRent)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </Table>
+        </Card>
+      )}
+
+      <AddPropertyDialog owners={owners} />
     </>
   );
 }

@@ -24,7 +24,9 @@ async function addProperty(
   type: 'Multi-unit building' | 'Single-unit home',
 ) {
   await page.goto('/properties');
+  await page.getByRole('link', { name: '+ Add property' }).click();
   const form = page.locator('#add-property');
+  await expect(form).toBeVisible({ timeout: 15_000 });
   await form.getByLabel('Property name').fill(name);
   await form.getByLabel('Type').selectOption({ label: type });
   await form.getByLabel('Street address').fill('77 Test Lane');
@@ -42,6 +44,8 @@ test('add a property, add a unit, open the unit', async ({ page }) => {
 
   // Server-side validation shows field errors without creating anything.
   await page.goto('/properties');
+  await page.getByRole('link', { name: '+ Add property' }).click();
+  await expect(page.locator('#add-property')).toBeVisible({ timeout: 15_000 });
   await page.locator('#add-property').getByRole('button', { name: 'Save property' }).click();
   await expect(page.getByText('Property name is required')).toBeVisible();
 
@@ -66,15 +70,15 @@ test('add a property, add a unit, open the unit', async ({ page }) => {
     mimeType: 'image/png',
     buffer: PNG,
   });
-  await expect(page.locator('#photos img[alt="front.png"]')).toBeVisible();
+  await expect(page.getByRole('img', { name: 'front.png' })).toBeVisible();
 
   // Open the unit.
   await page.locator('#units').getByRole('link', { name: '6A', exact: true }).click();
-  await expect(page).toHaveURL(/\/properties\/[^/]+\/units\/[^/]+$/);
+  await expect(page).toHaveURL(/\/properties\/[^/?]+(\/units\/[^/?]+|\?unit=[^/]+)$/);
   await expect(page.getByRole('heading', { level: 1, name: `${name} · Unit 6A` })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Lease', exact: true })).toBeVisible();
   await expect(page.getByText('No active lease on this unit.')).toBeVisible();
-  const unitId = page.url().split('/').pop();
+  const unitId = new URL(page.url()).searchParams.get('unit') ?? page.url().split('/').pop();
   await expect(page.getByRole('link', { name: 'Rent comps' }).first()).toHaveAttribute(
     'href',
     `/rent-comps?unit=${unitId}`,
@@ -94,7 +98,7 @@ test('add a property, add a unit, open the unit', async ({ page }) => {
     mimeType: 'image/png',
     buffer: PNG,
   });
-  await expect(page.locator('#photos img[alt="kitchen.png"]')).toBeVisible();
+  await expect(page.getByRole('img', { name: 'kitchen.png' })).toBeVisible();
 });
 
 test('single-unit property links straight to its one unit; archive hides it', async ({ page }) => {
@@ -108,7 +112,7 @@ test('single-unit property links straight to its one unit; archive hides it', as
     .getByRole('link', { name: /Whole property|Open/ })
     .first()
     .click();
-  await expect(page).toHaveURL(/\/properties\/[^/]+\/units\/[^/]+$/);
+  await expect(page).toHaveURL(/\/properties\/[^/?]+(\/units\/[^/?]+|\?unit=[^/]+)$/);
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
   // The implicit unit is the whole property, so it cannot be deleted.
   await expect(page.getByRole('button', { name: /^Delete/ })).toBeDisabled();
@@ -149,5 +153,5 @@ test('seeded Maple Court shows its units and the 4B lease', async ({ page }) => 
     'href',
     /\/leases\//,
   );
-  await expect(page.getByText('Kitchen sink leak')).toBeVisible();
+  await expect(page.getByRole('link', { name: '1 open maintenance request' })).toBeVisible();
 });

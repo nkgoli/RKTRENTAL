@@ -58,7 +58,7 @@ export default async function DashboardPage() {
           <Link className={styles.secondaryButton} href="/payments">
             Review payments
           </Link>
-          <Link className={styles.primaryButton} href="/properties#add-property">
+          <Link className={styles.primaryButton} href="/properties?add=1">
             + Add property
           </Link>
         </div>
@@ -293,7 +293,7 @@ export default async function DashboardPage() {
           </ul>
         ) : (
           <p className={styles.empty}>
-            No properties yet. <Link href="/properties#add-property">Add your first property</Link>.
+            No properties yet. <Link href="/properties?add=1">Add your first property</Link>.
           </p>
         )}
       </section>

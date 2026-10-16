@@ -39,6 +39,9 @@ describe('multi-year ranges', () => {
     expect(all.start.toISOString()).toBe('2021-03-01T00:00:00.000Z');
     expect(all.months).toBe(68);
     expect(resolvePeriod('ALL', now).months).toBe(12);
+    expect(
+      resolvePeriod('ALL', now, { earliest: new Date('2010-01-01T00:00:00Z') }).start.toISOString(),
+    ).toBe('2010-01-01T00:00:00.000Z');
   });
 
   it('resolves a custom range, clamps it to this month and ignores bad input', () => {
@@ -47,6 +50,7 @@ describe('multi-year ranges', () => {
     expect(custom.start.toISOString()).toBe('2023-02-01T00:00:00.000Z');
     expect(custom.end.toISOString()).toBe('2024-06-01T00:00:00.000Z');
     expect(custom.months).toBe(16);
+    expect(resolvePeriod('CUSTOM', now, { from: '2010-01', to: '2024-12' }).months).toBe(180);
     expect(resolvePeriod('CUSTOM', now, { from: '2024-05', to: '2023-02' }).months).toBe(16);
     expect(resolvePeriod('CUSTOM', now, { from: '2026-01', to: '2031-01' }).end.toISOString()).toBe(
       '2026-11-01T00:00:00.000Z',

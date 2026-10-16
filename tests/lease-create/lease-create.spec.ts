@@ -116,6 +116,62 @@ test('manager builds a lease in the wizard, resumes it, and sends it for signing
   await expect(page.getByText('Signed lease agreement.pdf').first()).toBeVisible();
 });
 
+test('Clauses swap the no-pets clause and the pet agreement when pets change at a fixed term', async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto('/leases/new', { waitUntil: 'domcontentloaded' }).catch(async (error: unknown) => {
+    if (!(error instanceof Error) || !error.message.includes('ERR_ABORTED')) throw error;
+    await page.goto('/leases/new', { waitUntil: 'domcontentloaded' });
+  });
+  const unitId = (await page.locator('select[name="unit"] option', { hasText: 'Maple Court · Unit 3A' }).getAttribute('value'))!;
+  await page.goto(`/leases/new?unit=${unitId}&fresh=1`);
+  await expect(page.getByRole('heading', { name: 'Lease term', exact: true })).toBeVisible();
+  await page.getByRole('radio', { name: /Full year/ }).check();
+  await next(page, 'Rent, deposit & fees');
+  await page.getByRole('textbox', { name: 'Monthly rent', exact: true }).fill('1600');
+  await page.getByLabel('Security deposit').fill('1600');
+  await next(page, 'Tenants');
+  await page.getByRole('checkbox', { name: /Alex Rivera/ }).check();
+  await next(page, 'Options');
+  await expect(page.getByRole('checkbox', { name: /Pets allowed/ })).not.toBeChecked();
+  await next(page, 'Clauses');
+
+  const titles = page.locator('article input[aria-label$=" title"]:visible');
+  const noPets = page.locator('article', { has: page.getByRole('textbox', { name: 'No pets title' }) });
+  const petAgreement = page.locator('article', { has: page.getByRole('textbox', { name: 'Approved pets title' }) });
+
+  // Fixed term, no pets: the no-pets clause is in, the pet agreement is not.
+  await expect(titles.first()).toBeVisible();
+  const withoutPets = await titles.evaluateAll((els) => els.map((el) => (el as HTMLInputElement).value));
+  expect(withoutPets).toContain('No pets');
+  expect(withoutPets).toContain('Ending a fixed term early');
+  expect(withoutPets).not.toContain('Approved pets');
+  expect(withoutPets).not.toContain('Month-to-month notice');
+  await expect(noPets.getByText('Added because pets are not allowed')).toBeVisible();
+  await page.screenshot({ path: 'tests/lease-create/evidence/fixed-no-pets-clauses.png' });
+
+  // Back, allow pets, return: the two clauses swap and the pet agreement says why.
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Options', exact: true })).toBeVisible();
+  await page.getByRole('checkbox', { name: /Pets allowed/ }).check();
+  await next(page, 'Clauses');
+  await expect(titles.first()).toBeVisible();
+  const withPets = await titles.evaluateAll((els) => els.map((el) => (el as HTMLInputElement).value));
+  expect(withPets).toContain('Approved pets');
+  expect(withPets).toContain('Ending a fixed term early');
+  expect(withPets).not.toContain('No pets');
+  await expect(petAgreement.getByText('Added because pets are allowed or a pet fee is set')).toBeVisible();
+  await page.screenshot({ path: 'tests/lease-create/evidence/fixed-pets-clauses.png' });
+
+  // Turning pets off again restores the no-pets clause.
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await page.getByRole('checkbox', { name: /Pets allowed/ }).uncheck();
+  await next(page, 'Clauses');
+  await expect(page.getByRole('textbox', { name: 'No pets title' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Approved pets title' })).toBeHidden();
+});
+
 test('wizard blocks continuing past a step with missing values', async ({ page }) => {
   await signIn(page);
   await page.goto('/leases/new?unit=seed-unit-cedar-8&fresh=1');

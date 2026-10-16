@@ -38,6 +38,21 @@ export function TemplateTermsStep({ section, draft, update, templates, isRenewal
     setMessage(`Saved ${result.template.name} · v${result.template.version}`);
     update({ template: result.template, termOverrides: {} });
   };
+  // Items whose condition is not met stay out of the way unless the manager has toggled them.
+  const sectionTerms = terms.filter((t) => t.section === section);
+  const applicable = sectionTerms.filter((t) => t.included || draft.termOverrides[t.id]?.included !== undefined);
+  const notApplicable = sectionTerms.filter((t) => !applicable.includes(t));
+  const renderItem = (item: (typeof terms)[number]) => <article key={item.id} className={styles.templateItem}>
+    <div className={styles.templateItemTop}>
+      <label><input type="checkbox" checked={item.included} onChange={(e) => updateItem(item.id, { included: e.target.checked })} /> Include</label>
+      {item.required && <span className={styles.termBadge}>Required by template</span>}
+      {item.edited && <span className={styles.termBadge}>Edited</span>}
+      {item.changed && <span className={styles.termBadge}>Changed</span>}
+    </div>
+    <label>Title<input aria-label={`${item.title} title`} value={item.title} onChange={(e) => updateItem(item.id, { title: e.target.value })} /></label>
+    <label>Wording<textarea aria-label={`${item.title} wording`} value={item.body} onChange={(e) => updateItem(item.id, { body: e.target.value })} /></label>
+    <p className={styles.termReason}>{item.reason}</p>
+  </article>;
   return <div className={styles.fields}>
     {isRenewal && <div className={styles.alert} role="status">
       Carried over from the prior lease. Items marked Changed have been re-evaluated for this renewal.
@@ -60,17 +75,11 @@ export function TemplateTermsStep({ section, draft, update, templates, isRenewal
     </div>
     {message && <p role="status">{message}</p>}
     <div className={styles.templateHeading}><h3>{sectionNames[section]} in this lease</h3><p>Conditions are checked using the property and the choices in earlier steps. You can edit or uncheck each item.</p></div>
-    {terms.filter((t) => t.section === section).map((item) => <article key={item.id} className={styles.templateItem}>
-      <div className={styles.templateItemTop}>
-        <label><input type="checkbox" checked={item.included} onChange={(e) => updateItem(item.id, { included: e.target.checked })} /> Include</label>
-        {item.required && <span className={styles.termBadge}>Required by template</span>}
-        {item.edited && <span className={styles.termBadge}>Edited</span>}
-        {item.changed && <span className={styles.termBadge}>Changed</span>}
-      </div>
-      <label>Title<input aria-label={`${item.title} title`} value={item.title} onChange={(e) => updateItem(item.id, { title: e.target.value })} /></label>
-      <label>Wording<textarea aria-label={`${item.title} wording`} value={item.body} onChange={(e) => updateItem(item.id, { body: e.target.value })} /></label>
-      <p className={styles.termReason}>{item.reason}</p>
-    </article>)}
+    {applicable.map(renderItem)}
+    {notApplicable.length > 0 && <details>
+      <summary>Not applicable to this lease ({notApplicable.length})</summary>
+      {notApplicable.map(renderItem)}
+    </details>}
     <button type="button" className={styles.btn} onClick={add}>+ Add {section.toLowerCase()}</button>
     <p className={styles.termReason}>The wording sent for signature is kept on the lease even if this template changes later.</p>
   </div>;

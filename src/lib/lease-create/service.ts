@@ -2,8 +2,10 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
 import { recordLeaseEvents } from '@/lib/leases/events';
 import { LeaseServiceError } from '@/lib/leases/service';
+import { ensureSetupCharges } from '@/lib/ledger/lease-setup';
+import { feesFromDraft } from './fees';
 import { hasOverlap, parseWizardTerms, renewalWindow, validateReview } from './validation';
-import type { WizardDraft } from './types';
+import { emptyDraft, type WizardDraft } from './types';
 
 export { LeaseServiceError };
 
@@ -36,6 +38,9 @@ function assertWizard(draft: WizardDraft, isRenewal: boolean, renewalSourceEnd?:
   const errors = validateReview(draft, { isRenewal, renewalSourceEnd: renewalSourceEnd ?? null });
   // Saving a draft still needs a unit and tenants; e-sign email is enforced only on send.
   delete errors.primaryTenantId;
+  // Lessor details are collected by the draft wizard, not by this direct-create path.
+  delete errors.lessorName;
+  delete errors.lessorAddress;
   const first = Object.entries(errors)[0];
   if (first) throw new LeaseServiceError(first[1], first[0]);
   const terms = parseWizardTerms(draft);
@@ -71,11 +76,19 @@ export async function createLeaseFromWizard(
         isPrimary: tenantId === draft.primaryTenantId,
       })),
     });
-    if (status === 'ACTIVE')
+    if (status === 'ACTIVE') {
       await tx.unit.updateMany({
         where: { id: draft.unitId, organizationId },
         data: { status: 'OCCUPIED' },
       });
+      await ensureSetupCharges(tx, {
+        organizationId,
+        leaseId: lease.id,
+        startDate: terms.startDate,
+        endDate: terms.endDate,
+        fees: feesFromDraft(draft),
+      });
+    }
     await recordLeaseEvents(tx, organizationId, lease.id, [
       { kind: 'CREATED', message: status === 'DRAFT' ? 'Saved as draft' : 'Created from wizard' },
     ]);
@@ -117,6 +130,14 @@ export async function createRenewalFromWizard(
             source.tenants.find((t) => t.tenantId === tenantId)?.isPrimary === true),
       })),
     });
+    if (status === 'ACTIVE')
+      await ensureSetupCharges(tx, {
+        organizationId,
+        leaseId: lease.id,
+        startDate: terms.startDate,
+        endDate: terms.endDate,
+        fees: feesFromDraft(draft),
+      });
     await recordLeaseEvents(tx, organizationId, lease.id, [
       { kind: 'CREATED', message: 'Created as a renewal' },
       { kind: 'RENEWED', message: `Renews lease ${source.id}` },
@@ -139,7 +160,7 @@ export function renewalDefaults(source: {
 }): WizardDraft {
   const window = renewalWindow(source.endDate);
   const iso = (d: Date) => d.toISOString().slice(0, 10);
-  return {
+  return emptyDraft({
     unitId: source.unitId,
     tenantIds: source.tenants.map((t) => t.tenantId),
     primaryTenantId:
@@ -151,10 +172,11 @@ export function renewalDefaults(source: {
     monthlyRent: source.monthlyRent.toString(),
     deposit: source.deposit.toString(),
     lateFee: source.lateFee.toString(),
+    lateFeeEnabled: Number(source.lateFee.toString()) > 0,
     graceDays: source.graceDays,
     rentDueDay: 1,
     clauses: ['residential-use', 'utilities'],
     customClause: '',
     documentNames: [],
-  };
+  });
 }

@@ -42,7 +42,7 @@ describe('wizard step validation', () => {
     expect(
       validateUnitAndTenants({ ...base(), primaryTenantId: 'other' }).primaryTenantId,
     ).toContain('primary tenant');
-    expect(validateStep(0, emptyDraft()).unitId).toBeTruthy();
+    expect(validateStep(2, emptyDraft()).unitId).toBeTruthy();
   });
 
   it('rejects inverted and renewal-early terms, and bad rent values', () => {
@@ -84,7 +84,7 @@ describe('renewal dates', () => {
       '2027-12-31',
     );
     expect(suggestedEndDate(day('2027-01-15'), 'month-to-month').toISOString().slice(0, 10)).toBe(
-      '2027-02-14',
+      '2027-01-31',
     );
   });
 
@@ -134,7 +134,17 @@ function fakeDb() {
       tenants: ['tenant-1'],
     },
   ];
+  const charges: { leaseId: string; kind: string; amount: string; description: string }[] = [];
   const tx = {
+    $executeRaw: async () => 0,
+    charge: {
+      findMany: async ({ where }: { where: { leaseId: string; description: { in: string[] } } }) =>
+        charges.filter((c) => c.leaseId === where.leaseId && where.description.in.includes(c.description)),
+      createMany: async ({ data }: { data: (typeof charges)[number][] }) => {
+        charges.push(...data);
+        return { count: data.length };
+      },
+    },
     unit: {
       updateMany: async ({ where }: { where: { id: string } }) => ({
         count: where.id === 'unit-1' ? 1 : 0,
@@ -175,6 +185,7 @@ function fakeDb() {
   ];
   return {
     leases,
+    charges,
     client: {
       $transaction: async (run: (c: unknown) => Promise<unknown>) => run(tx),
     } as unknown as PrismaClient,
@@ -192,6 +203,10 @@ describe('wizard lease creation service', () => {
     };
     const { id } = await createLeaseFromWizard('org-1', draft, 'ACTIVE', db.client);
     expect(db.leases.find((l) => l.id === id)?.tenants).toEqual(['tenant-1', 'tenant-2']);
+    // Creating an active lease puts its security deposit in the ledger, once.
+    expect(db.charges.map((c) => [c.kind, c.amount, c.description])).toEqual([
+      ['DEPOSIT', '1600.00', `setup:deposit:${id}`],
+    ]);
     await expect(createLeaseFromWizard('org-1', draft, 'ACTIVE', db.client)).rejects.toMatchObject({
       field: 'startDate',
     });

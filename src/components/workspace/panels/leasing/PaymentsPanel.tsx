@@ -1,7 +1,7 @@
 import { Alert } from '@/components/ui/Feedback';
 import { activeIntegration } from '@/lib/integrations/active';
 import { findProvider } from '@/lib/integrations/catalog';
-import { ensureRentCharges, loadPropertyLedger } from '@/lib/ledger';
+import { ensureRentCharges, loadPropertyLedger, paymentsProviderLabel } from '@/lib/ledger';
 import type { ScopeFilter } from '@/lib/workspace/scope';
 import { PaymentsBoard, type BoardGroup } from './PaymentsBoard';
 import styles from './leasing.module.css';
@@ -73,7 +73,7 @@ export async function PaymentsPanel({ organizationId, scope, recording, notice }
       propertyId={scope.propertyId ?? ''}
       unitId={scope.unitId}
       balanceCents={ledger.balanceCents}
-      providerLabel={providerName ? `${providerName} connected` : 'No payments provider connected'}
+      providerLabel={paymentsProviderLabel(connection, providerName)}
       providerConnected={Boolean(providerName)}
       tenants={ledger.tenants}
       groups={groups}

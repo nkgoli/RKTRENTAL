@@ -59,6 +59,17 @@ const KIND_LABEL: Record<ChargeKindName, string> = {
   OTHER: 'Fee',
 };
 const kindOrder: Record<ChargeKindName, number> = { RENT: 0, DEPOSIT: 1, LATE_FEE: 2, OTHER: 3 };
+const SETUP_LABEL: Record<string, string> = {
+  deposit: 'Security deposit',
+  'move-in-fee': 'Move-in fee',
+  'pet-deposit': 'Pet deposit',
+};
+
+/** Type column wording: move-in charges name themselves, everything else follows its kind. */
+export function chargeTypeLabel(charge: Pick<LedgerCharge, 'kind' | 'description'>): string {
+  const key = /^setup:(deposit|move-in-fee|pet-deposit):/.exec(charge.description ?? '');
+  return key ? SETUP_LABEL[key[1]] : KIND_LABEL[charge.kind];
+}
 
 export const kindLabel = (kind: ChargeKindName) => KIND_LABEL[kind];
 
@@ -66,7 +77,8 @@ const monthName = (key: string) =>
   monthStart(key).toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
 
 /** Deterministic keys are stored in Charge.description; manual charges must never collide with them. */
-export const isReservedDescription = (value: string) => /^(rent|late-fee):/i.test(value.trim());
+export const isReservedDescription = (value: string) =>
+  /^(rent|late-fee|setup):/i.test(value.trim());
 
 /** Human wording for a charge: generated keys become "October rent for <place>". */
 export function describeCharge(
@@ -74,6 +86,8 @@ export function describeCharge(
   place: string,
 ): string {
   const text = charge.description?.trim() ?? '';
+  const setup = /^setup:(deposit|move-in-fee|pet-deposit):[^:]+$/.exec(text);
+  if (setup) return `${SETUP_LABEL[setup[1]]} for ${place}`;
   const generated = /^(rent|late-fee):[^:]+:(\d{4}-\d{2})$/.exec(text);
   if (generated)
     return generated[1] === 'rent'
@@ -196,7 +210,7 @@ export function buildLeaseStatement(input: {
       chargeId: charge.id ?? null,
       kind: charge.kind,
       derived: !charge.id,
-      typeLabel: KIND_LABEL[charge.kind],
+      typeLabel: chargeTypeLabel(charge),
       description: describeCharge(charge, place),
       dueDate: charge.dueDate,
       amountCents: charge.amountCents,

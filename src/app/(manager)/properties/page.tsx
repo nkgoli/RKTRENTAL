@@ -68,7 +68,7 @@ export default async function PropertiesPage({
         title="Properties"
         actions={[{ label: '+ Add property', href: '/properties?add=1', primary: true }]}
       />
-      <section className="toolbar">
+      <section className={`toolbar ${styles.toolbar}`}>
         <form role="search" action="/properties" method="get" style={{ display: 'contents' }}>
           {filter !== 'all' && <input type="hidden" name="filter" value={filter} />}
           {view === 'list' && <input type="hidden" name="view" value="list" />}

@@ -1,4 +1,5 @@
 .uploader {
+  container-type: inline-size;
   display: grid;
   gap: 12px;
   font-family: var(--design-font, Inter, system-ui, sans-serif);
@@ -137,4 +138,14 @@
   font-weight: 700;
   color: var(--design-primary, #1e3a8a);
   align-self: center;
+}
+
+/* In narrow columns the row actions drop below the file name instead of overlapping it. */
+@container (max-width: 480px) {
+  .item {
+    flex-wrap: wrap;
+  }
+  .actions {
+    flex: 1 0 100%;
+  }
 }

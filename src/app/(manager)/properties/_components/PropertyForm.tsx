@@ -15,23 +15,11 @@ import {
 import {
   createPropertyAction,
   setPropertyArchivedAction,
-  updatePropertyAction,
   type FormState,
 } from '../actions';
 import { FieldError } from './FieldError';
 
 export type OwnerOption = { id: string; name: string };
-export type PropertyFormValues = {
-  name: string;
-  type: 'SINGLE_UNIT' | 'MULTI_UNIT';
-  street: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  yearBuilt: number | null;
-  ownerId: string | null;
-};
-
 const empty: FormState = {};
 
 export function AddPropertyForm({ owners }: { owners: OwnerOption[] }) {
@@ -129,105 +117,7 @@ export function AddPropertyForm({ owners }: { owners: OwnerOption[] }) {
   );
 }
 
-export function EditPropertyForm({
-  propertyId,
-  initial,
-  owners,
-  archived,
-}: {
-  propertyId: string;
-  initial: PropertyFormValues;
-  owners: OwnerOption[];
-  archived: boolean;
-}) {
-  const [state, action, pending] = useActionState(updatePropertyAction, empty);
-  const e = state.errors ?? {};
-
-  return (
-    <Card id="edit-property">
-      <CardHeader
-        title="Edit property"
-        action={<span className="muted">Changes apply to all units</span>}
-      />
-      <form className="form" action={action} noValidate>
-        <input type="hidden" name="propertyId" value={propertyId} />
-        {state.message && <Alert tone={state.ok ? 'success' : 'warning'}>{state.message}</Alert>}
-        <FormRow columns={3}>
-          <Field label="Name">
-            <Input name="name" defaultValue={initial.name} required aria-invalid={!!e.name} />
-            <FieldError message={e.name} />
-          </Field>
-          <Field label="Street address">
-            <Input name="street" defaultValue={initial.street} required aria-invalid={!!e.street} />
-            <FieldError message={e.street} />
-          </Field>
-          <Field label="Type">
-            <Select name="type" defaultValue={initial.type}>
-              <option value="MULTI_UNIT">Multi-unit building</option>
-              <option value="SINGLE_UNIT">Single-unit home</option>
-            </Select>
-            <FieldError message={e.type} />
-          </Field>
-        </FormRow>
-        <FormRow columns={3}>
-          <Field label="City">
-            <Input name="city" defaultValue={initial.city} required aria-invalid={!!e.city} />
-            <FieldError message={e.city} />
-          </Field>
-          <Field label="State">
-            <Input
-              name="state"
-              defaultValue={initial.state}
-              maxLength={2}
-              required
-              aria-invalid={!!e.state}
-            />
-            <FieldError message={e.state} />
-          </Field>
-          <Field label="ZIP">
-            <Input
-              name="postalCode"
-              defaultValue={initial.postalCode}
-              required
-              aria-invalid={!!e.postalCode}
-            />
-            <FieldError message={e.postalCode} />
-          </Field>
-        </FormRow>
-        <FormRow>
-          <Field label="Year built">
-            <Input
-              name="yearBuilt"
-              defaultValue={initial.yearBuilt ?? ''}
-              inputMode="numeric"
-              aria-invalid={!!e.yearBuilt}
-            />
-            <FieldError message={e.yearBuilt} />
-          </Field>
-          <Field label="Owner">
-            <Select name="ownerId" defaultValue={initial.ownerId ?? ''}>
-              <option value="">No owner</option>
-              {owners.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </Select>
-            <FieldError message={e.ownerId} />
-          </Field>
-        </FormRow>
-        <div className="row">
-          <Button type="submit" variant="primary" disabled={pending}>
-            {pending ? 'Saving…' : 'Save changes'}
-          </Button>
-        </div>
-      </form>
-      <ArchiveButton propertyId={propertyId} archived={archived} />
-    </Card>
-  );
-}
-
-function ArchiveButton({ propertyId, archived }: { propertyId: string; archived: boolean }) {
+export function ArchiveButton({ propertyId, archived }: { propertyId: string; archived: boolean }) {
   const [state, action, pending] = useActionState(setPropertyArchivedAction, empty);
   return (
     <form action={action} className="row" style={{ marginTop: 12 }}>

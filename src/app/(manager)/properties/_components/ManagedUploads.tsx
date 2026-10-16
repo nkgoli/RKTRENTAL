@@ -98,3 +98,38 @@ export function DocumentUploader({ target, label }: { target: Target; label?: st
     />
   );
 }
+
+/** One upload area for a property or unit: a small toggle picks whether files are photos or documents. */
+export function FilesUploader({
+  target,
+  photos,
+  max,
+}: {
+  target: Target;
+  photos: StoredPhoto[];
+  max: number | null;
+}) {
+  const [mode, setMode] = useState<'photo' | 'document'>('photo');
+  return (
+    <div style={{ display: 'grid', gap: 10 }}>
+      <div role="group" aria-label="Upload type" className="row" style={{ gap: 6 }}>
+        {(['photo', 'document'] as const).map((value) => (
+          <button
+            key={value}
+            type="button"
+            className={`btn btn-sm ${mode === value ? 'btn-primary' : 'btn-secondary'}`}
+            aria-pressed={mode === value}
+            onClick={() => setMode(value)}
+          >
+            {value === 'photo' ? 'Photos' : 'Documents'}
+          </button>
+        ))}
+      </div>
+      {mode === 'photo' ? (
+        <PhotoManager target={target} photos={photos} max={max} />
+      ) : (
+        <DocumentUploader target={target} label="Upload documents" />
+      )}
+    </div>
+  );
+}

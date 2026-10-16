@@ -31,16 +31,12 @@ describe('property operations panels', () => {
       <PropertyMaintenanceList
         propertyId="property-1"
         requests={[request]}
-        openCount={1}
-        urgentCount={1}
-        doneThisWeekCount={2}
         createRequestControl={<button type="button">+ New request</button>}
       />,
     );
 
-    expect(html).toContain('>Open<');
-    expect(html).toContain('>Urgent<');
-    expect(html).toContain('>Done this week<');
+    expect(html).not.toContain('Maintenance summary');
+    expect(html).not.toContain('>Done this week<');
     expect(html).toContain('Kitchen sink leak');
     expect(html).toContain('>New<');
     expect(html).toContain('>Unassigned<');

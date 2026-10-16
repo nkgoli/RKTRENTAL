@@ -34,35 +34,14 @@ function formatDate(date: Date) {
 export function PropertyMaintenanceList({
   propertyId,
   requests,
-  openCount,
-  urgentCount,
-  doneThisWeekCount,
   createRequestControl,
 }: {
   propertyId: string;
   requests: MaintenanceBoardRequest[];
-  openCount: number;
-  urgentCount: number;
-  doneThisWeekCount: number;
   createRequestControl: ReactNode;
 }) {
-  const stats = [
-    { label: 'Open', value: openCount },
-    { label: 'Urgent', value: urgentCount },
-    { label: 'Done this week', value: doneThisWeekCount },
-  ];
-
   return (
     <>
-      <section className={styles.statsGrid} aria-label="Maintenance summary">
-        {stats.map((stat) => (
-          <article className={`card ${styles.statCard}`} key={stat.label}>
-            <span className={styles.statLabel}>{stat.label}</span>
-            <strong className={styles.statValue}>{stat.value}</strong>
-          </article>
-        ))}
-      </section>
-
       <section
         className={`card flush ${styles.listCard}`}
         aria-labelledby="repair-requests-heading"

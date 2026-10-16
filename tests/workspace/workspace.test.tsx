@@ -7,8 +7,7 @@ import { resolvePeriod } from '@/lib/returns/period';
 import type { PropertyDetail, UnitDetail } from '@/lib/properties/data';
 
 vi.mock('@/app/(manager)/properties/_components/ManagedUploads', () => ({
-  PhotoManager: () => <button type="button">Upload photos</button>,
-  DocumentUploader: () => <button type="button">Upload file</button>,
+  FilesUploader: () => <button type="button">Upload files</button>,
 }));
 vi.mock('@/components/units/DeleteUnitControl', () => ({
   DeleteUnitControl: () => <button type="button">Delete</button>,
@@ -53,6 +52,8 @@ describe('property and unit workspace render', () => {
     />);
 
     expect(html).toContain('<h1>Maple Court</h1>');
+    expect(html).not.toContain('Edit property');
+    expect(html).not.toContain('Property workspace');
     expect(html).toContain('214 Maple Ave, Austin, TX');
     expect(html).toContain('aria-current="page"');
     expect(html).toContain('href="/properties/property-1/listing"');
@@ -71,29 +72,34 @@ describe('property and unit workspace render', () => {
     expect(html).toContain('<h1>Maple Court · Unit 4B</h1>');
     expect(html).toContain('Net operating income');
     expect(html).toContain('Cash flow');
-    expect(html).toContain('Collected vs due');
+    expect(html).not.toContain('Collected vs due');
     expect(html).toContain('Unit 4B monthly income versus expenses over the last twelve months');
     expect(html).toContain('Income statement');
     expect(html).not.toContain('Expense breakdown');
   });
 
   it('renders the property overview grid from its supplied record', () => {
-    const html = renderToStaticMarkup(<PropertyOverview property={property} returns={metrics} />);
+    const html = renderToStaticMarkup(<PropertyOverview property={property} />);
 
-    expect(html).toContain('Lease timeline');
     expect(html).toContain('Property details');
     expect(html).toContain('Next steps');
     expect(html).toContain('Documents and photos');
-    expect(html).toContain('Returns at a glance');
-    expect(html).toContain('Payments by the numbers');
+    expect(html).not.toContain('Lease timeline');
+    expect(html).not.toContain('Returns at a glance');
+    expect(html).not.toContain('Payments by the numbers');
     expect(html).toContain('Property units');
     expect(html).toContain('Alex Rivera');
   });
 
-  it('renders unit facts, a lease timeline and empty-state next steps', () => {
-    const html = renderToStaticMarkup(<UnitOverview unit={unit} returns={metrics} canDelete />);
+  it('renders one lease card, read-only unit facts and empty-state next steps', () => {
+    const html = renderToStaticMarkup(<UnitOverview unit={unit} canDelete />);
 
-    expect(html).toContain('Lease timeline');
+    expect(html).toContain('>Lease<');
+    expect(html).not.toContain('Lease timeline');
+    expect(html).not.toContain('Current lease');
+    expect(html).not.toContain('Edit unit');
+    expect(html).not.toContain('Maintenance at a glance');
+    expect(html).not.toContain('<dt>Status</dt>');
     expect(html).toContain('Unit facts');
     expect(html).toContain('Balcony');
     expect(html).toContain('Create a lease for this unit');

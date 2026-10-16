@@ -5,7 +5,6 @@ import { db } from '@/lib/db/client';
 import { initials } from '@/lib/properties/format';
 import type { ApplicationStatus } from '@/lib/screening/policy';
 import { unitScopeWhere, scopeQuery, type ScopeFilter } from '@/lib/workspace/scope';
-import { LeasingStats } from './LeasingStats';
 import styles from './leasing.module.css';
 
 const labels: Record<ApplicationStatus, string> = {
@@ -28,7 +27,6 @@ export async function ApplicationsPanel({ organizationId, scope }: { organizatio
     include: { unit: true },
     orderBy: { appliedAt: 'desc' },
   });
-  const count = (status: ApplicationStatus) => applications.filter((a) => a.status === status).length;
   const approved = applications.find((a) => a.status === 'APPROVED');
   const createLease = new URLSearchParams();
   const leaseUnit = approved?.unitId ?? scope.unitId;
@@ -41,11 +39,6 @@ export async function ApplicationsPanel({ organizationId, scope }: { organizatio
   };
 
   return <section className={styles.panel} aria-label="Applications">
-    <LeasingStats label="Application stats" stats={[
-      { label: 'Applicants', value: applications.length },
-      { label: 'In screening', value: count('SCREENING') + count('SUBMITTED'), note: 'Awaiting consent or report' },
-      { label: 'Ready for decision', value: count('REVIEW') },
-    ]} />
     <div className="card flush">
       <div className={styles.listHeader}>
         <h3>Applicants</h3>

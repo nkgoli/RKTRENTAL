@@ -17,9 +17,6 @@ const ALL_KEYS: PeriodKey[] = [...PERIOD_KEYS, 'CUSTOM'];
 /** Ranges up to this many months chart by month; longer ones chart by quarter. */
 export const MONTHLY_CHART_MAX_MONTHS = 24;
 
-/** "All" and custom ranges never look back further than this. */
-export const MAX_RANGE_MONTHS = 120;
-
 export type Granularity = 'month' | 'quarter';
 
 export type ResolvedPeriod = {
@@ -90,7 +87,7 @@ export function resolvePeriod(
       break;
     case 'ALL':
       months = options.earliest
-        ? Math.max(1, Math.min(MAX_RANGE_MONTHS, monthIndex(end) - monthIndex(options.earliest)))
+        ? Math.max(1, monthIndex(end) - monthIndex(options.earliest))
         : 12;
       break;
     case 'CUSTOM': {
@@ -106,7 +103,7 @@ export function resolvePeriod(
       const last = hi > current ? current : hi;
       const first = lo > last ? last : lo;
       end = new Date(Date.UTC(last.getUTCFullYear(), last.getUTCMonth() + 1, 1));
-      months = Math.min(MAX_RANGE_MONTHS, monthIndex(end) - monthIndex(first));
+      months = monthIndex(end) - monthIndex(first);
       break;
     }
     case '12M':

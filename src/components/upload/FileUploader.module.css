@@ -1,0 +1,140 @@
+.uploader {
+  display: grid;
+  gap: 12px;
+  font-family: var(--design-font, Inter, system-ui, sans-serif);
+  color: var(--design-text, #17142b);
+}
+.dropzone {
+  border: 1.5px dashed #b6c2d9;
+  border-radius: var(--design-radius, 16px);
+  background: var(--design-surface, #fff);
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+}
+.dropzone:focus-visible {
+  outline: 3px solid var(--design-primary, #1e3a8a);
+  outline-offset: 2px;
+}
+.dragging {
+  border-color: var(--design-primary, #1e3a8a);
+  background: #eef2ff;
+}
+.dropTitle {
+  margin: 0;
+  font-weight: 600;
+}
+.dropHint {
+  margin: 6px 0 14px;
+  color: var(--design-muted, #64748b);
+  font-size: 12px;
+}
+.browseButton {
+  background: var(--design-primary, #1e3a8a);
+  color: #fff;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 18px;
+  cursor: pointer;
+  font: inherit;
+}
+.input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.counter {
+  margin: 0;
+  font-size: 13px;
+  color: var(--design-muted, #64748b);
+}
+.status {
+  min-height: 1em;
+  font-size: 13px;
+}
+.error {
+  color: var(--design-danger, #dc2626);
+  font-size: 13px;
+  margin: 0;
+}
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--design-radius, 16px);
+  padding: 10px 12px;
+  background: var(--design-surface, #fff);
+}
+.thumbnail {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex: none;
+}
+.fileIcon {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #eef2ff;
+  color: var(--design-primary, #1e3a8a);
+  font-size: 11px;
+  font-weight: 700;
+  flex: none;
+}
+.details {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.name {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  font-weight: 600;
+}
+.meta {
+  color: var(--design-muted, #64748b);
+  font-size: 12px;
+}
+.progress {
+  width: 100%;
+  height: 8px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.actions button {
+  font: inherit;
+  font-size: 12px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  border-radius: 999px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.coverBadge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--design-primary, #1e3a8a);
+  align-self: center;
+}

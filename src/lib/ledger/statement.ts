@@ -81,22 +81,19 @@ const monthName = (key: string) =>
 export const isReservedDescription = (value: string) =>
   /^(rent|prorated|late-fee|setup):/i.test(value.trim());
 
-/** Human wording for a charge: generated keys become "October rent for <place>". */
-export function describeCharge(
-  charge: Pick<LedgerCharge, 'kind' | 'description'>,
-  place: string,
-): string {
+/** Human wording for a charge: generated keys become "October rent"; the unit lives in the group heading. */
+export function describeCharge(charge: Pick<LedgerCharge, 'kind' | 'description'>): string {
   const text = charge.description?.trim() ?? '';
   const setup = /^setup:(deposit|move-in-fee|pet-deposit):[^:]+$/.exec(text);
-  if (setup) return `${SETUP_LABEL[setup[1]]} for ${place}`;
+  if (setup) return SETUP_LABEL[setup[1]];
   const prorated = /^prorated:[^:]+:(\d{4})-(\d{2})-\d{2}$/.exec(text);
-  if (prorated) return `Prorated ${monthName(`${prorated[1]}-${prorated[2]}`)} rent for ${place}`;
+  if (prorated) return `Prorated ${monthName(`${prorated[1]}-${prorated[2]}`)} rent`;
   const generated = /^(rent|late-fee):[^:]+:(\d{4}-\d{2})$/.exec(text);
   if (generated)
     return generated[1] === 'rent'
-      ? `${monthName(generated[2])} rent for ${place}`
-      : `${monthName(generated[2])} late fee for ${place}`;
-  return text || `${KIND_LABEL[charge.kind]} for ${place}`;
+      ? `${monthName(generated[2])} rent`
+      : `${monthName(generated[2])} late fee`;
+  return text || KIND_LABEL[charge.kind];
 }
 
 export function paymentMethod(providerReference?: string | null): string {
@@ -198,10 +195,9 @@ export function buildLeaseStatement(input: {
   lease: LeaseTerms;
   charges: LedgerCharge[];
   payments: LedgerPayment[];
-  place: string;
   asOf: Date;
 }): LeaseStatement {
-  const { lease, charges, payments, place, asOf } = input;
+  const { lease, charges, payments, asOf } = input;
   const upcoming = scheduledRent(lease, charges, asOf);
   const everything = [...charges, ...upcoming];
   const applied = applyPayments(everything, payments);
@@ -214,7 +210,7 @@ export function buildLeaseStatement(input: {
       kind: charge.kind,
       derived: !charge.id,
       typeLabel: chargeTypeLabel(charge),
-      description: describeCharge(charge, place),
+      description: describeCharge(charge),
       dueDate: charge.dueDate,
       amountCents: charge.amountCents,
       paidCents,
@@ -250,6 +246,24 @@ export function termLabel(start: Date, end: Date): string {
   const fmt = (d: Date) =>
     d.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
   return `${fmt(start)} – ${fmt(end)}`;
+}
+
+/**
+ * Period heading for a group of listed charges. The lease term is used only when the listed charges
+ * reach both ends of it; otherwise the heading spans the charges actually shown.
+ */
+export function periodLabel(
+  term: { start: Date; end: Date },
+  rows: Pick<StatementRow, 'dueDate'>[],
+): string {
+  if (rows.length === 0) return termLabel(term.start, term.end);
+  const times = rows.map((r) => r.dueDate.getTime());
+  const first = new Date(Math.min(...times));
+  const last = new Date(Math.max(...times));
+  const covers = monthKey(first) <= monthKey(term.start) && monthKey(last) >= monthKey(term.end);
+  if (covers) return termLabel(term.start, term.end);
+  if (monthKey(first) !== monthKey(last)) return termLabel(first, last);
+  return first.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
 }
 
 /** Always two decimal places: $3,395.00, -$12.50. */

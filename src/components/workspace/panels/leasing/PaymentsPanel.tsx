@@ -1,7 +1,8 @@
 import { Alert } from '@/components/ui/Feedback';
 import { activeIntegration } from '@/lib/integrations/active';
 import { findProvider } from '@/lib/integrations/catalog';
-import { ensureRentCharges, loadPropertyLedger, paymentsProviderLabel } from '@/lib/ledger';
+import { db } from '@/lib/db/client';
+import { ensureRentCharges, loadPropertyLedger, paymentsProviderLabel, summarizeUnits } from '@/lib/ledger';
 import type { ScopeFilter } from '@/lib/workspace/scope';
 import { PaymentsBoard, type BoardGroup } from './PaymentsBoard';
 import styles from './leasing.module.css';
@@ -30,17 +31,21 @@ export async function PaymentsPanel({ organizationId, scope, recording, notice }
 }) {
   const now = new Date();
   await ensureRentCharges(organizationId, now);
-  const [ledger, { connection }] = await Promise.all([
+  const [ledger, { connection }, unitCount] = await Promise.all([
     loadPropertyLedger(organizationId, scope, now),
     activeIntegration(organizationId, 'payments', ['stripe', 'mock']),
+    scope.unitId || !scope.propertyId
+      ? Promise.resolve(0)
+      : db.unit.count({ where: { organizationId, propertyId: scope.propertyId, isImplicit: false } }),
   ]);
+  const summary = unitCount > 1 ? summarizeUnits(ledger.groups) : null;
   const message = notice ? notices[notice] : undefined;
   const providerName = connection ? (findProvider(connection.kind, connection.provider)?.name ?? connection.provider) : null;
 
   const groups: BoardGroup[] = ledger.groups.map((group) => ({
     leaseId: group.leaseId,
     label: group.label,
-    place: group.singleUnit ? 'Whole property' : `Unit ${group.unitLabel}`,
+    place: group.singleUnit ? '' : group.unitLabel,
     active: group.active,
     tenantNames: group.tenants.map((t) => t.name).join(', '),
     rows: group.rows.map((row) => {
@@ -77,6 +82,18 @@ export async function PaymentsPanel({ organizationId, scope, recording, notice }
       providerConnected={Boolean(providerName)}
       tenants={ledger.tenants}
       groups={groups}
+      summary={summary && {
+        totalBalanceCents: summary.totalBalanceCents,
+        units: summary.units.map((u) => ({
+          unitId: u.unitId,
+          leaseId: u.leaseId,
+          unitLabel: u.unitLabel,
+          tenantNames: u.tenantNames,
+          balanceCents: u.balanceCents,
+          status: u.status,
+          nextDue: u.nextDue && { dateLabel: dateParts(u.nextDue.dueDate).label, amountCents: u.nextDue.amountCents },
+        })),
+      }}
       openRecord={recording}
       today={now.toISOString().slice(0, 10)}
     />

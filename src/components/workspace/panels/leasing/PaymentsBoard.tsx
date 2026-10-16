@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Field, FormRow, Input, Select } from '@/components/ui/Forms';
 import { formatMoney, type StatementStatus } from '@/lib/ledger/statement';
 import { createPropertyChargeAction, recordPropertyPaymentAction } from './actions';
+import { withUnit } from './scope';
 import styles from './payments.module.css';
 
 export type BoardRow = {
@@ -32,6 +33,26 @@ export type BoardGroup = {
   rows: BoardRow[];
 };
 export type BoardTenant = { id: string; name: string; initials: string };
+export type BoardUnit = {
+  unitId: string;
+  leaseId: string;
+  unitLabel: string;
+  tenantNames: string;
+  balanceCents: number;
+  status: 'LATE' | 'DUE' | 'CURRENT';
+  nextDue: { dateLabel: string; amountCents: number } | null;
+};
+export type BoardSummary = { units: BoardUnit[]; totalBalanceCents: number };
+
+const unitPill: Record<BoardUnit['status'], { tone: BadgeTone; label: string }> = {
+  LATE: { tone: 'danger', label: 'Late' },
+  DUE: { tone: 'info', label: 'Due' },
+  CURRENT: { tone: 'success', label: 'Current' },
+};
+
+/** "Townhome 1 · Sample Tenant"; the unit is left out for a single-family lease. */
+const groupHeading = (g: Pick<BoardGroup, 'place' | 'tenantNames'>) =>
+  [g.place, g.tenantNames].filter(Boolean).join(' · ') || 'Whole property';
 
 const pill: Record<StatementStatus, { tone: BadgeTone; label: string }> = {
   PAID: { tone: 'success', label: 'Paid' },
@@ -51,7 +72,7 @@ function Ring({ row }: { row: BoardRow }) {
   </svg>;
 }
 
-export function PaymentsBoard({ propertyId, unitId, balanceCents, providerLabel, providerConnected, tenants, groups, openRecord, today }: {
+export function PaymentsBoard({ propertyId, unitId, balanceCents, providerLabel, providerConnected, tenants, groups, summary, openRecord, today }: {
   propertyId: string;
   unitId?: string;
   balanceCents: number;
@@ -59,6 +80,8 @@ export function PaymentsBoard({ propertyId, unitId, balanceCents, providerLabel,
   providerConnected: boolean;
   tenants: BoardTenant[];
   groups: BoardGroup[];
+  /** Set for a multi-unit property without a unit scope: replaces the ledger with a per-unit table. */
+  summary: BoardSummary | null;
   openRecord: boolean;
   today: string;
 }) {
@@ -69,7 +92,8 @@ export function PaymentsBoard({ propertyId, unitId, balanceCents, providerLabel,
   const [detail, setDetail] = useState<BoardRow | null>(null);
   const [amount, setAmount] = useState('');
   const activeGroups = groups.filter((g) => g.active);
-  const defaultLease = activeGroups[0]?.leaseId ?? '';
+  const defaultLease = summary ? '' : (activeGroups[0]?.leaseId ?? '');
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set(groups.filter((g) => !g.active).map((g) => g.leaseId)));
   const [leaseId, setLeaseId] = useState(defaultLease);
 
   const cell = (group: BoardGroup, row: BoardRow) => `${group.leaseId}|${row.key}`;
@@ -87,11 +111,8 @@ export function PaymentsBoard({ propertyId, unitId, balanceCents, providerLabel,
     if (on) next.add(id); else next.delete(id);
     return next;
   });
-  const toggleGroup = (group: BoardGroup, on: boolean) => setSelected((cur) => {
-    const next = new Set(cur);
-    for (const row of group.rows) { if (on) next.add(cell(group, row)); else next.delete(cell(group, row)); }
-    return next;
-  });
+  const allRows = groups.flatMap((g) => g.rows.map((r) => cell(g, r)));
+  const toggleAll = (on: boolean) => setSelected(on ? new Set(allRows) : new Set());
   const openPayment = (lease: string, cents: number) => {
     setLeaseId(lease);
     setAmount(cents > 0 ? (cents / 100).toFixed(2) : '');
@@ -101,9 +122,10 @@ export function PaymentsBoard({ propertyId, unitId, balanceCents, providerLabel,
     <input type="hidden" name="propertyId" value={propertyId} />
     {unitId && <input type="hidden" name="unitId" value={unitId} />}
   </>;
-  const leasePicker = activeGroups.length > 1
-    ? <Field label="Lease"><Select name="leaseId" value={leaseId} onChange={(e) => setLeaseId(e.target.value)} required>
-        {activeGroups.map((g) => <option key={g.leaseId} value={g.leaseId}>{g.place}{g.tenantNames ? ` · ${g.tenantNames}` : ''}</option>)}
+  const leasePicker = activeGroups.length > 1 || summary
+    ? <Field label={summary ? 'Unit' : 'Lease'}><Select name="leaseId" value={leaseId} onChange={(e) => setLeaseId(e.target.value)} required>
+        {summary && <option value="" disabled>Choose a unit</option>}
+        {activeGroups.map((g) => <option key={g.leaseId} value={g.leaseId}>{groupHeading(g)}</option>)}
       </Select></Field>
     : <input type="hidden" name="leaseId" value={leaseId || defaultLease} />;
 
@@ -121,7 +143,8 @@ export function PaymentsBoard({ propertyId, unitId, balanceCents, providerLabel,
           <Button variant="secondary" size="sm" disabled={activeGroups.length === 0} onClick={() => openPayment(defaultLease, 0)}>Record payment</Button>
         </div>
       </div>
-      {tenants.length > 0 && <div className={styles.tenants}>
+      {summary && <p className={styles.note} data-testid="occupied-units">{summary.units.length} occupied {summary.units.length === 1 ? 'unit' : 'units'}</p>}
+      {!summary && tenants.length > 0 && <div className={styles.tenants}>
         <span className={styles.tenantsLabel}>Tenants on the active lease</span>
         <ul>{tenants.map((t) => <li key={t.id}>
           <Link href={`/tenants/${t.id}`} className={styles.tenantChip}><Avatar initials={t.initials} size="sm" />{t.name}<span aria-hidden="true">›</span></Link>
@@ -136,34 +159,68 @@ export function PaymentsBoard({ propertyId, unitId, balanceCents, providerLabel,
     </div>}
 
     {groups.length === 0 && <div className="card"><p className={styles.empty}>No leases in this {unitId ? 'unit' : 'property'} yet. Create a lease to start charging rent.</p></div>}
-    {groups.map((group) => {
-      const all = group.rows.length > 0 && group.rows.every((r) => selected.has(cell(group, r)));
-      return <details key={group.leaseId} className={styles.group} open={group.active}>
-        <summary>
-          <span className={styles.chevron} aria-hidden="true" />
-          <span><strong>{group.label}</strong> ({group.rows.length} {group.rows.length === 1 ? 'charge' : 'charges'})</span>
-          <span className={styles.groupMeta}>{group.place}{group.tenantNames ? ` · ${group.tenantNames}` : ''}{group.active ? '' : ' · Ended'}</span>
-        </summary>
-        <table className={styles.ledger}>
-          <thead><tr>
-            <th className={styles.check}><input type="checkbox" aria-label={`Select all charges for ${group.label}`} checked={all} onChange={(e) => toggleGroup(group, e.target.checked)} /></th>
-            <th>Date</th><th>Description</th><th /><th className={styles.num}>Amount</th><th /><th />
-          </tr></thead>
-          <tbody>{group.rows.map((row) => {
-            const p = pill[row.status];
-            return <tr key={row.key} data-status={row.status}>
-              <td className={styles.check}><input type="checkbox" aria-label={`Select ${row.description}`} checked={selected.has(cell(group, row))} onChange={(e) => toggle(cell(group, row), e.target.checked)} /></td>
-              <td><div className={styles.date}><span>{row.month}</span><strong>{row.day}</strong></div></td>
-              <td className={styles.desc}><small>{row.type}</small>{row.description}</td>
-              <td><Badge tone={p.tone}>{p.label}</Badge></td>
-              <td className={styles.num}>{formatMoney(row.amountCents)}<small>Balance: {formatMoney(row.balanceCents)}</small></td>
-              <td><Ring row={row} /></td>
-              <td><button type="button" className={styles.view} onClick={() => setDetail(row)}>View</button></td>
-            </tr>;
-          })}</tbody>
-        </table>
-      </details>;
-    })}
+    {summary && summary.units.length > 0 && <div className={styles.group}>
+      <table className={styles.ledger} aria-label="Unit balances" data-testid="unit-summary">
+        <thead><tr>
+          <th className={styles.firstCol}>Unit</th><th>Tenant</th><th className={styles.num}>Balance</th><th>Status</th><th>Next due</th><th />
+        </tr></thead>
+        <tbody>{summary.units.map((u) => {
+          const p = unitPill[u.status];
+          const href = withUnit(`/properties/${propertyId}/payments`, u.unitId);
+          return <tr key={u.unitId} data-status={u.status}>
+            <td className={styles.firstCol}><Link href={href} className={styles.unitLink}>{u.unitLabel}</Link></td>
+            <td>{u.tenantNames || '—'}</td>
+            <td className={styles.num}>{formatMoney(u.balanceCents)}</td>
+            <td><Badge tone={p.tone}>{p.label}</Badge></td>
+            <td>{u.nextDue ? <>{u.nextDue.dateLabel} · {formatMoney(u.nextDue.amountCents)}</> : '—'}</td>
+            <td className={styles.go}><Link href={href} aria-label={`Open ${u.unitLabel} ledger`} className={styles.chevronLink}>›</Link></td>
+          </tr>;
+        })}</tbody>
+        <tfoot><tr>
+          <th className={styles.firstCol} colSpan={2}>Total</th>
+          <th className={styles.num}>{formatMoney(summary.totalBalanceCents)}</th>
+          <td colSpan={3} />
+        </tr></tfoot>
+      </table>
+    </div>}
+    {!summary && groups.length > 0 && <div className={styles.group}>
+      <table className={styles.ledger}>
+        <thead><tr>
+          <th className={styles.check}><input type="checkbox" aria-label="Select all charges" checked={allRows.length > 0 && allRows.every((c) => selected.has(c))} onChange={(e) => toggleAll(e.target.checked)} /></th>
+          <th>Date</th><th>Description</th><th /><th className={styles.num}>Amount</th><th /><th />
+        </tr></thead>
+        {groups.map((group) => {
+          const closed = collapsed.has(group.leaseId);
+          return <tbody key={group.leaseId}>
+            <tr className={styles.groupRow}>
+              <td colSpan={7}>
+                <button type="button" className={styles.groupToggle} aria-expanded={!closed} onClick={() => setCollapsed((cur) => {
+                  const next = new Set(cur);
+                  if (closed) next.delete(group.leaseId); else next.add(group.leaseId);
+                  return next;
+                })}>
+                  <span className={`${styles.chevron} ${closed ? styles.chevronClosed : ''}`} aria-hidden="true" />
+                  <strong>{groupHeading(group)}</strong>
+                  <span className={styles.groupMeta}>{group.label} ({group.rows.length} {group.rows.length === 1 ? 'charge' : 'charges'}){group.active ? '' : ' · Ended'}</span>
+                </button>
+              </td>
+            </tr>
+            {!closed && group.rows.map((row) => {
+              const p = pill[row.status];
+              return <tr key={row.key} data-status={row.status}>
+                <td className={styles.check}><input type="checkbox" aria-label={`Select ${row.description}`} checked={selected.has(cell(group, row))} onChange={(e) => toggle(cell(group, row), e.target.checked)} /></td>
+                <td><div className={styles.date}><span>{row.month}</span><strong>{row.day}</strong></div></td>
+                <td className={styles.desc}><small>{row.type}</small>{row.description}</td>
+                <td><Badge tone={p.tone}>{p.label}</Badge></td>
+                <td className={styles.num}>{formatMoney(row.amountCents)}<small>Balance: {formatMoney(row.balanceCents)}</small></td>
+                <td><Ring row={row} /></td>
+                <td><button type="button" className={styles.view} onClick={() => setDetail(row)}>View</button></td>
+              </tr>;
+            })}
+          </tbody>;
+        })}
+      </table>
+    </div>}
 
     <dialog ref={chargeDialog} className={styles.dialog} aria-labelledby="charge-heading">
       <div className={styles.dialogHeader}>

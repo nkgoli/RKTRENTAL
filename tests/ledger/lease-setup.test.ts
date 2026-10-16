@@ -115,7 +115,7 @@ describe('ledger rows after sending', () => {
     const setup = planSetupCharges({ leaseId: fifthLease.id, startDate, endDate, fees: fifthFees }).map((charge) => ({ leaseId: fifthLease.id, ...charge }));
     const june = planRentCharges(fifthLease, setup, [], d('2027-06-10'));
     const stored = [...june, ...planRentCharges(fifthLease, [...setup, ...june], [], d('2027-07-10'))];
-    const statement = buildLeaseStatement({ lease: fifthLease, charges: [...setup, ...stored], payments: [], place: 'Maple Court', asOf: d('2027-07-10') });
+    const statement = buildLeaseStatement({ lease: fifthLease, charges: [...setup, ...stored], payments: [], asOf: d('2027-07-10') });
     expect(statement.rows.filter((row) => row.kind === 'RENT').map((row) => iso(row.dueDate))).toEqual(['2027-05-15', '2027-06-05', '2027-07-05', '2027-08-05']);
     expect(new Set(statement.rows.map((row) => row.description)).size).toBe(statement.rows.length);
   });
@@ -148,7 +148,7 @@ describe('ledger rows after sending', () => {
   it('never repeats a charge, whether rent is stored or derived', () => {
     for (const asOf of [d('2027-05-10'), d('2027-05-20'), d('2027-06-01'), d('2027-08-31')]) {
       const charges = stored(asOf);
-      const statement = buildLeaseStatement({ lease, charges, payments: [], place: 'Maple Court 1A', asOf });
+      const statement = buildLeaseStatement({ lease, charges, payments: [], asOf });
       const keys = statement.rows.map((r) => `${r.kind}:${r.description}:${iso(r.dueDate)}`);
       expect(new Set(keys).size).toBe(keys.length);
       const rentRows = statement.rows.filter((r) => r.kind === 'RENT');
@@ -170,9 +170,9 @@ describe('ledger rows after sending', () => {
     const asOf = d('2027-05-10');
     const preview = previewScheduledCharges({ startDate: lease.startDate, endDate: lease.endDate, fees, asOf });
     expect(preview.moveInTotalCents).toBe(101_452 + 185_000 + 15_000 + 25_000);
-    const statement = buildLeaseStatement({ lease, charges: stored(asOf), payments: [], place: 'x', asOf });
+    const statement = buildLeaseStatement({ lease, charges: stored(asOf), payments: [], asOf });
     const ledgerMonthly = statement.rows
-      .filter((r) => r.kind === 'RENT' && r.description.includes('rent for'))
+      .filter((r) => r.kind === 'RENT' && / rent$/.test(r.description))
       .filter((r) => r.amountCents === 185_000)
       .map((r) => iso(r.dueDate));
     expect(preview.monthly.map((r) => iso(r.date))).toEqual(ledgerMonthly);
@@ -202,7 +202,7 @@ describe('activation setup idempotency', () => {
 describe('statement wording for move-in charges', () => {
   it('names them and reserves the keys', () => {
     const charge = { kind: 'DEPOSIT' as const, description: setupKey('pet-deposit', 'L9') };
-    expect(describeCharge(charge, 'Maple Court 1A')).toBe('Pet deposit for Maple Court 1A');
+    expect(describeCharge(charge)).toBe('Pet deposit');
     expect(chargeTypeLabel(charge)).toBe('Pet deposit');
     expect(chargeTypeLabel({ kind: 'DEPOSIT', description: setupKey('deposit', 'L9') })).toBe('Security deposit');
     expect(chargeTypeLabel({ kind: 'OTHER', description: setupKey('move-in-fee', 'L9') })).toBe('Move-in fee');

@@ -144,7 +144,6 @@ describe.skipIf(!live)('lease draft persistence (database)', () => {
       lease: leaseTerms(lease),
       charges: lease.charges.map(toLedgerCharge),
       payments: [],
-      place: 'Unit',
       asOf: new Date('2031-06-10T00:00:00Z'),
     });
     const keys = statement.rows.map((r) => `${r.kind}:${r.description}:${r.dueDate.toISOString()}`);

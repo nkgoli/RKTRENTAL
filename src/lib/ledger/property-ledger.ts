@@ -6,7 +6,7 @@ import { leaseTerms, toLedgerCharge, toLedgerPayment } from './store';
 import {
   buildLeaseStatement,
   isReservedDescription,
-  termLabel,
+  periodLabel,
   type StatementRow,
 } from './statement';
 
@@ -17,7 +17,10 @@ export type LedgerTenant = { id: string; name: string; initials: string };
 export type LedgerGroup = {
   leaseId: string;
   label: string;
+  unitId: string;
   unitLabel: string;
+  /** Charges minus settled payments due by now for this lease. */
+  balanceCents: Cents;
   singleUnit: boolean;
   active: boolean;
   tenants: LedgerTenant[];
@@ -65,20 +68,18 @@ export async function loadPropertyLedger(
   for (const lease of leases) {
     const active = lease.status === 'ACTIVE';
     if (!active && lease.charges.length === 0) continue;
-    const place = lease.unit.isImplicit
-      ? lease.unit.property.name
-      : `${lease.unit.property.name} ${lease.unit.number}`;
     const statement = buildLeaseStatement({
       lease: leaseTerms(lease),
       charges: lease.charges.map(toLedgerCharge),
       payments: lease.payments.map(toLedgerPayment),
-      place,
       asOf,
     });
     if (active) balanceCents += statement.balanceCents;
     groups.push({
       leaseId: lease.id,
-      label: termLabel(lease.startDate, lease.endDate),
+      label: periodLabel({ start: lease.startDate, end: lease.endDate }, statement.rows),
+      unitId: lease.unitId,
+      balanceCents: statement.balanceCents,
       unitLabel: lease.unit.number,
       singleUnit: lease.unit.isImplicit,
       active,
@@ -97,6 +98,57 @@ export async function loadPropertyLedger(
     .flatMap((g) => g.tenants)
     .filter((t) => !seen.has(t.id) && seen.add(t.id));
   return { groups, balanceCents, tenants };
+}
+
+export type UnitHealth = 'LATE' | 'DUE' | 'CURRENT';
+
+export type UnitSummary = {
+  unitId: string;
+  leaseId: string;
+  unitLabel: string;
+  tenantNames: string;
+  balanceCents: Cents;
+  status: UnitHealth;
+  nextDue: { dueDate: Date; amountCents: Cents } | null;
+};
+
+export type UnitSummaryTable = { units: UnitSummary[]; totalBalanceCents: Cents };
+
+/**
+ * One row per unit with an active lease: balance, health (Late if any charge is late, Due if
+ * something is owed now) and the next unpaid charge. Late units sort first, then by unit label.
+ */
+export function summarizeUnits(groups: LedgerGroup[]): UnitSummaryTable {
+  const units = groups
+    .filter((g) => g.active)
+    .map((g): UnitSummary => {
+      const open = g.rows.filter((r) => r.balanceCents > 0);
+      const status: UnitHealth = open.some((r) => r.status === 'LATE')
+        ? 'LATE'
+        : open.some((r) => r.status === 'DUE' || r.status === 'PARTIAL')
+          ? 'DUE'
+          : 'CURRENT';
+      const next = open.find((r) => r.status !== 'LATE') ?? open[0];
+      return {
+        unitId: g.unitId,
+        leaseId: g.leaseId,
+        unitLabel: g.unitLabel,
+        tenantNames: g.tenants.map((t) => t.name).join(', '),
+        balanceCents: g.balanceCents,
+        status,
+        nextDue: next ? { dueDate: next.dueDate, amountCents: next.balanceCents } : null,
+      };
+    });
+  const rank: Record<UnitHealth, number> = { LATE: 0, DUE: 1, CURRENT: 2 };
+  units.sort(
+    (a, b) =>
+      rank[a.status] - rank[b.status] ||
+      a.unitLabel.localeCompare(b.unitLabel, 'en', { numeric: true }),
+  );
+  return {
+    units,
+    totalBalanceCents: units.reduce((sum, u) => sum + u.balanceCents, 0),
+  };
 }
 
 export const CHARGE_TYPES = [

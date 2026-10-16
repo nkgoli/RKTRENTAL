@@ -232,7 +232,7 @@ export async function loadTenantLease(
     listTenantLeaseDocuments(scope, lease.id, files),
     client.document.findMany({
       where: { organizationId, unitId: lease.unitId, kind: 'PHOTO' },
-      orderBy: [{ isCover: 'desc' }, { createdAt: 'asc' }],
+      orderBy: [{ isCover: 'desc' }, { sortOrder: { sort: 'asc', nulls: 'last' } }, { createdAt: 'asc' }],
     }),
   ]);
   const me = lease.tenants.find((t) => t.tenantId === tenantId)?.tenant;

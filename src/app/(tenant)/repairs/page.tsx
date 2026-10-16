@@ -1,6 +1,7 @@
 ﻿import Link from 'next/link';
 import { Badge, type BadgeTone } from '@/components/ui/Badge';
 import { Alert, Progress } from '@/components/ui/Feedback';
+import { FileUploader } from '@/components/upload';
 import { requireTenantRole } from '@/lib/auth/access';
 import { repairProgress, repairStatusLabel } from '@/lib/tenant-portal';
 import { commentRepairAction } from './actions';
@@ -104,15 +105,10 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
               Add where it is and when it started, so the vendor brings the right parts.
             </span>
           </label>
-          <label className={styles.upload}>
-            <p>
-              <strong>+ Add photos</strong>
-            </p>
-            <p style={{ fontSize: 13, marginTop: 4 }}>
-              Tap to take or upload photos · JPG/PNG · Up to {MAX_PHOTOS}
-            </p>
-            <input type="file" name="photos" accept="image/*" multiple aria-label="Photos" />
-          </label>
+          <div className="field">
+            <span>Photos</span>
+            <FileUploader kind="photo" formField="photos" max={MAX_PHOTOS} label="Photos" />
+          </div>
           <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
             <legend style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
               Entry permission

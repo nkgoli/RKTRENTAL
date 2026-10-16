@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { FileUploader } from '@/components/upload';
 import { Alert, Badge, Button, Card, CardHeader, Steps } from '@/components/ui';
 import { CLAUSE_OPTIONS, STANDARD_DOCUMENTS } from '@/lib/lease-create/clauses';
 import { WIZARD_STEPS, type WizardDraft } from '@/lib/lease-create/types';
@@ -384,16 +385,15 @@ export function LeaseCreateWizard({ units, tenants, renewId, initialDraft, sourc
                     {STANDARD_DOCUMENTS.join(' · ')} — the signed lease PDF is stored on the lease
                     automatically after mock signing.
                   </p>
-                  <label className="field">
-                    Attach documents (optional)
-                    <input
-                      aria-label="Attach documents"
-                      type="file"
-                      name="documents"
-                      multiple
+                  <div className="field">
+                    <span>Attach documents (optional)</span>
+                    <FileUploader
+                      kind="document"
+                      formField="documents"
                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      label="Attach documents"
                     />
-                  </label>
+                  </div>
                 </div>
               </div>
             </Card>

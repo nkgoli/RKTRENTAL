@@ -14,6 +14,7 @@ import {
   Ticket,
   TrendChip,
 } from '@/components/ui';
+import { FileUploader } from '@/components/upload';
 import { requireManagerRole } from '@/lib/auth/access';
 import {
   listMaintenanceBoard,
@@ -134,14 +135,8 @@ function RequestTicket({
           </form>
           <form action={uploadMaintenancePhotoAction} className={styles.compactForm}>
             <input type="hidden" name="requestId" value={request.id} />
-            <label htmlFor={`photo-${request.id}`}>Add photo</label>
-            <input
-              id={`photo-${request.id}`}
-              name="photo"
-              type="file"
-              accept="image/png,image/jpeg,image/heic,image/heif"
-              required
-            />
+            <span id={`photo-${request.id}`}>Add photo</span>
+            <FileUploader kind="photo" formField="photo" multiple={false} label="Add photo" />
             <button className="btn btn-secondary btn-sm" type="submit">
               Upload photo
             </button>
@@ -306,11 +301,10 @@ export default async function MaintenancePage({
             Description
             <textarea name="description" maxLength={3000} placeholder="What needs attention?" />
           </label>
-          <label className="field">
-            Photo
-            <input type="file" name="photo" accept="image/png,image/jpeg,image/heic,image/heif" />
-            <span className="hint">PNG, JPEG or HEIC, up to 25 MB</span>
-          </label>
+          <div className="field">
+            <span>Photo</span>
+            <FileUploader kind="photo" formField="photo" multiple={false} label="Request photo" />
+          </div>
           <button className="btn btn-primary" type="submit">
             Create request
           </button>

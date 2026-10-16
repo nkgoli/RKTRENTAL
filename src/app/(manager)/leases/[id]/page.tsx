@@ -263,8 +263,8 @@ export default async function LeaseDetailPage({
                   Files owned by this lease
                 </p>
               </div>
-              <LeaseUploader leaseId={lease.id} />
             </div>
+            <LeaseUploader leaseId={lease.id} />
             <LeaseDocumentGrid
               leaseId={lease.id}
               documents={lease.documents.map((file) => ({

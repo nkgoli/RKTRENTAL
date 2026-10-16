@@ -15,7 +15,7 @@ function imageFile(name: string): File {
 }
 
 function chooseFiles(files: File[]) {
-  const input = screen.getByLabelText('Choose files') as HTMLInputElement;
+  const input = screen.getByLabelText(/^Choose (files|a file)$/) as HTMLInputElement;
   fireEvent.change(input, { target: { files } });
   return input;
 }
@@ -170,5 +170,62 @@ describe('FileUploader', () => {
     fireEvent.drop(zone, { dataTransfer: { files: [imageFile('dropped.jpg')] } });
     await waitFor(() => expect(screen.getByText('Uploaded')).toBeTruthy());
     expect(screen.getByText('1 of 5 photos')).toBeTruthy();
+  });
+
+  it('shows existing photos counted toward the limit and confirms removal through onRemove', async () => {
+    const onRemove = vi.fn().mockResolvedValue(undefined);
+    render(
+      <FileUploader
+        kind="photo"
+        target={{ kind: 'unit', id: 'unit-1' }}
+        max={10}
+        initialFiles={[
+          { id: 'p1', name: 'front.jpg', isCover: true },
+          { id: 'p2', name: 'rear.jpg' },
+        ]}
+        onRemove={onRemove}
+      />,
+    );
+    expect(screen.getByText('2 of 10 photos')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Remove rear.jpg'));
+    await waitFor(() => expect(screen.getByText('1 of 10 photos')).toBeTruthy());
+    expect(onRemove).toHaveBeenCalledWith(
+      expect.objectContaining({ document: { id: 'p2', name: 'rear.jpg' } }),
+    );
+  });
+
+  it('keeps the cover first when reordering', () => {
+    const onOrderChange = vi.fn();
+    render(
+      <FileUploader
+        kind="photo"
+        target={{ kind: 'property', id: 'property-1' }}
+        initialFiles={[
+          { id: 'p1', name: 'a.jpg', isCover: true },
+          { id: 'p2', name: 'b.jpg' },
+          { id: 'p3', name: 'c.jpg' },
+        ]}
+        onOrderChange={onOrderChange}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText('Move c.jpg earlier'));
+    const ids = onOrderChange.mock.calls[0][0].map(
+      (i: { document: { id: string } }) => i.document.id,
+    );
+    expect(ids).toEqual(['p1', 'p3', 'p2']);
+  });
+
+  it('attaches selected files to a named form field instead of uploading', () => {
+    const uploadFile = vi.fn();
+    const { container } = render(
+      <form>
+        <FileUploader kind="photo" formField="photo" multiple={false} uploadFile={uploadFile} />
+      </form>,
+    );
+    chooseFiles([imageFile('one.jpg'), imageFile('two.jpg')]);
+    expect(uploadFile).not.toHaveBeenCalled();
+    expect(screen.getByText('one.jpg')).toBeTruthy();
+    expect(screen.queryByText('two.jpg')).toBeNull();
+    expect(container.querySelector('input[name="photo"]')).toBeTruthy();
   });
 });

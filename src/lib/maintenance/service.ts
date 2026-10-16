@@ -1,4 +1,10 @@
-import { MaintenancePriority, MaintenanceStatus } from '@prisma/client';
+import { MaintenancePriority, MaintenanceStatus, type Prisma } from '@prisma/client';
+import {
+  MAINTENANCE_PAGE_SIZE,
+  RECENT_DONE_DAYS,
+  usesRecentWindow,
+  type MaintenanceListQuery,
+} from './query';
 import { db } from '@/lib/db/client';
 import { directScopeWhere, type ScopeFilter } from '@/lib/workspace/scope';
 import type { AuthSession } from '@/lib/auth/session';
@@ -34,20 +40,141 @@ async function publishStatusWithoutBlocking(organizationId: string, eventId: str
   }
 }
 
+const boardSelect = {
+  id: true,
+  title: true,
+  description: true,
+  priority: true,
+  status: true,
+  createdAt: true,
+  completedAt: true,
+  propertyId: true,
+  vendorId: true,
+  vendorName: true,
+  property: { select: { id: true, name: true } },
+  unit: { select: { id: true, number: true } },
+  vendor: { select: { id: true, name: true } },
+  // Cover photo only; the image itself is fetched lazily by the browser.
+  photos: {
+    where: { documentId: { not: null } },
+    select: { documentId: true },
+    orderBy: { createdAt: 'asc' },
+    take: 1,
+  },
+  events: {
+    where: { kind: 'COMMENT' },
+    select: { id: true, body: true },
+    orderBy: { createdAt: 'desc' },
+    take: 3,
+  },
+} satisfies Prisma.MaintenanceRequestSelect;
+
+export type MaintenanceBoardRequest = Prisma.MaintenanceRequestGetPayload<{
+  select: typeof boardSelect;
+}>;
+
+function listWhere(
+  organizationId: string,
+  scope: ScopeFilter,
+  query: MaintenanceListQuery,
+  now: Date,
+): Prisma.MaintenanceRequestWhereInput {
+  const where: Prisma.MaintenanceRequestWhereInput = {
+    organizationId,
+    ...directScopeWhere(scope),
+  };
+  if (query.status) where.status = query.status;
+  if (query.from || query.to) {
+    where.createdAt = {
+      ...(query.from ? { gte: new Date(`${query.from}T00:00:00.000Z`) } : {}),
+      ...(query.to ? { lt: new Date(Date.parse(`${query.to}T00:00:00.000Z`) + 86_400_000) } : {}),
+    };
+  }
+  if (usesRecentWindow(query)) {
+    const cutoff = new Date(now.getTime() - RECENT_DONE_DAYS * 86_400_000);
+    where.OR = [
+      { status: { in: ['NEW', 'ASSIGNED', 'IN_PROGRESS'] } },
+      {
+        status: 'DONE',
+        OR: [{ completedAt: { gte: cutoff } }, { completedAt: null, createdAt: { gte: cutoff } }],
+      },
+      { status: 'CANCELLED', createdAt: { gte: cutoff } },
+    ];
+  }
+  return where;
+}
+
+/** One page of requests plus board-wide counts; every relation is loaded with one batched query. */
+export async function listMaintenancePage(
+  organizationId: string,
+  scope: ScopeFilter = {},
+  query: MaintenanceListQuery = { allHistory: false, page: 1 },
+  now = new Date(),
+) {
+  const where = listWhere(organizationId, scope, query, now);
+  const base = { organizationId, ...directScopeWhere(scope) };
+  const open = {
+    ...base,
+    status: { in: ['NEW', 'ASSIGNED', 'IN_PROGRESS'] as MaintenanceStatus[] },
+  };
+  const weekAgo = new Date(now.getTime() - 7 * 86_400_000);
+  const [
+    total,
+    statusCounts,
+    openCount,
+    urgentCount,
+    firstUrgent,
+    openProperties,
+    completedThisWeek,
+  ] = await Promise.all([
+    db.maintenanceRequest.count({ where }),
+    db.maintenanceRequest.groupBy({ by: ['status'], where, _count: { _all: true } }),
+    db.maintenanceRequest.count({ where: open }),
+    db.maintenanceRequest.count({ where: { ...open, priority: 'URGENT' } }),
+    db.maintenanceRequest.findFirst({
+      where: { ...open, priority: 'URGENT' },
+      select: { title: true, property: { select: { name: true } } },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    }),
+    db.maintenanceRequest.groupBy({ by: ['propertyId'], where: open }),
+    db.maintenanceRequest.count({
+      where: { ...base, status: 'DONE', completedAt: { gte: weekAgo } },
+    }),
+  ]);
+  const pageCount = Math.max(1, Math.ceil(total / MAINTENANCE_PAGE_SIZE));
+  const page = Math.min(query.page, pageCount);
+  const requests = await db.maintenanceRequest.findMany({
+    where,
+    select: boardSelect,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    skip: (page - 1) * MAINTENANCE_PAGE_SIZE,
+    take: MAINTENANCE_PAGE_SIZE,
+  });
+  const isEmpty = total === 0 && (await db.maintenanceRequest.count({ where: base })) === 0;
+  return {
+    requests,
+    isEmpty,
+    total,
+    page,
+    pageCount,
+    statusCounts: Object.fromEntries(
+      statusCounts.map((row) => [row.status, row._count._all]),
+    ) as Partial<Record<MaintenanceStatus, number>>,
+    summary: {
+      open: openCount,
+      urgent: urgentCount,
+      firstUrgent,
+      openProperties: openProperties.length,
+      completedThisWeek,
+    },
+  };
+}
+
+/** Lean status/priority rows for counting (dashboard); the board itself pages via listMaintenancePage. */
 export async function listMaintenanceBoard(organizationId: string, scope: ScopeFilter = {}) {
   return db.maintenanceRequest.findMany({
     where: { organizationId, ...directScopeWhere(scope) },
-    include: {
-      property: { select: { id: true, name: true } },
-      unit: { select: { id: true, number: true } },
-      vendor: { select: { id: true, name: true } },
-      photos: {
-        include: { document: { select: { id: true, name: true } } },
-        orderBy: { createdAt: 'asc' },
-      },
-      events: { orderBy: { createdAt: 'desc' }, take: 3 },
-    },
-    orderBy: [{ createdAt: 'desc' }],
+    select: { status: true, priority: true },
   });
 }
 
@@ -301,5 +428,3 @@ export async function addRequestPhoto(session: AuthSession, requestId: string, f
     },
   });
 }
-
-export type MaintenanceBoardRequest = Awaited<ReturnType<typeof listMaintenanceBoard>>[number];

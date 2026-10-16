@@ -22,6 +22,9 @@ uploads/
 
 output/
 
+# check logs and screenshots from verification runs
+tests/evidence/
+
 # evidence screenshots
 tests/**/*.png
 tests/**/*.jpg

@@ -1,6 +1,11 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import type { MaintenanceBoardRequest } from '@/lib/maintenance';
+import {
+  MaintenanceFilters,
+  MaintenanceListFooter,
+} from '@/components/maintenance/MaintenanceListControls';
+import type { MaintenanceBoardRequest, MaintenanceListQuery } from '@/lib/maintenance';
+import { workspaceTabHref } from '@/components/workspace/routes';
 import styles from './operations.module.css';
 
 function statusLabel(status: MaintenanceBoardRequest['status']) {
@@ -33,14 +38,27 @@ function formatDate(date: Date) {
 
 export function PropertyMaintenanceList({
   propertyId,
-  requests,
+  list,
+  query,
+  unitId,
   createRequestControl,
 }: {
   propertyId: string;
-  requests: MaintenanceBoardRequest[];
+  list: {
+    requests: MaintenanceBoardRequest[];
+    isEmpty: boolean;
+    total: number;
+    page: number;
+    pageCount: number;
+  };
+  query: MaintenanceListQuery;
+  unitId?: string;
   createRequestControl: ReactNode;
 }) {
-  if (requests.length === 0) {
+  const { requests } = list;
+  const action = workspaceTabHref(propertyId, 'maintenance');
+  const hidden = { unit: unitId };
+  if (list.isEmpty) {
     return (
       <section className={`card ${styles.emptyState}`} aria-labelledby="repair-requests-heading">
         <span className={styles.emptyIcon} aria-hidden="true">+</span>
@@ -61,6 +79,9 @@ export function PropertyMaintenanceList({
           <h2 id="repair-requests-heading">Repair requests</h2>
           {createRequestControl}
         </div>
+        <div className={styles.listHeader}>
+          <MaintenanceFilters action={action} hidden={hidden} query={query} />
+        </div>
         <div className={styles.tableWrap}>
           <table className="table" aria-label="Repair requests">
             <thead>
@@ -77,7 +98,7 @@ export function PropertyMaintenanceList({
               {requests.length === 0 ? (
                 <tr>
                   <td colSpan={6} className={`muted ${styles.emptyCell}`}>
-                    No repair requests for this property yet.
+                    No repair requests match these filters.
                   </td>
                 </tr>
               ) : (
@@ -116,6 +137,16 @@ export function PropertyMaintenanceList({
               )}
             </tbody>
           </table>
+        </div>
+        <div className={styles.listHeader}>
+          <MaintenanceListFooter
+            action={action}
+            hidden={hidden}
+            query={query}
+            page={list.page}
+            pageCount={list.pageCount}
+            total={list.total}
+          />
         </div>
       </section>
     </>

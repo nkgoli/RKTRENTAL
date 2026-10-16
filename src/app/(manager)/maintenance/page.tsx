@@ -17,10 +17,16 @@ import {
 import { FileUploader } from '@/components/upload';
 import { requireManagerRole } from '@/lib/auth/access';
 import {
-  listMaintenanceBoard,
   listMaintenanceOptions,
+  listMaintenancePage,
+  parseMaintenanceQuery,
   type MaintenanceBoardRequest,
+  type MaintenanceListParams,
 } from '@/lib/maintenance';
+import {
+  MaintenanceFilters,
+  MaintenanceListFooter,
+} from '@/components/maintenance/MaintenanceListControls';
 import {
   assignMaintenanceAction,
   commentMaintenanceAction,
@@ -35,6 +41,7 @@ const columns = [
   { status: 'ASSIGNED', title: 'Assigned' },
   { status: 'IN_PROGRESS', title: 'In progress' },
   { status: 'DONE', title: 'Done' },
+  { status: 'CANCELLED', title: 'Cancelled' },
 ] as const;
 
 function initials(name: string) {
@@ -53,19 +60,23 @@ function RequestTicket({
   request: MaintenanceBoardRequest;
   vendors: { id: string; name: string }[];
 }) {
-  const firstPhoto = request.photos.find((photo) => photo.document);
+  const coverDocumentId = request.photos[0]?.documentId;
   const priorityTone =
     request.priority === 'URGENT' ? 'danger' : request.priority === 'HIGH' ? 'warning' : 'info';
   return (
     <Ticket>
       <article id={`request-${request.id}`} className={styles.ticketContent}>
-        {firstPhoto?.document ? (
-          <div
-            className={styles.photo}
-            role="img"
-            aria-label={`${request.title} photo`}
-            style={{ backgroundImage: `url(/api/files/${firstPhoto.document.id}/preview)` }}
-          >
+        {coverDocumentId ? (
+          <div className={styles.photo}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- authenticated file route, loaded lazily */}
+            <img
+              src={`/api/files/${coverDocumentId}/preview`}
+              alt={`${request.title} photo`}
+              loading="lazy"
+              decoding="async"
+              width={240}
+              height={78}
+            />
             <span className="caption">Photo attached</span>
           </div>
         ) : (
@@ -149,13 +160,11 @@ function RequestTicket({
               Add comment
             </button>
           </form>
-          {request.events
-            .filter((event) => event.kind === 'COMMENT')
-            .map((event) => (
-              <p key={event.id} className={styles.comment}>
-                {event.body}
-              </p>
-            ))}
+          {request.events.map((event) => (
+            <p key={event.id} className={styles.comment}>
+              {event.body}
+            </p>
+          ))}
         </details>
       </article>
     </Ticket>
@@ -165,20 +174,17 @@ function RequestTicket({
 export default async function MaintenancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ propertyId?: string; unitId?: string }>;
+  searchParams: Promise<{ propertyId?: string; unitId?: string } & MaintenanceListParams>;
 }) {
   const [session, params] = await Promise.all([requireManagerRole(), searchParams]);
   const scope = scopeFilterFrom(params);
-  const [requests, { properties, vendors }] = await Promise.all([
-    listMaintenanceBoard(session.organizationId, scope),
+  const query = parseMaintenanceQuery(params);
+  const [list, { properties, vendors }] = await Promise.all([
+    listMaintenancePage(session.organizationId, scope, query),
     listMaintenanceOptions(session.organizationId),
   ]);
-  const open = requests.filter((request) => !['DONE', 'CANCELLED'].includes(request.status));
-  const urgent = open.filter((request) => request.priority === 'URGENT');
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const completed = requests.filter(
-    (request) => request.status === 'DONE' && request.completedAt && request.completedAt >= weekAgo,
-  );
+  const { requests, summary, statusCounts } = list;
+  const hidden = { propertyId: scope.propertyId, unitId: scope.unitId };
   return (
     <>
       <ScopedWorkspace
@@ -209,19 +215,19 @@ export default async function MaintenancePage({
             <span>Open requests</span>
             <KpiIcon>⚒</KpiIcon>
           </div>
-          <strong>{open.length}</strong>
-          <TrendChip>
-            Across {new Set(open.map((request) => request.propertyId)).size} properties
-          </TrendChip>
+          <strong>{summary.open}</strong>
+          <TrendChip>Across {summary.openProperties} properties</TrendChip>
         </article>
         <article className={styles.stat}>
           <div className={styles.statTop}>
             <span>Urgent attention</span>
             <KpiIcon tone="coral">!</KpiIcon>
           </div>
-          <strong>{urgent.length}</strong>
+          <strong>{summary.urgent}</strong>
           <TrendChip warm>
-            {urgent[0] ? `${urgent[0].title} · ${urgent[0].property.name}` : 'No urgent requests'}
+            {summary.firstUrgent
+              ? `${summary.firstUrgent.title} · ${summary.firstUrgent.property.name}`
+              : 'No urgent requests'}
           </TrendChip>
         </article>
         <article className={styles.stat}>
@@ -229,11 +235,12 @@ export default async function MaintenancePage({
             <span>Completed this week</span>
             <KpiIcon tone="green">✓</KpiIcon>
           </div>
-          <strong>{completed.length}</strong>
+          <strong>{summary.completedThisWeek}</strong>
           <TrendChip>Requests resolved</TrendChip>
         </article>
       </div>
-      {requests.length === 0 && (
+      <MaintenanceFilters action="/maintenance" hidden={hidden} query={query} />
+      {list.isEmpty && (
         <EmptyState
           title="No repair requests yet"
           description="Create a repair request to track work from start to finish."
@@ -243,23 +250,37 @@ export default async function MaintenancePage({
       )}
       <div id="requests" className={styles.board}>
         <KanbanBoard>
-          {columns.map((column) => {
-            const items = requests.filter((request) => request.status === column.status);
-            return (
-              <KanbanColumn key={column.status} title={column.title} count={items.length}>
-                {items.map((request) => (
-                  <RequestTicket key={request.id} request={request} vendors={vendors} />
-                ))}
-                {items.length === 0 && (
-                  <p className="muted" style={{ fontSize: 13 }}>
-                    No requests
-                  </p>
-                )}
-              </KanbanColumn>
-            );
-          })}
+          {columns
+            .filter((column) => column.status !== 'CANCELLED' || statusCounts.CANCELLED)
+            .map((column) => {
+              const items = requests.filter((request) => request.status === column.status);
+              return (
+                <KanbanColumn
+                  key={column.status}
+                  title={column.title}
+                  count={statusCounts[column.status] ?? 0}
+                >
+                  {items.map((request) => (
+                    <RequestTicket key={request.id} request={request} vendors={vendors} />
+                  ))}
+                  {items.length === 0 && (
+                    <p className="muted" style={{ fontSize: 13 }}>
+                      No requests
+                    </p>
+                  )}
+                </KanbanColumn>
+              );
+            })}
         </KanbanBoard>
       </div>
+      <MaintenanceListFooter
+        action="/maintenance"
+        hidden={hidden}
+        query={query}
+        page={list.page}
+        pageCount={list.pageCount}
+        total={list.total}
+      />
       <section id="new-request" className={`card ${styles.newRequest}`}>
         <div className="card-header">
           <h3>New repair request</h3>

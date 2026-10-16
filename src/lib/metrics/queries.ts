@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
-import { expensesDb, EXPENSE_CATEGORY_LABELS } from '@/lib/expenses';
+import { EXPENSE_CATEGORY_LABELS, type ExpenseCategoryValue } from '@/lib/expenses';
 import { toCents } from '@/lib/ledger/core';
 import { type ResolvedPeriod } from '@/lib/returns/period';
 import { computeScopedReturns, type ScopedReturns } from './scoped';
@@ -23,6 +23,10 @@ export type PropertyWorkspaceReturns = {
     tenantName: string | null;
   }[];
 };
+
+const isoDay = (date: Date) => date.toISOString().slice(0, 10);
+const monthStart = (month: string) =>
+  new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1));
 
 /** Loads property and unit returns using the portfolio's existing income/expense sources. */
 export async function loadPropertyWorkspaceReturns(
@@ -63,21 +67,32 @@ export async function loadPropertyWorkspaceReturns(
   });
   if (!property) return null;
 
+  // Settled rent per unit and month, and expenses per category and month,
+  // summed in SQL so the row count is bounded by units x months.
   const [payments, expenses] = await Promise.all([
-    client.payment.findMany({
-      where: {
-        organizationId,
-        status: 'SUCCEEDED',
-        paidAt: { gte: period.start, lt: period.end },
-        lease: { unit: { propertyId } },
-      },
-      select: {
-        amount: true,
-        paidAt: true,
-        lease: { select: { unitId: true } },
-      },
-    }),
-    expensesDb(organizationId, client).listExpenses(period),
+    client.$queryRaw<{ unitId: string; month: string; cents: bigint }[]>`
+      SELECT l."unitId" AS "unitId",
+             to_char(date_trunc('month', p."paidAt"), 'YYYY-MM') AS month,
+             (SUM(p.amount) * 100)::bigint AS cents
+      FROM "Payment" p
+      JOIN "Lease" l ON l.id = p."leaseId" AND l."organizationId" = p."organizationId"
+      JOIN "Unit" u ON u.id = l."unitId" AND u."organizationId" = l."organizationId"
+      WHERE p."organizationId" = ${organizationId}
+        AND u."propertyId" = ${propertyId}
+        AND p.status = 'SUCCEEDED'
+        AND p."paidAt" >= ${isoDay(period.start)}::timestamp
+        AND p."paidAt" < ${isoDay(period.end)}::timestamp
+      GROUP BY 1, 2`,
+    client.$queryRaw<{ category: ExpenseCategoryValue; month: string; cents: bigint }[]>`
+      SELECT e.category::text AS category,
+             to_char(date_trunc('month', e."occurredOn"), 'YYYY-MM') AS month,
+             (SUM(e.amount) * 100)::bigint AS cents
+      FROM "Expense" e
+      WHERE e."organizationId" = ${organizationId}
+        AND e."propertyId" = ${propertyId}
+        AND e."occurredOn" >= ${isoDay(period.start)}::date
+        AND e."occurredOn" < ${isoDay(period.end)}::date
+      GROUP BY 1, 2`,
   ]);
 
   const units = property.units.map((unit) => ({
@@ -108,19 +123,17 @@ export async function loadPropertyWorkspaceReturns(
       annualDebtServiceCents: toCents(property.annualDebtService),
     },
     units,
-    payments: payments.flatMap((payment) =>
-      payment.paidAt
-        ? [{ unitId: payment.lease.unitId, amountCents: toCents(payment.amount), paidAt: payment.paidAt }]
-        : [],
-    ),
-    expenses: expenses
-      .filter((expense) => expense.propertyId === propertyId)
-      .map((expense) => ({
-        category: expense.category,
-        label: EXPENSE_CATEGORY_LABELS[expense.category],
-        amountCents: expense.amountCents,
-        occurredOn: expense.occurredOn,
-      })),
+    payments: payments.map((row) => ({
+      unitId: row.unitId,
+      amountCents: Number(row.cents),
+      paidAt: monthStart(row.month),
+    })),
+    expenses: expenses.map((row) => ({
+      category: row.category,
+      label: EXPENSE_CATEGORY_LABELS[row.category],
+      amountCents: Number(row.cents),
+      occurredOn: monthStart(row.month),
+    })),
     period,
   };
 

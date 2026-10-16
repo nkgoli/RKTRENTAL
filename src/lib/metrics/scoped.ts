@@ -1,5 +1,13 @@
 import { computeReturns, type ReturnsMetrics } from '@/lib/returns/core';
-import { monthBucket, periodBuckets, type ResolvedPeriod } from '@/lib/returns/period';
+import {
+  bucketLabel,
+  bucketSeries,
+  monthBucket,
+  yearlyTotals,
+  type ResolvedPeriod,
+  type SeriesPoint,
+  type YearlyPoint,
+} from '@/lib/returns/period';
 
 export type ScopedUnitInput = {
   id: string;
@@ -9,12 +17,14 @@ export type ScopedUnitInput = {
   listedRentCents: number | null;
 };
 
+/** A payment, or the sum of a unit's payments for one month (paidAt = any day in it). */
 export type ScopedPaymentInput = {
   unitId: string;
   amountCents: number;
   paidAt: Date;
 };
 
+/** An expense, or the sum of one category's expenses for one month. */
 export type ScopedExpenseInput = {
   category: string;
   label: string;
@@ -39,7 +49,9 @@ export type ScopedReturns = {
   unitId: string | null;
   unitNumber: string | null;
   metrics: ReturnsMetrics;
-  monthly: { month: string; incomeCents: number; expensesCents: number }[];
+  /** One point per month, or per quarter when the range is longer than two years. */
+  monthly: SeriesPoint[];
+  yearly: YearlyPoint[];
   expenseBreakdown: { category: string; label: string; amountCents: number }[];
   dueCents: number;
   collectedCents: number;
@@ -49,14 +61,10 @@ export type ScopedReturns = {
   period: ResolvedPeriod;
 };
 
+/** Axis labels for the chart rows; years are added once the chart spans more than a year. */
 export function returnsMonthLabels(rows: { month: string }[]): string[] {
-  return rows.map(({ month }) => {
-    const [year, number] = month.split('-').map(Number);
-    return new Date(Date.UTC(year!, number! - 1, 1)).toLocaleDateString('en-US', {
-      month: 'short',
-      timeZone: 'UTC',
-    });
-  });
+  const withYear = new Set(rows.map(({ month }) => month.slice(0, 4))).size > 1;
+  return rows.map(({ month }) => bucketLabel(month, withYear));
 }
 
 function unitWeight(unit: ScopedUnitInput): number {
@@ -140,11 +148,8 @@ export function computeScopedReturns(input: ScopedReturnsInput): ScopedReturns {
       scheduledRentCents: dueCents,
       periodMonths: input.period.months,
     }),
-    monthly: periodBuckets(input.period).map((month) => ({
-      month,
-      incomeCents: monthlyIncome.get(month) ?? 0,
-      expensesCents: monthlyExpenses.get(month) ?? 0,
-    })),
+    monthly: bucketSeries(input.period, monthlyIncome, monthlyExpenses),
+    yearly: yearlyTotals(monthlyIncome, monthlyExpenses),
     expenseBreakdown: [...expenseBreakdown.entries()]
       .map(([category, values]) => ({ category, ...values }))
       .sort((a, b) => b.amountCents - a.amountCents),

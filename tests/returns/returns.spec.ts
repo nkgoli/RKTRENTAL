@@ -71,3 +71,29 @@ test('manager reviews returns, adds an expense and exports CSV', async ({ page }
   expect(path).toBeTruthy();
 });
 
+
+test('returns and dashboard switch to multi-year ranges kept in the URL', async ({ page }) => {
+  await signIn(page);
+  await page.goto('/returns');
+  await page.getByRole('link', { name: '5Y', exact: true }).click();
+  await expect(page).toHaveURL(/period=5Y/);
+  await expect(page.getByText(/by quarter/)).toBeVisible();
+  await page.getByRole('link', { name: '2Y', exact: true }).click();
+  await expect(page.getByText(/by month/)).toBeVisible();
+
+  await page.goto('/returns');
+  const custom = page.getByRole('form', { name: 'Custom range' });
+  await custom.getByLabel('From').fill('2024-01');
+  await custom.getByLabel('To').fill('2024-06');
+  await custom.getByRole('button', { name: 'Apply' }).click();
+  await expect(page).toHaveURL(/period=CUSTOM&from=2024-01&to=2024-06/);
+  await expect(page.getByText('Jan 2024 – Jun 2024').first()).toBeVisible();
+
+  await page.goto('/properties/seed-property-maple/returns?period=3Y');
+  await expect(page.getByText(/by quarter/)).toBeVisible();
+
+  await page.goto('/dashboard');
+  await page.getByRole('link', { name: '5Y', exact: true }).click();
+  await expect(page).toHaveURL(/range=5Y/);
+  await expect(page.getByTestId('collection-chart')).toBeVisible();
+});

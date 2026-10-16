@@ -135,6 +135,7 @@ describe('loadDashboardView', () => {
       application: { count: vi.fn().mockResolvedValue(0), findMany: vi.fn().mockResolvedValue([]) },
       property: { findMany: vi.fn().mockResolvedValue([property]) },
       document: { findMany: vi.fn().mockResolvedValue([{ id: 'photo-1', propertyId: 'property-1' }]) },
+      $queryRaw: vi.fn().mockResolvedValue([{ month: '2026-10', due: 100000n, collected: 85000n }]),
     } as unknown as PrismaClient;
     // loadDashboardData reads the maintenance board through the default loader, which needs a database.
     vi.doMock('@/lib/maintenance', () => ({ listMaintenanceBoard: async () => [{ status: 'NEW', priority: 'URGENT' }] }));
@@ -145,6 +146,9 @@ describe('loadDashboardView', () => {
 
     expect(view.pastDueTenants).toEqual([{ leaseId: 'lease-1', name: 'Alex Rivera', initials: 'AR' }]);
     expect(view.expiringSoonCount).toBe(1);
+    expect(view.collection).toEqual([
+      { key: '2026-10', label: 'Oct', dueCents: 100_000, collectedCents: 85_000 },
+    ]);
     expect(view.attention.map((item) => item.count)).toEqual([1, 1, 1]);
     expect(view.properties).toEqual([
       expect.objectContaining({

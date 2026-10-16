@@ -1,8 +1,11 @@
 ﻿import type { PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
 import {
+  COLLECTION_RANGES,
+  loadCollectionSeries,
   loadDashboardData,
   overdueSummary,
+  type CollectionRange,
   type DashboardData,
   type LedgerLease,
 } from '@/lib/dashboard/queries';
@@ -120,9 +123,11 @@ export async function loadDashboardView(
   now = new Date(),
   client: PrismaClient = db,
   formatMoney: (cents: number) => string = (cents) => `$${(cents / 100).toFixed(2)}`,
+  collectionRange: CollectionRange = '6M',
 ): Promise<DashboardView> {
-  const [data, leases, list] = await Promise.all([
+  const [data, series, leases, list] = await Promise.all([
     loadDashboardData(organizationId, now, client),
+    loadCollectionSeries(organizationId, now, COLLECTION_RANGES[collectionRange], client),
     client.lease.findMany({
       where: {
         organizationId,
@@ -140,6 +145,7 @@ export async function loadDashboardView(
   const { pastDueTenants, expiringSoonCount } = assembleLeaseSignals(leases, now);
   return {
     ...data,
+    collection: series,
     expiringSoonCount,
     pastDueTenants,
     attention: attentionStrip(data, expiringSoonCount, formatMoney),

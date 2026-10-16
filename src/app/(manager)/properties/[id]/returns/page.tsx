@@ -3,7 +3,7 @@ import { ReturnsWorkspace } from '@/components/workspace/ReturnsWorkspace';
 import { requireManagerRole } from '@/lib/auth/access';
 import { loadPropertyWorkspaceReturns } from '@/lib/metrics';
 import { propertiesDb } from '@/lib/properties/data';
-import { resolvePeriod, periodKeyFrom } from '@/lib/returns/period';
+import { resolveReturnsPeriod } from '@/lib/returns/queries';
 import { first, type WorkspaceSearch } from '../routing';
 
 export default async function PropertyReturnsPage({ params, searchParams }: {
@@ -12,7 +12,13 @@ export default async function PropertyReturnsPage({ params, searchParams }: {
 }) {
   const [session, { id }, query] = await Promise.all([requireManagerRole(), params, searchParams]);
   const unitId = first(query.unit);
-  const period = resolvePeriod(periodKeyFrom(first(query.period)), new Date());
+  const now = new Date();
+  const period = await resolveReturnsPeriod(
+    session.organizationId,
+    { period: first(query.period), from: first(query.from), to: first(query.to) },
+    now,
+    id,
+  );
   const [property, workspaceReturns, unit] = await Promise.all([
     propertiesDb(session.organizationId).getProperty(id),
     loadPropertyWorkspaceReturns(session.organizationId, id, period),
@@ -21,5 +27,5 @@ export default async function PropertyReturnsPage({ params, searchParams }: {
   if (!property || !workspaceReturns || (unitId && !unit)) notFound();
   const returns = unit ? workspaceReturns.units.find((row) => row.unitId === unit.id) : workspaceReturns.property;
   if (!returns) notFound();
-  return <ReturnsWorkspace returns={returns} propertyId={id} propertyName={property.name} />;
+  return <ReturnsWorkspace returns={returns} propertyId={id} propertyName={property.name} now={now} />;
 }

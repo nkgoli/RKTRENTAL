@@ -3,7 +3,9 @@ import { MiniCover } from '@/components/dashboard/MiniCover';
 import { IconAlert, IconCalendar, IconWrench } from '@/components/dashboard/icons';
 import { loadDashboardView, initialsOf } from '@/components/dashboard/assemble';
 import { trendOf } from '@/components/dashboard/trend';
-import { AvatarStack, OccupancyRing, Sparkline, TrendChip } from '@/components/ui';
+import { CollectionChart } from '@/components/dashboard/CollectionChart';
+import { AvatarStack, OccupancyRing, TrendChip } from '@/components/ui';
+import { collectionRangeFrom } from '@/lib/dashboard/queries';
 import { requireManagerRole } from '@/lib/auth/access';
 import { formatUsd } from '@/lib/ledger';
 import styles from './dashboard.module.css';
@@ -31,10 +33,15 @@ const attentionIcons = {
   repairs: <IconWrench />,
 };
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}) {
   const session = await requireManagerRole();
   const now = new Date();
-  const dashboard = await loadDashboardView(session.organizationId, now, undefined, formatUsd);
+  const range = collectionRangeFrom((await searchParams).range);
+  const dashboard = await loadDashboardView(session.organizationId, now, undefined, formatUsd, range);
   const givenName = session.name.trim().split(/\s+/)[0] || 'there';
   const collectionPercent = dashboard.rentDueCents
     ? Math.min(100, Math.round((dashboard.rentCollectedCents / dashboard.rentDueCents) * 100))
@@ -104,12 +111,12 @@ export default async function DashboardPage() {
             </div>
             <OccupancyRing value={collectionPercent} label={`${collectionPercent}% of rent collected`} />
           </div>
-          <div className={styles.sparkRow}>
-            <Sparkline values={collectedSeries} tone="ok" label="Rent collected, last six months" />
-            <span className={styles.note}>
-              {dashboard.collection[0]?.label}–{dashboard.collection.at(-1)?.label} collected
-            </span>
-          </div>
+          <CollectionChart months={dashboard.collection} range={range} />
+          <p className={styles.note} style={{ margin: '4px 0 14px' }}>
+            {dashboard.collection[0]?.label}
+            {dashboard.collection.length > 12 ? ` ${dashboard.collection[0]?.key.slice(0, 4)}` : ''}–
+            {dashboard.collection.at(-1)?.label} collected against rent due
+          </p>
           <dl className={styles.facts}>
             <div>
               <dt>Collected</dt>

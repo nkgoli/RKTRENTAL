@@ -2,8 +2,7 @@ import { requireManagerRole } from '@/lib/auth/access';
 import {
   buildReturnsCsv,
   loadReturnsOverview,
-  periodKeyFrom,
-  resolvePeriod,
+  resolveReturnsPeriod,
 } from '@/lib/returns';
 
 export const dynamic = 'force-dynamic';
@@ -11,8 +10,16 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   const session = await requireManagerRole();
   const url = new URL(request.url);
-  const periodKey = periodKeyFrom(url.searchParams.get('period'));
-  const period = resolvePeriod(periodKey, new Date());
+  const period = await resolveReturnsPeriod(
+    session.organizationId,
+    {
+      period: url.searchParams.get('period'),
+      from: url.searchParams.get('from'),
+      to: url.searchParams.get('to'),
+    },
+    new Date(),
+  );
+  const periodKey = period.key;
   const overview = await loadReturnsOverview(session.organizationId, period);
   const propertyId = url.searchParams.get('property');
   const rows = propertyId

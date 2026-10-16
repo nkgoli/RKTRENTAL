@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
+import { ensureLeaseSetupCharges } from '@/lib/ledger/lease-setup';
 import { defaultLeaseEnd, todayUtc } from './format';
 import type { FieldErrors, NewTenantInput, TenantInput } from './validation';
 
@@ -187,6 +188,7 @@ export async function moveInTenant(
       where: { id: lease.unitId, organizationId },
       data: { status: 'OCCUPIED' },
     });
+    await ensureLeaseSetupCharges(tx, organizationId, leaseId);
   });
 }
 

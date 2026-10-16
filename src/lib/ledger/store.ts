@@ -41,6 +41,7 @@ type LeaseRow = {
   monthlyRent: { toString(): string };
   lateFee: { toString(): string };
   graceDays: number;
+  rentDueDay?: number;
   status: LeaseTerms['status'];
 };
 
@@ -51,6 +52,7 @@ export const leaseTerms = (lease: LeaseRow): LeaseTerms => ({
   monthlyRentCents: toCents(lease.monthlyRent),
   lateFeeCents: toCents(lease.lateFee),
   graceDays: lease.graceDays,
+  rentDueDay: lease.rentDueDay ?? 1,
   status: lease.status,
 });
 

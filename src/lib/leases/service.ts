@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
+import { ensureLeaseSetupCharges } from '@/lib/ledger/lease-setup';
 import { recordLeaseEvents } from './events';
 import { nextLeaseStart, overlaps, renewalEnd, terminationEnd, type LeaseWindow } from './core';
 
@@ -18,6 +19,10 @@ export type Terms = LeaseWindow & {
   deposit: string;
   lateFee: string;
   graceDays: number;
+  rentDueDay?: number;
+  prorateFirstMonth?: boolean;
+  moveInFee?: string;
+  petDeposit?: string;
 };
 
 function overlapError(error: unknown): never {
@@ -100,6 +105,7 @@ export async function createLease(
           where: { id: unitId, organizationId },
           data: { status: 'OCCUPIED' },
         });
+      if (status === 'ACTIVE') await ensureLeaseSetupCharges(tx, organizationId, lease.id);
       await recordLeaseEvents(tx, organizationId, lease.id, [{ kind: 'CREATED' }]);
       return lease;
     })
@@ -133,6 +139,10 @@ export async function renewLease(
         deposit: terms?.deposit ?? source.deposit,
         lateFee: terms?.lateFee ?? source.lateFee,
         graceDays: terms?.graceDays ?? source.graceDays,
+        rentDueDay: terms?.rentDueDay ?? source.rentDueDay,
+        prorateFirstMonth: terms?.prorateFirstMonth ?? source.prorateFirstMonth,
+        moveInFee: terms?.moveInFee ?? '0.00',
+        petDeposit: terms?.petDeposit ?? '0.00',
         status: 'DRAFT',
       },
       select: { id: true },
@@ -198,6 +208,7 @@ export async function activateLease(
         where: { id: lease.unitId, organizationId },
         data: { status: 'OCCUPIED' },
       });
+      await ensureLeaseSetupCharges(tx, organizationId, leaseId);
     })
     .catch(overlapError);
 }

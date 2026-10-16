@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { FileTarget } from '@/lib/storage/types';
 import { MAX_FILE_BYTES } from '@/lib/storage/types';
 import { validateUploadMeta } from '@/lib/storage/validation';
@@ -93,6 +93,8 @@ export interface FileUploaderProps {
   /** Alias for existingCount. */
   initialUsed?: number;
   onUploaded?: (document: UploadedDocument, item: FileUploaderItem) => void;
+  /** Optional control shown beside each uploaded file, such as a document type picker. */
+  renderItemAction?: (item: FileUploaderItem) => ReactNode;
   onOrderChange?: (items: FileUploaderItem[]) => void;
   onCoverChange?: (item: FileUploaderItem | null) => void;
   /** Injectable transport for tests; defaults to POST /api/files with progress. */
@@ -483,6 +485,7 @@ export function FileUploader(props: FileUploaderProps) {
                 ) : null}
               </div>
               <div className={styles.actions}>
+                {item.status === 'done' ? props.renderItemAction?.(item) : null}
                 {item.status === 'error' ? (
                   <button
                     type="button"

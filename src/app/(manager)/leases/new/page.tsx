@@ -118,9 +118,14 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
         await db.document.findMany({
           where: { organizationId, leaseId: snapshot.leaseId, kind: { not: 'PHOTO' } },
           orderBy: { createdAt: 'asc' },
-          select: { id: true, name: true, sizeBytes: true },
+          select: { id: true, name: true, sizeBytes: true, kind: true },
         })
-      ).map((d) => ({ id: d.id, name: d.name, sizeBytes: Number(d.sizeBytes) }))
+      ).map((d) => ({
+        id: d.id,
+        name: d.name,
+        sizeBytes: Number(d.sizeBytes),
+        kind: d.kind === 'LEASE' || d.kind === 'ADDENDUM' || d.kind === 'DISCLOSURE' ? d.kind : 'OTHER' as const,
+      }))
     : [];
 
   const renewSource =

@@ -10,6 +10,7 @@ import {
   monthKey,
   monthStart,
   rentKey,
+  rentDueDate,
   startOfUtcDay,
   type Cents,
   type ChargeKindName,
@@ -78,7 +79,7 @@ const monthName = (key: string) =>
 
 /** Deterministic keys are stored in Charge.description; manual charges must never collide with them. */
 export const isReservedDescription = (value: string) =>
-  /^(rent|late-fee|setup):/i.test(value.trim());
+  /^(rent|prorated|late-fee|setup):/i.test(value.trim());
 
 /** Human wording for a charge: generated keys become "October rent for <place>". */
 export function describeCharge(
@@ -88,6 +89,8 @@ export function describeCharge(
   const text = charge.description?.trim() ?? '';
   const setup = /^setup:(deposit|move-in-fee|pet-deposit):[^:]+$/.exec(text);
   if (setup) return `${SETUP_LABEL[setup[1]]} for ${place}`;
+  const prorated = /^prorated:[^:]+:(\d{4})-(\d{2})-\d{2}$/.exec(text);
+  if (prorated) return `Prorated ${monthName(`${prorated[1]}-${prorated[2]}`)} rent for ${place}`;
   const generated = /^(rent|late-fee):[^:]+:(\d{4}-\d{2})$/.exec(text);
   if (generated)
     return generated[1] === 'rent'
@@ -124,13 +127,13 @@ export function scheduledRent(
   const last = monthKey(lease.endDate);
   const out: LedgerCharge[] = [];
   for (
-    let month = [monthKey(lease.startDate), addMonths(monthKey(asOf), 1)].sort().at(-1) as string;
+    let month = [monthKey(lease.startDate), monthKey(asOf)].sort().at(-1) as string;
     month <= last;
     month = addMonths(month, 1)
   ) {
     const description = rentKey(lease.id, month);
-    const dueDate = monthStart(month);
-    if (have.has(description) || dueDate.getTime() <= today) continue;
+    const dueDate = rentDueDate(month, lease.rentDueDay);
+    if (have.has(description) || dueDate.getTime() <= today || dueDate < startOfUtcDay(lease.startDate) || dueDate > startOfUtcDay(lease.endDate)) continue;
     out.push({
       leaseId: lease.id,
       kind: 'RENT',

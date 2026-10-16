@@ -88,7 +88,7 @@ describe('monthly rent charges', () => {
 
   it('never charges before the lease starts or after it ends', () => {
     const early = { ...lease, startDate: d('2026-10-10') };
-    expect(planRentCharges(early, [], [pay(1, 'SUCCEEDED', '2026-05-01')], asOf)).toHaveLength(1);
+    expect(planRentCharges(early, [], [pay(1, 'SUCCEEDED', '2026-05-01')], asOf)).toHaveLength(0);
     const ended = { ...lease, endDate: d('2026-09-30') };
     expect(planRentCharges(ended, [], [], asOf)).toEqual([]);
     expect(planRentCharges({ ...lease, status: 'ENDED' }, [], [], asOf)).toEqual([]);

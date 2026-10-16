@@ -5,7 +5,7 @@ export interface FileTarget {
   kind: FileTargetKind;
   id: string;
 }
-export type DocumentKindValue = 'LEASE' | 'NOTICE' | 'INSPECTION' | 'ID' | 'PHOTO' | 'OTHER';
+export type DocumentKindValue = 'LEASE' | 'ADDENDUM' | 'DISCLOSURE' | 'NOTICE' | 'INSPECTION' | 'ID' | 'PHOTO' | 'OTHER';
 
 export interface AllowedType {
   extensions: string[];

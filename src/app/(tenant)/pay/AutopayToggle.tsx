@@ -11,11 +11,13 @@ export function AutopayToggle({
   enabled,
   paymentMethodId,
   monthlyRentCents,
+  rentDueDay,
 }: {
   leaseId: string;
   enabled: boolean;
   paymentMethodId: string | null;
   monthlyRentCents: number;
+  rentDueDay: number;
 }) {
   const router = useRouter();
   const [on, setOn] = useState(enabled);
@@ -49,7 +51,7 @@ export function AutopayToggle({
             Autopay
           </strong>
           <small className="muted">
-            Currently {on ? 'on' : 'off'} · Pay {formatUsd(monthlyRentCents)} on the 1st each month
+            Currently {on ? 'on' : 'off'} · Pay {formatUsd(monthlyRentCents)} on the {rentDueDay}{[1, 21].includes(rentDueDay) ? 'st' : [2, 22].includes(rentDueDay) ? 'nd' : [3, 23].includes(rentDueDay) ? 'rd' : 'th'} each month
           </small>
         </span>
         <Switch on={on} label="Autopay" onChange={toggle} />

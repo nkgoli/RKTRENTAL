@@ -3,8 +3,7 @@ import { db } from '@/lib/db/client';
 import { recordLeaseEvents } from '@/lib/leases/events';
 import { LeaseServiceError } from '@/lib/leases/service';
 import { parseLeaseDate, parseMoney } from '@/lib/leases/core';
-import { ensureSetupCharges } from '@/lib/ledger/lease-setup';
-import { feesFromDraft } from './fees';
+import { ensureLeaseSetupCharges } from '@/lib/ledger/lease-setup';
 import { STEP_COUNT, emptyDraft, type WizardDraft, type WizardErrors } from './types';
 import {
   endOptionDates,
@@ -125,6 +124,12 @@ export async function loadLeaseDraft(
           lateFee: late > 0 ? lease.lateFee.toString() : '75',
           lateFeeEnabled: late > 0,
           graceDays: lease.graceDays,
+          rentDueDay: lease.rentDueDay,
+          prorateFirstMonth: lease.prorateFirstMonth,
+          moveInFeeEnabled: Number(lease.moveInFee) > 0,
+          moveInFee: lease.moveInFee.toString(),
+          petDepositEnabled: Number(lease.petDeposit) > 0,
+          petDeposit: lease.petDeposit.toString(),
           occupants: lease.occupants ?? '',
         }),
       ),
@@ -270,6 +275,12 @@ export async function saveLeaseDraft(
       ...(Number.isInteger(draft.graceDays) && draft.graceDays >= 0 && draft.graceDays <= 31
         ? { graceDays: draft.graceDays }
         : {}),
+      ...(Number.isInteger(draft.rentDueDay) && draft.rentDueDay >= 1 && draft.rentDueDay <= 28
+        ? { rentDueDay: draft.rentDueDay }
+        : {}),
+      prorateFirstMonth: draft.prorateFirstMonth,
+      moveInFee: draft.moveInFeeEnabled ? parseMoney(draft.moveInFee) ?? '0.00' : '0.00',
+      petDeposit: draft.petDepositEnabled ? parseMoney(draft.petDeposit) ?? '0.00' : '0.00',
       occupants: draft.occupants.trim() || null,
     };
 
@@ -294,6 +305,10 @@ export async function saveLeaseDraft(
           deposit: deposit ?? '0.00',
           lateFee: lateFee ?? '0.00',
           graceDays: columns.graceDays as number | undefined,
+          rentDueDay: columns.rentDueDay as number | undefined,
+          prorateFirstMonth: draft.prorateFirstMonth,
+          moveInFee: columns.moveInFee as string,
+          petDeposit: columns.petDeposit as string,
           occupants: draft.occupants.trim() || null,
           status: 'DRAFT',
         },
@@ -394,13 +409,7 @@ export async function activateDraftLease(
         where: { id: lease.unitId, organizationId },
         data: { status: 'OCCUPIED' },
       });
-    await ensureSetupCharges(tx, {
-      organizationId,
-      leaseId,
-      startDate: terms.startDate,
-      endDate: terms.endDate,
-      fees: feesFromDraft(draft),
-    });
+    await ensureLeaseSetupCharges(tx, organizationId, leaseId);
     if (source) {
       await recordLeaseEvents(tx, organizationId, leaseId, [
         { kind: 'RENEWED', message: `Renews lease ${source.id}` },

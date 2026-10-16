@@ -2,8 +2,7 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
 import { recordLeaseEvents } from '@/lib/leases/events';
 import { LeaseServiceError } from '@/lib/leases/service';
-import { ensureSetupCharges } from '@/lib/ledger/lease-setup';
-import { feesFromDraft } from './fees';
+import { ensureLeaseSetupCharges } from '@/lib/ledger/lease-setup';
 import { hasOverlap, parseWizardTerms, renewalWindow, validateReview } from './validation';
 import { emptyDraft, type WizardDraft } from './types';
 
@@ -81,13 +80,7 @@ export async function createLeaseFromWizard(
         where: { id: draft.unitId, organizationId },
         data: { status: 'OCCUPIED' },
       });
-      await ensureSetupCharges(tx, {
-        organizationId,
-        leaseId: lease.id,
-        startDate: terms.startDate,
-        endDate: terms.endDate,
-        fees: feesFromDraft(draft),
-      });
+      await ensureLeaseSetupCharges(tx, organizationId, lease.id);
     }
     await recordLeaseEvents(tx, organizationId, lease.id, [
       { kind: 'CREATED', message: status === 'DRAFT' ? 'Saved as draft' : 'Created from wizard' },
@@ -131,13 +124,7 @@ export async function createRenewalFromWizard(
       })),
     });
     if (status === 'ACTIVE')
-      await ensureSetupCharges(tx, {
-        organizationId,
-        leaseId: lease.id,
-        startDate: terms.startDate,
-        endDate: terms.endDate,
-        fees: feesFromDraft(draft),
-      });
+      await ensureLeaseSetupCharges(tx, organizationId, lease.id);
     await recordLeaseEvents(tx, organizationId, lease.id, [
       { kind: 'CREATED', message: 'Created as a renewal' },
       { kind: 'RENEWED', message: `Renews lease ${source.id}` },
@@ -155,6 +142,7 @@ export function renewalDefaults(source: {
   deposit: { toString(): string };
   lateFee: { toString(): string };
   graceDays: number;
+  rentDueDay?: number;
   tenants: { tenantId: string; isPrimary: boolean }[];
   unitId: string;
 }): WizardDraft {
@@ -174,7 +162,7 @@ export function renewalDefaults(source: {
     lateFee: source.lateFee.toString(),
     lateFeeEnabled: Number(source.lateFee.toString()) > 0,
     graceDays: source.graceDays,
-    rentDueDay: 1,
+    rentDueDay: source.rentDueDay ?? 1,
     clauses: ['residential-use', 'utilities'],
     customClause: '',
     documentNames: [],

@@ -126,7 +126,7 @@ export interface SignedUploadInput extends Omit<UploadInput, 'body'> {
 export interface CompleteSignedUploadInput extends SignedUploadInput {
   storageKey: string;
 }
-const KINDS: DocumentKindValue[] = ['LEASE', 'NOTICE', 'INSPECTION', 'ID', 'PHOTO', 'OTHER'];
+const KINDS: DocumentKindValue[] = ['LEASE', 'ADDENDUM', 'DISCLOSURE', 'NOTICE', 'INSPECTION', 'ID', 'PHOTO', 'OTHER'];
 export const TENANT_UPLOAD_KINDS: readonly DocumentKindValue[] = [
   'NOTICE',
   'INSPECTION',

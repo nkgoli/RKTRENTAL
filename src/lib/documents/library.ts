@@ -1,4 +1,4 @@
-export const DOCUMENT_KINDS = ['LEASE', 'NOTICE', 'INSPECTION', 'ID', 'PHOTO'] as const;
+export const DOCUMENT_KINDS = ['LEASE', 'ADDENDUM', 'DISCLOSURE', 'NOTICE', 'INSPECTION', 'ID', 'PHOTO'] as const;
 
 export type LibraryDocumentKind = (typeof DOCUMENT_KINDS)[number] | 'OTHER';
 export type LibrarySort = 'newest' | 'oldest';

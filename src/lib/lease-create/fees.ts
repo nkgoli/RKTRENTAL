@@ -16,5 +16,6 @@ export function feesFromDraft(draft: WizardDraft): SetupFees {
     moveInFeeCents: draft.moveInFeeEnabled ? cents(draft.moveInFee) : 0,
     petDepositCents: draft.petDepositEnabled ? cents(draft.petDeposit) : 0,
     prorateFirstMonth: draft.prorateFirstMonth,
+    rentDueDay: draft.rentDueDay,
   };
 }

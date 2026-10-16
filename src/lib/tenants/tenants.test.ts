@@ -113,6 +113,8 @@ describe('organization scoping', () => {
 
 function fakeTx(overrides: Record<string, unknown>) {
   const tx = {
+    $executeRaw: vi.fn().mockResolvedValue(0),
+    charge: { findMany: vi.fn().mockResolvedValue([]), createMany: vi.fn().mockResolvedValue({ count: 1 }) },
     tenant: {
       findFirst: vi.fn().mockResolvedValue(null),
       create: vi.fn().mockResolvedValue({ id: 't-new' }),
@@ -222,7 +224,7 @@ describe('move-in and move-out', () => {
 
   it('activates a draft lease and occupies the unit', async () => {
     const { tx, client } = fakeTx({});
-    tx.lease.findFirst.mockResolvedValueOnce(lease('DRAFT')).mockResolvedValueOnce(null);
+    tx.lease.findFirst.mockResolvedValueOnce(lease('DRAFT')).mockResolvedValueOnce(null).mockResolvedValueOnce({ ...lease('ACTIVE'), monthlyRent: '1850.00', deposit: '1850.00', moveInFee: '0', petDeposit: '0', prorateFirstMonth: true, rentDueDay: 1 });
     await moveInTenant('org-1', 't1', 'l1', client);
     expect(tx.lease.findFirst.mock.calls[0][0].where.organizationId).toBe('org-1');
     expect(tx.lease.update).toHaveBeenCalledWith({

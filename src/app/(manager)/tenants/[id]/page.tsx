@@ -2,21 +2,21 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/shell/PageHeader';
 import {
-  Avatar,
-  AvatarStack,
-  TrendChip,
   Badge,
   Button,
   Card,
   CardHeader,
   FileRow,
+  Pagination,
+  pageFrom,
+  paginate,
   Table,
   TableHead,
 } from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
-import styles from './tenant-detail.module.css';
-import { formatBytes, formatDate, formatMoney, initials } from '@/lib/tenants/format';
+import { describePaymentReference } from '@/lib/ledger';
+import { formatBytes, formatDate, formatMoney } from '@/lib/tenants/format';
 import { organizationTenants, type TenantDetail } from '@/lib/tenants/queries';
 import { STATUS_LABEL, STATUS_TONE } from '@/lib/tenants/status';
 import { addNoteAction, moveInAction, moveOutAction, updateTenantAction } from '../actions';
@@ -110,9 +110,11 @@ export default async function TenantDetailPage({
   const { tenant, leases, currentLease } = detail;
   const editing = raw.edit === '1';
   const error = typeof raw.error === 'string' ? raw.error : undefined;
-  const payments = leases
+  const allPayments = leases
     .flatMap((lease) => lease.payments.map((payment) => ({ payment, lease })))
     .sort((a, b) => b.payment.createdAt.getTime() - a.payment.createdAt.getTime());
+  const payPage = pageFrom(typeof raw.payPage === 'string' ? raw.payPage : undefined, allPayments.length);
+  const payments = paginate(allPayments, payPage);
   const draftLease = leases.find((l) => l.status === 'DRAFT');
   const activeLease = leases.find((l) => l.status === 'ACTIVE');
   const firstMoveIn = leases
@@ -147,10 +149,6 @@ export default async function TenantDetailPage({
         ]}
       />
 
-      <p className="breadcrumbs">
-        <Link href="/tenants">Tenants</Link> / {tenant.name}
-      </p>
-
       {error && (
         <div className="alert warning" role="alert">
           {error}
@@ -165,39 +163,26 @@ export default async function TenantDetailPage({
         />
       )}
 
-      <div className={`hero ${styles.identityCard}`}>
-        <div className="row" style={{ gap: 20 }}>
-          <Avatar initials={initials(tenant.name)} size="lg" />
-          <div>
-            <h2>{tenant.name}</h2>
-            <p>
-              {currentLease ? (
-                <>
-                  <Link href={`/properties/${currentLease.unit.property.id}`}>
-                    {currentLease.unit.property.name}
-                  </Link>
-                  {!currentLease.unit.isImplicit && <> · Unit {currentLease.unit.number}</>}
-                  {firstMoveIn && <> · Tenant since {formatDate(firstMoveIn)}</>}
-                </>
-              ) : (
-                'Not assigned to a unit'
-              )}
-            </p>
-          </div>
-        </div>
-        <div className="row">
-          <Badge tone={STATUS_TONE[detail.status]}>{STATUS_LABEL[detail.status]}</Badge>
-          {activeLease?.noticeGivenAt && <Badge tone="warning">Notice given</Badge>}
-          {autopayOn && <TrendChip>Autopay on</TrendChip>}
-          {currentLease && (
-            <AvatarStack
-              initials={currentLease.tenants.map(({ tenant: coTenant }) => initials(coTenant.name))}
-            />
+      <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+        <Badge tone={STATUS_TONE[detail.status]}>{STATUS_LABEL[detail.status]}</Badge>
+        {activeLease?.noticeGivenAt && <Badge tone="warning">Notice given</Badge>}
+        {autopayOn && <Badge tone="info">Autopay on</Badge>}
+        {detail.balanceCents > 0 && (
+          <Badge tone="danger">{formatMoney(detail.balanceCents / 100)} due</Badge>
+        )}
+        <span className="muted">
+          {currentLease ? (
+            <>
+              <Link href={`/properties/${currentLease.unit.property.id}`}>
+                {currentLease.unit.property.name}
+              </Link>
+              {!currentLease.unit.isImplicit && <> · Unit {currentLease.unit.number}</>}
+              {firstMoveIn && <> · Tenant since {formatDate(firstMoveIn)}</>}
+            </>
+          ) : (
+            'Not assigned to a unit'
           )}
-          {detail.balanceCents > 0 && (
-            <Badge tone="danger">{formatMoney(detail.balanceCents / 100)} due</Badge>
-          )}
-        </div>
+        </span>
       </div>
 
       <div className="split">
@@ -316,7 +301,7 @@ export default async function TenantDetailPage({
                     <td>
                       <Link href={`/leases/${lease.id}`}>{unitLabel(lease)}</Link>
                     </td>
-                    <td className="muted">{payment.providerReference ?? 'Manual'}</td>
+                    <td className="muted">{describePaymentReference(payment.providerReference)}</td>
                     <td className="num">{formatMoney(payment.amount)}</td>
                     <td>
                       <Badge tone={PAYMENT_TONE[payment.status]}>
@@ -327,6 +312,12 @@ export default async function TenantDetailPage({
                 ))}
               </tbody>
             </Table>
+            <Pagination
+              page={payPage}
+              total={allPayments.length}
+              noun="payments"
+              href={(p) => `/tenants/${tenant.id}?payPage=${p}`}
+            />
           </Card>
 
           <Card>
@@ -453,7 +444,6 @@ export default async function TenantDetailPage({
             <AddNoteForm action={addNoteAction.bind(null, tenant.id)} />
             {history(detail).map((event, i) => (
               <div className="list-item" key={i}>
-                <Avatar initials="•" size="sm" />
                 <div className="file-meta">
                   <strong>{event.title}</strong>
                   <small>

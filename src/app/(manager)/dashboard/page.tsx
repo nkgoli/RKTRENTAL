@@ -1,6 +1,5 @@
 ﻿import Link from 'next/link';
 import { MiniCover } from '@/components/dashboard/MiniCover';
-import { IconAlert, IconCalendar, IconWrench } from '@/components/dashboard/icons';
 import { loadDashboardView, initialsOf } from '@/components/dashboard/assemble';
 import { trendOf } from '@/components/dashboard/trend';
 import { CollectionChart } from '@/components/dashboard/CollectionChart';
@@ -27,12 +26,6 @@ function when(date: Date) {
   });
 }
 
-const attentionIcons = {
-  overdue: <IconAlert />,
-  expiring: <IconCalendar />,
-  repairs: <IconWrench />,
-};
-
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -42,7 +35,6 @@ export default async function DashboardPage({
   const now = new Date();
   const range = collectionRangeFrom((await searchParams).range);
   const dashboard = await loadDashboardView(session.organizationId, now, undefined, formatUsd, range);
-  const givenName = session.name.trim().split(/\s+/)[0] || 'there';
   const collectionPercent = dashboard.rentDueCents
     ? Math.min(100, Math.round((dashboard.rentCollectedCents / dashboard.rentDueCents) * 100))
     : 0;
@@ -52,46 +44,6 @@ export default async function DashboardPage({
 
   return (
     <section className={styles.dashboard} aria-label="Manager dashboard">
-      <header className={styles.greeting} aria-label="Portfolio summary">
-        <div>
-          <p className={styles.eyebrow}>{dashboard.monthLabel}</p>
-          <h2>Good morning, {givenName}</h2>
-          <p>
-            {dashboard.unitsOccupied} of {dashboard.unitsTotal} units occupied across{' '}
-            {dashboard.propertyCount} {dashboard.propertyCount === 1 ? 'property' : 'properties'}.
-          </p>
-        </div>
-        <div className={styles.heroActions}>
-          <Link className={styles.secondaryButton} href="/payments">
-            Review payments
-          </Link>
-          <Link className={styles.primaryButton} href="/properties?add=1">
-            + Add property
-          </Link>
-        </div>
-      </header>
-
-      <section className={styles.strip} aria-label="Needs a look">
-        {dashboard.attention.map((item) => (
-          <Link
-            key={item.key}
-            href={item.href}
-            className={`${styles.stripItem} ${styles[`strip_${item.tone}`]}`}
-            data-attention={item.key}
-          >
-            <span className={styles.stripIcon}>{attentionIcons[item.key]}</span>
-            <span className={styles.stripCount}>{item.count}</span>
-            <span className={styles.stripText}>
-              <strong>{item.label}</strong>
-              <small>{item.detail}</small>
-            </span>
-            <span className={styles.stripArrow} aria-hidden="true">
-              →
-            </span>
-          </Link>
-        ))}
-      </section>
-
       <section className={styles.split}>
         <article className={`card ${styles.numbers}`}>
           <div className="card-header">

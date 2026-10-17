@@ -1,6 +1,6 @@
 import type { MaintenanceStatus } from '@prisma/client';
 
-export const MAINTENANCE_PAGE_SIZE = 50;
+export const MAINTENANCE_PAGE_SIZE = 20;
 export const RECENT_DONE_DAYS = 90;
 
 export const MAINTENANCE_STATUSES: MaintenanceStatus[] = [

@@ -1,16 +1,6 @@
 ﻿import type { ReactNode } from 'react';
 import { cx } from './cx';
 
-export type KpiTone = 'blue' | 'green' | 'coral';
-
-export function KpiIcon({ tone = 'blue', children }: { tone?: KpiTone; children: ReactNode }) {
-  return (
-    <span className={cx('kpi-icon', tone)} aria-hidden="true">
-      {children}
-    </span>
-  );
-}
-
 export function TrendChip({ warm, children }: { warm?: boolean; children: ReactNode }) {
   return <span className={cx('trend', warm && 'warm')}>{children}</span>;
 }

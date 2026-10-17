@@ -37,7 +37,7 @@
 
 .intro {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: flex-end;
   gap: 18px;
 }
@@ -124,50 +124,14 @@
   border-radius: 9px;
 }
 
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.stat,
 .listCard,
 .detail {
   border: 1px solid var(--rr-border);
   border-radius: var(--design-radius);
   background: #fff;
-  box-shadow: 0 1px 2px rgb(23 20 43 / 4%);
+  box-shadow: var(--rr-card-shadow);
 }
 
-.stat {
-  display: flex;
-  min-height: 128px;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 18px 20px;
-}
-
-.stat > span {
-  color: var(--design-muted);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.stat > strong {
-  margin: 4px 0 0;
-  font-size: 28px;
-  letter-spacing: -0.04em;
-}
-
-.stat > small {
-  display: inline-flex;
-  margin-top: 7px;
-  padding: 3px 8px;
-  border-radius: 6px;
-  background: var(--rr-primary-tint);
-  color: var(--design-primary);
-  font-size: 12px;
-}
 
 .stat:nth-child(2) > small {
   background: var(--rr-warn-bg);
@@ -597,12 +561,4 @@
   color: var(--design-muted);
   font-size: 13px;
   font-weight: 600;
-}
-.stat {
-  box-shadow: var(--rr-shadow-lg);
-  border-color: #e2e8f0;
-  border-radius: 18px;
-}
-.stat :global(.trend) {
-  margin-top: 8px;
 }

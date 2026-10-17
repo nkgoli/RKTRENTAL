@@ -1,18 +1,8 @@
 import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { EmptyState } from '@/components/RouteStates';
-import { Badge } from '@/components/ui/Badge';
-import { PageHero } from '@/components/dashboard/PageHero';
 import { KpiCard } from '@/components/dashboard/KpiCard';
-import { MiniCover } from '@/components/dashboard/MiniCover';
 import { trendOf } from '@/components/dashboard/trend';
-import {
-  IconBuilding,
-  IconCash,
-  IconChart,
-  IconPercent,
-} from '@/components/dashboard/icons';
-import { propertiesDb } from '@/lib/properties/data';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Alert, Progress } from '@/components/ui/Feedback';
@@ -61,11 +51,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
   const period = await resolveReturnsPeriod(session.organizationId, params, now);
   const periodKey = period.key;
   const range = periodParams(period);
-  const [overview, propertyList] = await Promise.all([
-    loadReturnsOverview(session.organizationId, period),
-    propertiesDb(session.organizationId).listProperties(),
-  ]);
-  const covers = new Map(propertyList.properties.map((p) => [p.id, p]));
+  const overview = await loadReturnsOverview(session.organizationId, period);
   const selected =
     overview.properties.find((p) => p.propertyId === params.property) ?? null;
   const scope = selected ?? overview.portfolio;
@@ -104,11 +90,6 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           { label: 'Export report', href: exportHref, primary: true },
         ]}
       />
-      <PageHero eyebrow={period.label} title={selected ? selected.propertyName : 'Portfolio returns'}>
-        {metrics
-          ? `NOI ${formatUsd(metrics.noiCents)} on ${formatUsd(metrics.incomeCents)} income across ${overview.properties.length} ${overview.properties.length === 1 ? 'property' : 'properties'}.`
-          : 'Add a property to start tracking returns.'}
-      </PageHero>
       {notice && (
         <Alert tone={notice.tone}>
           <div>{notice.text}</div>
@@ -143,12 +124,11 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
       </section>
 
       {metrics && (
-        <section className="grid-3">
+        <section className="kpis">
           <KpiCard
             label="Net operating income"
             value={formatUsd(metrics.noiCents)}
-            note="Income less operating expenses"
-            icon={<IconChart />}
+            note="Income less expenses"
             trend={noiTrend?.label}
             trendWarm={noiTrend?.warm}
             spark={selected ? undefined : noiSeries}
@@ -159,36 +139,28 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             label="Cash flow"
             value={formatUsd(metrics.cashFlowCents)}
             note={`After ${formatUsd(metrics.debtServiceCents)} debt service`}
-            icon={<IconCash />}
-            tone="green"
           />
           <KpiCard
             label="Cap rate"
             value={formatPercent(metrics.capRate)}
-            note="NOI on portfolio value"
-            icon={<IconPercent />}
+            note="NOI on property value"
           />
           <KpiCard
             label="Cash-on-cash return"
             value={formatPercent(metrics.cashOnCash)}
             note={`On ${metrics.cashInvestedCents ? formatUsd(metrics.cashInvestedCents) : '—'} invested`}
-            icon={<IconPercent />}
-            tone="coral"
           />
           <KpiCard
             label="Occupancy"
             value={`${occupancy}%`}
             note={`${overview.occupiedUnits} of ${overview.totalUnits} units`}
-            icon={<IconBuilding />}
             ring={occupancy}
             ringLabel={`${occupancy}% occupied`}
           />
           <KpiCard
             label="Expense ratio"
             value={formatPercent(metrics.expenseRatio)}
-            note={`${formatUsd(metrics.expensesCents)} of ${formatUsd(metrics.incomeCents)} income`}
-            icon={<IconChart />}
-            tone="coral"
+            note="Of income"
             trend={expenseTrend?.label}
             trendWarm={expenseTrend?.warm}
             spark={selected ? undefined : expenseSeries}
@@ -209,23 +181,23 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             </div>
           </div>
           <svg
-            viewBox="0 0 640 240"
-            width="100%"
+            viewBox="0 0 720 200"
+            style={{ display: 'block', width: '100%', height: 'auto', maxHeight: 220 }}
             role="img"
             aria-label={`${period.granularity === 'quarter' ? 'Quarterly' : 'Monthly'} income versus expenses for the selected period`}
           >
             {overview.monthly.map((point, index) => {
-              const slot = 600 / overview.monthly.length;
-              const barWidth = Math.min(16, slot * 0.4);
+              const slot = 680 / overview.monthly.length;
+              const barWidth = Math.min(14, slot * 0.4);
               const x = 20 + index * slot + (slot - 2 * barWidth - 2) / 2;
-              const incomeHeight = (point.incomeCents / maxMonthly) * 160;
-              const expenseHeight = (point.expensesCents / maxMonthly) * 160;
+              const incomeHeight = (point.incomeCents / maxMonthly) * 150;
+              const expenseHeight = (point.expensesCents / maxMonthly) * 150;
               const labelEvery = Math.ceil(overview.monthly.length / 12);
               return (
                 <g key={point.month}>
                   <rect
                     x={x}
-                    y={210 - incomeHeight}
+                    y={170 - incomeHeight}
                     width={barWidth}
                     height={incomeHeight}
                     rx={Math.min(4, barWidth / 3)}
@@ -233,14 +205,14 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
                   />
                   <rect
                     x={x + barWidth + 2}
-                    y={210 - expenseHeight}
+                    y={170 - expenseHeight}
                     width={barWidth}
                     height={expenseHeight}
                     rx={Math.min(4, barWidth / 3)}
-                    fill="#94a3b8"
+                    fill="var(--design-accent)"
                   />
                   {index % labelEvery === 0 && (
-                    <text x={x} y={230} fontSize={10} fill="var(--design-muted)">
+                    <text x={x} y={190} fontSize={11} fill="var(--design-muted)">
                       {bucketLabel(point.month, overview.monthly.length > 12)}
                     </text>
                   )}
@@ -248,13 +220,6 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
               );
             })}
           </svg>
-          {metrics && (
-            <div className="row" style={{ marginTop: 8 }}>
-              <Badge tone="info">Income {formatUsd(metrics.incomeCents)}</Badge>
-              <Badge>Expenses {formatUsd(metrics.expensesCents)}</Badge>
-              <Badge>NOI {formatUsd(metrics.noiCents)}</Badge>
-            </div>
-          )}
           {!selected && overview.yearly.length > 1 && (
             <div style={{ marginTop: 12 }}>
               <YearOverYear rows={overview.yearly} />
@@ -270,28 +235,20 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
               </p>
             </div>
           </div>
-          <svg
-            viewBox={`0 0 320 ${Math.max(220, 16 + overview.properties.length * 52)}`}
-            width="100%"
-            role="img"
-            aria-label="Net operating income by property"
-          >
-            {overview.properties.map((property, index) => {
-              const y = 16 + index * 52;
-              const width = Math.max(0, (property.metrics.noiCents / maxNoi) * 220);
-              return (
-                <g key={property.propertyId}>
-                  <text x={0} y={y} fontSize={12} fontWeight={600} fill="var(--design-text)">
-                    {property.propertyName}
-                  </text>
-                  <rect x={0} y={y + 6} width={width} height={24} rx={6} fill="var(--design-primary)" />
-                  <text x={width + 8} y={y + 23} fontSize={12} fill="var(--design-muted)">
-                    {formatUsd(property.metrics.noiCents)}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
+          <ul className="bar-list" aria-label="Net operating income by property">
+            {overview.properties.map((property) => (
+              <li key={property.propertyId}>
+                <span className="bar-name">{property.propertyName}</span>
+                <span className="bar-track">
+                  <span
+                    className="bar-fill"
+                    style={{ width: `${Math.max(0, (property.metrics.noiCents / maxNoi) * 100)}%` }}
+                  />
+                </span>
+                <span className="bar-value">{formatUsd(property.metrics.noiCents)}</span>
+              </li>
+            ))}
+          </ul>
         </Card>
       </section>
 
@@ -305,7 +262,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             ROI includes 3% assumed appreciation · Yield is scheduled rent ÷ value
           </span>
         </div>
-        <table className="table" style={{ marginTop: 12 }}>
+        <table className="table">
           <thead>
             <tr>
               <th>Property</th>
@@ -327,11 +284,10 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
                     href={returnsHref(property.propertyId)}
                     style={{ color: 'inherit' }}
                   >
-                    <MiniCover cover={covers.get(property.propertyId)} />
                     <span>
                       <strong>{property.propertyName}</strong>
                       <small>
-                        {property.units} units · {property.occupied} occupied
+                        {property.units} {property.units === 1 ? 'unit' : 'units'} · {property.occupied} occupied
                       </small>
                     </span>
                   </Link>
@@ -351,11 +307,10 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
               <tr style={{ background: 'var(--rr-subtle)' }}>
                 <td>
                   <div className="cell-main">
-                    <span className="avatar sm">Σ</span>
                     <span>
                       <strong>Portfolio</strong>
                       <small>
-                        {overview.portfolio.units} units · {overview.portfolio.occupied} occupied
+                        {overview.portfolio.units} {overview.portfolio.units === 1 ? 'unit' : 'units'} · {overview.portfolio.occupied} occupied
                       </small>
                     </span>
                   </div>
@@ -430,7 +385,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           </div>
         </Card>
         <Card>
-          <CardHeader title="Export report" action={<Badge tone="info">Owner-ready</Badge>} />
+          <CardHeader title="Export report" />
           <div className="stack">
             <p className="muted">
               Download the returns summary, per-property table and expense detail for the selected
@@ -449,12 +404,6 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             <Button href={exportHref} variant="primary">
               Export report (CSV)
             </Button>
-            <Alert>
-              <div>
-                Figures follow the payments ledger. Owner payouts are listed on{' '}
-                <Link href="/payments">Payments</Link>.
-              </div>
-            </Alert>
           </div>
         </Card>
       </section>

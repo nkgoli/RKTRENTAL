@@ -11,15 +11,15 @@
   align-items: center;
   gap: 20px;
   flex-wrap: wrap;
-  padding: 22px 24px;
-  border: 1px solid var(--rr-border);
-  border-radius: var(--design-radius);
+  padding: var(--rr-card-pad);
+  border: var(--rr-card-border);
+  border-radius: var(--rr-card-radius);
   background: var(--design-surface);
-  box-shadow: var(--rr-shadow-lg);
+  box-shadow: var(--rr-card-shadow);
 }
 .summary h2 {
-  font-size: 23px;
-  margin: 6px 0 15px;
+  font-size: var(--rr-h2);
+  margin: 6px 0 12px;
 }
 .summaryItems {
   display: flex;
@@ -66,11 +66,11 @@
 }
 .documentCard {
   border: 1px solid var(--rr-border);
-  border-radius: 14px;
-  padding: 16px;
+  border-radius: var(--rr-card-radius);
+  padding: 12px;
   background: #fff;
   min-width: 0;
-  box-shadow: var(--rr-shadow);
+  box-shadow: var(--rr-card-shadow);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -188,10 +188,12 @@
   border-radius: 7px;
   cursor: pointer;
 }
-.signedTerms { border: 1px solid #e2e8f0; border-radius: 16px; background: white; padding: 22px; margin: 20px 0; }
-.signedTerms h2 { font-size: 21px; margin: 0; }
+.signedTerms { border: var(--rr-card-border); border-radius: var(--rr-card-radius); background: white; padding: var(--rr-card-pad); margin: 0; }
+.signedTerms h2 { font-size: var(--rr-h2); margin: 0; }
 .signedGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 16px 0; }
 .signedGrid article { border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; }
 .signedGrid h3 { font-size: 14px; margin: 0 0 6px; }
 .signedGrid p { font-size: 13px; line-height: 1.5; margin: 0; white-space: pre-wrap; }
 @media(max-width: 800px) { .signedGrid { grid-template-columns: 1fr; } }
+.signedDetails { margin: 12px 0; }
+.signedDetails > summary { cursor: pointer; color: var(--design-primary); font-size: 13px; font-weight: 600; }

@@ -11,9 +11,9 @@
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 16px; align-items: start; }
 
-.propertyCard { overflow: hidden; min-width: 0; color: var(--design-text); text-decoration: none; transition: transform .18s ease, box-shadow .18s ease; }
-.propertyCard:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(30, 58, 138, .12); }
-.cover > :global(.cover) { height: 128px; aspect-ratio: auto; border-radius: 0; }
+.propertyCard { overflow: hidden; min-width: 0; color: var(--design-text); text-decoration: none; transition: border-color .15s ease; }
+.propertyCard:hover { border-color: var(--rr-border-strong); }
+.cover > :global(.cover) { height: 96px; aspect-ratio: auto; border-radius: 0; }
 .cover > :global(.cover)::after { display: none; }
 .details { display: grid; gap: 4px; padding: 14px 16px 16px; }
 .name { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; line-height: 1.3; }

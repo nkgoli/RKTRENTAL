@@ -6,7 +6,6 @@ import { PageHeader } from '@/components/shell/PageHeader';
 import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
 import { scopeFilterFrom } from '@/lib/workspace/scope';
 import {
-  AvatarStack,
   Badge,
   Card,
   CardHeader,
@@ -14,8 +13,10 @@ import {
   Chips,
   FileRow,
   Gallery,
-  KpiIcon,
+  Pagination,
   Progress,
+  pageFrom,
+  paginate,
   TrendChip,
 } from '@/components/ui';
 import { PhotoImage, fileKind } from '@/app/(manager)/properties/_components/Media';
@@ -53,7 +54,13 @@ type SearchParams = {
   propertyId?: string;
   unitId?: string;
   sort?: string;
+  leasePage?: string;
+  filesPage?: string;
+  photoPage?: string;
 };
+
+const LEASE_GROUPS_PER_PAGE = 10;
+const PAGE_KEYS = ['leasePage', 'filesPage', 'photoPage'] as const;
 
 function kindFromParam(value?: string): KindFilter {
   return value && DOCUMENT_KINDS.includes(value as (typeof DOCUMENT_KINDS)[number])
@@ -69,6 +76,7 @@ function documentsHref(filters: SearchParams, overrides: Partial<SearchParams> =
   if (next.propertyId) params.set('propertyId', next.propertyId);
   if (next.unitId) params.set('unitId', next.unitId);
   if (next.sort && next.sort !== 'newest') params.set('sort', next.sort);
+  for (const key of PAGE_KEYS) if (overrides[key] && overrides[key] !== '1') params.set(key, overrides[key]!);
   const query = params.toString();
   return query ? `/documents?${query}` : '/documents';
 }
@@ -218,9 +226,21 @@ export default async function DocumentsPage({
     unitId: params.unitId,
     sort,
   });
-  const leaseGroups = groupLeaseDocuments(matchingFiles);
-  const propertyFiles = propertyDocuments(matchingFiles);
-  const photos = photoDocuments(matchingFiles);
+  const allLeaseGroups = groupLeaseDocuments(matchingFiles);
+  const allPropertyFiles = propertyDocuments(matchingFiles);
+  const allPhotos = photoDocuments(matchingFiles);
+  const leasePage = pageFrom(params.leasePage, allLeaseGroups.length, LEASE_GROUPS_PER_PAGE);
+  const filesPage = pageFrom(params.filesPage, allPropertyFiles.length);
+  const photoPage = pageFrom(params.photoPage, allPhotos.length);
+  const leaseGroups = paginate(allLeaseGroups, leasePage, LEASE_GROUPS_PER_PAGE);
+  const propertyFiles = paginate(allPropertyFiles, filesPage);
+  const photos = paginate(allPhotos, photoPage);
+  const pageHref = (key: (typeof PAGE_KEYS)[number]) => (page: number) =>
+    documentsHref(filters, {
+      leasePage: String(key === 'leasePage' ? page : leasePage),
+      filesPage: String(key === 'filesPage' ? page : filesPage),
+      photoPage: String(key === 'photoPage' ? page : photoPage),
+    });
   const usedBytes = libraryFiles.reduce((total, file) => total + file.sizeBytes, 0);
   const storagePercent = Math.min(100, (usedBytes / STORAGE_LIMIT) * 100);
 
@@ -255,22 +275,6 @@ export default async function DocumentsPage({
         eyebrow="Files"
         actions={[{ label: 'Upload files', href: '#upload', primary: true }]}
       />
-      <div className={styles.libraryIntro}>
-        <div>
-          <p className="eyebrow">Portfolio files</p>
-          <h2>Documents and photos</h2>
-        </div>
-        <AvatarStack
-          initials={leaseTargets.slice(0, 4).map((lease) =>
-            (lease.tenants[0]?.tenant.name ?? 'Tenant')
-              .split(' ')
-              .map((part) => part[0])
-              .join('')
-              .slice(0, 2)
-              .toUpperCase(),
-          )}
-        />
-      </div>
       <div className="stack">
         <section className="split">
           <Card id="upload">
@@ -284,7 +288,6 @@ export default async function DocumentsPage({
           <Card>
             <div className={styles.storageHeading}>
               <span className="eyebrow">Storage</span>
-              <KpiIcon>▣</KpiIcon>
             </div>
             <div className="row between" style={{ marginTop: 4 }}>
               <strong>{formatBytes(usedBytes)} of 10 GB</strong>
@@ -365,8 +368,8 @@ export default async function DocumentsPage({
             title="Lease documents"
             action={
               <span className="muted">
-                Grouped by lease · {leaseGroups.length}{' '}
-                {leaseGroups.length === 1 ? 'lease' : 'leases'}
+                Grouped by lease · {allLeaseGroups.length}{' '}
+                {allLeaseGroups.length === 1 ? 'lease' : 'leases'}
               </span>
             }
           />
@@ -420,6 +423,7 @@ export default async function DocumentsPage({
               href="/leases"
             />
           )}
+          <Pagination page={leasePage} total={allLeaseGroups.length} size={LEASE_GROUPS_PER_PAGE} noun="leases" href={pageHref('leasePage')} />
         </Card>
 
         <Card>
@@ -451,12 +455,13 @@ export default async function DocumentsPage({
               href="/properties"
             />
           )}
+          <Pagination page={filesPage} total={allPropertyFiles.length} noun="files" href={pageHref('filesPage')} />
         </Card>
 
         <Card>
           <CardHeader
             title="Photos"
-            action={<span className="muted">Property and unit photos · {photos.length} files</span>}
+            action={<span className="muted">Property and unit photos · {allPhotos.length} files</span>}
           />
           {photos.length ? (
             <Gallery>
@@ -501,6 +506,7 @@ export default async function DocumentsPage({
               href="/properties"
             />
           )}
+          <Pagination page={photoPage} total={allPhotos.length} noun="photos" href={pageHref('photoPage')} />
         </Card>
         <Badge tone="info">{matchingFiles.length} matching files</Badge>
       </div>

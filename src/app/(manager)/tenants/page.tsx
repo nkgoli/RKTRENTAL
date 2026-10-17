@@ -89,7 +89,7 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
         />
       ) : (
         <>
-          <div className="grid-4">
+          <div className="kpis">
             <Stat label="Active tenants" value={stats.activeTenants} />
             <Stat
               label="Move-ins (30 days)"

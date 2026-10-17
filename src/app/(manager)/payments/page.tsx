@@ -6,11 +6,8 @@ import { Badge, Avatar } from '@/components/ui/Badge';
 import type { BadgeTone } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader } from '@/components/ui/Card';
-import { PageHero } from '@/components/dashboard/PageHero';
 import { KpiCard } from '@/components/dashboard/KpiCard';
-import { MiniCover } from '@/components/dashboard/MiniCover';
-import { IconAlert, IconBank, IconCash, IconCheck } from '@/components/dashboard/icons';
-import { propertiesDb } from '@/lib/properties/data';
+import { Pagination, PAGE_SIZE, pageFrom, paginate } from '@/components/ui/Pagination';
 import { Field, FormRow, Input, Select } from '@/components/ui/Forms';
 import { Progress } from '@/components/ui/Feedback';
 import { requireManagerRole } from '@/lib/auth/access';
@@ -42,6 +39,7 @@ type SearchParams = Promise<{
   notice?: string;
   propertyId?: string;
   unitId?: string;
+  page?: string;
 }>;
 
 const notices: Record<string, { tone: 'success' | 'warning'; text: string }> = {
@@ -97,14 +95,13 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
 
   // Idempotent: only creates rent charges that do not exist yet.
   await ensureRentCharges(session.organizationId, now);
-  const [overview, propertyList] = await Promise.all([
-    loadPaymentsOverview(session.organizationId, month, now, undefined, scope),
-    propertiesDb(session.organizationId).listProperties(),
-  ]);
-  const covers = new Map(propertyList.properties.map((p) => [p.id, p]));
+  const overview = await loadPaymentsOverview(session.organizationId, month, now, undefined, scope);
   const dueCents = overview.collectedCents + overview.outstandingCents;
   const collectedPercent = dueCents ? Math.round((overview.collectedCents / dueCents) * 100) : 0;
-  const rows = filterRows(overview.rows, filter);
+  const filtered = filterRows(overview.rows, filter);
+  const page = pageFrom(params.page, filtered.length);
+  const rows = paginate(filtered, page);
+  const filterQuery = filter === 'all' ? '' : `&filter=${filter}`;
   const notice = params.notice ? notices[params.notice] : undefined;
   const recording = params.record !== undefined;
   const chip = (value: string, label: string) => (
@@ -132,41 +129,17 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
           { label: '+ Record payment', href: `/payments?month=${month}&record=1${scopeSuffix}`, primary: true },
         ]}
       />
-      <PageHero eyebrow={monthLabel(month)} title="Collections at a glance">
-        {formatUsd(overview.collectedCents)} collected of {formatUsd(dueCents)} due ·{' '}
-        {overview.openCount} open {overview.openCount === 1 ? 'balance' : 'balances'}.
-      </PageHero>
-      {notice ? (
+      {notice && (
         <Alert tone={notice.tone}>
           <div>{notice.text}</div>
         </Alert>
-      ) : overview.lateCount === 0 ? (
-        <Alert tone="success">
-          <div>
-            <strong>{monthLabel(month)} collections are on track.</strong>
-            <br />
-            Card and bank payments sync automatically to the tenant ledger.
-          </div>
-        </Alert>
-      ) : (
-        <Alert tone="warning">
-          <div>
-            <strong>
-              {overview.lateCount} {overview.lateCount === 1 ? 'rent is' : 'rents are'} past due.
-            </strong>
-            <br />
-            Review overdue rent below and apply late fees where the grace period has passed.
-          </div>
-        </Alert>
       )}
 
-      <div className="grid-4">
+      <div className="kpis">
         <KpiCard
           label="Collected this month"
           value={formatUsd(overview.collectedCents)}
           note={`${collectedPercent}% of ${formatUsd(dueCents)}`}
-          icon={<IconCash />}
-          tone="green"
           ring={collectedPercent}
           ringLabel={`${collectedPercent}% of rent collected`}
         />
@@ -174,22 +147,16 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
           label="Outstanding"
           value={formatUsd(overview.outstandingCents)}
           note={`${overview.openCount} open ${overview.openCount === 1 ? 'balance' : 'balances'}`}
-          icon={<IconCheck />}
         />
         <KpiCard
           label="Late"
           value={formatUsd(overview.lateCents)}
           note={`${overview.lateCount} past-due ${overview.lateCount === 1 ? 'payment' : 'payments'}`}
-          icon={<IconAlert />}
-          tone={overview.lateCount ? 'coral' : 'green'}
-          trend={overview.lateCount ? `${overview.lateCount} late` : 'On track'}
-          trendWarm={overview.lateCount > 0}
         />
         <KpiCard
           label="Next owner payout"
           value={formatUsd(overview.payoutReadyCents)}
           note={overview.payoutReadyCents ? 'Ready to transfer' : 'Nothing waiting'}
-          icon={<IconBank />}
         />
       </div>
 
@@ -287,7 +254,6 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                   </td>
                   <td>
                     <div className="cell-main">
-                      <MiniCover cover={covers.get(row.propertyId)} />
                       <div>
                         <strong>
                           <Link href={`/properties/${row.propertyId}`} style={{ color: 'inherit' }}>
@@ -347,6 +313,13 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
             })}
           </tbody>
         </table>
+        <Pagination
+          page={page}
+          total={filtered.length}
+          size={PAGE_SIZE}
+          noun="leases"
+          href={(p) => `/payments?month=${month}${filterQuery}${scopeSuffix}&page=${p}`}
+        />
       </section>
 
       <div className="grid-2">
@@ -361,7 +334,6 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
             {overview.payouts.map((payout) => (
               <div className="row between" key={payout.propertyId}>
                 <div className="cell-main">
-                  <MiniCover cover={covers.get(payout.propertyId)} />
                   <div>
                   <strong>
                     <Link href={`/properties/${payout.propertyId}`} style={{ color: 'inherit' }}>

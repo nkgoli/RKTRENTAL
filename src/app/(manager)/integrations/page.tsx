@@ -12,9 +12,7 @@ import {
   SCREENING_PACKAGES,
 } from '@/lib/integrations/settings';
 import { Alert, Badge, Button } from '@/components/ui';
-import { PageHero } from '@/components/dashboard/PageHero';
 import { KpiCard } from '@/components/dashboard/KpiCard';
-import { IconAlert, IconCheck, IconPlug } from '@/components/dashboard/icons';
 import { ProviderLogo } from '@/components/integrations/ProviderLogo';
 import { connectAction, disconnectAction, saveSettingsAction } from './actions';
 import { FeeSwitch } from './FeeSwitch';
@@ -206,34 +204,23 @@ export default async function Page({
 
   return (
     <div className="page" style={{ padding: 0 }}>
-      <PageHero eyebrow="Connections" title="Integrations">
-        Payments, screening and rent comps providers in one place. {connected.length} of {providers.length}{' '}
-        connected.
-      </PageHero>
-      <section className="grid-3" aria-label="Integration status">
+      <section className="kpis" aria-label="Integration status">
         <KpiCard
           label="Connected providers"
           value={connected.length}
           note={`of ${providers.length} available`}
-          icon={<IconPlug />}
           ring={connectedPercent}
-          ringLabel={`% of providers connected`}
+          ringLabel={`${connectedPercent}% of providers connected`}
         />
         <KpiCard
           label="Healthy connections"
           value={connected.length - attention.length}
           note="Syncing normally"
-          icon={<IconCheck />}
-          tone="green"
         />
         <KpiCard
           label="Needs attention"
           value={attention.length}
           note={attention.length ? 'Check sync errors below' : 'No sync problems'}
-          icon={<IconAlert />}
-          tone={attention.length ? 'coral' : 'green'}
-          trend={attention.length ? ` failing` : 'All clear'}
-          trendWarm={attention.length > 0}
         />
       </section>
       {error && (

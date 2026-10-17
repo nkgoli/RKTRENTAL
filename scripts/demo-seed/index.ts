@@ -112,6 +112,15 @@ async function seedDatabase() {
   await createManyInChunks(plan.tenants.map((tenant) => ({ organizationId, ...tenant })),
     (data) => prisma.tenant.createMany({ data }));
 
+  // A tenant-portal login for the demo: the first tenant with a lease running today.
+  const portalLease = plan.leases.find((lease) => lease.status === 'ACTIVE' && lease.startDate <= now && lease.endDate >= now);
+  const portalTenant = portalLease && plan.tenants.find((tenant) => tenant.id === portalLease.tenantId);
+  if (portalTenant) {
+    await prisma.user.create({ data: { id: 'seed-tenant-portal', organizationId, name: portalTenant.name,
+      email: portalTenant.email, role: 'TENANT', passwordHash: await hashPassword('TenantDemo#2026') } });
+    await prisma.tenant.update({ where: { id: portalTenant.id }, data: { userId: 'seed-tenant-portal' } });
+  }
+
   const leaseRows: Prisma.LeaseCreateManyInput[] = [];
   const membershipRows: Prisma.LeaseTenantCreateManyInput[] = [];
   for (const lease of plan.leases) {

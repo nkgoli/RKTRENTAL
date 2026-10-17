@@ -1,6 +1,4 @@
 .forms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 20px; align-items: start; }
 @media (max-width: 800px) { .forms { grid-template-columns: minmax(0, 1fr); gap: 14px; } }
-/* Narrow, centred reading column with quieter cards on every workspace tab. */
-.column { width: 100%; max-width: 980px; margin: 0 auto; }
-.column :global(.card) { box-shadow: none; border-color: #e8ecf3; padding: 18px; }
-.column :global(.card.flush) { padding: 0; }
+/* Same content width and card style as every other page (see the layout tokens in globals.css). */
+.column { width: 100%; min-width: 0; }

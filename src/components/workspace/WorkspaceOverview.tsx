@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Badge, Card, CardHeader, KpiIcon } from '@/components/ui';
+import { Badge, Card, CardHeader, Pagination, pageFrom, paginate } from '@/components/ui';
 import { formatAddress, formatDate, formatMoney } from '@/lib/properties/format';
 import type { PropertyDetail, UnitDetail } from '@/lib/properties/data';
 import { ArchiveButton } from '@/app/(manager)/properties/_components/PropertyForm';
@@ -48,13 +48,15 @@ function NextSteps({ steps }: { steps: { label: string; href: string }[] }) {
   return (
     <Card>
       <CardHeader title="Next steps" />
-      {steps.length ? <ul className={styles.steps}>{steps.map((step) => <li key={step.label}><span aria-hidden="true">↗</span><Link href={step.href}>{step.label}</Link></li>)}</ul> : <div className={styles.clearState}><KpiIcon tone="green">✓</KpiIcon><p>All caught up</p><small>No urgent items need attention.</small></div>}
+      {steps.length ? <ul className={styles.steps}>{steps.map((step) => <li key={step.label}><span aria-hidden="true">↗</span><Link href={step.href}>{step.label}</Link></li>)}</ul> : <div className={styles.clearState}><p>All caught up</p><small>No urgent items need attention.</small></div>}
     </Card>
   );
 }
 
-function PropertyUnits({ property }: { property: PropertyDetail }) {
-  const units = property.units.filter((unit) => unit.status !== 'ARCHIVED');
+function PropertyUnits({ property, page: pageParam }: { property: PropertyDetail; page?: string }) {
+  const all = property.units.filter((unit) => unit.status !== 'ARCHIVED');
+  const page = pageFrom(pageParam, all.length);
+  const units = paginate(all, page);
   return (
     <Card flush id="units">
       <CardHeader title="Units" action={<span className="muted">{property.stats.unitCount} total</span>} />
@@ -75,6 +77,7 @@ function PropertyUnits({ property }: { property: PropertyDetail }) {
           </tbody>
         </table>
       </div>
+      <Pagination page={page} total={all.length} noun="units" href={(p) => `/properties/${property.id}?unitsPage=${p}#units`} />
     </Card>
   );
 }
@@ -90,11 +93,12 @@ function TimelineCard({ timeline, propertyId, linkUnits, footer }: { timeline?: 
   );
 }
 
-export function PropertyOverview({ property, owners = [], timeline, payments }: {
+export function PropertyOverview({ property, owners = [], timeline, payments, unitsPage }: {
   property: PropertyDetail;
   owners?: { id: string; name: string }[];
   timeline?: Timeline;
   payments?: PaymentsMonth;
+  unitsPage?: string;
 }) {
   const activeUnits = property.units.filter((unit) => unit.status !== 'ARCHIVED');
   const steps = [
@@ -109,7 +113,7 @@ export function PropertyOverview({ property, owners = [], timeline, payments }: 
     <div className={styles.page}>
       <TimelineCard timeline={timeline} propertyId={property.id} linkUnits={multiUnit} />
       <PaymentsStrip payments={payments} href={`/properties/${property.id}/payments`} />
-      {multiUnit && <PropertyUnits property={property} />}
+      {multiUnit && <PropertyUnits property={property} page={unitsPage} />}
       <div className={styles.pair}>
         <PropertyFactsCard
           propertyId={property.id}

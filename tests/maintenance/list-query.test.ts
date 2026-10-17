@@ -60,7 +60,7 @@ describe('listMaintenancePage', () => {
       take: number;
       skip: number;
     };
-    expect(args.take).toBe(50);
+    expect(args.take).toBe(20);
     expect(args.skip).toBe(0);
     expect(JSON.stringify(args.where.OR)).toContain('2026-07-18T12:00:00.000Z');
   });
@@ -71,7 +71,7 @@ describe('listMaintenancePage', () => {
     await listMaintenancePage('org-1', {}, { allHistory: true, page: 3 }, now);
     const args = findMany.mock.calls[0]?.[0] as { where: Record<string, unknown>; skip: number };
     expect(args.where).toEqual({ organizationId: 'org-1' });
-    expect(args.skip).toBe(100);
+    expect(args.skip).toBe(40);
   });
 
   it('loads one cover photo and issues one findMany (no per-row queries)', async () => {

@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { EmptyState } from '@/components/RouteStates';
 import { Avatar, Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { AvatarStack, KpiIcon, TrendChip } from '@/components/ui';
+import { Pagination, PAGE_SIZE, pageFrom } from '@/components/ui/Pagination';
+import { KpiCard } from '@/components/dashboard/KpiCard';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
 import { scopeFilterFrom, unitScopeWhere } from '@/lib/workspace/scope';
@@ -19,6 +20,7 @@ type SearchParams = {
   status?: string;
   propertyId?: string;
   unitId?: string;
+  page?: string;
 };
 const statuses: ApplicationStatus[] = ['SUBMITTED', 'SCREENING', 'REVIEW', 'APPROVED', 'DECLINED'];
 const labels: Record<ApplicationStatus, string> = {
@@ -85,15 +87,20 @@ export default async function ApplicationsPage({
         }
       : {}),
   };
+  const include = {
+    unit: { include: { property: true } },
+    consents: { orderBy: { consentedAt: 'desc' as const } },
+    reports: { orderBy: { createdAt: 'desc' as const } },
+  };
+  const filteredCount = await db.application.count({ where });
+  const page = pageFrom(params.page, filteredCount);
   const [applications, groups, totalCount, connections] = await Promise.all([
     db.application.findMany({
       where,
-      include: {
-        unit: { include: { property: true } },
-        consents: { orderBy: { consentedAt: 'desc' } },
-        reports: { orderBy: { createdAt: 'desc' } },
-      },
+      include,
       orderBy: { appliedAt: 'desc' },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
     }),
     db.application.groupBy({
       by: ['status'],
@@ -107,7 +114,16 @@ export default async function ApplicationsPage({
     }),
   ]);
   const selectedId = params.applicant ?? 'seed-application-olivia';
-  const selected = applications.find((item) => item.id === selectedId) ?? applications[0] ?? null;
+  const selected =
+    applications.find((item) => item.id === selectedId) ??
+    (params.applicant
+      ? await db.application.findFirst({
+          where: { ...where, id: selectedId },
+          include,
+        })
+      : null) ??
+    applications[0] ??
+    null;
   const ordered = selected
     ? [selected, ...applications.filter((item) => item.id !== selected.id)]
     : applications;
@@ -181,15 +197,6 @@ export default async function ApplicationsPage({
         ]}
       />
       <div className={styles.intro}>
-        <div>
-          <div className={styles.introPeople}>
-            <h2>Applicant review</h2>
-            <AvatarStack
-              initials={applications.slice(0, 4).map((item) => initials(item.applicantName))}
-            />
-          </div>
-          <p>Review screening reports and application status across your portfolio.</p>
-        </div>
         <form className={styles.filters} action="/applications" method="get">
           <label className={styles.search}>
             <span aria-hidden="true">⌕</span>
@@ -231,42 +238,28 @@ export default async function ApplicationsPage({
         </p>
       )}
 
-      <div className={styles.stats}>
-        <article className={styles.stat}>
-          <div className={styles.statHeader}>
-            <span>New applications</span>
-            <KpiIcon>✉</KpiIcon>
-          </div>
-          <strong>{countByStatus.get('SUBMITTED') ?? 0}</strong>
-          <TrendChip warm>
-            {(countByStatus.get('SUBMITTED') ?? 0) + (countByStatus.get('SCREENING') ?? 0)} need
-            review
-          </TrendChip>
-        </article>
-        <article className={styles.stat}>
-          <div className={styles.statHeader}>
-            <span>Screening in progress</span>
-            <KpiIcon tone="coral">◷</KpiIcon>
-          </div>
-          <strong>{countByStatus.get('SCREENING') ?? 0}</strong>
-          <TrendChip warm>
-            {(countByStatus.get('SCREENING') ?? 0) > 0
+      <div className="kpis">
+        <KpiCard
+          label="New applications"
+          value={countByStatus.get('SUBMITTED') ?? 0}
+          note={`${(countByStatus.get('SUBMITTED') ?? 0) + (countByStatus.get('SCREENING') ?? 0)} need review`}
+        />
+        <KpiCard
+          label="Screening in progress"
+          value={countByStatus.get('SCREENING') ?? 0}
+          note={
+            (countByStatus.get('SCREENING') ?? 0) > 0
               ? 'Waiting on provider'
               : providerReady
                 ? 'Provider ready'
-                : 'Provider not connected'}
-          </TrendChip>
-        </article>
-        <article className={styles.stat}>
-          <div className={styles.statHeader}>
-            <span>Ready for decision</span>
-            <KpiIcon tone="green">✓</KpiIcon>
-          </div>
-          <strong>{countByStatus.get('REVIEW') ?? 0}</strong>
-          <TrendChip>
-            {(countByStatus.get('REVIEW') ?? 0) > 0 ? 'Consent recorded' : 'No reports ready'}
-          </TrendChip>
-        </article>
+                : 'Provider not connected'
+          }
+        />
+        <KpiCard
+          label="Ready for decision"
+          value={countByStatus.get('REVIEW') ?? 0}
+          note={(countByStatus.get('REVIEW') ?? 0) > 0 ? 'Consent recorded' : 'No reports ready'}
+        />
       </div>
 
       <div className={styles.reviewGrid}>
@@ -275,7 +268,7 @@ export default async function ApplicationsPage({
             <div>
               <h3 id="applicants-title">Applicants</h3>
               <p>
-                Showing {ordered.length} of {totalCount} applications
+                {filteredCount === totalCount ? `${totalCount} applications` : `${filteredCount} of ${totalCount} applications`}
               </p>
             </div>
             <Badge>{totalCount} total</Badge>
@@ -340,6 +333,20 @@ export default async function ApplicationsPage({
               href="/properties"
             />
           )}
+          <Pagination
+            page={page}
+            total={filteredCount}
+            noun="applications"
+            href={(p) => {
+              const next = new URLSearchParams();
+              if (q) next.set('q', q);
+              if (status) next.set('status', status);
+              if (scope.propertyId) next.set('propertyId', scope.propertyId);
+              if (scope.unitId) next.set('unitId', scope.unitId);
+              next.set('page', String(p));
+              return '/applications?' + next.toString();
+            }}
+          />
         </section>
 
         {selected ? (

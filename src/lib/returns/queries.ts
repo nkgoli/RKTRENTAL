@@ -247,7 +247,7 @@ export async function loadReturnsOverview(
       metrics: portfolioMetrics,
     },
     monthly: bucketSeries(period, monthlyIncome, monthlyExpenses),
-    yearly: yearlyTotals(monthlyIncome, monthlyExpenses),
+    yearly: yearlyTotals(monthlyIncome, monthlyExpenses, period),
     expenseBreakdown: [...expensesByCategory.entries()]
       .map(([category, amountCents]) => ({
         category,

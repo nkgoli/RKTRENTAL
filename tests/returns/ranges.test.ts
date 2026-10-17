@@ -7,6 +7,7 @@ import {
   periodParams,
   resolvePeriod,
   yearlyTotals,
+  yearOverYearChange,
 } from '../../src/lib/returns/period';
 import { collectionRangeFrom, COLLECTION_RANGES } from '../../src/lib/dashboard/queries';
 
@@ -96,5 +97,20 @@ describe('multi-year ranges', () => {
     expect(collectionRangeFrom('bogus')).toBe('6M');
     expect(collectionRangeFrom(undefined)).toBe('6M');
     expect(COLLECTION_RANGES['2Y']).toBe(24);
+  });
+
+  it('computes year-over-year only between comparable full years', () => {
+    const full = (year: number, noiCents: number) => ({ year, incomeCents: noiCents, expensesCents: 0, noiCents, months: 12 });
+    expect(yearOverYearChange(full(2025, 110), full(2024, 100))).toBeCloseTo(0.1);
+    // A partial first year (3 months) is never a baseline: no +7167% style jumps.
+    expect(yearOverYearChange(full(2026, 5000), { ...full(2025, 70), months: 3 })).toBeNull();
+    expect(yearOverYearChange({ ...full(2026, 5000), months: 10 }, full(2025, 70))).toBeNull();
+    expect(yearOverYearChange(full(2026, 5), undefined)).toBeNull();
+    expect(yearOverYearChange(full(2026, 5), full(2025, 0))).toBeNull();
+    const years = yearlyTotals(new Map([['2025-11', 1], ['2026-02', 1]]), new Map(), {
+      start: new Date(Date.UTC(2025, 10, 1)),
+      months: 12,
+    });
+    expect(years.map((y) => [y.year, y.months])).toEqual([[2025, 2], [2026, 10]]);
   });
 });

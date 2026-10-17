@@ -7,9 +7,9 @@ export function trendOf(values: readonly number[], goodWhenUp = true): Trend | n
   const last = values[values.length - 1]!;
   if (prev === 0) return null;
   const pct = Math.round(((last - prev) / Math.abs(prev)) * 100);
-  const arrow = pct > 0 ? '▲' : pct < 0 ? '▼' : '–';
+  if (pct === 0) return null;
   return {
-    label: `${arrow} ${Math.abs(pct)}%`,
-    warm: pct === 0 ? false : goodWhenUp ? pct < 0 : pct > 0,
+    label: `${pct > 0 ? '▲' : '▼'} ${Math.abs(pct)}%`,
+    warm: goodWhenUp ? pct < 0 : pct > 0,
   };
 }

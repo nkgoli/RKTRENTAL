@@ -15,9 +15,9 @@ export {
   Cover,
   CoverName,
   CoverPill,
-  KpiIcon,
   OccupancyRing,
   Sparkline,
   TrendChip,
 } from './Flair';
-export type { CoverKind, KpiTone, SparklineTone } from './Flair';
+export type { CoverKind, SparklineTone } from './Flair';
+export { PAGE_SIZE, Pagination, pageFrom, paginate } from './Pagination';

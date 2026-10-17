@@ -122,6 +122,7 @@ test('manager builds a lease in the wizard, resumes it, and sends it for signing
   await page.goto(`/leases/${leaseId}`);
   await expect(page).toHaveURL(/\/leases\/(?!new)[^/?]+$/);
   await expect(page.getByRole('heading', { name: 'Terms as signed' })).toBeVisible();
+  await page.getByText(/Show all \d+ clauses, rules and disclosures/).click();
   await expect(page.getByText(/monthly rent of \$1600\.00 in advance/)).toBeVisible();
   await expect(page.getByText(/returned-payment fee of \$35\.00/)).toBeVisible();
   await expect(page.getByText(/held at Example Bank/).first()).toBeVisible();

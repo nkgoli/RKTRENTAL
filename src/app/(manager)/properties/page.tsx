@@ -97,7 +97,7 @@ export default async function PropertiesPage({
         </Chips>
       </section>
 
-      <section className="grid-3">
+      <section className="kpis">
         <Stat
           label="Total units"
           value={totals.units}

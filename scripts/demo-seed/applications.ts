@@ -33,6 +33,10 @@ export function planApplications(seed: number, now: Date, units: PlannedUnit[],
   function addGroup(unitId: string, key: string, at: Date, statuses: ApplicationStatus[],
     options: { nextLeaseId?: string; open?: boolean; tenant?: PlannedTenant; archived?: boolean } = {}) {
     const id = `demo-group-${key}`;
+    // Nobody applies in the future: households for leases starting later applied last week or so,
+    // early enough that their consent and decision dates are in the past too.
+    const latest = day(now, -8);
+    if (at > latest) at = day(latest, -(groups.length % 10));
     const group: PlannedApplicationGroup = { id, unitId, at, nextLeaseId: options.nextLeaseId,
       open: options.open ?? false, applicantIds: [],
       status: statusRank.find((candidate) => statuses.includes(candidate)) ?? 'SUBMITTED',

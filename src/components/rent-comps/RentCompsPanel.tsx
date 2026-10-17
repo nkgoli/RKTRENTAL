@@ -54,33 +54,32 @@ export async function RentCompsPanel({
     <Card>
       <div className="row between">
         <div className="row">
-          <div className="photo" style={{ width: 120 }} />
           <div>
             <p className="eyebrow">{propertyLevel ? 'Subject property' : 'Subject unit'}</p>
-            <h3 style={{ fontSize: 20 }}>{label}</h3>
+            <h3 style={{ fontSize: 'var(--rr-h2)' }}>{label}</h3>
             <p className="muted">
               {formatAddress(unit.property)} · {bedBath({ bedrooms: unit.bedrooms, bathrooms: subject.bathrooms })}
               {unit.squareFeet ? ` · ${unit.squareFeet.toLocaleString('en-US')} sqft` : ''}
             </p>
           </div>
         </div>
-        <div className="row" style={{ gap: 24 }}>
+        <div className="row" style={{ gap: 16, flexWrap: 'wrap', minWidth: 0, maxWidth: '100%' }}>
           <div><p className="muted">Status</p><Badge tone={unit.status === 'VACANT' ? 'warning' : 'info'}>{status ?? 'Archived'}</Badge></div>
-          <div><p className="muted">Listed at</p><strong style={{ fontSize: 20 }}>{formatMoney(listedRent)}</strong>{listedRent !== null && unit.squareFeet ? <p className="muted">${(listedRent / unit.squareFeet).toFixed(2)} / sqft</p> : null}</div>
+          <div><p className="muted">Listed at</p><strong style={{ fontSize: 'var(--rr-h2)' }}>{formatMoney(listedRent)}</strong>{listedRent !== null && unit.squareFeet ? <p className="muted">${(listedRent / unit.squareFeet).toFixed(2)} / sqft</p> : null}</div>
           <UnitPicker
             unitId={unit.id}
             action="/rent-comps"
             units={units.map((candidate) => ({ id: candidate.id, label: `${unitLabel(candidate.property, candidate)}${candidate.status === 'VACANT' ? ' (vacant)' : ''}` }))}
           />
+          {result && <form action={refreshCompsAction}>
+            <input type="hidden" name="unitId" value={unit.id} />
+            <button className="btn btn-ghost btn-sm">Refresh comps</button>
+          </form>}
         </div>
       </div>
     </Card>
     <Card><FilterBar unitId={unit.id} filters={filters} action="/rent-comps" /></Card>
     {failure || !result ? <Alert tone="warning"><div><strong>Comps unavailable</strong><br />{failure} Check the rent comps provider in <Link href="/integrations">Integrations</Link>.</div></Alert> : <>
-      <form action={refreshCompsAction} className="row" style={{ justifyContent: 'flex-end' }}>
-        <input type="hidden" name="unitId" value={unit.id} />
-        <button className="btn btn-ghost btn-sm">Refresh comps</button>
-      </form>
       <CompsWorkbench
         key={`${unit.id}:${JSON.stringify(filters)}:${result.fetchedAt.getTime()}`}
         unitId={unit.id}

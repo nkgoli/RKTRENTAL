@@ -90,10 +90,18 @@ export function planPortfolio(seed: number, now: Date) {
       units.push({ id, propertySlug: property.slug, number: unitNumber(property.slug, index), index, vacant });
       let next = addMonths(currentMonth, -60);
       let tenantId = '';
-      let rentCents = Math.round((property.baseRent + (index % 5) * 85) * 100 * 0.83);
+      // Rents are whole dollars rounded to $5, as a landlord would set them.
+      const toRent = (cents: number) => Math.round(cents / 500) * 500;
+      let rentCents = toRent((property.baseRent + (index % 5) * 85) * 100 * 0.83);
       for (let cycle = 0; cycle < 8 && monthStart(next) <= horizon; cycle++) {
         const renewal = cycle > 0 && random() < 0.55;
-        if (cycle > 0) rentCents = Math.round(rentCents * (1 + pickInt(random, 2, 6) / 100));
+        if (cycle > 0) {
+          // A 2-6% renewal raise, kept inside that band after rounding to $5.
+          const prior = rentCents;
+          rentCents = toRent(prior * (1 + pickInt(random, 2, 6) / 100));
+          if (rentCents > prior * 1.06) rentCents -= 500;
+          if (rentCents < prior * 1.02) rentCents += 500;
+        }
         if (!renewal || !tenantId) {
           personIndex++;
           const person = fakePerson(random, personIndex);

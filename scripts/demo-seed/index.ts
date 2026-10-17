@@ -157,7 +157,7 @@ async function seedDatabase() {
   await createManyInChunks(membershipRows, (data) => prisma.leaseTenant.createMany({ data }));
   await createManyInChunks(plan.leases.flatMap((lease): Prisma.LeaseEventCreateManyInput[] => [
     { id: `demo-event-${lease.id}-created`, organizationId, leaseId: lease.id,
-      kind: 'CREATED', message: lease.status === 'DRAFT' ? 'Saved as draft' : 'Demo lease created',
+      kind: 'CREATED', message: lease.status === 'DRAFT' ? 'Saved as draft' : 'Drafted from the lease template',
       actorName: 'Jordan Mills', createdAt: day(lease.startDate, -12) },
     ...(lease.renewal ? [{ id: `demo-event-${lease.id}-renewed`, organizationId,
       leaseId: lease.id, kind: 'RENEWED' as const, message: 'Renewal signed with a rent increase',
@@ -257,6 +257,11 @@ async function seedDatabase() {
     if (depositCents < Math.round(Number(payment.amount) * 100)) {
       await refundPayment({ organizationId, paymentId, amountCents: depositCents,
         idempotencyKey: `move-out:${payment.leaseId}` }, { client: prisma });
+      // The deposit went back at move-out, not when the demo was seeded.
+      await prisma.payment.updateMany({
+        where: { leaseId: payment.leaseId, status: 'REFUNDED', createdAt: { gte: now } },
+        data: { paidAt: lease.endDate, createdAt: lease.endDate },
+      });
     }
   }
 
@@ -275,7 +280,17 @@ async function seedDatabase() {
     { id: 'demo-vendor-keyline', name: 'Keyline Services', trade: 'Locks and doors' },
   ];
   await prisma.vendor.createMany({ data: vendors.map((vendor) => ({ ...vendor, organizationId })) });
-  const topics = ['Kitchen sink leak', 'Air conditioner service', 'Door lock repair', 'Bathroom tile repair', 'Smoke alarm replacement', 'Window latch adjustment', 'Laundry appliance repair'];
+  // Each repair topic has a plain description and goes to the vendor whose trade fits it.
+  const repairTopics: Record<string, { description: string; vendor: number }> = {
+    'Kitchen sink leak': { description: 'Water drips from the trap under the kitchen sink.', vendor: 0 },
+    'Air conditioner service': { description: 'The AC runs but the air from the vents is warm.', vendor: 1 },
+    'Door lock repair': { description: 'The front door deadbolt sticks and is hard to turn.', vendor: 2 },
+    'Bathroom tile repair': { description: 'Two tiles by the tub are loose and the grout is cracked.', vendor: 0 },
+    'Smoke alarm replacement': { description: 'The hallway smoke alarm chirps even with a new battery.', vendor: 0 },
+    'Window latch adjustment': { description: 'The bedroom window latch does not close fully.', vendor: 2 },
+    'Laundry appliance repair': { description: 'The washer stops mid-cycle and leaves water in the drum.', vendor: 0 },
+  };
+  const topics = Object.keys(repairTopics);
   const statuses: MaintenanceStatus[] = ['NEW', 'ASSIGNED', 'IN_PROGRESS', 'DONE', 'CANCELLED'];
   const priorities: MaintenancePriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
   const maintenance: Prisma.MaintenanceRequestCreateManyInput[] = [];
@@ -290,13 +305,14 @@ async function seedDatabase() {
         const status = at < day(now, -75)
           ? (random() < 0.94 ? 'DONE' : 'CANCELLED')
           : statuses[pickInt(random, 0, statuses.length - 1)]!;
-        const vendor = vendors[pickInt(random, 0, vendors.length - 1)]!;
+        pickInt(random, 0, vendors.length - 1); // keeps the seeded sequence stable
         const title = topics[pickInt(random, 0, topics.length - 1)]!;
+        const vendor = vendors[repairTopics[title]!.vendor]!;
         const matchingLease = plan.leases.find((lease) => lease.unitId === unit.id &&
           lease.startDate <= at && lease.endDate >= at && lease.status !== 'DRAFT');
         const tenantId = matchingLease && photoRandom() < 0.35 ? matchingLease.tenantId : null;
         maintenance.push({ id, organizationId, propertyId: propertyId(unit.propertySlug), unitId: unit.id,
-          title, description: 'Synthetic maintenance history for the demo.', tenantId,
+          title, description: repairTopics[title]!.description, tenantId,
           priority: priorities[pickInt(random, 0, priorities.length - 1)]!, status,
           vendorId: status === 'NEW' ? null : vendor.id, vendorName: status === 'NEW' ? null : vendor.name,
           createdAt: at, completedAt: status === 'DONE' ? day(at, 4) : null });
@@ -319,7 +335,7 @@ async function seedDatabase() {
       for (const [category, factor] of [['TAXES', 0.22], ['INSURANCE', 0.09], ['REPAIRS', 0.12], ['MANAGEMENT', 0.08]] as const) {
         expenses.push({ id: `demo-expense-${property.slug}-${month}-${category}`, organizationId,
           propertyId: propertyId(property.slug), category, amount: Math.round(property.baseRent * property.count * factor),
-          occurredOn: date, description: 'Synthetic monthly operating expense' });
+          occurredOn: date, description: 'Monthly operating expense' });
       }
     }
   }

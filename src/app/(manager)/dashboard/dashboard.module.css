@@ -1,4 +1,4 @@
-﻿.dashboard {
+.dashboard {
   display: flex;
   flex-direction: column;
   gap: var(--rr-gap);
@@ -216,69 +216,43 @@
   color: #615d75;
 }
 
-.tableCard {
-  container-type: inline-size;
-  overflow: hidden;
-}
-
-@container (max-width: 560px) {
-  .table {
-    min-width: 0;
-  }
-
-  .table th:nth-child(n + 3),
-  .table td:nth-child(n + 3) {
-    display: none;
-  }
-
-  .table th,
-  .table td {
-    padding-left: 10px;
-    padding-right: 10px;
-  }
-}
-
-.tableScroller {
-  margin: 0 calc(-1 * var(--rr-card-pad)) calc(-1 * var(--rr-card-pad));
-  overflow-x: auto;
-}
-
-.table {
-  border-collapse: collapse;
-  font-size: 12px;
-  min-width: 560px;
-  width: 100%;
-}
-
-.table th {
-  background: #f7f9fd;
-  border-bottom: 1px solid var(--rr-border);
-  color: var(--design-muted);
-  font-size: 11px;
-  font-weight: 500;
-  padding: 10px 14px;
-  text-align: left;
-}
-
-.table td {
-  border-bottom: 1px solid #eef1f7;
-  padding: 10px 14px;
-  vertical-align: middle;
-}
-
-.table tr:last-child td {
-  border-bottom: 0;
-}
-
-.table td a:not(.eventTitle) {
-  color: var(--design-primary);
-}
-
-.eventCell {
-  align-items: center;
+.activity {
   display: flex;
-  gap: 9px;
-  min-width: 190px;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.activity li {
+  align-items: center;
+  border-top: 1px solid #eef1f7;
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.activity li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.activityBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.activityBody small {
+  color: var(--design-muted);
+  display: block;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activityBody small a {
+  color: inherit;
 }
 
 .smallAvatar {
@@ -295,24 +269,11 @@
   width: 28px;
 }
 
-.eventCell > div {
-  min-width: 0;
-}
-
 .eventTitle {
   color: var(--design-text);
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-}
-
-.eventCell small {
-  color: var(--design-muted);
-  display: block;
-  font-size: 11px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .empty {

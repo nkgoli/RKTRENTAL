@@ -1,9 +1,9 @@
 .summary {
   display: grid;
-  gap: 16px;
-  padding: 20px;
-  border: 1px solid var(--rr-border, #e5e7eb);
-  border-radius: var(--design-radius, 16px);
+  gap: 12px;
+  padding: var(--rr-card-pad);
+  border: var(--rr-card-border);
+  border-radius: var(--rr-card-radius);
   background: var(--design-surface, #fff);
   box-shadow: var(--rr-shadow, none);
 }
@@ -16,13 +16,15 @@
 }
 .balance {
   font-family: var(--design-heading-font, inherit);
-  font-size: 2rem;
-  line-height: 1.1;
+  font-size: var(--rr-kpi);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
 }
 .note {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   color: var(--design-muted, #64748b);
-  font-size: 0.875rem;
+  font-size: 13px;
 }
 .summaryActions {
   display: flex;
@@ -79,7 +81,7 @@
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
-  border-radius: var(--design-radius, 16px);
+  border-radius: var(--rr-card-radius);
   background: var(--rr-primary-tint, #e8eefc);
   font-size: 0.875rem;
   font-weight: 600;
@@ -90,8 +92,9 @@
   color: var(--design-muted, #64748b);
 }
 .group {
-  border: 1px solid var(--rr-border, #e5e7eb);
-  border-radius: var(--design-radius, 16px);
+  border: var(--rr-card-border);
+  border-radius: var(--rr-card-radius);
+  box-shadow: var(--rr-card-shadow);
   background: var(--design-surface, #fff);
   overflow: hidden;
 }
@@ -122,7 +125,7 @@
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 14px 16px;
+  padding: 10px var(--rr-card-pad);
   border: 0;
   background: transparent;
   color: inherit;
@@ -160,14 +163,17 @@
   border-collapse: collapse;
 }
 .ledger th {
-  padding: 12px 8px;
-  border-top: 1px solid var(--rr-border, #e5e7eb);
-  color: var(--design-text, #17142b);
-  font-size: 0.875rem;
+  padding: 8px;
+  border-bottom: 1px solid var(--rr-border, #e5e7eb);
+  background: #f8fafc;
+  color: var(--design-muted, #64748b);
+  font-size: 12px;
+  font-weight: 500;
   text-align: left;
 }
 .ledger td {
-  padding: 12px 8px;
+  padding: 8px;
+  font-size: 14px;
   border-top: 1px solid var(--rr-border, #e5e7eb);
   vertical-align: middle;
 }
@@ -199,14 +205,12 @@
 }
 .view {
   padding: 6px 16px;
-  border: 1.5px solid var(--design-primary, #1e3a8a);
-  border-radius: 6px;
+  border: 1px solid var(--rr-border-strong, #d1d5db);
+  border-radius: 8px;
   background: transparent;
-  color: var(--design-primary, #1e3a8a);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  color: var(--design-text, #17142b);
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
 }
 .view:hover {
@@ -235,9 +239,9 @@
 .dialog {
   width: min(520px, calc(100vw - 32px));
   max-height: calc(100dvh - 32px);
-  padding: 24px;
+  padding: 20px;
   border: 1px solid var(--rr-border, #e5e7eb);
-  border-radius: 16px;
+  border-radius: var(--rr-card-radius);
   background: #fff;
   color: var(--design-text, #17142b);
   box-shadow: var(--rr-shadow-lift, 0 14px 22px rgb(23 20 43 / 10%));

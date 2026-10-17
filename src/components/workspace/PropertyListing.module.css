@@ -1,7 +1,7 @@
 .singleFamily { display: grid; gap: 16px; }
 .heading { display: grid; gap: 5px; }
 .heading .eyebrow, .heading p, .heading h2 { margin: 0; }
-.heading h2 { font-size: 22px; font-family: var(--design-heading-font); }
+.heading h2 { font-size: var(--rr-h2); font-family: var(--design-heading-font); }
 .heading .muted { font-size: 13px; }
 .tableWrap { overflow-x: auto; }
 .tableWrap table { min-width: 780px; }

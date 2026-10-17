@@ -1,6 +1,16 @@
 import { Fragment } from 'react';
 import Link from 'next/link';
-import { Avatar, AvatarStack, Card, cx, SearchInput, TrendChip } from '@/components/ui';
+import {
+  Avatar,
+  AvatarStack,
+  Card,
+  cx,
+  Pagination,
+  pageFrom,
+  paginate,
+  SearchInput,
+  TrendChip,
+} from '@/components/ui';
 import { formatDate, initials } from '@/lib/tenants/format';
 import type { organizationTenants } from '@/lib/tenants/queries';
 import { EmptyState } from '@/components/RouteStates';
@@ -8,11 +18,12 @@ import styles from './tenants.module.css';
 
 type SetupRow = Awaited<ReturnType<ReturnType<typeof organizationTenants>['setupRows']>>[number];
 
-function href(q?: string, property?: string, period?: string) {
+function href(q?: string, property?: string, period?: string, page?: number) {
   const params = new URLSearchParams();
   if (q) params.set('q', q);
   if (property) params.set('property', property);
   if (period === 'upcoming') params.set('period', period);
+  if (page && page > 1) params.set('page', String(page));
   return `/tenants${params.size ? `?${params}` : ''}`;
 }
 
@@ -39,12 +50,14 @@ export function StatusView({
   q,
   property,
   period,
+  page,
 }: {
   rows: SetupRow[];
   properties: { id: string; name: string }[];
   q?: string;
   property?: string;
   period: 'current' | 'upcoming';
+  page?: string;
 }) {
   const shown = rows.filter((row) => {
     if (period === 'upcoming' ? row.leaseStatus !== 'DRAFT' : row.leaseStatus !== 'ACTIVE')
@@ -57,6 +70,7 @@ export function StatusView({
         .includes(q.toLowerCase())
     );
   });
+  const current = pageFrom(page, shown.length);
   const attention = shown.filter(
     (row) => row.checklist.bankAdded === 'incomplete' || row.checklist.autopayOn === 'incomplete',
   ).length;
@@ -64,7 +78,6 @@ export function StatusView({
     <section className={styles.statusSection} aria-labelledby="tenant-status-title">
       <div className={styles.statusHeading}>
         <div>
-          <p className="eyebrow">Onboarding and payments</p>
           <h2 id="tenant-status-title">Tenant status</h2>
           <p className="muted">Who has finished setup — and who still needs a nudge.</p>
         </div>
@@ -121,7 +134,7 @@ export function StatusView({
           <table className={styles.statusTable}>
             <thead>
               <tr>
-                <th>Dates / lease</th>
+                <th>Lease</th>
                 <th>Tenant info</th>
                 {checklistLabels.map((label) => (
                   <th key={label}>{label}</th>
@@ -142,34 +155,24 @@ export function StatusView({
                   </td>
                 </tr>
               )}
-              {shown.map((row, index) => {
-                const group = `${row.property.id}:${row.unit.id}:${row.leaseId}`;
-                const previous = shown[index - 1];
-                const showGroup =
-                  !previous ||
-                  `${previous.property.id}:${previous.unit.id}:${previous.leaseId}` !== group;
+              {paginate(shown, current).map((row) => {
                 return (
                   <Fragment key={`${row.leaseId}:${row.tenant.id}`}>
-                    {showGroup && (
-                      <tr className={styles.groupRow}>
-                        <td colSpan={9}>
-                          <strong>
-                            <Link href={`/properties/${row.property.id}`}>{row.property.name}</Link>{' '}
-                            · {row.unit.isImplicit ? 'Single-unit' : `Unit ${row.unit.number}`}
-                          </strong>
-                          <span>
-                            {period === 'upcoming' ? 'Upcoming lease' : 'Current lease'} ·{' '}
-                            {formatDate(row.startDate)} – {formatDate(row.endDate)}
-                          </span>
-                          <Link href={`/leases/${row.leaseId}`}>View lease →</Link>
-                        </td>
-                      </tr>
-                    )}
                     <tr>
                       <td>
-                        <Link href={`/leases/${row.leaseId}`}>
-                          {formatDate(row.startDate)} – {formatDate(row.endDate)}
-                        </Link>
+                        <span className="cell-main">
+                          <span>
+                            <strong>
+                              <Link href={`/properties/${row.property.id}`}>{row.property.name}</Link>{' '}
+                              · {row.unit.isImplicit ? 'Single-unit' : `Unit ${row.unit.number}`}
+                            </strong>
+                            <small>
+                              <Link href={`/leases/${row.leaseId}`}>
+                                {formatDate(row.startDate)} – {formatDate(row.endDate)}
+                              </Link>
+                            </small>
+                          </span>
+                        </span>
                       </td>
                       <td>
                         <Link className="cell-main" href={`/tenants/${row.tenant.id}`}>
@@ -221,6 +224,12 @@ export function StatusView({
             </tbody>
           </table>
         </div>
+        <Pagination
+          page={current}
+          total={shown.length}
+          noun="tenants"
+          href={(n) => href(q, property, period, n)}
+        />
       </Card>
       <p className="muted">
         Invitation, acceptance and bank verification are not tracked yet. Card on file is not

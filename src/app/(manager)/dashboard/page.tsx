@@ -75,11 +75,11 @@ export default async function DashboardPage({
               <dd>{formatUsd(dashboard.rentCollectedCents)}</dd>
             </div>
             <div>
-              <dt>Outstanding</dt>
+              <dt>Unpaid this month</dt>
               <dd>{formatUsd(outstandingCents)}</dd>
             </div>
             <div>
-              <dt>Overdue</dt>
+              <dt>Past due</dt>
               <dd className={dashboard.overdueCents ? styles.bad : undefined}>
                 {formatUsd(dashboard.overdueCents)}
               </dd>
@@ -173,51 +173,32 @@ export default async function DashboardPage({
           </div>
         </article>
 
-        <article className={`card ${styles.tableCard}`}>
+        <article className="card">
           <div className="card-header">
             <h3>Recent activity</h3>
             <Link href="/payments">All activity</Link>
           </div>
           {dashboard.activity.length ? (
-            <div className={styles.tableScroller}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Event</th>
-                    <th>Property / unit</th>
-                    <th>When</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dashboard.activity.map((item) => (
-                    <tr key={item.id}>
-                      <td>
-                        <div className={styles.eventCell}>
-                          <span className={styles.smallAvatar} aria-hidden="true">
-                            {initialsOf(item.description)}
-                          </span>
-                          <div>
-                            <Link className={styles.eventTitle} href={item.href}>
-                              {item.title}
-                            </Link>
-                            <small>{item.description}</small>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <Link href={item.propertyHref}>{item.propertyName}</Link> ·{' '}
-                        <Link href={item.unitHref}>{item.unitLabel}</Link>
-                      </td>
-                      <td>{when(item.happenedAt)}</td>
-                      <td>
-                        <span className={`${styles.badge} ${styles[`${item.tone}Badge`]}`}>{item.status}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ul className={styles.activity}>
+              {dashboard.activity.map((item) => (
+                <li key={item.id}>
+                  <span className={styles.smallAvatar} aria-hidden="true">
+                    {/* Applications describe the person; payments start with the amount, so use the title's name. */}
+                    {initialsOf(/^[A-Za-z]/.test(item.description) ? item.description : item.title)}
+                  </span>
+                  <div className={styles.activityBody}>
+                    <Link className={styles.eventTitle} href={item.href}>
+                      {item.title}
+                    </Link>
+                    <small>
+                      {item.description} · <Link href={item.propertyHref}>{item.propertyName}</Link> ·{' '}
+                      <Link href={item.unitHref}>{item.unitLabel}</Link> · {when(item.happenedAt)}
+                    </small>
+                  </div>
+                  <span className={`${styles.badge} ${styles[`${item.tone}Badge`]}`}>{item.status}</span>
+                </li>
+              ))}
+            </ul>
           ) : (
             <p className={styles.empty}>New payments and lease updates will appear here.</p>
           )}

@@ -12,5 +12,6 @@ export default async function PropertyApplicationsPage({ params, searchParams }:
     scope={tabScope(id, query)}
     hideArchived={first(query.hideArchived) === '1'}
     notice={first(query.notice)}
+    page={first(query.page)}
   />;
 }

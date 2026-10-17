@@ -2,15 +2,18 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 12px;
-  padding: 32px;
+  gap: 6px;
+  padding: var(--rr-card-pad);
   border: 1px solid var(--rr-border);
   border-radius: var(--design-radius);
   background: var(--design-surface);
   color: var(--design-text);
   box-shadow: var(--rr-shadow);
 }
-.empty h2, .error h1, .error h2 { font-size: 20px; }
+.empty h2 { font-size: var(--rr-h3); }
+.error h1, .error h2 { font-size: var(--rr-h2); }
+/* Inside a card or table the empty state is just text: no second box. */
+:global(.card) .empty, td .empty { padding: 4px 0; border: 0; box-shadow: none; background: transparent; }
 .empty p, .error p { color: var(--design-muted); max-width: 60ch; }
 .emptyMark {
   display: grid;
@@ -36,5 +39,5 @@
 @media (max-width: 700px) {
   .grid { grid-template-columns: 1fr; }
   .tile { height: 72px; }
-  .empty, .error { padding: 20px; }
+  .error { padding: 20px; }
 }

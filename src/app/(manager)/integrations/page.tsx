@@ -71,7 +71,7 @@ function ProviderCard({ provider }: { provider: ProviderView }) {
               <dt>Credential</dt>
               <dd>
                 <code>{provider.mode === 'live' ? provider.credentialRef : 'none'}</code>
-                <span className="muted"> � value never shown</span>
+                <span className="muted"> · value never shown</span>
               </dd>
               {provider.details.lastError && (
                 <>
@@ -198,9 +198,6 @@ export default async function Page({
   const attention = providers.filter(
     (provider) => provider.connected && (provider.status === 'ERROR' || provider.health.tone === 'danger'),
   );
-  const connectedPercent = providers.length
-    ? Math.round((connected.length / providers.length) * 100)
-    : 0;
 
   return (
     <div className="page" style={{ padding: 0 }}>
@@ -209,8 +206,6 @@ export default async function Page({
           label="Connected providers"
           value={connected.length}
           note={`of ${providers.length} available`}
-          ring={connectedPercent}
-          ringLabel={`${connectedPercent}% of providers connected`}
         />
         <KpiCard
           label="Healthy connections"

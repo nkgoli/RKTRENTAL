@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { Avatar, Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { Pagination, pageFrom, paginate } from '@/components/ui/Pagination';
 import { leaseName, signLabel, statusLabel, term } from '@/lib/leases/format';
 import { leasesDb, type LeaseListItem } from '@/lib/leases/queries';
 import { formatMoney, initials } from '@/lib/properties/format';
 import type { ScopeFilter } from '@/lib/workspace/scope';
+import { withUnit } from './scope';
 import styles from './leasing.module.css';
 
 type Section = { key: 'current' | 'drafts' | 'past'; title: string; leases: LeaseListItem[]; empty: string };
@@ -32,7 +34,7 @@ function LeaseCard({ lease, showUnit }: { lease: LeaseListItem; showUnit: boolea
 }
 
 /** Leases for one property (and optionally one unit) as Current, Drafts and Past; cards open the lease detail page. */
-export async function LeasesPanel({ organizationId, scope }: { organizationId: string; scope: ScopeFilter }) {
+export async function LeasesPanel({ organizationId, scope, page }: { organizationId: string; scope: ScopeFilter; page?: string }) {
   const { leases } = await leasesDb(organizationId).list(scope);
   const newLease = scope.unitId ? `/leases/new?unit=${encodeURIComponent(scope.unitId)}` : '/leases/new';
   const byStart = (a: LeaseListItem, b: LeaseListItem) => b.startDate.getTime() - a.startDate.getTime();
@@ -42,6 +44,10 @@ export async function LeasesPanel({ organizationId, scope }: { organizationId: s
     { key: 'past', title: 'Past', leases: leases.filter((l) => l.status === 'ENDED' || l.status === 'TERMINATED').sort(byStart), empty: 'No past leases.' },
   ];
   const showUnit = !scope.unitId;
+  // Past leases pile up over the years; page them like every other long list.
+  const past = sections[2].leases;
+  const pastPage = pageFrom(page, past.length);
+  const pastHref = (n: number) => withUnit(`/properties/${scope.propertyId}/leases`, scope.unitId, n > 1 ? { page: String(n) } : {});
 
   return <section className={styles.panel} aria-label="Leases">
     <div className={styles.pageHeader}>
@@ -59,7 +65,10 @@ export async function LeasesPanel({ organizationId, scope }: { organizationId: s
       <h3>{section.title} <span className="muted">{section.leases.length}</span></h3>
       {section.leases.length === 0
         ? <p className={styles.sectionEmpty}>{section.empty}</p>
-        : <ul className={`card flush ${styles.leaseList}`}>{section.leases.map((lease) => <LeaseCard key={lease.id} lease={lease} showUnit={showUnit} />)}</ul>}
+        : <div className="card flush">
+          <ul className={styles.leaseList}>{(section.key === 'past' ? paginate(past, pastPage) : section.leases).map((lease) => <LeaseCard key={lease.id} lease={lease} showUnit={showUnit} />)}</ul>
+          {section.key === 'past' && <Pagination page={pastPage} total={past.length} noun="past leases" href={pastHref} />}
+        </div>}
     </div>)}
   </section>;
 }

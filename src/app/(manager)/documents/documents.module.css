@@ -121,10 +121,16 @@
   gap: 16px;
 }
 .libraryIntro h2 {
-  font-size: 22px;
+  font-size: var(--rr-h2);
 }
 .storageHeading {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+}
+
+/* Photo library: small thumbnails, about six to a row. */
+.photoGrid :global(.gallery) {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
 }

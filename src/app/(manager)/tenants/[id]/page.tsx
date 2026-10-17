@@ -83,13 +83,7 @@ function history(detail: TenantDetail) {
     if (lease.signedAt) {
       events.push({ at: lease.signedAt, title: 'Lease signed', meta: label });
     }
-    for (const p of lease.payments) {
-      events.push({
-        at: p.paidAt ?? p.createdAt,
-        title: `Payment ${PAYMENT_LABEL[p.status].toLowerCase()} ${formatMoney(p.amount)}`,
-        meta: label,
-      });
-    }
+    // Payments are listed once, in Payment history; this feed keeps notes and lease milestones.
   }
   return events.sort((a, b) => b.at.getTime() - a.at.getTime()).slice(0, 12);
 }

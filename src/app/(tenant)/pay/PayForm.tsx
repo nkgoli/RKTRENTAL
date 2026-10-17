@@ -100,25 +100,15 @@ export function PayForm({
                   {fee}
                 </small>
               </span>
-              {selectedKey === option.key && <span className="badge success">Selected</span>}
             </label>
           );
         })}
 
-        <div
-          className="card"
-          role="group"
-          aria-label="Provider hosted payment field"
-          style={{ padding: 14 }}
-        >
-          <strong style={{ display: 'block', fontSize: 13 }}>Provider hosted field</strong>
-          <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-            {selected
-              ? `${selected.detail}. Details are entered with your payment provider; RocketRental never sees or stores them.`
-              : 'Details are entered with your payment provider.'}{' '}
-            In this demo the mock provider supplies the token.
-          </p>
-        </div>
+        {/* The method above already names the account; this only explains who holds the details. */}
+        <p className="muted" role="note" aria-label="Provider hosted payment field" style={{ fontSize: 12 }}>
+          Account details are entered with your payment provider; RocketRental never sees or stores
+          them.
+        </p>
 
         <label className="field">
           Amount

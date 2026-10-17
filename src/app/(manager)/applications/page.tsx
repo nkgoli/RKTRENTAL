@@ -175,12 +175,6 @@ export default async function ApplicationsPage({
     selected.status !== 'APPROVED' &&
     selected.status !== 'DECLINED',
   );
-  const providerName =
-    connection?.provider === 'transunion' ? 'TransUnion SmartMove' : connection?.provider;
-  const providerAction = connection
-    ? providerName + (providerReady ? ' connected' : ' disconnected')
-    : 'Screening provider unavailable';
-
   return (
     <section className={styles.applications} aria-label="Applications and screening">
       <ScopedWorkspace
@@ -191,10 +185,7 @@ export default async function ApplicationsPage({
       <PageHeader
         title="Applications"
         eyebrow="Leasing"
-        actions={[
-          { label: providerAction, href: '/integrations' },
-          { label: 'Manage provider', href: '/integrations' },
-        ]}
+        actions={[{ label: 'Screening provider', href: '/integrations' }]}
       />
       <div className={styles.intro}>
         <form className={styles.filters} action="/applications" method="get">
@@ -242,7 +233,7 @@ export default async function ApplicationsPage({
         <KpiCard
           label="New applications"
           value={countByStatus.get('SUBMITTED') ?? 0}
-          note={`${(countByStatus.get('SUBMITTED') ?? 0) + (countByStatus.get('SCREENING') ?? 0)} need review`}
+          note="Not screened yet"
         />
         <KpiCard
           label="Screening in progress"
@@ -271,7 +262,6 @@ export default async function ApplicationsPage({
                 {filteredCount === totalCount ? `${totalCount} applications` : `${filteredCount} of ${totalCount} applications`}
               </p>
             </div>
-            <Badge>{totalCount} total</Badge>
           </div>
           {ordered.length ? (
             <ul>
@@ -286,6 +276,8 @@ export default async function ApplicationsPage({
                 if (scope.propertyId) paramsForApplicant.set('propertyId', scope.propertyId);
                 if (scope.unitId) paramsForApplicant.set('unitId', scope.unitId);
                 paramsForApplicant.set('applicant', application.id);
+                // A decision stands on its own; consent only matters while screening is still open.
+                const decided = application.status === 'APPROVED' || application.status === 'DECLINED';
                 return (
                   <li key={application.id}>
                     <Link
@@ -302,8 +294,10 @@ export default async function ApplicationsPage({
                           {application.unit.property.name} · Unit {application.unit.number}
                         </small>
                         <span className={styles.metaLine}>
-                          <Badge tone={!hasConsent ? 'neutral' : tones[application.status]}>
-                            {!hasConsent
+                          <Badge tone={!hasConsent && !decided ? 'neutral' : tones[application.status]}>
+                            {decided
+                              ? labels[application.status]
+                              : !hasConsent
                               ? 'Awaiting consent'
                               : application.status === 'SUBMITTED'
                                 ? 'Ready to screen'

@@ -271,7 +271,8 @@ export function organizationTenants(
               lease: {
                 include: {
                   unit: { include: { property: true } },
-                  documents: { orderBy: { createdAt: 'desc' } },
+                  // Repair photos stay on their maintenance request, not in the lease's documents.
+                  documents: { where: { maintenancePhoto: { is: null } }, orderBy: { createdAt: 'desc' } },
                   charges: { where: { dueDate: { lte: today } } },
                   payments: { orderBy: { createdAt: 'desc' } },
                   tenants: { include: { tenant: true } },

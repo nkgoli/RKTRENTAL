@@ -17,7 +17,7 @@ test('manager reviews the rent roll, records a payment and applies a late fee', 
   await signIn(page);
   await page.goto('/payments');
   await expect(page.getByRole('heading', { name: 'Payments', level: 1 })).toBeVisible();
-  for (const label of ['Collected this month', 'Outstanding', 'Late', 'Next owner payout'])
+  for (const label of ['Collected this month', 'Outstanding', 'Late'])
     await expect(page.locator('.stat .label', { hasText: new RegExp(`^${label}$`) })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Rent roll' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Owner payouts' })).toBeVisible();

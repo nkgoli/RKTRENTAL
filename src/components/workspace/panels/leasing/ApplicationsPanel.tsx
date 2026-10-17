@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Feedback';
+import { Pagination, pageFrom, paginate } from '@/components/ui/Pagination';
 import { db } from '@/lib/db/client';
 import { loadIntegrations } from '@/lib/integrations/service';
 import { SCREENING_PACKAGES } from '@/lib/integrations/settings';
@@ -30,12 +31,13 @@ const date = (value: Date) =>
   new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(value);
 
 /** Applications for one property (and optionally one unit), grouped by household; applicants open the existing review page. */
-export async function ApplicationsPanel({ organizationId, scope, hideArchived = false, notice }: {
+export async function ApplicationsPanel({ organizationId, scope, hideArchived = false, notice, page }: {
   organizationId: string;
   scope: ScopeFilter;
   /** Archived households (archivedAt set) are closed out and no longer in play. */
   hideArchived?: boolean;
   notice?: string;
+  page?: string;
 }) {
   const [applications, integrations] = await Promise.all([
     db.application.findMany({
@@ -73,6 +75,10 @@ export async function ApplicationsPanel({ organizationId, scope, hideArchived = 
   const leaseHref = (unitId: string, applicantId: string) => `/leases/new?${new URLSearchParams({ unit: unitId, applicant: applicantId })}`;
   const toggleHref = withUnit(`/properties/${scope.propertyId}/applications`, scope.unitId, hideArchived ? {} : { hideArchived: '1' });
   const message = notice ? notices[notice] : undefined;
+  const allGroups = [...groups.values()];
+  const current = pageFrom(page, allGroups.length);
+  const pageHref = (n: number) => withUnit(`/properties/${scope.propertyId}/applications`, scope.unitId,
+    { ...(hideArchived ? { hideArchived: '1' } : {}), ...(n > 1 ? { page: String(n) } : {}) });
 
   return <section className={styles.panel} aria-label="Applications">
     {message && <Alert tone={message.tone}><div>{message.text}</div></Alert>}
@@ -113,26 +119,30 @@ export async function ApplicationsPanel({ organizationId, scope, hideArchived = 
     {visible.length === 0 ? <div className={`card ${styles.emptyCard}`}>
       <strong>{applications.length === 0 ? 'No applications yet' : 'Nothing active'}</strong>
       <p className="muted">{applications.length === 0 ? 'Applications for this property will appear here.' : 'Only archived applications are left. Show archived to see them.'}</p>
-    </div> : <div className={styles.groups}>{[...groups.values()].map((group) => {
-      const status = group.status;
-      const approved = group.items.find((a) => a.status === 'APPROVED');
-      return <article className="card" key={group.key} aria-label={`${group.label} applications`} data-application-group={group.key}>
-        <div className={styles.groupHead}>
-          <div>
+    </div> : <div className="card flush">
+      <ul className={styles.groups}>{paginate(allGroups, current).map((group) => {
+        const status = group.status;
+        const approved = group.items.find((a) => a.status === 'APPROVED');
+        return <li className={styles.groupRow} key={group.key} aria-label={`${group.label} applications`} data-application-group={group.key}>
+          <div className={styles.groupHead}>
             <h3>{group.label}</h3>
             <small className="muted">{group.items.length} applicant{group.items.length === 1 ? '' : 's'} · latest {date(group.items[0].appliedAt)}</small>
           </div>
-          <Badge tone={tones[status]}>{labels[status]}</Badge>
-        </div>
-        <ul className={styles.pills}>{group.items.map((application) => <li key={application.id}>
-          <Link href={reviewHref(application.id)} className={styles.pill} data-status={application.status} title={`${application.applicantEmail} · applied ${date(application.appliedAt)}`}>
-            <span className={styles.pillDot} aria-hidden="true" />
-            {application.applicantName}
-            <small>{labels[application.status as ApplicationStatus]}</small>
-          </Link>
-        </li>)}</ul>
-        {approved && <div className={styles.groupActions}><Link className="btn btn-primary btn-sm" href={leaseHref(group.unitId, approved.id)}>Create lease →</Link></div>}
-      </article>;
-    })}</div>}
+          <ul className={styles.pills}>{group.items.map((application) => <li key={application.id}>
+            <Link href={reviewHref(application.id)} className={styles.pill} data-status={application.status} title={`${application.applicantEmail} · applied ${date(application.appliedAt)}`}>
+              <span className={styles.pillDot} aria-hidden="true" />
+              {application.applicantName}
+              {/* The row badge already states the household status; only a different one is shown here. */}
+              {application.status !== status && <small>{labels[application.status as ApplicationStatus]}</small>}
+            </Link>
+          </li>)}</ul>
+          <div className={styles.groupActions}>
+            <Badge tone={tones[status]}>{labels[status]}</Badge>
+            {approved && <Link className="btn btn-primary btn-sm" href={leaseHref(group.unitId, approved.id)}>Create lease →</Link>}
+          </div>
+        </li>;
+      })}</ul>
+      <Pagination page={current} total={allGroups.length} noun="households" href={pageHref} />
+    </div>}
   </section>;
 }

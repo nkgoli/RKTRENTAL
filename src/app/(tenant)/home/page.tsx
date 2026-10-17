@@ -1,4 +1,4 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { Alert, Progress } from '@/components/ui/Feedback';
 import { EmptyState } from '@/components/RouteStates';
@@ -40,15 +40,7 @@ function RentHero({ view }: { view: TenantHomeView }) {
       : 'Autopay is off.';
   return (
     <section className="phone-hero" aria-labelledby="rent-due">
-      <p
-        id="rent-due"
-        style={{
-          fontSize: 13,
-          fontWeight: 600,
-          letterSpacing: '.04em',
-          textTransform: 'uppercase',
-        }}
-      >
+      <p id="rent-due" className="eyebrow">
         {settled ? 'Rent' : `Rent due ${due.dueDate ? shortDate(due.dueDate) : ''}`}
       </p>
       <div className="amount">{settled ? 'All paid up' : formatUsd(due.totalDueCents)}</div>
@@ -59,7 +51,7 @@ function RentHero({ view }: { view: TenantHomeView }) {
         <Link
           className="btn btn-primary btn-block"
           href="/pay"
-          style={{ marginTop: 16, color: '#fff' }}
+          style={{ marginTop: 12, color: '#fff' }}
         >
           Pay now
         </Link>
@@ -79,18 +71,13 @@ export default async function TenantHomePage() {
     return (
       <>
         <div>
-          <h1 style={{ fontSize: 24 }}>Welcome home</h1>
+          <h1 style={{ fontSize: 'var(--rr-h1)' }}>Welcome home</h1>
         </div>
         <EmptyState title="No active lease yet" description="Your property manager will add it here once it is set up." action="Check again" href="/home" />
       </>
     );
   }
 
-  const due = view.pay.amountDue;
-  const dueNote =
-    due.totalDueCents > 0 && due.dueDate
-      ? `${formatUsd(due.totalDueCents)} due ${shortDate(due.dueDate)}`
-      : 'Nothing due';
   const repair = view.openRepair;
 
   return (
@@ -99,13 +86,13 @@ export default async function TenantHomePage() {
         <p className="muted" style={{ fontSize: 13 }}>
           Hi {view.tenantName} · {view.premises}
         </p>
-        <h1 style={{ fontSize: 24, marginTop: 4 }}>Welcome home</h1>
+        <h1 style={{ fontSize: 'var(--rr-h1)', marginTop: 2 }}>Welcome home</h1>
       </div>
 
       <RentHero view={view} />
 
       <section aria-labelledby="quick-actions">
-        <h2 id="quick-actions" style={{ fontSize: 16, marginBottom: 12 }}>
+        <h2 id="quick-actions" style={{ fontSize: 'var(--rr-h3)', marginBottom: 8 }}>
           Quick actions
         </h2>
         <div className="tile-grid">
@@ -118,7 +105,7 @@ export default async function TenantHomePage() {
             </span>
             Pay rent
             <small className="muted" style={{ fontWeight: 400 }}>
-              {dueNote}
+              Bank or card · autopay
             </small>
           </Link>
           <Link className="tile" href="/lease">
@@ -193,28 +180,24 @@ export default async function TenantHomePage() {
       )}
 
       <section aria-labelledby="announcements">
-        <h2 id="announcements" style={{ fontSize: 16, marginBottom: 12 }}>
+        <h2 id="announcements" style={{ fontSize: 'var(--rr-h3)', marginBottom: 8 }}>
           Announcements
         </h2>
-        <div className="stack" style={{ gap: 10 }}>
-          {view.activity.length === 0 && (
-            <EmptyState title="No activity yet" description="Payments and notices will show up here." action="View your lease" href="/lease" />
-          )}
-          {view.activity.map((item) => (
-            <Alert
-              key={item.id}
-              tone={
-                item.tone === 'success' ? 'success' : item.tone === 'warning' ? 'warning' : 'info'
-              }
-            >
-              <p>
-                <strong>{item.title}</strong>
-                <br />
-                <span className="muted">{item.detail}</span>
-              </p>
-            </Alert>
-          ))}
-        </div>
+        {view.activity.length === 0 ? (
+          <p className="muted">Payments and notices will show up here.</p>
+        ) : (
+          // Announcements are a short list, not a stack of coloured banners.
+          <ul className="card" style={{ listStyle: 'none', margin: 0, padding: '4px var(--rr-card-pad)' }}>
+            {view.activity.slice(0, 4).map((item) => (
+              <li key={item.id} className="list-item" style={{ padding: '8px 0' }}>
+                <span className="file-meta">
+                  <strong>{item.title}</strong>
+                  <small>{item.detail}</small>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </>
   );

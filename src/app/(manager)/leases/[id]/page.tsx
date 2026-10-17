@@ -3,18 +3,25 @@ import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { Workspace } from '@/components/workspace/Workspace';
 import { hasScope, loadWorkspaceScope, scopeFilterFrom } from '@/lib/workspace/scope';
-import { Avatar, AvatarStack, Badge, Card, CardHeader } from '@/components/ui';
+import { Avatar, Badge, Card, CardHeader } from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
 import { LeaseDocumentGrid } from './LeaseDocumentGrid';
 import styles from './lease-detail.module.css';
 import { dateInput } from '@/lib/leases/core';
 import { EVENT_LABEL } from '@/lib/leases/events';
-import { leaseName, money, signLabel, statusLabel, term } from '@/lib/leases/format';
+import { money, signLabel, statusLabel, term } from '@/lib/leases/format';
 import { leasesDb } from '@/lib/leases/queries';
 import { formatAddress, formatDate, initials } from '@/lib/properties/format';
 import { EditTermsForm, LeaseStatusActions, LeaseUploader, NoticeForm } from '../LeaseForms';
 import type { TemplateItem } from '@/lib/lease-create/templates';
+
+const CHARGE_LABEL: Record<string, string> = {
+  RENT: 'Rent',
+  DEPOSIT: 'Deposit',
+  LATE_FEE: 'Late fee',
+  OTHER: 'Fee',
+};
 
 const showSignedBody = (body: string) => body.split(/(\{\{[a-z_]+\}\})/g).map((part, index) =>
   /^\{\{[a-z_]+\}\}$/.test(part) ? <mark key={index}>________ ({part.slice(2, -2).replaceAll('_', ' ')})</mark> : part);
@@ -31,7 +38,6 @@ export default async function LeaseDetailPage({
   const lease = await leasesDb(session.organizationId).detail(id);
   if (!lease) notFound();
   const property = lease.unit.property;
-  const name = leaseName(lease);
   const signedTerms = lease.termsSnapshot && typeof lease.termsSnapshot === 'object' && !Array.isArray(lease.termsSnapshot)
     ? lease.termsSnapshot as Record<string, unknown> : null;
   const snapshotItems = Array.isArray(signedTerms?.items) ? signedTerms.items as TemplateItem[] : [];
@@ -79,6 +85,8 @@ export default async function LeaseDetailPage({
     return { tenant, event: latest };
   });
   const noticeGiven = lease.noticeGivenAt != null;
+  // A lease marked signed without per-signer events was signed outside the e-sign flow.
+  const signedOnPaper = lease.eSignStatus === 'SIGNED';
   // Scope comes from the lease itself; the query only says whether to show the workspace.
   const workspaceScope = hasScope(scopeFilterFrom(query))
     ? await loadWorkspaceScope(session.organizationId, {
@@ -99,16 +107,10 @@ export default async function LeaseDetailPage({
           ...(lease.status === 'ACTIVE'
             ? [{ label: 'Renew lease', href: `/leases/new?renew=${lease.id}`, primary: true }]
             : []),
-          ...(lease.status === 'DRAFT' || lease.status === 'ACTIVE'
-            ? [{ label: 'Edit terms', href: '#edit-terms' }]
-            : []),
         ]}
       />
-      <nav className="breadcrumbs" aria-label="Breadcrumb">
-        <Link href="/leases">Leases</Link> / {property.name}{' '}
-        {!lease.unit.isImplicit && lease.unit.number} — {name}
-      </nav>
-      <div className="row" style={{ flexWrap: 'wrap' }}>
+      {/* One line of status; dates, rent and premises are in their own cards below. */}
+      <section className={styles.summaryLine} aria-label="Lease summary">
         <Badge
           tone={
             lease.status === 'ACTIVE' ? 'success' : lease.status === 'DRAFT' ? 'info' : 'neutral'
@@ -124,56 +126,20 @@ export default async function LeaseDetailPage({
         {noticeGiven && (
           <Badge tone="warning">Notice given {formatDate(lease.noticeGivenAt!)}</Badge>
         )}
-        <span className="muted">{signLabel(lease.eSignStatus)}</span>
-      </div>
-      <Link
-        className={styles.backLink}
-        href={
-          lease.unit.isImplicit
-            ? `/properties/${property.id}`
-            : `/properties/${property.id}/units/${lease.unitId}`
-        }
-      >
-        ← Back to unit
-      </Link>
-      <section className={styles.summary} aria-label="Lease summary">
-        <div>
-          <p className="eyebrow">Lease agreement</p>
-          <h2>
-            {title}{' '}
-            <Badge
-              tone={
-                lease.status === 'ACTIVE'
-                  ? 'success'
-                  : lease.status === 'DRAFT'
-                    ? 'info'
-                    : 'neutral'
-              }
-            >
-              {statusLabel(lease.status)}
-            </Badge>
-          </h2>
-          <div className={styles.summaryItems}>
-            <div className={styles.summaryItem}>
-              <span>Lease dates</span>
-              <strong>{term(lease.startDate, lease.endDate)}</strong>
-            </div>
-            <div className={styles.summaryItem}>
-              <span>Monthly rent</span>
-              <strong>{money(lease.monthlyRent)} / month</strong>
-            </div>
-            <div className={styles.summaryItem}>
-              <span>Online payments</span>
-              <strong>{onlinePaymentsEnabled ? 'Enabled' : 'Not connected'}</strong>
-            </div>
-          </div>
-        </div>
-        <div className={styles.tenantFaces}>
-          <AvatarStack initials={lease.tenants.map(({ tenant }) => initials(tenant.name))} />
-          <span>
-            {lease.tenants.map(({ tenant }) => tenant.name).join(', ') || 'No tenants yet'}
-          </span>
-        </div>
+        <span>
+          {lease.tenants.length
+            ? lease.tenants.map(({ tenant }, index) => (
+                <span key={tenant.id}>
+                  {index > 0 && ', '}
+                  <Link href={`/tenants/${tenant.id}`}>{tenant.name}</Link>
+                </span>
+              ))
+            : 'No tenants yet'}
+        </span>
+        <span className="muted">· {signLabel(lease.eSignStatus)}</span>
+        <span className="muted">
+          · Online payments {onlinePaymentsEnabled ? 'enabled' : 'not connected'}
+        </span>
       </section>
       {signedTerms && <section className={styles.signedTerms} aria-labelledby="terms-as-signed">
         <div className="row between"><div><p className="eyebrow">Signed agreement snapshot</p><h2 id="terms-as-signed">Terms as signed</h2></div>
@@ -185,10 +151,10 @@ export default async function LeaseDetailPage({
         </article>)}</div></details>
         <p className="muted">These words and the template version remain on this lease when a template changes.</p>
       </section>}
-      <section className={styles.amendment} aria-label="Amendment or addendum">
+      <section className={`card ${styles.amendment}`} aria-label="Amendment or addendum">
         <div>
-          <h2>Add an amendment or addendum</h2>
-          <p>Keep every lease change documented and easy to share.</p>
+          <h3>Add an amendment or addendum</h3>
+          <p className="muted">Keep every lease change documented and easy to share.</p>
         </div>
         <button
           type="button"
@@ -232,16 +198,7 @@ export default async function LeaseDetailPage({
             </p>
           </Card>
           <Card>
-            <CardHeader
-              title="Lease terms"
-              action={
-                (lease.status === 'ACTIVE' || lease.status === 'DRAFT') && (
-                  <Link className="btn btn-secondary btn-sm" href="#edit-terms">
-                    Edit terms
-                  </Link>
-                )
-              }
-            />
+            <CardHeader title="Lease terms" />
             <dl className="kv">
               <dt>Lease term</dt>
               <dd>{term(lease.startDate, lease.endDate)}</dd>
@@ -267,6 +224,13 @@ export default async function LeaseDetailPage({
                 )}
               </dd>
             </dl>
+            {(lease.status === 'ACTIVE' || lease.status === 'DRAFT') && (
+              // The form repeats every value above, so it stays folded until asked for.
+              <details id="edit-terms" className={styles.editTerms}>
+                <summary className="btn btn-secondary btn-sm">Edit terms</summary>
+                <EditTermsForm leaseId={lease.id} values={terms} />
+              </details>
+            )}
             {lease.status === 'ACTIVE' && (
               <div style={{ marginTop: 16 }}>
                 <NoticeForm
@@ -298,12 +262,6 @@ export default async function LeaseDetailPage({
               }))}
             />
           </Card>
-          {(lease.status === 'ACTIVE' || lease.status === 'DRAFT') && (
-            <Card id="edit-terms">
-              <CardHeader title="Edit terms" />
-              <EditTermsForm leaseId={lease.id} values={terms} />
-            </Card>
-          )}
         </div>
         <div className="stack">
           <Card>
@@ -362,7 +320,7 @@ export default async function LeaseDetailPage({
             </div>
             {charges.slice(0, 3).map((charge) => (
               <div className="list-item" key={charge.id}>
-                <Badge>{charge.kind === 'RENT' ? 'Rent' : charge.kind.replaceAll('_', ' ')}</Badge>
+                <Badge>{CHARGE_LABEL[charge.kind] ?? 'Charge'}</Badge>
                 <span className="file-meta">
                   <strong>{money(charge.amount)}</strong>
                   <small>Due {formatDate(charge.dueDate)}</small>
@@ -401,19 +359,21 @@ export default async function LeaseDetailPage({
                       <small>
                         {event
                           ? `${EVENT_LABEL[event.kind]} · ${formatDate(event.createdAt)}`
-                          : 'Not sent'}
+                          : signedOnPaper
+                            ? `Signed${lease.signedAt ? ` · ${formatDate(lease.signedAt)}` : ''}`
+                            : 'Not sent'}
                       </small>
                     </span>
                     <Badge
                       tone={
-                        event?.kind === 'SIGNED'
+                        event?.kind === 'SIGNED' || (!event && signedOnPaper)
                           ? 'success'
                           : event?.kind === 'DECLINED'
                             ? 'danger'
                             : 'info'
                       }
                     >
-                      {event?.kind === 'SIGNED'
+                      {event?.kind === 'SIGNED' || (!event && signedOnPaper)
                         ? 'Signed'
                         : event?.kind === 'DECLINED'
                           ? 'Declined'

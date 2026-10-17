@@ -6,7 +6,6 @@ import { PageHeader } from '@/components/shell/PageHeader';
 import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
 import { scopeFilterFrom } from '@/lib/workspace/scope';
 import {
-  Badge,
   Card,
   CardHeader,
   Chip,
@@ -17,7 +16,6 @@ import {
   Progress,
   pageFrom,
   paginate,
-  TrendChip,
 } from '@/components/ui';
 import { PhotoImage, fileKind } from '@/app/(manager)/properties/_components/Media';
 import { formatBytes, formatDate } from '@/lib/properties/format';
@@ -270,13 +268,9 @@ export default async function DocumentsPage({
         filter={scopeFilterFrom(params)}
         activeTab="documents"
       />
-      <PageHeader
-        title="Documents and photos"
-        eyebrow="Files"
-        actions={[{ label: 'Upload files', href: '#upload', primary: true }]}
-      />
+      <PageHeader title="Documents and photos" eyebrow="Files" actions={[]} />
       <div className="stack">
-        <section className="split">
+        <section className="split" style={{ alignItems: 'start' }}>
           <Card id="upload">
             <CardHeader title="Upload files" />
             <UploadDocumentForm
@@ -291,7 +285,7 @@ export default async function DocumentsPage({
             </div>
             <div className="row between" style={{ marginTop: 4 }}>
               <strong>{formatBytes(usedBytes)} of 10 GB</strong>
-              <TrendChip>{libraryFiles.length} files</TrendChip>
+              <span className="muted">{libraryFiles.length} files</span>
             </div>
             <Progress
               value={storagePercent}
@@ -359,6 +353,7 @@ export default async function DocumentsPage({
               <button className="btn btn-secondary btn-sm" type="submit">
                 Apply
               </button>
+              <span className="muted" style={{ fontSize: 13 }}>{matchingFiles.length} matching files</span>
             </form>
           </div>
         </section>
@@ -461,9 +456,10 @@ export default async function DocumentsPage({
         <Card>
           <CardHeader
             title="Photos"
-            action={<span className="muted">Property and unit photos · {allPhotos.length} files</span>}
+            action={<span className="muted">Property and unit photos</span>}
           />
           {photos.length ? (
+            <div className={styles.photoGrid}>
             <Gallery>
               {photos.map((photo, index) => {
                 const property = documentProperty(photo);
@@ -498,6 +494,7 @@ export default async function DocumentsPage({
                 );
               })}
             </Gallery>
+            </div>
           ) : (
             <EmptyState
               title="No photos in this view"
@@ -508,7 +505,6 @@ export default async function DocumentsPage({
           )}
           <Pagination page={photoPage} total={allPhotos.length} noun="photos" href={pageHref('photoPage')} />
         </Card>
-        <Badge tone="info">{matchingFiles.length} matching files</Badge>
       </div>
     </>
   );

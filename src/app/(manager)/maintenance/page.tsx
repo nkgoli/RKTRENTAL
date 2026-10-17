@@ -4,7 +4,6 @@ import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
 import { scopeFilterFrom } from '@/lib/workspace/scope';
 import { EmptyState } from '@/components/RouteStates';
 import {
-  Alert,
   Avatar,
   Badge,
   KanbanBoard,
@@ -64,7 +63,7 @@ function RequestTicket({
   return (
     <Ticket>
       <article id={`request-${request.id}`} className={styles.ticketContent}>
-        {coverDocumentId ? (
+        {coverDocumentId && (
           <div className={styles.photo}>
             {/* eslint-disable-next-line @next/next/no-img-element -- authenticated file route, loaded lazily */}
             <img
@@ -77,8 +76,6 @@ function RequestTicket({
             />
             <span className="caption">Photo attached</span>
           </div>
-        ) : (
-          <div className={styles.photoEmpty}>No photo yet</div>
         )}
         <strong>{request.title}</strong>
         <span className="muted" style={{ fontSize: 12 }}>
@@ -191,10 +188,7 @@ export default async function MaintenancePage({
         activeTab="maintenance"
       />
       <PageHeader
-        actions={[
-          { label: 'Assign vendor', href: '#requests' },
-          { label: '+ New request', href: '#new-request', primary: true },
-        ]}
+        actions={[{ label: '+ New request', href: '#new-request', primary: true }]}
       />
       <div className="kpis">
         <KpiCard
@@ -210,8 +204,6 @@ export default async function MaintenancePage({
               ? `${summary.firstUrgent.title} · ${summary.firstUrgent.property.name}`
               : 'No urgent requests'
           }
-          trend={summary.urgent ? 'Urgent' : undefined}
-          trendWarm
         />
         <KpiCard label="Completed this week" value={summary.completedThisWeek} note="Requests resolved" />
       </div>
@@ -307,11 +299,6 @@ export default async function MaintenancePage({
           </button>
         </form>
       </section>
-      <Alert>
-        <strong>Keep tenants informed.</strong>
-        <br />
-        Status changes and vendor visits can be shared with residents from each work order.
-      </Alert>
     </>
   );
 }

@@ -14,10 +14,9 @@ export function EmptyState({
 }) {
   return (
     <div className={styles.empty}>
-      <div className={styles.emptyMark} aria-hidden="true">＋</div>
       <h2>{title}</h2>
       <p>{description}</p>
-      <Link className="btn btn-primary" href={href}>{action}</Link>
+      <Link className="btn btn-secondary btn-sm" href={href}>{action}</Link>
     </div>
   );
 }

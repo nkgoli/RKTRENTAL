@@ -19,8 +19,8 @@ export function UnitPicker({
   action?: string;
 }) {
   return (
-    <form method="get" action={action} onChange={submitOnChange}>
-      <label className="field" style={{ minWidth: 200 }}>
+    <form method="get" action={action} onChange={submitOnChange} style={{ flex: '1 1 200px', minWidth: 0 }}>
+      <label className="field">
         Unit
         <select name="unit" defaultValue={unitId}>
           {units.map((unit) => (
@@ -50,7 +50,7 @@ export function FilterBar({ unitId, filters, action }: { unitId: string; filters
   return (
     <form method="get" action={action} className="form" onChange={submitOnChange} aria-label="Comp filters">
       <input type="hidden" name="unit" value={unitId} />
-      <div className="form-row" style={{ gridTemplateColumns: 'repeat(6,1fr)' }}>
+      <div className="form-row six">
         <label className="field">
           Radius
           <select name="radius" defaultValue={String(filters.radiusMiles)}>

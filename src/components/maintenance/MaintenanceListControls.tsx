@@ -89,7 +89,7 @@ export function MaintenanceListFooter({
   const first = total === 0 ? 0 : (page - 1) * MAINTENANCE_PAGE_SIZE + 1;
   const last = Math.min(page * MAINTENANCE_PAGE_SIZE, total);
   return (
-    <nav className="row between" aria-label="Request pagination">
+    <nav className="pager" aria-label="Request pagination">
       <p className="muted" style={{ fontSize: 13 }}>
         {usesRecentWindow(query)
           ? `Showing open requests and requests completed in the last ${RECENT_DONE_DAYS} days. `
@@ -109,29 +109,29 @@ export function MaintenanceListFooter({
         </Link>
       )}
       {pageCount > 1 && (
-        <div className="row">
+        <span className="pager-links">
           {page > 1 ? (
-            <Link className="btn btn-secondary btn-sm" rel="prev" href={href({ page: page - 1 })}>
-              Previous
+            <Link className="chip" rel="prev" href={href({ page: page - 1 })}>
+              ‹ Prev
             </Link>
           ) : (
-            <span className="btn btn-secondary btn-sm" aria-disabled="true">
-              Previous
+            <span className="chip" aria-disabled="true">
+              ‹ Prev
             </span>
           )}
-          <span className="muted" style={{ fontSize: 13 }}>
-            Page {page} of {pageCount}
+          <span className="chip active" aria-current="page">
+            {page} / {pageCount}
           </span>
           {page < pageCount ? (
-            <Link className="btn btn-secondary btn-sm" rel="next" href={href({ page: page + 1 })}>
-              Next
+            <Link className="chip" rel="next" href={href({ page: page + 1 })}>
+              Next ›
             </Link>
           ) : (
-            <span className="btn btn-secondary btn-sm" aria-disabled="true">
-              Next
+            <span className="chip" aria-disabled="true">
+              Next ›
             </span>
           )}
-        </div>
+        </span>
       )}
     </nav>
   );

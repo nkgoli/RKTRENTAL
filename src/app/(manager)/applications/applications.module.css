@@ -47,11 +47,11 @@
 .stat > strong,
 .providerLogo,
 .noSelection h2 {
-  font-family: 'Space Grotesk', Inter, sans-serif;
+  font-family: var(--design-heading-font);
 }
 
 .intro h2 {
-  font-size: 22px;
+  font-size: var(--rr-h2);
   letter-spacing: -0.03em;
 }
 
@@ -159,14 +159,14 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 18px 14px;
+  padding: 12px var(--rr-card-pad);
   border-bottom: 1px solid var(--rr-border);
 }
 
 .listHeader h3,
 .reportHeading h3 {
-  font-family: 'Space Grotesk', Inter, sans-serif;
-  font-size: 17px;
+  font-family: var(--design-heading-font);
+  font-size: var(--rr-h3);
 }
 
 .listHeader p {
@@ -188,8 +188,8 @@
 .applicantActive {
   display: flex;
   align-items: flex-start;
-  gap: 11px;
-  padding: 16px 18px;
+  gap: 10px;
+  padding: 10px var(--rr-card-pad);
   color: var(--design-text) !important;
 }
 
@@ -199,7 +199,7 @@
 
 .applicantActive {
   border-left: 3px solid var(--design-primary);
-  padding-left: 15px;
+  padding-left: 13px;
   background: var(--rr-primary-tint);
 }
 
@@ -208,7 +208,7 @@
   min-width: 0;
   flex: 1;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .applicantBody > strong {
@@ -229,7 +229,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  margin-top: 4px;
+  margin-top: 2px;
   color: var(--design-muted);
   font-size: 11px;
 }
@@ -269,7 +269,7 @@
 }
 
 .identity h2 {
-  font-size: 22px;
+  font-size: var(--rr-h2);
   letter-spacing: -0.03em;
 }
 
@@ -479,8 +479,8 @@
 
 .detail > h2,
 .noSelection h2 {
-  font-family: 'Space Grotesk', Inter, sans-serif;
-  font-size: 20px;
+  font-family: var(--design-heading-font);
+  font-size: var(--rr-h2);
 }
 
 .detail > p,

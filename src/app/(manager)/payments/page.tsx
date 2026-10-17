@@ -139,7 +139,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         <KpiCard
           label="Collected this month"
           value={formatUsd(overview.collectedCents)}
-          note={`${collectedPercent}% of ${formatUsd(dueCents)}`}
+          note={`of ${formatUsd(dueCents)} due`}
           ring={collectedPercent}
           ringLabel={`${collectedPercent}% of rent collected`}
         />
@@ -152,11 +152,6 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
           label="Late"
           value={formatUsd(overview.lateCents)}
           note={`${overview.lateCount} past-due ${overview.lateCount === 1 ? 'payment' : 'payments'}`}
-        />
-        <KpiCard
-          label="Next owner payout"
-          value={formatUsd(overview.payoutReadyCents)}
-          note={overview.payoutReadyCents ? 'Ready to transfer' : 'Nothing waiting'}
         />
       </div>
 

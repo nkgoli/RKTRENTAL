@@ -9,7 +9,10 @@ import {
   yearOverYearChange,
   type YearlyPoint,
 } from '@/lib/returns/period';
-import { formatUsd } from '@/lib/ledger';
+import { formatMoney } from '@/lib/properties/format';
+
+/** Returns are summaries: whole dollars, like the rest of the reports. */
+const formatUsd = (cents: number) => formatMoney(Math.round(cents) / 100);
 
 /**
  * Range chips plus a custom from/to month form. The selection lives in the

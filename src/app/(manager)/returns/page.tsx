@@ -12,7 +12,8 @@ import {
   EXPENSE_CATEGORIES,
   EXPENSE_CATEGORY_LABELS,
 } from '@/lib/expenses';
-import { formatUsd } from '@/lib/ledger';
+import { formatMoney } from '@/lib/properties/format';
+import { AutoSubmitSelect } from '@/components/ui/AutoSubmitSelect';
 import {
   formatPercent,
   loadReturnsOverview,
@@ -24,6 +25,9 @@ import { RangePicker, YearOverYear } from '@/components/returns/RangePicker';
 import { addExpenseAction } from './actions';
 
 export const dynamic = 'force-dynamic';
+
+/** Returns are summaries: whole dollars, like the rest of the reports. */
+const formatUsd = (cents: number) => formatMoney(Math.round(cents) / 100);
 
 type SearchParams = Promise<{
   period?: string;
@@ -108,23 +112,25 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             <input key={name} type="hidden" name={name} value={value} />
           ))}
           <Field label="Property">
-            <Select name="property" defaultValue={selected?.propertyId ?? 'all'}>
+            <AutoSubmitSelect name="property" defaultValue={selected?.propertyId ?? 'all'}>
               <option value="all">All properties ({overview.properties.length})</option>
               {overview.properties.map((p) => (
                 <option key={p.propertyId} value={p.propertyId}>
                   {p.propertyName}
                 </option>
               ))}
-            </Select>
+            </AutoSubmitSelect>
           </Field>
-          <Button type="submit" variant="secondary" size="sm">
-            Apply
-          </Button>
+          <noscript>
+            <Button type="submit" variant="secondary" size="sm">
+              Show
+            </Button>
+          </noscript>
         </form>
       </section>
 
       {metrics && (
-        <section className="kpis">
+        <section className="kpis three">
           <KpiCard
             label="Net operating income"
             value={formatUsd(metrics.noiCents)}
@@ -220,11 +226,16 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
               );
             })}
           </svg>
-          {!selected && overview.yearly.length > 1 && (
-            <div style={{ marginTop: 12 }}>
-              <YearOverYear rows={overview.yearly} />
-            </div>
-          )}
+          <div className="row" style={{ justifyContent: 'center', gap: 16, fontSize: 12, color: 'var(--design-muted)' }}>
+            <span className="row" style={{ gap: 6 }}>
+              <i style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--design-primary)' }} />
+              Income
+            </span>
+            <span className="row" style={{ gap: 6 }}>
+              <i style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--design-accent)' }} />
+              Expenses
+            </span>
+          </div>
         </Card>
         <Card>
           <div className="card-header">
@@ -251,6 +262,13 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           </ul>
         </Card>
       </section>
+
+      {!selected && overview.yearly.length > 1 && (
+        <Card>
+          <CardHeader title="Year over year" action={<span className="muted">{period.label}</span>} />
+          <YearOverYear rows={overview.yearly} />
+        </Card>
+      )}
 
       <section className="card flush">
         <div className="card-header">

@@ -1,4 +1,4 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/RouteStates';
 import { requireTenantRole } from '@/lib/auth/access';
@@ -16,7 +16,7 @@ export default async function TenantLeasePage() {
   if (!view) {
     return (
       <>
-        <h1 style={{ fontSize: 22 }}>My lease</h1>
+        <h1 style={{ fontSize: 'var(--rr-h1)' }}>My lease</h1>
         <EmptyState title="No active lease yet" description="Your property manager will add it here once it is set up." action="Check again" href="/lease" />
       </>
     );
@@ -27,10 +27,9 @@ export default async function TenantLeasePage() {
   return (
     <>
       <div>
-        <p className="eyebrow">{view.premises}</p>
-        <h1 style={{ fontSize: 22 }}>{view.tenantName}</h1>
-        <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-          Manager: {view.managerName} · {view.propertyName}
+        <h1 style={{ fontSize: 'var(--rr-h1)' }}>{view.tenantName}</h1>
+        <p className="muted" style={{ fontSize: 13, marginTop: 2 }}>
+          Managed by {view.managerName}
         </p>
       </div>
 
@@ -46,8 +45,6 @@ export default async function TenantLeasePage() {
         <dl className="kv" style={{ gridTemplateColumns: '110px 1fr' }}>
           <dt>Property</dt>
           <dd>{view.premises.replace(' · ', ' — ')}</dd>
-          <dt>Tenant</dt>
-          <dd>{view.tenantName}</dd>
           {others.length > 0 && (
             <>
               <dt>Occupants</dt>
@@ -62,8 +59,6 @@ export default async function TenantLeasePage() {
           <dd>{formatUsd(view.monthlyRentCents)} / month</dd>
           <dt>Deposit</dt>
           <dd>{formatUsd(view.depositCents)} · Held</dd>
-          <dt>Manager</dt>
-          <dd>{view.managerName}</dd>
           {view.notice?.kind === 'move-out' && (
             <>
               <dt>Notice given</dt>
@@ -107,7 +102,7 @@ export default async function TenantLeasePage() {
             {view.documents.length} {view.documents.length === 1 ? 'file' : 'files'}
           </Badge>
         </div>
-        {view.documents.length === 0 && <EmptyState title="No documents yet" description="Your lease and notices will appear here when your manager adds them." action="Back to home" href="/home" />}
+        {view.documents.length === 0 && <p className="muted">Your lease and notices will appear here when your manager adds them.</p>}
         {view.documents.map((doc) => {
           const badge = fileBadge(doc.mimeType);
           return (
@@ -148,7 +143,7 @@ export default async function TenantLeasePage() {
 
       {view.photos.length > 0 && (
         <section aria-labelledby="unit-photos">
-          <h2 id="unit-photos" style={{ fontSize: 16, marginBottom: 12 }}>
+          <h2 id="unit-photos" style={{ fontSize: 'var(--rr-h3)', marginBottom: 8 }}>
             Unit photos
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -170,19 +165,6 @@ export default async function TenantLeasePage() {
         </section>
       )}
 
-      <div className="row" style={{ gap: 10 }}>
-        <Link className="btn btn-primary" href="/pay" style={{ flex: 1, color: '#fff' }}>
-          Pay rent
-        </Link>
-        <Link className="btn btn-secondary" href="/repairs" style={{ flex: 1 }}>
-          Request repair
-        </Link>
-      </div>
-      <p style={{ textAlign: 'center' }}>
-        <Link href="/home" style={{ fontSize: 13 }}>
-          ← Back to home
-        </Link>
-      </p>
     </>
   );
 }

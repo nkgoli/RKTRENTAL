@@ -60,17 +60,12 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
     return (
       <>
         <div>
-          <h1 style={{ fontSize: 22 }}>Pay rent</h1>
+          <h1 style={{ fontSize: 'var(--rr-h1)' }}>Pay rent</h1>
           <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
             {session.name}
           </p>
         </div>
         <EmptyState title="No active lease" description="There is no active lease on your account yet, so there is nothing to pay." action="Check again" href="/pay" />
-        <p style={{ textAlign: 'center' }}>
-          <Link href="/home" style={{ fontSize: 13 }}>
-            ← Back to home
-          </Link>
-        </p>
       </>
     );
   }
@@ -84,13 +79,10 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
   return (
     <>
       <div>
-        <p className="eyebrow">
+        <h1 style={{ fontSize: 'var(--rr-h1)' }}>Pay {headingMonth} rent</h1>
+        <p className="muted" style={{ fontSize: 13, marginTop: 2 }}>
           {view.propertyName}
           {view.unitLabel ? ` · Unit ${view.unitLabel}` : ''}
-        </p>
-        <h1 style={{ fontSize: 22 }}>Pay {headingMonth} rent</h1>
-        <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-          {view.tenantName}
           {dueDate ? ` · Due ${fullDate(dueDate)}` : ' · Nothing due right now'}
         </p>
       </div>
@@ -128,7 +120,7 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
             <div style={{ borderTop: '1px solid var(--rr-border)', margin: '14px 0' }} />
             <div className="row between">
               <strong>Total due{dueDate ? ` ${shortDate(dueDate)}` : ''}</strong>
-              <strong style={{ fontSize: 20 }}>{formatUsd(amountDue.totalDueCents)}</strong>
+              <strong style={{ fontSize: 'var(--rr-h2)' }}>{formatUsd(amountDue.totalDueCents)}</strong>
             </div>
             {amountDue.pendingCents > 0 && (
               <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
@@ -157,7 +149,7 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
         />
       ) : (
         <section aria-labelledby="payment-method-title">
-          <h2 id="payment-method-title" style={{ fontSize: 16, marginBottom: 4 }}>
+          <h2 id="payment-method-title" style={{ fontSize: 'var(--rr-h3)', marginBottom: 4 }}>
             Payment method
           </h2>
           <p className="muted" style={{ fontSize: 13 }}>
@@ -193,7 +185,7 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
               <span style={{ flex: 1 }}>
                 <strong style={{ display: 'block', fontSize: 14 }}>{receipt.label}</strong>
                 <small className="muted">
-                  {receipt.status === 'SUCCEEDED' ? 'Paid' : 'Started'} {shortDate(receipt.date)}
+                  {shortDate(receipt.date)}
                 </small>
               </span>
               <span style={{ textAlign: 'right' }}>
@@ -215,15 +207,9 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
             </div>
           ))
         ) : (
-          <EmptyState title="No payments yet" description="Your receipts will appear here after your first payment." action="Back to home" href="/home" />
+          <p className="muted">Your receipts will appear here after your first payment.</p>
         )}
       </section>
-
-      <p style={{ textAlign: 'center' }}>
-        <Link href="/home" style={{ fontSize: 13 }}>
-          ← Back to home
-        </Link>
-      </p>
     </>
   );
 }

@@ -29,7 +29,7 @@
   flex-wrap: wrap;
 }
 .statusHeading h2 {
-  font-size: 22px;
+  font-size: var(--rr-h2);
 }
 .statusHeading p:last-child {
   margin-top: 4px;

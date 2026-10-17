@@ -1,63 +1,34 @@
-.backLink {
-  display: inline-block;
-  margin: 0 0 10px;
-  color: var(--design-primary);
-  font-size: 13px;
-  font-weight: 600;
-}
-.summary {
+.summaryLine {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 20px;
   flex-wrap: wrap;
-  padding: var(--rr-card-pad);
-  border: var(--rr-card-border);
-  border-radius: var(--rr-card-radius);
-  background: var(--design-surface);
-  box-shadow: var(--rr-card-shadow);
-}
-.summary h2 {
-  font-size: var(--rr-h2);
-  margin: 6px 0 12px;
-}
-.summaryItems {
-  display: flex;
-  align-items: center;
-  gap: 26px;
-  flex-wrap: wrap;
-}
-.summaryItem span {
-  display: block;
-  color: var(--design-muted);
-  font-size: 12px;
-  margin-bottom: 4px;
-}
-.summaryItem strong {
-  font-size: 15px;
-}
-.tenantFaces {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  gap: 8px;
+  font-size: 14px;
 }
 .amendment {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   flex-wrap: wrap;
-  background: #eef3ff;
-  border: 1px solid #dce5fb;
-  border-radius: var(--design-radius);
-  padding: 18px 22px;
 }
-.amendment h2 {
-  font-size: 17px;
+.amendment h3 {
+  font-size: var(--rr-h3);
 }
 .amendment p {
-  color: var(--design-muted);
-  margin-top: 4px;
+  margin-top: 2px;
+}
+.editTerms {
+  margin-top: 12px;
+}
+.editTerms > summary {
+  list-style: none;
+}
+.editTerms > summary::-webkit-details-marker {
+  display: none;
+}
+.editTerms[open] > summary {
+  margin-bottom: 12px;
 }
 .documentGrid {
   display: grid;
@@ -118,7 +89,7 @@
   place-items: center;
   border: 1px solid var(--rr-border);
   border-radius: 8px;
-  font-size: 22px;
+  font-size: var(--rr-h2);
   line-height: 1;
 }
 .documentMenu > summary::-webkit-details-marker {
@@ -191,7 +162,7 @@
 .signedTerms { border: var(--rr-card-border); border-radius: var(--rr-card-radius); background: white; padding: var(--rr-card-pad); margin: 0; }
 .signedTerms h2 { font-size: var(--rr-h2); margin: 0; }
 .signedGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 16px 0; }
-.signedGrid article { border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; }
+.signedGrid article { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; }
 .signedGrid h3 { font-size: 14px; margin: 0 0 6px; }
 .signedGrid p { font-size: 13px; line-height: 1.5; margin: 0; white-space: pre-wrap; }
 @media(max-width: 800px) { .signedGrid { grid-template-columns: 1fr; } }

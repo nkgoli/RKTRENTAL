@@ -1,16 +1,21 @@
 .board {
   min-width: 0;
 }
+/* All five status columns side by side on desktop; Cancelled never wraps onto its own row. */
+.board :global(.kanban) {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
 .ticketContent {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
   scroll-margin-top: 24px;
 }
 .photo,
 .photoEmpty {
-  height: 78px;
-  border-radius: var(--design-radius);
+  height: 64px;
+  border-radius: 8px;
   background-color: #e2e8f0;
   background-position: center;
   background-size: cover;
@@ -54,7 +59,7 @@
   padding-top: 10px;
   font-size: 12px;
 }
-.compactForm input,
+.compactForm input:not([type='file']),
 .compactForm select,
 .compactForm textarea {
   min-width: 0;
@@ -90,11 +95,6 @@
 }
 .newRequest :global(.btn) {
   align-self: flex-start;
-}
-@media (max-width: 1100px) {
-  .board :global(.kanban) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 @media (max-width: 720px) {
   .board :global(.kanban) {

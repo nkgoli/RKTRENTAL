@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
-import { Avatar, Badge, Card, cx, SearchInput, Stat, Table, TableHead } from '@/components/ui';
+import { Avatar, Badge, Card, cx, Pagination, SearchInput, Stat, Table, TableHead } from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import { formatDate, formatMoney, initials } from '@/lib/tenants/format';
 import { organizationTenants, PAGE_SIZE } from '@/lib/tenants/queries';
@@ -30,13 +30,13 @@ const STATUS_CHIP: Record<StatusFilter, string> = {
 };
 
 function href(params: { q?: string; property?: string; status?: StatusFilter; page?: number }) {
-  const query = new URLSearchParams();
+  const query = new URLSearchParams({ view: 'directory' });
   if (params.q) query.set('q', params.q);
   if (params.property) query.set('property', params.property);
   if (params.status && params.status !== 'all') query.set('status', params.status);
   if (params.page && params.page > 1) query.set('page', String(params.page));
   const text = query.toString();
-  return text ? `/tenants?${text}` : '/tenants';
+  return `/tenants?${text}`;
 }
 
 export default async function TenantsPage({ searchParams }: { searchParams: SearchParams }) {
@@ -57,8 +57,6 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
     view === 'status' ? tenants.setupRows() : Promise.resolve([]),
   ]);
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-  const to = Math.min(total, page * PAGE_SIZE);
 
   return (
     <>
@@ -86,6 +84,7 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
           q={q}
           property={property}
           period={period}
+          page={first(raw.page)}
         />
       ) : (
         <>
@@ -244,30 +243,14 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
                 ))}
               </tbody>
             </Table>
+            <Pagination
+              page={Math.min(page, pages)}
+              total={total}
+              size={PAGE_SIZE}
+              noun={total === 1 ? 'tenant' : 'tenants'}
+              href={(n) => href({ q, property, status, page: n })}
+            />
           </Card>
-
-          <div className="toolbar">
-            <span className="muted">
-              Showing {from}–{to} of {total} {total === 1 ? 'tenant' : 'tenants'}
-            </span>
-            {pages > 1 && (
-              <div className="chips">
-                {page > 1 && (
-                  <Link className="chip" href={href({ q, property, status, page: page - 1 })}>
-                    Previous
-                  </Link>
-                )}
-                <span className="chip active">
-                  {page} / {pages}
-                </span>
-                {page < pages && (
-                  <Link className="chip" href={href({ q, property, status, page: page + 1 })}>
-                    Next
-                  </Link>
-                )}
-              </div>
-            )}
-          </div>
 
           <AddTenantForm properties={properties} action={addTenantAction} />
         </>

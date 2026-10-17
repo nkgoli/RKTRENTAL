@@ -114,5 +114,5 @@
   place-items: center;
   border-radius: 50%;
   background: #fff2e9;
-  font-size: 22px;
+  font-size: var(--rr-h2);
 }

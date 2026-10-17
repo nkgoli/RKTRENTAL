@@ -4,7 +4,7 @@ import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
 import { scopeFilterFrom, scopeQuery, type ScopeFilter } from '@/lib/workspace/scope';
 import { Badge, Card, Tabs } from '@/components/ui';
 import { KpiCard } from '@/components/dashboard/KpiCard';
-import { PAGE_SIZE } from '@/components/ui/Pagination';
+import { PAGE_SIZE, Pagination } from '@/components/ui/Pagination';
 import { requireManagerRole } from '@/lib/auth/access';
 import { formatMoney } from '@/lib/properties/format';
 import { signLabel, term } from '@/lib/leases/format';
@@ -97,8 +97,6 @@ export default async function LeasesPage({
           label="Expiring in 60 days"
           value={counts.expiring}
           note="Renewal reminders ready"
-          trend={counts.expiring ? `${counts.expiring} to renew` : undefined}
-          trendWarm
         />
         <KpiCard label="Awaiting e-signature" value={counts.awaiting} note="Pending signatures" />
       </section>
@@ -192,8 +190,7 @@ export default async function LeasesPage({
                           <small>
                             <Link href={`/properties/${property.id}/units/${lease.unitId}`}>
                               Unit {lease.unit.number}
-                            </Link>{' '}
-                            · Multi-unit
+                            </Link>
                           </small>
                         </>
                       )}
@@ -205,8 +202,7 @@ export default async function LeasesPage({
                     </td>
                     <td className="num">
                       <strong>{formatMoney(Number(lease.monthlyRent))}</strong>
-                      <br />
-                      <small className="muted">per month</small>
+                      <small className="muted">/mo</small>
                     </td>
                     <td>
                       <Badge
@@ -232,32 +228,13 @@ export default async function LeasesPage({
             </tbody>
           </table>
         </div>
-        <div
-          className="muted"
-          style={{
-            padding: '14px 20px',
-            borderTop: '1px solid var(--rr-border)',
-            fontSize: 13,
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          {rows.length
-            ? `Showing ${(page - 1) * PAGE_SIZE + 1}–${(page - 1) * PAGE_SIZE + shown.length} of ${rows.length} ${tab === 'expiring' ? 'expiring' : tab} leases`
-            : 'No leases match this view.'}
-          <span className="row" style={{ marginLeft: 'auto' }}>
-            {page > 1 && (
-              <Link className="btn btn-secondary btn-sm" href={tabHref(tab, q, page - 1, scope)}>
-                ‹ Previous
-              </Link>
-            )}
-            {page * PAGE_SIZE < rows.length && (
-              <Link className="btn btn-secondary btn-sm" href={tabHref(tab, q, page + 1, scope)}>
-                Next ›
-              </Link>
-            )}
-          </span>
-        </div>
+        <Pagination
+          page={page}
+          total={rows.length}
+          size={PAGE_SIZE}
+          noun={`${tab === 'expiring' ? 'expiring' : tab} leases`}
+          href={(n) => tabHref(tab, q, n, scope)}
+        />
       </Card>
     </>
   );

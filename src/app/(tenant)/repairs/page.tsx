@@ -1,4 +1,3 @@
-﻿import Link from 'next/link';
 import { Badge, type BadgeTone } from '@/components/ui/Badge';
 import { Alert, Progress } from '@/components/ui/Feedback';
 import { FileUploader } from '@/components/upload';
@@ -53,21 +52,22 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
   if (!view) {
     return (
       <>
-        <h1 style={{ fontSize: 22 }}>Repairs</h1>
+        <h1 style={{ fontSize: 'var(--rr-h1)' }}>Repairs</h1>
         <EmptyState title="No active lease" description="There is no active lease on your account yet, so you cannot send a repair request." action="Check again" href="/repairs" />
       </>
     );
   }
 
+  // Only photos this tenant can open: their lease's uploads, or unit photos without a lease.
+  const visiblePhotos = <T extends { document: { leaseId: string | null } | null }>(photos: T[]) =>
+    photos.filter(({ document }) => document && (!document.leaseId || document.leaseId === view.leaseId));
+
   return (
     <>
       <div>
-        <p className="eyebrow">
-          {view.propertyName} · Unit {view.unitNumber}
-        </p>
-        <h1 style={{ fontSize: 22 }}>Repairs</h1>
-        <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-          {view.tenantName} · Your manager will assign a vendor and confirm timing.
+        <h1 style={{ fontSize: 'var(--rr-h1)' }}>Repairs</h1>
+        <p className="muted" style={{ fontSize: 13, marginTop: 2 }}>
+          {view.propertyName}{view.unitLabel ? ` · ${view.unitLabel}` : ''} · Your manager will assign a vendor and confirm timing.
         </p>
       </div>
 
@@ -82,7 +82,7 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
           <h3 id="new-request-title" style={{ fontSize: 15 }}>
             New repair request
           </h3>
-          <Badge tone="info">Unit {view.unitNumber}</Badge>
+          {view.unitLabel && <Badge tone="info">{view.unitLabel}</Badge>}
         </div>
         <form className="form" method="post" action="/repairs/submit" encType="multipart/form-data">
           <label className="field">
@@ -142,12 +142,12 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
       </section>
 
       <section aria-labelledby="your-requests-title">
-        <h2 id="your-requests-title" style={{ fontSize: 16, marginBottom: 12 }}>
+        <h2 id="your-requests-title" style={{ fontSize: 'var(--rr-h3)', marginBottom: 8 }}>
           Your requests
         </h2>
         <div className="stack" style={{ gap: 12 }}>
           {view.requests.length === 0 && (
-            <EmptyState title="No repair requests yet" description="Describe what needs fixing and your manager will follow up." action="Start a repair request" href="#new-request-title" />
+            <p className="muted">No repair requests yet. Describe what needs fixing above and your manager will follow up.</p>
           )}
           {view.requests.map((request) => {
             const { category, text } = parseDescription(request.description);
@@ -173,9 +173,9 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
                 {text && (
                   <p style={{ fontSize: 13, marginTop: 8, whiteSpace: 'pre-wrap' }}>{text}</p>
                 )}
-                {request.photos.length > 0 && (
+                {visiblePhotos(request.photos).length > 0 && (
                   <div className={styles.photos}>
-                    {request.photos.map(({ id, document }) =>
+                    {visiblePhotos(request.photos).map(({ id, document }) =>
                       document ? (
                         <div
                           key={id}
@@ -234,15 +234,6 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
         </div>
       </section>
 
-      <p style={{ textAlign: 'center' }}>
-        <Link href="/home" style={{ fontSize: 13 }}>
-          ← Back to home
-        </Link>{' '}
-        ·{' '}
-        <Link href="/pay" style={{ fontSize: 13 }}>
-          Pay rent
-        </Link>
-      </p>
     </>
   );
 }

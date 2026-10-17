@@ -342,7 +342,8 @@ export async function loadDashboardData(
   );
   const currentCollection = collectionMonths(activeMonthLeases, now).at(-1)!;
   const collection = collectionMonths(leases, now);
-  const overdue = overdueSummary(leases, todayEnd);
+  // Same scope as the Payments rent roll: leases running this month, not balances left on ended leases.
+  const overdue = overdueSummary(activeMonthLeases, todayEnd);
   const expiryLeases: ExpiringLease[] = activeLeases
     .filter((lease) => lease.endDate >= today && lease.endDate <= expiresBy)
     .map((lease) => ({

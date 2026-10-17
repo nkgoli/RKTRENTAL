@@ -13,6 +13,8 @@ import type {
 const mockId = (prefix: string, value: string) =>
   `${prefix}_${createHash('sha256').update(value).digest('hex').slice(0, 16)}`;
 const positive = (value: number) => Number.isSafeInteger(value) && value > 0;
+// Plausible neighbourhood streets for sandbox comps, so the demo does not read "Sample St".
+const MOCK_STREETS = ['Oltorf St', 'Lamar Blvd', 'Barton Hills Dr', 'Congress Ave', 'Riverside Dr', 'Cesar Chavez St'];
 
 export class MockPaymentsProvider implements PaymentsProvider {
   readonly name = 'mock';
@@ -143,7 +145,7 @@ export class MockCompsProvider implements CompsProvider {
       const daysAgo = 4 + index * 9 + (jitter % 5);
       return {
         id: mockId('comp', `${input.postalCode}:${input.bedrooms}:${index}`),
-        address: `${210 + index * 12} Sample St, ${input.postalCode}`,
+        address: `${210 + index * 12} ${MOCK_STREETS[index % MOCK_STREETS.length]}, ${input.postalCode}`,
         monthlyRentCents:
           150000 + input.bedrooms * 25000 + index * 5000 + (jitter % 9) * 2500 - 10000,
         bedrooms: input.bedrooms,

@@ -1,4 +1,4 @@
-﻿/* Design tokens and component styles from Designs/rocketrental-app (layout system: one card, one grid). */
+/* Design tokens and component styles from Designs/rocketrental-app (layout system: one card, one grid). */
 * {
   box-sizing: border-box;
 }
@@ -70,6 +70,15 @@ h4 {
   letter-spacing: -0.02em;
   font-weight: 600;
   color: var(--design-text);
+}
+/* Default section heading sizes follow the 26/18/15 scale; page titles set their own. */
+h2 {
+  font-size: var(--rr-h2);
+  line-height: 1.3;
+}
+h3 {
+  font-size: var(--rr-h3);
+  line-height: 1.35;
 }
 p {
   margin: 0;
@@ -459,6 +468,10 @@ a.card:hover {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--rr-gap);
 }
+/* More than four tiles: a fixed three-column grid so labels and charts never squeeze. */
+.kpis.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 
 .card.stat,
 .card.kpi {
@@ -508,9 +521,9 @@ a.card:hover {
   white-space: nowrap;
 }
 .btn-primary {
-  background: linear-gradient(135deg, #27479f, #1e3a8a);
+  background: var(--design-primary);
   color: #fff;
-  box-shadow: 0 6px 14px rgb(30 58 138 / 0.3);
+  box-shadow: 0 1px 2px rgb(30 58 138 / 0.2);
 }
 .btn-primary:hover {
   background: var(--rr-primary-hover);
@@ -735,6 +748,9 @@ button.chip {
 .form-row.three {
   grid-template-columns: 1fr 1fr 1fr;
 }
+.form-row.six {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
 .field {
   display: flex;
   flex-direction: column;
@@ -835,7 +851,7 @@ button.switch {
   color: var(--rr-ok);
 }
 .steps li.done::before {
-  content: 'âœ“';
+  content: '✓';
   background: var(--rr-ok-bg);
 }
 .steps li.current {
@@ -1076,7 +1092,7 @@ button.switch {
 }
 .phone-hero {
   border-radius: var(--design-radius);
-  padding: 20px;
+  padding: var(--rr-card-pad);
   color: var(--design-text);
   background: var(--design-surface);
   border: 1px solid var(--rr-border);
@@ -1084,8 +1100,8 @@ button.switch {
 }
 .phone-hero .amount {
   font-family: var(--design-heading-font);
-  font-size: 34px;
-  font-weight: 600;
+  font-size: var(--rr-h1);
+  font-weight: 700;
   letter-spacing: -0.03em;
   margin: 4px 0;
   color: var(--design-text);
@@ -1506,4 +1522,99 @@ button.switch {
   text-align: right;
   font-variant-numeric: tabular-nums;
   color: var(--design-muted);
+}
+
+/* Compact empty state: one line of text and an optional action, no nested box. */
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--design-muted);
+  font-size: 14px;
+}
+
+/* Wide tables scroll inside their card instead of widening the page. */
+.table-scroll {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+/* Phone and small tablet: one column, actions under the title, tables scroll in their card. */
+@media (max-width: 900px) {
+  .split,
+  .grid-2,
+  .grid-3,
+  .form-row,
+  .form-row.three {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .grid-4,
+  .form-row.six {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* Rows of controls wrap instead of pushing the page sideways. */
+  .row {
+    flex-wrap: wrap;
+  }
+  .kpi .spark {
+    display: none;
+  }
+  .field input,
+  .field select {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .kpis,
+  .kpis.three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .kv {
+    grid-template-columns: minmax(96px, 38%) minmax(0, 1fr);
+  }
+  .kv dd {
+    overflow-wrap: anywhere;
+  }
+  .gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .kanban {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .topbar > div:not(.topbar-actions) {
+    flex: 1 1 calc(100% - 52px);
+  }
+  .topbar-actions {
+    flex-wrap: wrap;
+  }
+  .topbar-actions .btn {
+    height: 34px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+  .toolbar {
+    flex-wrap: wrap;
+  }
+  .search {
+    min-width: 0;
+    width: 100%;
+  }
+  .card.flush,
+  .card:has(> .table) {
+    overflow-x: auto;
+  }
+  .table th,
+  .table td {
+    padding-inline: 12px;
+  }
+  .table td {
+    white-space: nowrap;
+  }
+  .hero {
+    flex-wrap: wrap;
+  }
+  .pager {
+    flex-wrap: wrap;
+  }
 }

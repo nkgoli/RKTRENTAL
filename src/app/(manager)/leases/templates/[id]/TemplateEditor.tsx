@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { PageHeader } from '@/components/shell/PageHeader';
 import { useState } from 'react';
 import { deleteLeaseTemplateAction, saveLeaseTemplateAction, setPropertyLeaseTemplateAction } from '../actions';
 import { CONDITION_LABELS, INCLUDE_WHEN, STANDARD_FEES, type TemplateDefinition, type TemplateItem, type TemplateSection } from '@/lib/lease-create/templates';
@@ -60,11 +60,13 @@ export function TemplateEditor({ initial, properties }: { initial: TemplateDefin
     setMessage('error' in result ? result.error ?? 'Could not set default.' : 'Property default updated.');
     router.refresh();
   };
-  return <main className={styles.page}>
-    <header className={styles.header}><div><p className="eyebrow"><Link href="/leases">Leases</Link> / <Link href="/leases/templates">Templates</Link></p>
-      <h1>{initial ? 'Edit lease template' : 'Create lease template'}</h1><p className="muted">Set the terms your team starts with. Each item can still be changed in a lease draft.</p></div>
-      <div className={styles.actions}><Link className="btn btn-secondary" href="/leases/templates">All templates</Link><button className="btn btn-primary" type="button" onClick={() => save()} disabled={busy}>Save template</button></div></header>
-    <p className={styles.note}>Review templates with a local attorney before use.</p>
+  return <div className={styles.page}>
+    <PageHeader
+      eyebrow="Lease templates"
+      title={initial ? 'Edit lease template' : 'Create lease template'}
+      actions={[{ label: 'All templates', href: '/leases/templates' }]}
+    />
+    <p className="muted">Set the terms your team starts with. Each item can still be changed in a lease draft. Review templates with a local attorney before use.</p>
     {message && <p role="status" className={styles.note}>{message}</p>}
     <div className={styles.layout}><div className={styles.panel}>
       <div className={styles.panelHead}><h2>{name}</h2><span>v{initial?.version ?? 1} · Saving changes creates a new version</span></div>
@@ -97,12 +99,12 @@ export function TemplateEditor({ initial, properties }: { initial: TemplateDefin
       </div>
       <div className={styles.footer}><button type="button" className="btn btn-secondary" disabled={busy} onClick={() => save(true)}>Duplicate</button>
         {initial && <button type="button" className="btn btn-secondary" disabled={busy} onClick={remove}>Delete when unused</button>}
-        <button type="button" className="btn btn-primary" disabled={busy} onClick={() => save()}>Save changes</button></div>
+        <button type="button" className="btn btn-primary" disabled={busy} onClick={() => save()}>Save template</button></div>
     </div><aside className={styles.panel}><div className={styles.panelHead}><h2>Apply to properties</h2></div><div className={styles.panelBody}>
       {properties.map((property) => <div key={property.id} className={styles.property}><strong>{property.name}</strong>
         {property.defaultLeaseTemplateId === initial?.id ? <span>Default for this property</span>
           : <button type="button" onClick={() => setDefault(property.id)}>Set as default</button>}</div>)}
       <p className={styles.note}>The default is selected automatically for a unit in that property.</p>
     </div></aside></div>
-  </main>;
+  </div>;
 }

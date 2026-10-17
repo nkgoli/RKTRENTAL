@@ -43,6 +43,24 @@ function floorFor(slug: string, number: string, index: number): number | null {
   return null;
 }
 
+/** Realistic example residents for units without a named tenant; contact data uses example.com and 555-01xx. */
+const residentNames = [
+  'Noah Bennett', 'Emma Carter', 'Liam Foster', 'Olivia Brooks', 'Mason Reyes', 'Ava Sullivan',
+  'Ethan Hughes', 'Sophia Ramirez', 'Lucas Perry', 'Isabella Cole', 'Logan Ward', 'Mia Torres',
+  'Elijah Price', 'Amelia Barnes', 'James Ortiz', 'Harper Simmons', 'Benjamin Gray', 'Evelyn Ross',
+  'Henry Coleman', 'Abigail Hayes', 'Jack Russell', 'Ella Griffin', 'Owen Jenkins', 'Grace Powell',
+  'Daniel Webb', 'Chloe Fisher', 'Samuel Hunt', 'Lily Dixon', 'Gabriel Stone', 'Zoe Palmer',
+  'Wyatt Lane', 'Nora Fields', 'Leo Marsh', 'Hazel Burke', 'Julian Wells', 'Violet Shaw',
+  'Isaac Doyle', 'Aurora Quinn', 'Caleb Moss', 'Stella Rhodes', 'Nathan Pierce', 'Maya Holt',
+  'Adrian Boyd', 'Ruby Chandler', 'Miles Vaughn', 'Ivy Sutton',
+];
+let residentCursor = 0;
+const slugify = (value: string) => value.toLowerCase().replace(/[^a-z]+/g, '.').replace(/^\.|\.$/g, '');
+const contactFor = (name: string, index: number) => ({
+  email: `${slugify(name)}@example.com`,
+  phone: `(512) 555-01${String(10 + (index % 90)).padStart(2, '0')}`,
+});
+
 const emergencyContacts: Record<string, [string, string, string]> = {
   'Alex Rivera': ['Maria Rivera', '(512) 555-0142', 'Mother'],
   'Priya Shah': ['Dev Shah', '(512) 555-0177', 'Spouse'],
@@ -121,7 +139,7 @@ const maple: UnitSeed[] = [
     occupied: true,
     rent: 1800,
     tenant: 'Priya Shah',
-    email: 'priya.shah@email.com',
+    email: 'priya.shah@example.com',
     end: '2027-03-31',
   },
   { number: '2B', occupied: true, rent: 1850 },
@@ -150,15 +168,15 @@ const harbor: UnitSeed[] = harborNumbers.map((number, index) => ({
   number,
   occupied: index < 20 || index >= 22,
   rent: index === 23 ? 2240 : 1750,
-  ...(number === '12A' ? { tenant: 'Marcus Okafor', email: 'm.okafor@email.com' } : {}),
-  ...(number === '5' ? { tenant: 'Sofia Nguyen', email: 'sofia.n@email.com' } : {}),
-  ...(number === '306' ? { tenant: 'Mina Patel', email: 'mina.patel@email.com' } : {}),
+  ...(number === '12A' ? { tenant: 'Marcus Okafor', email: 'marcus.okafor@example.com' } : {}),
+  ...(number === '5' ? { tenant: 'Sofia Nguyen', email: 'sofia.nguyen@example.com' } : {}),
+  ...(number === '306' ? { tenant: 'Mina Patel', email: 'mina.patel@example.com' } : {}),
 }));
 const cedar: UnitSeed[] = Array.from({ length: 8 }, (_, index) => ({
   number: `Townhome ${index + 1}`,
   occupied: index < 7,
   rent: 1650,
-  ...(index === 6 ? { tenant: 'Lena Castillo', email: 'lena.c@email.com' } : {}),
+  ...(index === 6 ? { tenant: 'Lena Castillo', email: 'lena.castillo@example.com' } : {}),
 }));
 const elm: UnitSeed[] = [
   {
@@ -166,7 +184,7 @@ const elm: UnitSeed[] = [
     occupied: true,
     rent: 1690,
     tenant: 'Sam Wilson',
-    email: 'sam.wilson@email.com',
+    email: 'sam.wilson@example.com',
   },
 ];
 
@@ -308,10 +326,12 @@ async function main() {
       if (!item.occupied) continue;
 
       const tenantId = `seed-tenant-${slug}-${index + 1}`;
-      const name = item.tenant ?? `Sample Tenant ${slug.toUpperCase()}-${index + 1}`;
+      const name = item.tenant ?? residentNames[residentCursor++ % residentNames.length]!;
+      const contact = contactFor(name, residentCursor + index);
       const tenantData = {
         name,
-        email: item.email,
+        email: item.email ?? contact.email,
+        phone: contact.phone,
         ...(name === 'Alex Rivera' ? { userId: 'seed-alex-rivera' } : {}),
         ...(emergencyContacts[name]
           ? {
@@ -572,7 +592,7 @@ async function main() {
       .map((lease) => lease.id),
   );
   for (const lease of leases) {
-    for (const month of ['2026-08', '2026-09', '2026-10']) {
+    for (const month of ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10']) {
       if (new Date(`${month}-01T00:00:00.000Z`) < lease.startDate) continue;
       await prisma.charge.upsert({
         where: { id: `seed-charge-${lease.id}-${month}` },
@@ -912,10 +932,10 @@ async function seedReturnsData() {
     cedar: { TAXES: 1400, INSURANCE: 520, REPAIRS: 800, MANAGEMENT: 700, UTILITIES: 550, OTHER: 430 },
     elm: { TAXES: 350, INSURANCE: 140, REPAIRS: 220, MANAGEMENT: 180, UTILITIES: 160, OTHER: 120 },
   };
-  // Same months as the seeded rent ledger (Aug-Oct 2026), so the returns
+  // Same months as the seeded rent ledger (Jan-Oct 2026), so the returns
   // screen compares a full set of expenses against the income on record.
   const months: string[] = [];
-  for (let month = '2026-08'; month <= '2026-10'; month = addMonths(month, 1)) months.push(month);
+  for (let month = '2026-01'; month <= '2026-10'; month = addMonths(month, 1)) months.push(month);
   for (const [slug, categories] of Object.entries(monthly)) {
     for (const month of months) {
       for (const [category, amount] of Object.entries(categories)) {

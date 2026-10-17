@@ -179,9 +179,10 @@ export default async function LeaseDetailPage({
         <div className="row between"><div><p className="eyebrow">Signed agreement snapshot</p><h2 id="terms-as-signed">Terms as signed</h2></div>
           <span className="muted">Locked at send</span></div>
         <p className="muted">{snapshotTemplate?.name ?? 'Lease template'} · v{lease.templateVersion ?? 1}{lease.signedAt ? ` · Signed ${formatDate(lease.signedAt)}` : ' · Sent for signature'}</p>
+        <details className={styles.signedDetails}><summary>Show all {snapshotItems.length} clauses, rules and disclosures</summary>
         <div className={styles.signedGrid}>{snapshotItems.map((item) => <article key={item.id}>
           <h3>{item.section === 'CLAUSE' ? 'Clause' : item.section === 'RULE' ? 'Rule' : 'Disclosure'} · {item.title}</h3><p>{showSignedBody(item.body)}</p>
-        </article>)}</div>
+        </article>)}</div></details>
         <p className="muted">These words and the template version remain on this lease when a template changes.</p>
       </section>}
       <section className={styles.amendment} aria-label="Amendment or addendum">

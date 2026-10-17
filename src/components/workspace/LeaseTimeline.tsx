@@ -16,20 +16,15 @@ function segmentTitle(segment: TimelineSegment) {
 }
 
 /** Leases and vacant gaps on one date axis with a today marker; one row per unit in scope. */
-export function LeaseTimeline({ timeline, propertyId, linkUnits = false }: {
+export function LeaseTimeline({ timeline, propertyId, linkUnits = false, limit = 10 }: {
   timeline: Timeline;
   propertyId: string;
   /** Link each row's label to that unit (property view only). */
   linkUnits?: boolean;
+  /** Rows shown before the rest collapse behind "Show all". */
+  limit?: number;
 }) {
-  return <div className={styles.timeline} data-testid="lease-timeline">
-    <ul className={styles.legend} aria-label="Timeline legend">
-      <li data-kind="current">Current</li><li data-kind="next">Next</li><li data-kind="draft">Draft</li>
-      <li data-kind="past">Past</li><li data-kind="vacant">Vacant</li>
-    </ul>
-    <div className={styles.rows}>
-      {timeline.rows.length === 0 && <p className="muted">No units yet.</p>}
-      {timeline.rows.map((row) => <div className={styles.row} key={row.unitId} data-unit-row={row.unitId}>
+  const renderRow = (row: Timeline['rows'][number]) => <div className={styles.row} key={row.unitId} data-unit-row={row.unitId}>
         <div className={styles.rowLabel}>
           {linkUnits ? <Link href={`/properties/${propertyId}?unit=${encodeURIComponent(row.unitId)}`}>{row.label}</Link> : row.label}
         </div>
@@ -47,7 +42,20 @@ export function LeaseTimeline({ timeline, propertyId, linkUnits = false }: {
           })}
           <span className={styles.today} style={{ left: `${timeline.todayPct}%` }} data-testid="timeline-today" aria-hidden="true" />
         </div>
-      </div>)}
+      </div>;
+
+  return <div className={styles.timeline} data-testid="lease-timeline">
+    <ul className={styles.legend} aria-label="Timeline legend">
+      <li data-kind="current">Current</li><li data-kind="next">Next</li><li data-kind="draft">Draft</li>
+      <li data-kind="past">Past</li><li data-kind="vacant">Vacant</li>
+    </ul>
+    <div className={styles.rows}>
+      {timeline.rows.length === 0 && <p className="muted">No units yet.</p>}
+      {timeline.rows.slice(0, limit).map(renderRow)}
+      {timeline.rows.length > limit && <details className={styles.more}>
+        <summary>Show all {timeline.rows.length} units</summary>
+        <div className={styles.rows}>{timeline.rows.slice(limit).map(renderRow)}</div>
+      </details>}
     </div>
     <div className={styles.axis} aria-hidden="true">
       <span>{monthYear(timeline.start)}</span>

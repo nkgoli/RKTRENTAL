@@ -13,7 +13,6 @@ test('manager dashboard shows live portfolio data and opens an expiring lease', 
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Good morning, Jordan' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Rent collection this month' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Leases expiring soon' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible();

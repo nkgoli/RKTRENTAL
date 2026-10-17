@@ -149,7 +149,7 @@ export function computeScopedReturns(input: ScopedReturnsInput): ScopedReturns {
       periodMonths: input.period.months,
     }),
     monthly: bucketSeries(input.period, monthlyIncome, monthlyExpenses),
-    yearly: yearlyTotals(monthlyIncome, monthlyExpenses),
+    yearly: yearlyTotals(monthlyIncome, monthlyExpenses, input.period),
     expenseBreakdown: [...expenseBreakdown.entries()]
       .map(([category, values]) => ({ category, ...values }))
       .sort((a, b) => b.amountCents - a.amountCents),

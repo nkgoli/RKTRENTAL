@@ -1,7 +1,7 @@
 /* Plain hero text: no card chrome, identical on every tab. */
 .header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 144px;
+  grid-template-columns: minmax(0, 1fr) 112px;
   align-items: center;
   gap: 24px;
   margin: 8px 0 20px;
@@ -12,10 +12,10 @@
 .breadcrumbs a { color: var(--design-primary); text-decoration: none; }
 .breadcrumbs a:hover { text-decoration: underline; }
 .titleLine { margin-top: 10px; }
-.titleLine h1 { margin: 0; font-family: var(--design-heading-font); font-size: clamp(30px, 3.6vw, 42px); line-height: 1.08; letter-spacing: -.025em; color: var(--design-text); }
+.titleLine h1 { margin: 0; font-family: var(--design-heading-font); font-size: var(--rr-h1); line-height: 1.2; letter-spacing: -.025em; color: var(--design-text); }
 .address { margin: 8px 0 0; color: var(--design-muted); font-size: 15px; }
 .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.cover { overflow: hidden; min-width: 0; border-radius: 14px; }
+.cover { overflow: hidden; min-width: 0; border-radius: var(--rr-card-radius); }
 .cover :global(.cover) { min-height: 112px; }
 .tabs { display: flex; gap: 4px; overflow-x: auto; margin: 0 0 20px; border-bottom: 1px solid var(--rr-border); scrollbar-width: thin; }
 .tab { flex: 0 0 auto; padding: 12px 14px; border-bottom: 2px solid transparent; color: var(--design-muted); font-size: 14px; font-weight: 650; text-decoration: none; }

@@ -6,6 +6,7 @@ import {
   monthBucket,
   periodParams,
   type ResolvedPeriod,
+  yearOverYearChange,
   type YearlyPoint,
 } from '@/lib/returns/period';
 import { formatUsd } from '@/lib/ledger';
@@ -89,27 +90,25 @@ export function YearOverYear({ rows }: { rows: YearlyPoint[] }) {
           <th className="num">Income</th>
           <th className="num">Expenses</th>
           <th className="num">NOI</th>
+          <th className="num">YoY</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((row, index) => {
-          const prev = rows[index - 1];
-          const change =
-            prev && prev.noiCents > 0 ? (row.noiCents - prev.noiCents) / prev.noiCents : null;
+          const change = yearOverYearChange(row, rows[index - 1]);
           return (
             <tr key={row.year}>
-              <td>{row.year}</td>
+              <td>
+                {row.year}
+                {row.months < 12 && <small className="muted"> · {row.months} mo</small>}
+              </td>
               <td className="num">{formatUsd(row.incomeCents)}</td>
               <td className="num">{formatUsd(row.expensesCents)}</td>
               <td className="num">
                 <strong>{formatUsd(row.noiCents)}</strong>
-                {change !== null && (
-                  <small className="muted">
-                    {' '}
-                    {change >= 0 ? '+' : '−'}
-                    {Math.abs(change * 100).toFixed(1)}%
-                  </small>
-                )}
+              </td>
+              <td className="num muted">
+                {change === null ? '—' : `${change >= 0 ? '+' : '−'}${Math.abs(change * 100).toFixed(1)}%`}
               </td>
             </tr>
           );

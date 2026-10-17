@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { Card, CardHeader, KpiIcon, TrendChip } from '@/components/ui';
+import { Card, CardHeader } from '@/components/ui';
+import { KpiCard } from '@/components/dashboard/KpiCard';
 import { RangePicker, YearOverYear } from '@/components/returns/RangePicker';
 import { formatMoney } from '@/lib/properties/format';
 import { returnsMonthLabels, type ScopedReturns } from '@/lib/metrics/scoped';
@@ -36,15 +37,6 @@ function IncomeExpenseChart({ returns, title }: { returns: ScopedReturns; title:
   </div>;
 }
 
-function ReturnMetric({ label, value, icon, tone, note }: {
-  label: string; value: string; icon: string; tone: 'blue' | 'green' | 'coral'; note: string;
-}) {
-  return <Card className={styles.metricCard}>
-    <div className={styles.metricTop}><KpiIcon tone={tone}>{icon}</KpiIcon><TrendChip>{note}</TrendChip></div>
-    <p>{label}</p><strong>{value}</strong>
-  </Card>;
-}
-
 export function ReturnsWorkspace({ returns, propertyId, propertyName, now }: {
   returns: ScopedReturns;
   propertyId: string;
@@ -52,7 +44,6 @@ export function ReturnsWorkspace({ returns, propertyId, propertyName, now }: {
   now?: Date;
 }) {
   const title = returns.unitNumber ? `Unit ${returns.unitNumber}` : propertyName;
-  const rangeLabel = returns.period.key === '12M' ? '12 months' : returns.period.label;
   return <div className={styles.page}>
     <RangePicker
       period={returns.period}
@@ -60,10 +51,10 @@ export function ReturnsWorkspace({ returns, propertyId, propertyName, now }: {
       extra={returns.unitId ? { unit: returns.unitId } : {}}
       now={now}
     />
-    <div className={styles.metricGrid}>
-      <ReturnMetric label="Net operating income" value={moneyCents(returns.metrics.noiCents)} icon="↗" tone="green" note={rangeLabel} />
-      <ReturnMetric label="Cash flow" value={moneyCents(returns.metrics.cashFlowCents)} icon="↔" tone="blue" note="After debt" />
-      <ReturnMetric label="Cap rate" value={percent(returns.metrics.capRate)} icon="%" tone="coral" note={rangeLabel} />
+    <div className="kpis">
+      <KpiCard label="Net operating income" value={moneyCents(returns.metrics.noiCents)} note="Income less operating expenses" />
+      <KpiCard label="Cash flow" value={moneyCents(returns.metrics.cashFlowCents)} note="After debt service" />
+      <KpiCard label="Cap rate" value={percent(returns.metrics.capRate)} note="NOI on property value" />
     </div>
     <div className={styles.contentGrid}>
       <Card>

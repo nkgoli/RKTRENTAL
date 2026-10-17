@@ -20,7 +20,6 @@ import {
   Badge,
   Button,
   Cover,
-  KpiIcon,
   OccupancyRing,
   Progress,
   Sparkline,
@@ -137,9 +136,7 @@ describe('navigation', () => {
 });
 
 describe('flair components', () => {
-  it('KpiIcon and TrendChip map tone to class', () => {
-    expect(html(<KpiIcon tone="coral">x</KpiIcon>)).toContain('class="kpi-icon coral"');
-    expect(html(<KpiIcon>x</KpiIcon>)).toContain('kpi-icon blue');
+  it('TrendChip maps tone to class', () => {
     expect(html(<TrendChip>+4%</TrendChip>)).toContain('class="trend"');
     expect(html(<TrendChip warm>-2%</TrendChip>)).toContain('trend warm');
   });

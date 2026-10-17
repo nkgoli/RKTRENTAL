@@ -2,17 +2,17 @@ import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
 import { scopeFilterFrom, scopeQuery, type ScopeFilter } from '@/lib/workspace/scope';
-import { Avatar, AvatarStack, Badge, Card, KpiIcon, Tabs, TrendChip } from '@/components/ui';
-import styles from './leases.module.css';
+import { Badge, Card, Tabs } from '@/components/ui';
+import { KpiCard } from '@/components/dashboard/KpiCard';
+import { PAGE_SIZE } from '@/components/ui/Pagination';
 import { requireManagerRole } from '@/lib/auth/access';
-import { formatMoney, initials } from '@/lib/properties/format';
-import { leaseName, signLabel, term } from '@/lib/leases/format';
+import { formatMoney } from '@/lib/properties/format';
+import { signLabel, term } from '@/lib/leases/format';
 import { leasesDb, type LeaseListItem } from '@/lib/leases/queries';
 import { EmptyState } from '@/components/RouteStates';
 
 type Tab = 'active' | 'expiring' | 'drafts' | 'ended';
 const tabs: Tab[] = ['active', 'expiring', 'drafts', 'ended'];
-const PAGE_SIZE = 4;
 
 function visible(lease: LeaseListItem, tab: Tab, today: Date, in60: Date) {
   if (tab === 'expiring')
@@ -91,60 +91,26 @@ export default async function LeasesPage({
           { label: '+ New lease', href: '/leases/new', primary: true },
         ]}
       />
-      <section className={styles.kpis} aria-label="Lease portfolio stats">
-        <article className={styles.kpi}>
-          <div className={styles.kpiTop}>
-            <span>Active leases</span>
-            <KpiIcon>⌂</KpiIcon>
-          </div>
-          <strong>{counts.active}</strong>
-          <div className={styles.kpiFooter}>
-            <TrendChip>Current</TrendChip> Current leases in your portfolio
-          </div>
-        </article>
-        <article className={styles.kpi}>
-          <div className={styles.kpiTop}>
-            <span>Expiring in 60 days</span>
-            <KpiIcon tone="coral">◷</KpiIcon>
-          </div>
-          <strong>{counts.expiring}</strong>
-          <div className={styles.kpiFooter}>
-            <TrendChip warm>{counts.expiring} expiring</TrendChip> Renewal reminders ready
-          </div>
-        </article>
-        <article className={styles.kpi}>
-          <div className={styles.kpiTop}>
-            <span>Awaiting e-signature</span>
-            <KpiIcon tone="green">✎</KpiIcon>
-          </div>
-          <strong>{counts.awaiting}</strong>
-          <div className={styles.kpiFooter}>Pending signatures</div>
-        </article>
+      <section className="kpis" aria-label="Lease stats">
+        <KpiCard label="Active leases" value={counts.active} note="Current leases in your portfolio" />
+        <KpiCard
+          label="Expiring in 60 days"
+          value={counts.expiring}
+          note="Renewal reminders ready"
+          trend={counts.expiring ? `${counts.expiring} to renew` : undefined}
+          trendWarm
+        />
+        <KpiCard label="Awaiting e-signature" value={counts.awaiting} note="Pending signatures" />
       </section>
       <Card flush>
-        <div style={{ padding: '20px 20px 0' }}>
-          <div className="row between" style={{ marginBottom: 14, flexWrap: 'wrap' }}>
-            <div>
-              <div className={styles.portfolioIntro}>
-                <h2 style={{ fontSize: 20 }}>Lease portfolio</h2>
-                <AvatarStack
-                  initials={shown
-                    .slice(0, 4)
-                    .map((lease) =>
-                      initials(lease.tenants[0]?.tenant.name ?? lease.unit.property.name),
-                    )}
-                />
-              </div>
-              <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-                Each lease covers one property: a single unit, or the whole home for single-unit
-                properties.
-              </p>
-            </div>
+        <div style={{ padding: '12px var(--rr-card-pad) 0' }}>
+          <div className="row between" style={{ marginBottom: 8, flexWrap: 'wrap' }}>
+            <h2 style={{ fontSize: 'var(--rr-h3)' }}>Leases</h2>
             <form role="search" action="/leases" method="get">
               {tab !== 'active' && <input type="hidden" name="tab" value={tab} />}
               {scope.propertyId && <input type="hidden" name="propertyId" value={scope.propertyId} />}
               {scope.unitId && <input type="hidden" name="unitId" value={scope.unitId} />}
-              <label className="search" style={{ minWidth: 230 }}>
+              <label className="search" style={{ minWidth: 230, height: 32 }}>
                 <span aria-hidden="true">⌕</span>
                 <input
                   name="q"
@@ -202,8 +168,7 @@ export default async function LeasesPage({
                   <tr key={lease.id}>
                     <td>
                       <div className="cell-main">
-                        <Avatar initials={initials(leaseName(lease))} />
-                        <div>
+                                                <div>
                           <strong>
                             {tenant ? (
                               <Link href={`/tenants/${tenant.id}`} style={{ color: 'inherit' }}>
@@ -294,21 +259,6 @@ export default async function LeasesPage({
           </span>
         </div>
       </Card>
-      {counts.expiring > 0 && (
-        <div className="alert">
-          <span aria-hidden="true">✦</span>
-          <div>
-            <strong>Renewal season is coming up</strong>
-            <div>
-              {counts.expiring} {counts.expiring === 1 ? 'lease expires' : 'leases expire'} in the
-              next 60 days. Review renewal terms from each lease.
-            </div>
-          </div>
-          <Link href="/leases?tab=expiring" style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }}>
-            Review expiring →
-          </Link>
-        </div>
-      )}
     </>
   );
 }

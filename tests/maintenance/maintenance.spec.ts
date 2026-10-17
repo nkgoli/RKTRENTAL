@@ -16,7 +16,7 @@ test('manager creates a photographed request, assigns a vendor, and changes stat
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await page.goto('/maintenance');
-  await expect(page.getByRole('heading', { name: 'Repairs at a glance' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Maintenance', level: 1 })).toBeVisible();
   await expect(
     page.locator('article').filter({ hasText: 'Kitchen sink leak' }).first(),
   ).toBeVisible();

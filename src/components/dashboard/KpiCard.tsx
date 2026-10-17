@@ -1,10 +1,8 @@
-﻿import type { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import {
-  KpiIcon,
   OccupancyRing,
   Sparkline,
   TrendChip,
-  type KpiTone,
   type SparklineTone,
 } from '@/components/ui';
 
@@ -12,8 +10,7 @@ export type KpiCardProps = {
   label: string;
   value: ReactNode;
   note?: ReactNode;
-  icon: ReactNode;
-  tone?: KpiTone;
+  /** Only for a real trend (e.g. ▲ 4.1%); never a restatement of the label or period. */
   trend?: ReactNode;
   trendWarm?: boolean;
   spark?: number[];
@@ -25,13 +22,11 @@ export type KpiCardProps = {
   ringLabel?: string;
 };
 
-/** Metric card with an icon chip, optional trend chip, and a sparkline or ring. */
+/** Compact metric tile: label, value and one line of context, with an optional trend, sparkline or ring. */
 export function KpiCard({
   label,
   value,
   note,
-  icon,
-  tone = 'blue',
   trend,
   trendWarm,
   spark,
@@ -44,17 +39,17 @@ export function KpiCard({
   return (
     <article className="card kpi stat">
       <div className="kpi-top">
-        <KpiIcon tone={tone}>{icon}</KpiIcon>
+        <div className="label">{label}</div>
         {trend !== undefined && <TrendChip warm={trendWarm}>{trend}</TrendChip>}
       </div>
-      <div className="label">{label}</div>
-      <div className="value">{value}</div>
       <div className="kpi-bottom">
-        <span className="note">{note}</span>
+        <div>
+          <div className="value">{value}</div>
+          {note && <span className="note">{note}</span>}
+        </div>
         {spark && spark.length > 1 && <Sparkline values={spark} tone={sparkTone} label={sparkLabel} />}
         {ring !== undefined && <OccupancyRing value={ring} warm={ringWarm} label={ringLabel} />}
       </div>
     </article>
   );
 }
-

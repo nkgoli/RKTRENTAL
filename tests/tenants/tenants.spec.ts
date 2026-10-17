@@ -40,7 +40,7 @@ test('manager lists, searches, adds and opens a tenant', async ({ page }) => {
   await form.getByRole('button', { name: 'Save tenant' }).click();
 
   await expect(page).toHaveURL(/\/tenants\/[^/?]+$/);
-  await expect(page.getByRole('heading', { name: `Pat ${unique}`, level: 2 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: `Pat ${unique}`, level: 1 })).toBeVisible();
   await expect(page.getByText(`${unique}@example.com`)).toBeVisible();
   await expect(page.getByText('No lease', { exact: true })).toBeVisible();
 });
@@ -53,7 +53,7 @@ test('tenant detail shows lease summary linking to the lease', async ({ page }) 
     .first()
     .click();
   await expect(page).toHaveURL(/\/tenants\/seed-tenant-maple-11$/);
-  await expect(page.getByRole('heading', { name: 'Alex Rivera', level: 2 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Alex Rivera', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Lease summary' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Payment history' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'View lease' }).first()).toHaveAttribute(
@@ -72,7 +72,7 @@ test('manager moves a new tenant in and out of a vacant unit', async ({ page }) 
   await form.locator('select[name=unitId]').selectOption({ label: '3A' });
   await form.getByLabel('Move-in date').fill('2026-11-01');
   await form.getByRole('button', { name: 'Save tenant' }).click();
-  await expect(page.getByRole('heading', { name, level: 2 })).toBeVisible();
+  await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
 
   await page.getByRole('button', { name: 'Move in' }).click();
   await expect(page.getByText(/Moved in Nov 1, 2026/)).toBeVisible();

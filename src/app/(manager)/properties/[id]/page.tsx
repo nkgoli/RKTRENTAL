@@ -41,7 +41,7 @@ export default async function PropertyOverviewPage({ params, searchParams }: {
   return <>
     {notice === 'unit-deleted' && <Alert tone="success">Unit deleted.</Alert>}
     {notice === 'unit-delete-blocked' && <Alert tone="warning">This unit has linked records or is the single-family home unit, so it could not be deleted.</Alert>}
-    <PropertyOverview property={{ ...property, photos }} owners={owners} timeline={timeline} payments={payments} />
+    <PropertyOverview property={{ ...property, photos }} owners={owners} timeline={timeline} payments={payments} unitsPage={first(query.unitsPage)} />
     {!property.archived && property.type !== 'SINGLE_UNIT' && <section className={styles.forms}>
       <AddUnitForm propertyId={property.id} />
     </section>}

@@ -102,6 +102,31 @@ export function paymentMethod(providerReference?: string | null): string {
   return 'Online payment';
 }
 
+/**
+ * Human-readable payment reference for tables: "Rent · Oct 2026", "Move-in payment", "Online payment".
+ * Raw ids such as `seed:seed-lease-maple-1:2026-10` or `manual:<lease>:<key>` are never shown.
+ */
+export function describePaymentReference(providerReference?: string | null): string {
+  const ref = providerReference?.trim();
+  if (!ref) return 'Recorded manually';
+  const month = /(\d{4})-(\d{2})(?::catch-up)?$/.exec(ref);
+  const label = month
+    ? monthStart(`${month[1]}-${month[2]}`).toLocaleDateString('en-US', {
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'UTC',
+      })
+    : '';
+  if (/^(?:seed|manual):.+:\d{4}-\d{2}(?::catch-up)?$/.test(ref) || /^mock-payment-.+-\d{4}-\d{2}$/.test(ref))
+    return `Rent · ${label}`;
+  if (/:setup$/.test(ref)) return 'Move-in payment';
+  if (ref.startsWith('demo-returned:')) return label ? `Returned payment · ${label}` : 'Returned payment';
+  if (ref.startsWith('refund:')) return 'Refund';
+  if (ref.startsWith('seed:payout:')) return label ? `Owner payout · ${label}` : 'Owner payout';
+  if (ref.startsWith('manual:')) return 'Recorded manually';
+  return 'Online payment';
+}
+
 const paymentTime = (p: LedgerPayment) => (p.paidAt ?? p.createdAt)?.getTime() ?? 0;
 
 const compareCharges = (a: LedgerCharge, b: LedgerCharge) =>

@@ -1,9 +1,4 @@
-.page { display: grid; gap: 20px; }
-.metricGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.metricCard { min-width: 0; }
-.metricTop { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.metricCard > p { margin: 14px 0 4px; color: var(--design-muted); font-size: 13px; font-weight: 650; }
-.metricCard > strong { display: block; font-size: clamp(20px, 2.2vw, 27px); letter-spacing: -.03em; }
+.page { display: grid; gap: var(--rr-gap); }
 .contentGrid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, .8fr); gap: 20px; align-items: start; }
 .chartWrap { padding-top: 4px; }
 .chart { display: block; width: 100%; overflow: visible; }
@@ -23,10 +18,8 @@
 .rollup a { color: var(--design-primary); }
 
 @media (max-width: 920px) {
-  .metricGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .contentGrid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 560px) {
   .page { gap: 15px; }
-  .metricGrid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
 }

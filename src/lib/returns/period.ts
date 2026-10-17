@@ -181,25 +181,49 @@ export type YearlyPoint = {
   incomeCents: number;
   expensesCents: number;
   noiCents: number;
+  /** Months of this calendar year inside the selected range; a full year has 12. */
+  months: number;
 };
 
-/** Calendar-year totals (oldest first) for the year-over-year income statement. */
+/**
+ * Calendar-year totals (oldest first) for the year-over-year income statement. With `period`,
+ * each year records how many of its months the range covers; without it, how many months have data.
+ */
 export function yearlyTotals(
   income: ReadonlyMap<string, number>,
   expenses: ReadonlyMap<string, number>,
+  period?: Pick<ResolvedPeriod, 'start' | 'months'>,
 ): YearlyPoint[] {
   const years = new Map<number, YearlyPoint>();
-  const row = (month: string) => {
-    const year = Number(month.slice(0, 4));
+  const row = (year: number) => {
     let point = years.get(year);
-    if (!point) years.set(year, (point = { year, incomeCents: 0, expensesCents: 0, noiCents: 0 }));
+    if (!point)
+      years.set(year, (point = { year, incomeCents: 0, expensesCents: 0, noiCents: 0, months: 0 }));
     return point;
   };
-  for (const [month, cents] of income) row(month).incomeCents += cents;
-  for (const [month, cents] of expenses) row(month).expensesCents += cents;
+  if (period) {
+    for (let i = 0; i < period.months; i++) {
+      row(new Date(Date.UTC(period.start.getUTCFullYear(), period.start.getUTCMonth() + i, 1)).getUTCFullYear())
+        .months++;
+    }
+  } else {
+    const seen = new Set<string>([...income.keys(), ...expenses.keys()]);
+    for (const month of seen) row(Number(month.slice(0, 4))).months++;
+  }
+  for (const [month, cents] of income) row(Number(month.slice(0, 4))).incomeCents += cents;
+  for (const [month, cents] of expenses) row(Number(month.slice(0, 4))).expensesCents += cents;
   return [...years.values()]
     .map((p) => ({ ...p, noiCents: p.incomeCents - p.expensesCents }))
     .sort((a, b) => a.year - b.year);
+}
+
+/**
+ * Year-over-year NOI change, only between two comparable full calendar years (12 months each)
+ * and a positive prior NOI. Otherwise null, shown as "—".
+ */
+export function yearOverYearChange(row: YearlyPoint, prev: YearlyPoint | undefined): number | null {
+  if (!prev || row.months < 12 || prev.months < 12 || prev.noiCents <= 0) return null;
+  return (row.noiCents - prev.noiCents) / prev.noiCents;
 }
 
 /** Axis label for a chart bucket: "Mar" or "Q2", with a short year when the chart spans several. */

@@ -25,3 +25,5 @@
   .axis { margin-left: 0; }
 }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.more { margin-top: 10px; }
+.more > summary { cursor: pointer; color: var(--design-primary); font-size: 13px; font-weight: 600; margin-bottom: 10px; }

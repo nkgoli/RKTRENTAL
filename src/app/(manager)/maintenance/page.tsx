@@ -6,14 +6,12 @@ import { EmptyState } from '@/components/RouteStates';
 import {
   Alert,
   Avatar,
-  AvatarStack,
   Badge,
   KanbanBoard,
   KanbanColumn,
-  KpiIcon,
   Ticket,
-  TrendChip,
 } from '@/components/ui';
+import { KpiCard } from '@/components/dashboard/KpiCard';
 import { FileUploader } from '@/components/upload';
 import { requireManagerRole } from '@/lib/auth/access';
 import {
@@ -198,46 +196,24 @@ export default async function MaintenancePage({
           { label: '+ New request', href: '#new-request', primary: true },
         ]}
       />
-      <div className="row between">
-        <div>
-          <p className="eyebrow">Work orders</p>
-          <div className={styles.headingPeople}>
-            <h2>Repairs at a glance</h2>
-            <AvatarStack initials={vendors.slice(0, 4).map((vendor) => initials(vendor.name))} />
-          </div>
-          <p className="muted">From tenant photo to completed work, keep every request moving.</p>
-        </div>
-        <span className="chip active">All properties</span>
-      </div>
-      <div className={styles.stats}>
-        <article className={styles.stat}>
-          <div className={styles.statTop}>
-            <span>Open requests</span>
-            <KpiIcon>⚒</KpiIcon>
-          </div>
-          <strong>{summary.open}</strong>
-          <TrendChip>Across {summary.openProperties} properties</TrendChip>
-        </article>
-        <article className={styles.stat}>
-          <div className={styles.statTop}>
-            <span>Urgent attention</span>
-            <KpiIcon tone="coral">!</KpiIcon>
-          </div>
-          <strong>{summary.urgent}</strong>
-          <TrendChip warm>
-            {summary.firstUrgent
+      <div className="kpis">
+        <KpiCard
+          label="Open requests"
+          value={summary.open}
+          note={`Across ${summary.openProperties} ${summary.openProperties === 1 ? 'property' : 'properties'}`}
+        />
+        <KpiCard
+          label="Urgent attention"
+          value={summary.urgent}
+          note={
+            summary.firstUrgent
               ? `${summary.firstUrgent.title} · ${summary.firstUrgent.property.name}`
-              : 'No urgent requests'}
-          </TrendChip>
-        </article>
-        <article className={styles.stat}>
-          <div className={styles.statTop}>
-            <span>Completed this week</span>
-            <KpiIcon tone="green">✓</KpiIcon>
-          </div>
-          <strong>{summary.completedThisWeek}</strong>
-          <TrendChip>Requests resolved</TrendChip>
-        </article>
+              : 'No urgent requests'
+          }
+          trend={summary.urgent ? 'Urgent' : undefined}
+          trendWarm
+        />
+        <KpiCard label="Completed this week" value={summary.completedThisWeek} note="Requests resolved" />
       </div>
       <MaintenanceFilters action="/maintenance" hidden={hidden} query={query} />
       {list.isEmpty && (

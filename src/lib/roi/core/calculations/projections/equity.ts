@@ -20,12 +20,12 @@ export function generateEquityTimeline(
   const appreciationRate = fromPercent(input.appreciationExit.annualAppreciation);
   const timeline: EquityTimelineEntry[] = [];
 
-  // Initial equity is the down payment plus other cash at closing
+  // Purchase equity excludes transaction costs; ARV changes are tracked separately.
   const initialEquity = input.purchase.purchasePrice - loanAmount;
 
   // Use ARV as the initial property value if provided (accounts for instant equity)
   // ARV represents the market value after repairs, which is what appreciation is based on
-  const afterRepairValue = input.purchase.afterRepairValue || input.purchase.purchasePrice;
+  const afterRepairValue = input.purchase.afterRepairValue ?? input.purchase.purchasePrice;
   const initialPropertyValue = afterRepairValue;
 
   // Track instant equity (difference between ARV and total cost)
@@ -87,7 +87,7 @@ export function calculateSaleProceeds(
   loanPayoff: number;
   netProceeds: number;
 } {
-  const grossSalePrice = input.appreciationExit.salePriceOverride || propertyValueAtSale;
+  const grossSalePrice = input.appreciationExit.salePriceOverride ?? propertyValueAtSale;
   const sellingCosts = round(
     grossSalePrice * fromPercent(input.appreciationExit.sellingCostsPercent),
     2,

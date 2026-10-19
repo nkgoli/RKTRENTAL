@@ -168,8 +168,8 @@ export type TaxSettings = z.infer<typeof TaxSettingsSchema>;
  * Complete deal input schema
  */
 export const DealInputSchema = z.object({
-  /** Reference to the property record */
-  propertyId: z.string().uuid().optional(),
+  /** Opaque application property ID (RocketRental CUID or an imported UUID). */
+  propertyId: z.string().min(1).max(200).optional(),
   /** Schema version for migrations */
   schemaVersion: z.number().int().default(1),
   /** Property info (name, address) */

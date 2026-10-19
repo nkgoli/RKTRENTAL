@@ -40,11 +40,9 @@ import {
 } from '../calculations/projections/equity.js';
 import { evaluateWarnings } from './warnings.js';
 
-const DEFAULT_DISCOUNT_RATE = 0.08; // 8% default discount rate for NPV
-
 export interface AnalysisOptions {
   /** Discount rate for NPV calculation (as decimal, e.g., 0.08 for 8%) */
-  discountRate?: number;
+  discountRate: number;
   /** Include tax analysis */
   includeTaxAnalysis?: boolean;
   /** Include explainability steps */
@@ -56,7 +54,7 @@ export interface AnalysisOptions {
 /**
  * Main analysis function - orchestrates all calculations
  */
-export function analyze(input: DealInput, options: AnalysisOptions = {}): AnalysisResult {
+export function analyze(input: DealInput, options: AnalysisOptions): AnalysisResult {
   const startTime = 0;
   const { startDate = new Date('2000-01-01T00:00:00Z') } = options;
 
@@ -120,7 +118,7 @@ export function analyze(input: DealInput, options: AnalysisOptions = {}): Analys
   );
 
   // 7. Calculate advanced metrics
-  const discountRate = options.discountRate ?? DEFAULT_DISCOUNT_RATE;
+  const discountRate = options.discountRate;
   const holdingPeriod = validatedInput.appreciationExit.holdingPeriodYears;
 
   // Get final year data for sale calculations
@@ -129,8 +127,8 @@ export function analyze(input: DealInput, options: AnalysisOptions = {}): Analys
   // Calculate sale proceeds
   const saleProceeds = calculateSaleProceeds(
     validatedInput,
-    finalEquity?.propertyValue || validatedInput.purchase.purchasePrice,
-    finalEquity?.loanBalance || 0,
+    finalEquity?.propertyValue ?? validatedInput.purchase.purchasePrice,
+    finalEquity?.loanBalance ?? 0,
   );
 
   // Extract annual cashflows array for calculations

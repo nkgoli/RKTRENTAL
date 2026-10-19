@@ -32,7 +32,6 @@ function explicit<T extends z.ZodRawShape>(shape: T) {
     .strict();
 }
 export const DealInputSchema = SourceSchema.extend({
-  propertyId: z.string().min(1).max(200).optional(),
   purchase: explicit(SourceSchema.shape.purchase.shape),
   financing: explicit(SourceSchema.shape.financing.shape),
   income: explicit(SourceSchema.shape.income.shape),
@@ -139,6 +138,19 @@ function checkBounds(value: unknown, path = 'input'): void {
   }
   if (value && typeof value === 'object' && !(value instanceof Date)) {
     for (const [key, child] of Object.entries(value)) checkBounds(child, `${path}.${key}`);
+  }
+}
+
+/** Every nested result, including comparison series and ratios, must remain safe. */
+function assertSafeOutput(value: unknown, context: string): void {
+  if (
+    typeof value === 'number' &&
+    (!Number.isFinite(value) || Math.abs(value) > Number.MAX_SAFE_INTEGER / 100)
+  ) {
+    throw new RangeError(`${context} output outside safe monetary precision`);
+  }
+  if (value && typeof value === 'object') {
+    for (const child of Object.values(value)) assertSafeOutput(child, context);
   }
 }
 
@@ -261,16 +273,7 @@ export function analyze(input: unknown, suppliedOptions: AnalysisOptions): RoiAn
     },
   };
   // Fail closed on overflow in any nested projected amount, rather than serializing Infinity as null.
-  function finite(value: unknown): void {
-    if (
-      typeof value === 'number' &&
-      (!Number.isFinite(value) || Math.abs(value) > Number.MAX_SAFE_INTEGER / 100)
-    ) {
-      throw new RangeError('Analysis output outside safe monetary precision');
-    }
-    if (value && typeof value === 'object') Object.values(value).forEach(finite);
-  }
-  finite(result);
+  assertSafeOutput(result, 'Analysis');
   return result;
 }
 
@@ -384,7 +387,7 @@ export function compareWithBenchmarks(result: RoiAnalysis, benchmarks: Benchmark
     }),
   ];
   assets[0].projections[years - 1].value = propertyValue;
-  return {
+  const comparison = {
     initialInvestment: initial,
     holdingPeriodYears: years,
     assets,
@@ -392,4 +395,6 @@ export function compareWithBenchmarks(result: RoiAnalysis, benchmarks: Benchmark
     assumptions:
       'Pre-tax; property cash flows held without reinvestment; benchmark total return reinvested; no added yield or invented volatility.',
   };
+  assertSafeOutput(comparison, 'Comparison');
+  return comparison;
 }

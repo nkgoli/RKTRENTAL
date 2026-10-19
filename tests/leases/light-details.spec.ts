@@ -61,7 +61,7 @@ for (const width of [1280, 390]) {
     test('scoped tabs, body links, return target, keyboard and resize', async ({ page }) => {
       await page.goto(route('active', 'overview'));
       const navigation = page.getByRole('navigation', { name: 'Lease sections' });
-      for (const label of tabs) {
+      for (const label of [...tabs, ...tabs]) {
         const link = navigation.getByRole('link', { name: label, exact: true });
         await expect(link).toHaveAttribute(
           'href',
@@ -286,6 +286,17 @@ for (const width of [1280, 390]) {
       await expect(
         page.getByRole('status').filter({ hasText: `${longName} deleted.` }),
       ).toBeVisible();
+      await input.setInputFiles(
+        [1, 2].map((index) => ({
+          name: `Batch ${width}-${index}.pdf`,
+          mimeType: 'application/pdf',
+          buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n'),
+        })),
+      );
+      for (const index of [1, 2])
+        await expect(
+          page.locator('article').getByText(`Batch ${width}-${index}.pdf`, { exact: true }),
+        ).toBeVisible();
     });
 
     test('empty ledger/documents and real pending, signed and declined activity', async ({
@@ -363,6 +374,8 @@ test('result routes require a manager and do not expose unavailable leases', asy
   await page.goto('/leases/light-detail-active/result?saved=terms&scope=unit');
   await expect(page).toHaveURL(/\/sign-in\?/);
   await signIn(page);
-  const missing = await page.goto('/leases/not-a-review-lease/result?saved=terms&scope=unit');
-  expect(missing?.status()).toBe(404);
+  const missing = await page.request.get(
+    '/leases/not-a-review-lease/result?saved=terms&scope=unit',
+  );
+  expect(missing.status()).toBe(404);
 });

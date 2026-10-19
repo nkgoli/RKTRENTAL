@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requireManagerRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
 
-export type DocumentActionState = { ok?: boolean; message?: string };
+export type DocumentActionState = { ok?: boolean; message?: string; name?: string };
 
 export async function renameLeaseDocumentAction(form: FormData): Promise<DocumentActionState> {
   const session = await requireManagerRole();
@@ -24,5 +24,5 @@ export async function renameLeaseDocumentAction(form: FormData): Promise<Documen
     return { message: 'The file could not be renamed. Please try again.' };
   }
   revalidatePath(`/leases/${leaseId}`);
-  return { ok: true, message: 'Document renamed.' };
+  return { ok: true, message: 'Document renamed.', name };
 }

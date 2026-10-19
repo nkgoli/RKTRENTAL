@@ -1,9 +1,7 @@
 ﻿'use client';
 
-import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useId, useRef, useState } from 'react';
 import { Alert, Button } from '@/components/ui';
-import { FileUploader } from '@/components/upload';
 import { saveLeaseAction, type LeaseFormState } from './actions';
 import {
   activateDetailLeaseAction,
@@ -392,19 +390,5 @@ export function NoticeForm({
         {pending ? 'Saving…' : 'Record notice'}
       </Button>
     </form>
-  );
-}
-
-export function LeaseUploader({ leaseId }: { leaseId: string }) {
-  const router = useRouter();
-  return (
-    <FileUploader
-      kind="document"
-      target={{ kind: 'lease', id: leaseId }}
-      documentKind="LEASE"
-      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-      label="Upload lease document"
-      onUploaded={() => router.refresh()}
-    />
   );
 }

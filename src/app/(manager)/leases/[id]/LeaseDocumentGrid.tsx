@@ -1,10 +1,11 @@
 ﻿'use client';
 
 import { useActionState, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Alert, Button } from '@/components/ui';
+import { FileUploader, type UploadedDocument } from '@/components/upload';
+import { formatDate } from '@/lib/properties/format';
 import styles from './lease-detail.module.css';
-import { renameLeaseDocumentAction, type DocumentActionState } from './documentActions';
+import type { DocumentActionState } from './documentActions';
 
 export type LeaseDocumentItem = {
   id: string;
@@ -18,16 +19,32 @@ function DocumentCard({
   leaseId,
   document,
   onRemoved,
+  onRenamed,
 }: {
   leaseId: string;
   document: LeaseDocumentItem;
   onRemoved: (name: string) => void;
+  onRenamed: (name: string) => void;
 }) {
   const [renameState, rename, renaming] = useActionState(
-    (_previous: DocumentActionState, form: FormData) => renameLeaseDocumentAction(form),
+    async (_previous: DocumentActionState, form: FormData): Promise<DocumentActionState> => {
+      try {
+        const response = await fetch(`/leases/${encodeURIComponent(leaseId)}/documents/rename`, {
+          method: 'POST',
+          body: form,
+        });
+        if (!response.ok) throw new Error('Rename failed');
+        const state: DocumentActionState = await response.json();
+        if (state.ok && state.name) onRenamed(state.name);
+        return state;
+      } catch {
+        return { message: 'The file could not be renamed. Please try again.' };
+      }
+    },
     {},
   );
   const [confirming, setConfirming] = useState(false);
+  const [name, setName] = useState(document.name);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
   const confirmation = useRef<HTMLDivElement>(null);
@@ -35,6 +52,7 @@ function DocumentCard({
   useEffect(() => {
     if (confirming) confirmation.current?.focus();
   }, [confirming]);
+  useEffect(() => setName(document.name), [document.name]);
 
   async function remove() {
     setDeleting(true);
@@ -85,7 +103,8 @@ function DocumentCard({
                   <input
                     aria-label={`New name for ${document.name}`}
                     name="name"
-                    defaultValue={document.name}
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
                     required
                     maxLength={200}
                   />
@@ -153,33 +172,65 @@ function DocumentCard({
 export function LeaseDocumentGrid({
   leaseId,
   documents,
+  withUploader = false,
 }: {
   leaseId: string;
   documents: LeaseDocumentItem[];
+  withUploader?: boolean;
 }) {
-  const router = useRouter();
+  const [items, setItems] = useState(documents);
   const [message, setMessage] = useState('');
+  useEffect(() => setItems(documents), [documents]);
   const feedback = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (message) feedback.current?.focus();
   }, [message]);
+
+  function uploaded(file: UploadedDocument) {
+    if (!file.id || !file.name) return;
+    const item: LeaseDocumentItem = {
+      id: file.id,
+      name: file.name,
+      kind: String(file.kind).toLowerCase(),
+      uploaded: formatDate(new Date(String(file.createdAt))),
+      mimeType: String(file.mimeType),
+    };
+    // Each completed file updates independently; concurrent uploads and failed
+    // items keep their progress/retry controls instead of navigating away.
+    setItems((current) => [item, ...current.filter((entry) => entry.id !== item.id)]);
+  }
   return (
     <>
+      {withUploader && (
+        <FileUploader
+          kind="document"
+          target={{ kind: 'lease', id: leaseId }}
+          documentKind="LEASE"
+          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+          label="Upload lease document"
+          onUploaded={uploaded}
+        />
+      )}
       {message && (
         <div ref={feedback} tabIndex={-1}>
           <Alert tone="success">{message}</Alert>
         </div>
       )}
-      {!documents.length && <p className="muted">No lease documents yet.</p>}
+      {!items.length && <p className="muted">No lease documents yet.</p>}
       <div className={styles.documentGrid} aria-label="Lease documents">
-        {documents.map((document) => (
+        {items.map((document) => (
           <DocumentCard
             key={document.id}
             leaseId={leaseId}
             document={document}
+            onRenamed={(name) =>
+              setItems((current) =>
+                current.map((entry) => (entry.id === document.id ? { ...entry, name } : entry)),
+              )
+            }
             onRemoved={(name) => {
               setMessage(`${name} deleted.`);
-              router.refresh();
+              setItems((current) => current.filter((entry) => entry.id !== document.id));
             }}
           />
         ))}

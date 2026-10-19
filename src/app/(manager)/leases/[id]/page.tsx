@@ -16,7 +16,7 @@ import { EVENT_LABEL } from '@/lib/leases/events';
 import { money, signLabel, statusLabel, term } from '@/lib/leases/format';
 import { leasesDb } from '@/lib/leases/queries';
 import { formatAddress, formatDate, initials } from '@/lib/properties/format';
-import { EditTermsForm, LeaseStatusActions, LeaseUploader, NoticeForm } from '../LeaseForms';
+import { EditTermsForm, LeaseStatusActions, NoticeForm } from '../LeaseForms';
 import type { TemplateItem } from '@/lib/lease-create/templates';
 
 const CHARGE_LABEL: Record<string, string> = {
@@ -476,9 +476,9 @@ export default async function LeaseDetailPage({
                   </p>
                 </div>
               </div>
-              <LeaseUploader leaseId={lease.id} />
               <LeaseDocumentGrid
                 leaseId={lease.id}
+                withUploader
                 documents={lease.documents.map((file) => ({
                   id: file.id,
                   name: file.name,

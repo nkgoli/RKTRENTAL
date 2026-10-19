@@ -11,6 +11,8 @@ import {
   loadSavedRoiAnalysisAction,
   saveRoiAnalysisAction,
 } from '@/app/(manager)/roi-analysis/actions';
+const routeQuery = vi.hoisted(() => ({ value: null as URLSearchParams | null }));
+vi.mock('next/navigation', () => ({ useSearchParams: () => routeQuery.value }));
 vi.mock('@/app/(manager)/roi-analysis/actions', () => ({
   loadRoiDraftAction: vi.fn(),
   loadSavedRoiAnalysisAction: vi.fn(),
@@ -40,6 +42,7 @@ const make = (id = 'a') => {
 };
 beforeEach(() => {
   vi.resetAllMocks();
+  routeQuery.value = null;
   vi.mocked(loadSavedRoiAnalysisAction).mockResolvedValue({ ok: true, data: null });
   vi.mocked(loadRoiDraftAction).mockImplementation(async (id) => ({
     ok: true,
@@ -93,7 +96,7 @@ describe('ROI summary workspace', () => {
     expect(document.activeElement).toBe(keep);
     await user.tab({ shift: true });
     expect(document.activeElement).toBe(
-      screen.getByRole('button', { name: 'Discard and continue' }),
+      screen.getByRole('button', { name: 'Correct highlighted assumption' }),
     );
     await user.tab();
     expect(document.activeElement).toBe(keep);
@@ -174,6 +177,195 @@ describe('ROI summary workspace', () => {
     expect(
       (vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as { propertyId: string }).propertyId,
     ).toBe('b');
+  });
+  it('follows changed property props, bare entry and history without stale results', async () => {
+    const view = render(
+      <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="a" />,
+    );
+    await screen.findByRole('button', { name: 'Save draft' });
+    let resolve!: (v: Awaited<ReturnType<typeof loadRoiDraftAction>>) => void;
+    vi.mocked(loadRoiDraftAction).mockImplementationOnce(
+      () =>
+        new Promise((r) => {
+          resolve = r;
+        }),
+    );
+    view.rerender(
+      <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="b" />,
+    );
+    expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull();
+    expect(screen.getByText('Property b')).toBeTruthy();
+    view.rerender(
+      <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="foreign" />,
+    );
+    await screen.findByText(/unavailable or archived/);
+    await act(async () => resolve({ ok: true, data: { payload: make('b'), missing: [], facts } }));
+    expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull();
+    view.rerender(<RoiWorkspace selection={{ ok: true, data: properties }} />);
+    expect(screen.getByRole('searchbox')).toBeTruthy();
+    act(() => {
+      window.history.replaceState(null, '', '/roi-analysis?property=a');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    await screen.findByRole('button', { name: 'Save draft' });
+    act(() => {
+      window.history.replaceState(null, '', '/roi-analysis');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(screen.getByRole('searchbox')).toBeTruthy();
+  });
+  it('guards external navigation, restores cancel focus and preserves the intended destination through correction', async () => {
+    const view = render(
+      <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="a" />,
+    );
+    await screen.findByRole('button', { name: 'Save draft' });
+    fireEvent.change(rent(), { target: { value: 'invalid rent' } });
+    rent().focus();
+    view.rerender(
+      <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="b" />,
+    );
+    expect(screen.getByRole('alertdialog')).toBeTruthy();
+    expect(window.location.search).toBe('?property=a');
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
+    await waitFor(() => expect(document.activeElement).toBe(rent()));
+    const change = screen.getByRole('button', { name: 'Change property' });
+    change.focus();
+    fireEvent.click(change);
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
+    expect(saveRoiAnalysisAction).not.toHaveBeenCalled();
+    expect(screen.getByRole('alertdialog').contains(document.activeElement)).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Correct highlighted assumption' }));
+    await waitFor(() => expect(document.activeElement).toBe(rent()));
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(rent().value).toBe('invalid rent');
+    fireEvent.change(rent(), { target: { value: '0' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue property change' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
+    await screen.findByRole('searchbox');
+    expect(saveRoiAnalysisAction).toHaveBeenCalledWith(
+      expect.objectContaining({ propertyId: 'a' }),
+    );
+  });
+  it('discards invalid edits explicitly and clears revoked authorization', async () => {
+    const view = render(
+      <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="a" />,
+    );
+    await screen.findByRole('button', { name: 'Save draft' });
+    fireEvent.change(rent(), { target: { value: 'bad' } });
+    view.rerender(
+      <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="b" />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Discard and continue' }));
+    await screen.findByRole('button', { name: 'Save draft' });
+    expect(screen.getByText('Property b')).toBeTruthy();
+    expect(rent().value).not.toBe('bad');
+    view.rerender(<RoiWorkspace selection={{ ok: true, data: [] }} initialPropertyId="b" />);
+    await screen.findByText(/unavailable or archived/);
+    expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull();
+  });
+  it('keeps failed draft focus visible and resumes navigation after correction', async () => {
+    const user = userEvent.setup();
+    await open();
+    fireEvent.change(rent(), { target: { value: 'not a number' } });
+    const disclosure = rent().closest('details')!;
+    disclosure.open = false;
+    await user.click(screen.getByRole('button', { name: 'Change property' }));
+    await user.click(screen.getByRole('button', { name: 'Save draft and continue' }));
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Correct highlighted assumption' }));
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(document.activeElement).toBe(rent());
+    expect(disclosure.open).toBe(true);
+    expect(rent().value).toBe('not a number');
+    fireEvent.change(rent(), { target: { value: '1111' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue property change' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Discard and continue' }));
+    await screen.findByRole('searchbox');
+  });
+  it('retains a dirty router destination while correcting and saving', async () => {
+    const view = render(
+      <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="a" />,
+    );
+    await screen.findByRole('button', { name: 'Save draft' });
+    fireEvent.change(rent(), { target: { value: 'bad' } });
+    view.rerender(
+      <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="b" />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Correct highlighted assumption' }));
+    fireEvent.change(rent(), { target: { value: '0' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue property change' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
+    await screen.findByText('Property b');
+    await screen.findByRole('button', { name: 'Save draft' });
+    expect(window.location.search).toBe('?property=b');
+    expect(saveRoiAnalysisAction).toHaveBeenCalledWith(
+      expect.objectContaining({ propertyId: 'a' }),
+    );
+  });
+  it('invalidates a late save when clean URL navigation is accepted', async () => {
+    const view = render(
+      <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="a" />,
+    );
+    await screen.findByRole('button', { name: 'Save draft' });
+    let resolve!: (v: Awaited<ReturnType<typeof saveRoiAnalysisAction>>) => void;
+    vi.mocked(saveRoiAnalysisAction).mockImplementationOnce(
+      () =>
+        new Promise((r) => {
+          resolve = r;
+        }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    view.rerender(
+      <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="b" />,
+    );
+    await screen.findByRole('button', { name: 'Save draft' });
+    await act(async () => resolve({ ok: false, code: 'CONFLICT', currentRevision: 7 }));
+    expect(screen.queryByText(/A newer revision exists/)).toBeNull();
+    expect(screen.getByText('Property b')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Save draft' }).hasAttribute('disabled')).toBe(false);
+  });
+  it('uses live router queries even when the server initial property prop is unchanged', async () => {
+    const selection = { ok: true as const, data: properties };
+    routeQuery.value = new URLSearchParams('property=a');
+    const view = render(<RoiWorkspace selection={selection} initialPropertyId="a" />);
+    await screen.findByRole('button', { name: 'Save draft' });
+    routeQuery.value = new URLSearchParams('property=b');
+    view.rerender(<RoiWorkspace selection={selection} initialPropertyId="a" />);
+    await screen.findByText('Property b');
+    await screen.findByRole('button', { name: 'Save draft' });
+    routeQuery.value = new URLSearchParams();
+    view.rerender(<RoiWorkspace selection={selection} initialPropertyId="a" />);
+    expect(screen.getByRole('searchbox')).toBeTruthy();
+    routeQuery.value = new URLSearchParams('property=foreign');
+    view.rerender(<RoiWorkspace selection={selection} initialPropertyId="a" />);
+    await screen.findByText(/unavailable or archived/);
+    expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull();
+  });
+  it('guards ordinary same-route sidebar links while preserving modified-click gestures', async () => {
+    render(
+      <>
+        <a href="/roi-analysis">ROI sidebar entry</a>
+        <a href="/roi-analysis?property=b">Other property route</a>
+        <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="a" />
+      </>,
+    );
+    await screen.findByRole('button', { name: 'Save draft' });
+    fireEvent.change(rent(), { target: { value: 'bad' } });
+    const link = screen.getByRole('link', { name: 'ROI sidebar entry' });
+    expect(fireEvent.click(link, { ctrlKey: true })).toBe(true);
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(fireEvent.click(link)).toBe(false);
+    expect(screen.getByRole('alertdialog')).toBeTruthy();
+    fireEvent.keyDown(screen.getByRole('alertdialog'), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(rent().value).toBe('bad');
+    fireEvent.click(screen.getByRole('link', { name: 'Other property route' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Discard and continue' }));
+    await screen.findByText('Property b');
+    fireEvent.click(link);
+    expect(screen.getByRole('searchbox')).toBeTruthy();
   });
   it('keeps all-cash and fixed zero cost overrides in the public payload', () => {
     const p = make();

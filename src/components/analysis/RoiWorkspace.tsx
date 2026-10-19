@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   PayloadSchema,
   calculatePayload,
@@ -57,7 +58,11 @@ export function RoiWorkspace({
   selection: PropertySelectionResult;
   initialPropertyId?: string;
 }) {
-  const [selected, setSelected] = useState(initialPropertyId ?? '');
+  const searchParams = useSearchParams();
+  const urlProperty = searchParams
+    ? (searchParams.get('property') ?? '')
+    : (initialPropertyId ?? '');
+  const [selected, setSelected] = useState('');
   const [payload, setPayload] = useState<AnalysisPayload | null>(null);
   const [values, setValues] = useState<Values>({});
   const [tax, setTax] = useState(false);
@@ -71,6 +76,9 @@ export function RoiWorkspace({
   const [stale, setStale] = useState(false);
   const [facts, setFacts] = useState<Facts | null>(null);
   const [pending, setPending] = useState<string | null>(null);
+  const [recovery, setRecovery] = useState<string | null>(null);
+  const modal = useRef<HTMLDivElement>(null);
+  const returnFocus = useRef<HTMLElement | null>(null);
   const [conflict, setConflict] = useState(false);
   const token = useRef(0);
   const properties = selection.ok ? selection.data : [];
@@ -136,16 +144,63 @@ export function RoiWorkspace({
       if (request === token.current) setLoading(false);
     }
   }
-  const initialLoad = useRef(() => {
-    if (initialPropertyId) void load(initialPropertyId);
+  // Route changes reuse this client component. Keep the guard and request token alive.
+  const navigate = useRef<(id: string) => void>(() => {});
+  useEffect(() => {
+    navigate.current = (id) => {
+      if (id === selected && (!id || property)) return;
+      if (dirty && property) {
+        window.history.replaceState(null, '', propertyUrl(selected));
+        choose(id);
+      } else switchProperty(id, false);
+    };
   });
   useEffect(() => {
+    navigate.current(urlProperty);
+  }, [urlProperty, selection]);
+  useEffect(() => {
     const counter = token;
-    initialLoad.current();
+    const onPop = () =>
+      navigate.current(new URLSearchParams(window.location.search).get('property') ?? '');
+    window.addEventListener('popstate', onPop);
     return () => {
+      window.removeEventListener('popstate', onPop);
       counter.current++;
     };
   }, []);
+  useEffect(() => {
+    // The existing shell may render ordinary anchors. Guard ROI links here without
+    // changing shared navigation or intercepting other routes and browser gestures.
+    const onLink = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      )
+        return;
+      const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
+      if (
+        !(anchor instanceof HTMLAnchorElement) ||
+        anchor.download ||
+        (anchor.target && anchor.target !== '_self')
+      )
+        return;
+      const destination = new URL(anchor.href, window.location.href);
+      if (
+        destination.origin !== window.location.origin ||
+        destination.pathname !== '/roi-analysis' ||
+        destination.hash
+      )
+        return;
+      event.preventDefault();
+      choose(destination.searchParams.get('property') ?? '');
+    };
+    document.addEventListener('click', onLink, true);
+    return () => document.removeEventListener('click', onLink, true);
+  });
   useEffect(() => {
     if (!dirty) return;
     const warn = (e: BeforeUnloadEvent) => {
@@ -155,16 +210,48 @@ export function RoiWorkspace({
     return () => window.removeEventListener('beforeunload', warn);
   }, [dirty]);
 
-  function switchProperty(id: string) {
+  useEffect(() => {
+    if (pending === null) return;
+    const contain = () => {
+      if (!modal.current?.contains(document.activeElement)) {
+        const first = modal.current?.querySelector<HTMLButtonElement>('button:not(:disabled)');
+        (first ?? modal.current)?.focus();
+      }
+    };
+    contain();
+    document.addEventListener('focusin', contain);
+    return () => document.removeEventListener('focusin', contain);
+  }, [pending, saving]);
+
+  function propertyUrl(id: string) {
+    return id ? `/roi-analysis?property=${encodeURIComponent(id)}` : '/roi-analysis';
+  }
+  function closeGuard() {
     setPending(null);
+    queueMicrotask(() => returnFocus.current?.focus());
+  }
+  function focusField(path: string) {
+    queueMicrotask(() => {
+      const field = document.getElementById(path);
+      let ancestor = field?.parentElement;
+      while (ancestor) {
+        if (ancestor instanceof HTMLDetailsElement) ancestor.open = true;
+        ancestor = ancestor.parentElement;
+      }
+      field?.focus();
+    });
+  }
+  function switchProperty(id: string, writeHistory = true) {
+    token.current++;
+    setPending(null);
+    setRecovery(null);
+    setLoading(false);
+    setSaving(false);
+    setValues({});
     setSelected(id);
     setPayload(null);
     setResult(null);
-    window.history.replaceState(
-      null,
-      '',
-      id ? `/roi-analysis?property=${encodeURIComponent(id)}` : '/roi-analysis',
-    );
+    if (writeHistory) window.history.pushState(null, '', propertyUrl(id));
     if (id) void load(id);
     else {
       token.current++;
@@ -175,8 +262,10 @@ export function RoiWorkspace({
     }
   }
   function choose(id: string) {
-    if (dirty) setPending(id);
-    else switchProperty(id);
+    if (dirty) {
+      returnFocus.current = document.activeElement as HTMLElement;
+      setPending(id);
+    } else switchProperty(id);
   }
   function edit(path: string, value: string) {
     setValues((v) => ({ ...v, [path]: value }));
@@ -216,15 +305,7 @@ export function RoiWorkspace({
       setErrors(found);
       setStale(true);
       setMessage('Check assumptions. Prior results are out of date.');
-      queueMicrotask(() => {
-        const field = document.getElementById(found[0]?.path);
-        let ancestor = field?.parentElement;
-        while (ancestor) {
-          if (ancestor instanceof HTMLDetailsElement) ancestor.open = true;
-          ancestor = ancestor.parentElement;
-        }
-        field?.focus();
-      });
+      if (pending === null) focusField(found[0]?.path);
       return null;
     }
   }
@@ -256,7 +337,6 @@ export function RoiWorkspace({
         setMessage('Could not save analysis. Your entries are kept. Try again.');
     } finally {
       if (request === token.current) setSaving(false);
-      else setSaving(false);
     }
   }
   function renderField(f: FieldSpec) {
@@ -310,308 +390,323 @@ export function RoiWorkspace({
   const metrics = result?.summaryMetrics;
   return (
     <div className={styles.workspace}>
-      <div className={styles.heading}>
-        <div>
-          <p className={styles.eyebrow}>Property planning</p>
-          <h1>{selected ? 'ROI Analysis' : 'Choose a property'}</h1>
-          <p>Explore projected returns with assumptions you control.</p>
-        </div>
-        {selected && (
-          <button disabled={saving} onClick={() => choose('')}>
-            Change property
-          </button>
-        )}
-      </div>
-      {!selection.ok && <p role="alert">{failure(selection.code)}</p>}
-      {!selected ? (
-        <>
-          <PropertySelector properties={properties} onSelect={choose} />
-          <section className={styles.card}>
-            <h2>What you’ll need</h2>
-            <p>
-              Purchase and loan terms, rent, operating budgets, reserve policy and growth
-              assumptions. Recorded facts are starting points; missing values stay empty.
-            </p>
-          </section>
-        </>
-      ) : (
-        <>
-          <section className={styles.context}>
-            <strong>{property?.name ?? 'Unavailable property'}</strong>
-            <span>
-              {property ? `${property.street}, ${property.city} - Whole property` : selected}
-            </span>
-            <span>{dirty ? 'Unsaved changes' : `Revision ${revision}`}</span>
-          </section>
-          <p role="status" aria-live="polite">
-            {message}
+      <div inert={pending !== null}>
+        {recovery !== null && (
+          <p className={styles.notice}>
+            Your property change is waiting. Correct the highlighted assumption, then{' '}
+            <button onClick={() => choose(recovery)}>Continue property change</button>
+            <button onClick={() => setRecovery(null)}>Cancel property change</button>
           </p>
-          {loading ? (
-            <p>Loading analysis...</p>
-          ) : !payload ? (
-            <button onClick={() => load(selected)}>Retry loading</button>
-          ) : (
-            <>
-              <div className={styles.actions}>
-                <button disabled={saving} onClick={() => validate(true)}>
-                  Recalculate
-                </button>
-                <button disabled={saving || conflict} onClick={() => save('DRAFT')}>
-                  Save draft
-                </button>
-                <button
-                  className={styles.primary}
-                  disabled={saving || conflict}
-                  onClick={() => save('READY')}
-                >
-                  Save ready
-                </button>
-                <button
-                  disabled={saving}
-                  onClick={() => (dirty ? setPending(selected) : load(selected))}
-                >
-                  Reload saved analysis
-                </button>
-              </div>
-              {!!errors.length && (
-                <details className={styles.notice} open>
-                  <summary>Review {errors.length} missing or invalid assumptions</summary>
-                  <ul>
-                    {errors.map((e, i) => (
-                      <li key={i}>
-                        <a href={`#${e.path}`}>
-                          {e.path}: {e.message}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-              {stale && (
-                <p className={styles.notice} role="status">
-                  {result
-                    ? 'Out of date - recalculate to update these prior results.'
-                    : 'Complete assumptions to calculate. No valid projection is available yet.'}
-                </p>
-              )}
-              <div className={styles.layout}>
-                <div className={styles.stack}>
-                  <section className={styles.card} aria-label="Year 1 at a glance">
-                    <h2>Year 1 at a glance</h2>
-                    <div className={styles.metrics}>
-                      {[
-                        ['Annual cash flow', money(metrics?.annualCashFlow)],
-                        ['Cap rate', percent(metrics?.capRate)],
-                        ['Cash-on-cash', percent(metrics?.cashOnCash)],
-                        ['Hold-period leveraged IRR', percent(metrics?.irrLeveraged)],
-                      ].map(([label, value]) => (
-                        <div key={label}>
-                          <small>{label}</small>
-                          <strong>{value}</strong>
-                        </div>
-                      ))}
-                    </div>
-                    <p>
-                      Forecast estimates - {stale ? 'out of date' : 'current assumptions'} - before
-                      tax
-                    </p>
-                  </section>
-                  <section className={styles.card}>
-                    <h2>From income to cash flow</h2>
-                    <dl className={styles.statement}>
-                      {[
-                        ['Gross potential income', metrics?.grossPotentialIncome],
-                        ['Vacancy loss', result?.incomeBreakdown.vacancyLoss],
-                        ['Effective gross income', metrics?.effectiveGrossIncome],
-                        ['Operating expenses', metrics?.totalOperatingExpenses],
-                        ['Net operating income', metrics?.noi],
-                        ['Capital reserves (below NOI)', result?.expenseBreakdown.capex],
-                        ['Modeled debt service', metrics?.annualDebtService],
-                        ['Annual cash flow', metrics?.annualCashFlow],
-                        ['Total cash required', metrics?.totalCashRequired],
-                      ].map(([label, value]) => (
-                        <div key={String(label)}>
-                          <dt>{label}</dt>
-                          <dd>{money(value as number | undefined)}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </section>
-                  <section className={styles.card}>
-                    <h2>Cash flow over time</h2>
-                    <p>Annual operating cash flow, before sale proceeds and tax.</p>
-                    {result ? (
-                      <>
-                        <div
-                          className={styles.chart}
-                          role="img"
-                          aria-label={`Annual cash flow over ${result.annualCashflows.length} years. Exact values follow.`}
-                        >
-                          {result.annualCashflows.map((y) => (
-                            <div key={y.year} title={`Year ${y.year}: ${money(y.cashFlow)}`}>
-                              <i
-                                style={{
-                                  height: `${Math.max(2, (Math.abs(y.cashFlow) / Math.max(1, ...result.annualCashflows.map((y) => Math.abs(y.cashFlow)))) * 110)}px`,
-                                  background: y.cashFlow < 0 ? '#dc2626' : '#1e3a8a',
-                                }}
-                              />
-                              <small>{y.year}</small>
-                            </div>
-                          ))}
-                        </div>
-                        <details>
-                          <summary>Exact annual cash flow</summary>
-                          <div
-                            className={styles.table}
-                            tabIndex={0}
-                            role="region"
-                            aria-label="Annual cash flow"
-                          >
-                            <table>
-                              <thead>
-                                <tr>
-                                  <th>Year</th>
-                                  <th>Cash flow</th>
-                                  <th>Cumulative</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {result.annualCashflows.map((y) => (
-                                  <tr key={y.year}>
-                                    <th scope="row">{y.year}</th>
-                                    <td>{money(y.cashFlow)}</td>
-                                    <td>{money(y.cumulativeCashFlow)}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </details>
-                      </>
-                    ) : (
-                      <p>Enter complete assumptions to see the cash-flow overview.</p>
-                    )}
-                  </section>
-                  {result && (
-                    <details className={styles.card}>
-                      <summary>Advanced metrics & warnings</summary>
-                      <dl className={styles.statement}>
-                        <div>
-                          <dt>NPV - discount {percent(result.assumptions.discountRate)}</dt>
-                          <dd>{money(metrics?.npv)}</dd>
-                        </div>
-                        <div>
-                          <dt>Debt coverage</dt>
-                          <dd>{metrics?.dscr?.toFixed(2) ?? 'Unavailable'}</dd>
-                        </div>
-                        <div>
-                          <dt>After-tax IRR - simplified estimate</dt>
-                          <dd>{percent(metrics?.afterTaxIrr)}</dd>
-                        </div>
-                      </dl>
-                      {result.warnings.map((w, i) => (
-                        <p key={i}>{w.message}</p>
-                      ))}
-                    </details>
-                  )}
-                  {facts && (
-                    <details className={styles.card}>
-                      <summary>Recorded source facts</summary>
-                      <p>
-                        Recorded annual debt service: {money(facts.annualDebtService)}. The forecast
-                        uses the loan terms you enter.
-                      </p>
-                      <p>
-                        Recorded down payment: {money(facts.downPayment)}. Scheduled monthly lease
-                        rent: {money(facts.scheduledMonthlyRent)}.
-                      </p>
-                      <p>
-                        {facts.expenses.length} dated expense observations
-                        {facts.expenseHistoryTruncated ? ' (history truncated)' : ''}; these are not
-                        annual budgets.
-                      </p>
-                      <ul>
-                        {payload.evidence
-                          .filter((e) => e.source !== 'manager')
-                          .map((e, i) => (
-                            <li key={i}>
-                              {e.path} - {e.source} - {e.note}
-                            </li>
-                          ))}
-                      </ul>
-                    </details>
-                  )}
+        )}
+        <div className={styles.heading}>
+          <div>
+            <p className={styles.eyebrow}>Property planning</p>
+            <h1>{selected ? 'ROI Analysis' : 'Choose a property'}</h1>
+            <p>Explore projected returns with assumptions you control.</p>
+          </div>
+          {selected && (
+            <button disabled={saving} onClick={() => choose('')}>
+              Change property
+            </button>
+          )}
+        </div>
+        {!selection.ok && <p role="alert">{failure(selection.code)}</p>}
+        {!selected ? (
+          <>
+            <PropertySelector properties={properties} onSelect={choose} />
+            <section className={styles.card}>
+              <h2>What you’ll need</h2>
+              <p>
+                Purchase and loan terms, rent, operating budgets, reserve policy and growth
+                assumptions. Recorded facts are starting points; missing values stay empty.
+              </p>
+            </section>
+          </>
+        ) : (
+          <>
+            <section className={styles.context}>
+              <strong>{property?.name ?? 'Unavailable property'}</strong>
+              <span>
+                {property ? `${property.street}, ${property.city} - Whole property` : selected}
+              </span>
+              <span>{dirty ? 'Unsaved changes' : `Revision ${revision}`}</span>
+            </section>
+            <p role="status" aria-live="polite">
+              {message}
+            </p>
+            {loading ? (
+              <p>Loading analysis...</p>
+            ) : !payload ? (
+              <button onClick={() => load(selected)}>Retry loading</button>
+            ) : (
+              <>
+                <div className={styles.actions}>
+                  <button disabled={saving} onClick={() => validate(true)}>
+                    Recalculate
+                  </button>
+                  <button disabled={saving || conflict} onClick={() => save('DRAFT')}>
+                    Save draft
+                  </button>
+                  <button
+                    className={styles.primary}
+                    disabled={saving || conflict}
+                    onClick={() => save('READY')}
+                  >
+                    Save ready
+                  </button>
+                  <button
+                    disabled={saving}
+                    onClick={() => (dirty ? choose(selected) : load(selected))}
+                  >
+                    Reload saved analysis
+                  </button>
                 </div>
-                <section className={`${styles.card} ${styles.assumptions}`}>
-                  <h2>Assumptions</h2>
-                  <p>
-                    Blank means missing. Enter 0 explicitly where applicable. Fixed annual costs
-                    override the corresponding percentage; clear fixed amounts to use percentages.
-                    Percentage assumptions remain required by the public contract.
+                {!!errors.length && (
+                  <details className={styles.notice} open>
+                    <summary>Review {errors.length} missing or invalid assumptions</summary>
+                    <ul>
+                      {errors.map((e, i) => (
+                        <li key={i}>
+                          <a href={`#${e.path}`}>
+                            {e.path}: {e.message}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+                {stale && (
+                  <p className={styles.notice} role="status">
+                    {result
+                      ? 'Out of date - recalculate to update these prior results.'
+                      : 'Complete assumptions to calculate. No valid projection is available yet.'}
                   </p>
-                  <fieldset disabled={saving}>
-                    <label className={styles.check}>
-                      <input
-                        type="checkbox"
-                        checked={
-                          values['input.financing.loanAmount'] === '0' &&
-                          values['input.financing.downPaymentPercent'] === '100'
-                        }
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            edit('input.financing.loanAmount', '0');
-                            edit('input.financing.downPaymentPercent', '100');
-                          } else {
-                            edit('input.financing.loanAmount', '');
-                            edit('input.financing.downPaymentPercent', '');
-                          }
-                        }}
-                      />
-                      All-cash purchase
-                    </label>
-                    <p>
-                      All-cash sets loan amount to 0 and down payment to 100%. Enter explicit
-                      remaining loan assumptions for validation; they do not create debt.
-                    </p>
-                    {groups.map((g) => (
-                      <details key={g.title} open>
-                        <summary>{g.title}</summary>
-                        <div className={styles.fields}>{g.fields.map(renderField)}</div>
+                )}
+                <div className={styles.layout}>
+                  <div className={styles.stack}>
+                    <section className={styles.card} aria-label="Year 1 at a glance">
+                      <h2>Year 1 at a glance</h2>
+                      <div className={styles.metrics}>
+                        {[
+                          ['Annual cash flow', money(metrics?.annualCashFlow)],
+                          ['Cap rate', percent(metrics?.capRate)],
+                          ['Cash-on-cash', percent(metrics?.cashOnCash)],
+                          ['Hold-period leveraged IRR', percent(metrics?.irrLeveraged)],
+                        ].map(([label, value]) => (
+                          <div key={label}>
+                            <small>{label}</small>
+                            <strong>{value}</strong>
+                          </div>
+                        ))}
+                      </div>
+                      <p>
+                        Forecast estimates - {stale ? 'out of date' : 'current assumptions'} -
+                        before tax
+                      </p>
+                    </section>
+                    <section className={styles.card}>
+                      <h2>From income to cash flow</h2>
+                      <dl className={styles.statement}>
+                        {[
+                          ['Gross potential income', metrics?.grossPotentialIncome],
+                          ['Vacancy loss', result?.incomeBreakdown.vacancyLoss],
+                          ['Effective gross income', metrics?.effectiveGrossIncome],
+                          ['Operating expenses', metrics?.totalOperatingExpenses],
+                          ['Net operating income', metrics?.noi],
+                          ['Capital reserves (below NOI)', result?.expenseBreakdown.capex],
+                          ['Modeled debt service', metrics?.annualDebtService],
+                          ['Annual cash flow', metrics?.annualCashFlow],
+                          ['Total cash required', metrics?.totalCashRequired],
+                        ].map(([label, value]) => (
+                          <div key={String(label)}>
+                            <dt>{label}</dt>
+                            <dd>{money(value as number | undefined)}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </section>
+                    <section className={styles.card}>
+                      <h2>Cash flow over time</h2>
+                      <p>Annual operating cash flow, before sale proceeds and tax.</p>
+                      {result ? (
+                        <>
+                          <div
+                            className={styles.chart}
+                            role="img"
+                            aria-label={`Annual cash flow over ${result.annualCashflows.length} years. Exact values follow.`}
+                          >
+                            {result.annualCashflows.map((y) => (
+                              <div key={y.year} title={`Year ${y.year}: ${money(y.cashFlow)}`}>
+                                <i
+                                  style={{
+                                    height: `${Math.max(2, (Math.abs(y.cashFlow) / Math.max(1, ...result.annualCashflows.map((y) => Math.abs(y.cashFlow)))) * 110)}px`,
+                                    background: y.cashFlow < 0 ? '#dc2626' : '#1e3a8a',
+                                  }}
+                                />
+                                <small>{y.year}</small>
+                              </div>
+                            ))}
+                          </div>
+                          <details>
+                            <summary>Exact annual cash flow</summary>
+                            <div
+                              className={styles.table}
+                              tabIndex={0}
+                              role="region"
+                              aria-label="Annual cash flow"
+                            >
+                              <table>
+                                <thead>
+                                  <tr>
+                                    <th>Year</th>
+                                    <th>Cash flow</th>
+                                    <th>Cumulative</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {result.annualCashflows.map((y) => (
+                                    <tr key={y.year}>
+                                      <th scope="row">{y.year}</th>
+                                      <td>{money(y.cashFlow)}</td>
+                                      <td>{money(y.cumulativeCashFlow)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </details>
+                        </>
+                      ) : (
+                        <p>Enter complete assumptions to see the cash-flow overview.</p>
+                      )}
+                    </section>
+                    {result && (
+                      <details className={styles.card}>
+                        <summary>Advanced metrics & warnings</summary>
+                        <dl className={styles.statement}>
+                          <div>
+                            <dt>NPV - discount {percent(result.assumptions.discountRate)}</dt>
+                            <dd>{money(metrics?.npv)}</dd>
+                          </div>
+                          <div>
+                            <dt>Debt coverage</dt>
+                            <dd>{metrics?.dscr?.toFixed(2) ?? 'Unavailable'}</dd>
+                          </div>
+                          <div>
+                            <dt>After-tax IRR - simplified estimate</dt>
+                            <dd>{percent(metrics?.afterTaxIrr)}</dd>
+                          </div>
+                        </dl>
+                        {result.warnings.map((w, i) => (
+                          <p key={i}>{w.message}</p>
+                        ))}
                       </details>
-                    ))}
-                    <details>
-                      <summary>Optional tax estimate</summary>
+                    )}
+                    {facts && (
+                      <details className={styles.card}>
+                        <summary>Recorded source facts</summary>
+                        <p>
+                          Recorded annual debt service: {money(facts.annualDebtService)}. The
+                          forecast uses the loan terms you enter.
+                        </p>
+                        <p>
+                          Recorded down payment: {money(facts.downPayment)}. Scheduled monthly lease
+                          rent: {money(facts.scheduledMonthlyRent)}.
+                        </p>
+                        <p>
+                          {facts.expenses.length} dated expense observations
+                          {facts.expenseHistoryTruncated ? ' (history truncated)' : ''}; these are
+                          not annual budgets.
+                        </p>
+                        <ul>
+                          {payload.evidence
+                            .filter((e) => e.source !== 'manager')
+                            .map((e, i) => (
+                              <li key={i}>
+                                {e.path} - {e.source} - {e.note}
+                              </li>
+                            ))}
+                        </ul>
+                      </details>
+                    )}
+                  </div>
+                  <section className={`${styles.card} ${styles.assumptions}`}>
+                    <h2>Assumptions</h2>
+                    <p>
+                      Blank means missing. Enter 0 explicitly where applicable. Fixed annual costs
+                      override the corresponding percentage; clear fixed amounts to use percentages.
+                      Enter each required percentage even when a fixed amount is used. Use the units
+                      shown beside each assumption.
+                    </p>
+                    <fieldset disabled={saving}>
                       <label className={styles.check}>
                         <input
                           type="checkbox"
-                          checked={tax}
+                          checked={
+                            values['input.financing.loanAmount'] === '0' &&
+                            values['input.financing.downPaymentPercent'] === '100'
+                          }
                           onChange={(e) => {
-                            setTax(e.target.checked);
-                            setDirty(true);
-                            setStale(true);
+                            if (e.target.checked) {
+                              edit('input.financing.loanAmount', '0');
+                              edit('input.financing.downPaymentPercent', '100');
+                            } else {
+                              edit('input.financing.loanAmount', '');
+                              edit('input.financing.downPaymentPercent', '');
+                            }
                           }}
                         />
-                        Include explicit tax assumptions
+                        All-cash purchase
                       </label>
-                      {tax && <div className={styles.fields}>{taxFields.map(renderField)}</div>}
-                    </details>
-                  </fieldset>
-                </section>
-              </div>
-            </>
-          )}
-        </>
-      )}
+                      <p>
+                        All-cash sets loan amount to 0 and down payment to 100%. Enter explicit
+                        interest rate, term and other required loan assumptions. With a zero loan
+                        amount, these do not add debt payments.
+                      </p>
+                      {groups.map((g) => (
+                        <details key={g.title} open>
+                          <summary>{g.title}</summary>
+                          <div className={styles.fields}>{g.fields.map(renderField)}</div>
+                        </details>
+                      ))}
+                      <details>
+                        <summary>Optional tax estimate</summary>
+                        <label className={styles.check}>
+                          <input
+                            type="checkbox"
+                            checked={tax}
+                            onChange={(e) => {
+                              setTax(e.target.checked);
+                              setDirty(true);
+                              setStale(true);
+                            }}
+                          />
+                          Include explicit tax assumptions
+                        </label>
+                        {tax && <div className={styles.fields}>{taxFields.map(renderField)}</div>}
+                      </details>
+                    </fieldset>
+                  </section>
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
       {pending !== null && (
         <div
           className={styles.confirm}
+          ref={modal}
+          tabIndex={-1}
           role="alertdialog"
           aria-modal="true"
           aria-label="Unsaved analysis"
           onKeyDown={(e) => {
-            if (e.key === 'Escape') setPending(null);
+            if (e.key === 'Escape' && !saving) closeGuard();
             if (e.key === 'Tab') {
-              const buttons = Array.from(e.currentTarget.querySelectorAll('button'));
+              const buttons = Array.from(
+                e.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),
+              );
               const i = buttons.indexOf(document.activeElement as HTMLButtonElement);
               if (e.shiftKey && i === 0) {
                 e.preventDefault();
@@ -627,8 +722,20 @@ export function RoiWorkspace({
             <h2>Keep your changes?</h2>
             <p>Save a draft before leaving, or discard these edits and load the saved workspace.</p>
             <p role="status">{message}</p>
+            {!!errors.length && (
+              <button
+                disabled={saving}
+                onClick={() => {
+                  setRecovery(pending);
+                  setPending(null);
+                  focusField(errors[0].path);
+                }}
+              >
+                Correct highlighted assumption
+              </button>
+            )}
             <div className={styles.actions}>
-              <button autoFocus disabled={saving} onClick={() => setPending(null)}>
+              <button autoFocus disabled={saving} onClick={closeGuard}>
                 Keep editing
               </button>
               <button disabled={saving || conflict} onClick={() => save('DRAFT', pending)}>

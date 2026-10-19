@@ -20,13 +20,15 @@ The current client state lives in `RoiWorkspace`:
 - `payload` is the last loaded/saved envelope; `values` holds entered strings, including incomplete or invalid edits. Preserve scenarios, benchmarks, engine/version identity and source evidence when adding panels.
 - `revision` is the last successful saved revision. Save uses that exact expected revision. A conflict retains edits and disables further saves until explicit reload/reconciliation.
 - `result` is the last successful public adapter base result. `stale` becomes true on any edit or calculation error. Never present that prior result as a fresh calculation. Recalculate validates and replaces it; incomplete draft saves remain resumable.
+- `calculatedPayload` is the exact successful input envelope paired with `result`, distinct from the last persisted `payload` and the currently entered `values`. Temporary chart probes use this snapshot only. `calculationVersion` changes when a successful calculation is installed, resetting temporary probe controls against that new base.
+- `view` selects Summary or Charts without unmounting the assumption form. The charts own their six-panel selection. Tab changes preserve entered strings, dirty state and local probes; accepted property changes reset the view and discard the former property's chart state.
 - `dirty` controls save/discard/keep-editing on property change and reload; successful saves clear it. Draft and ready use the same action with distinct statuses. Failures preserve values.
 - `token` invalidates late load/save replies. Property switches clear the previous property's inputs/results immediately. Saves disable input editing and property changes while pending.
 - `facts` are fresh recorded observations, independent of editable saved evidence annotations. Edited fields receive manager assumption evidence on save.
 
 Lift this state into a shared provider/hook when another panel actually needs it. That provider must retain the same lifecycle and identity invariants. Add panels against the public adapter result, never the engine's internal barrels or copied formulas. Preserve this summary's draft fields, dirty guard, revision and request token across panel changes. Add no inactive tab or dead link as a placeholder.
 
-Detailed cash flow/equity/expenses/amortization/exit/sensitivity charts, named scenario editing, benchmark provenance and comparisons remain separate implementation slices. Existing stored scenarios and benchmarks are retained and validated by the adapter but are not exposed as editable panels here. The small overview and exact annual table are summary scope only; this is not the full chart/scenario feature.
+Cash Flow, Equity, Expenses, Amortization, Exit and Sensitivity are implemented under Charts. Their public result mappings, tab identifiers, temporary-probe boundaries and review evidence are documented in [ROI projections](roi-projections.md). Named scenario editing, benchmark provenance and comparisons remain separate implementation slices. Existing stored scenarios and benchmarks are retained and validated by the adapter but are not exposed as editable panels here.
 
 ## Isolated review runtime
 
@@ -96,3 +98,11 @@ A granted 600-second desktop lease followed the queued desktop turn. Windows MCP
 - Device emulation was disabled, DevTools closed and the temporary tab closed. Windows MCP confirmed the original RealROI GitHub tab was active, then Orchestra confirmed desktop release. No publication, merge or push is claimed. The dedicated review runtime remains available for review; its data is isolated and retained.
 
 Native checks did not simulate transport failure, concurrent saves or a mid-session authorization change; those remain covered by automated regressions. The navigation correction does not guard unrelated-route client navigation; document exits retain the existing browser warning.
+
+## Projection extension (2026-10-19)
+
+The six functioning chart panels follow Designs/rocketrental-analysis revision 36 (roi-projections and analysis-phone). The corrected navigation baseline `6025e4fb3b699017b54d032d31cd2b4d06b2a6e6` was verified as an ancestor of this retained checkout's initial `d7ff58237085464758f9b816b7961611987a5009`; its workspace component and this handoff matched at that boundary. A shared-checkout label was not treated as proof of source membership.
+
+The extension retains the existing property/history guards, string inputs, revision conflict behavior and request invalidation. Assumption correction from Charts first opens Summary, then focuses the field in its expanded disclosure. Missing-input and overflow installation failures now retain a visible explanation and a working correction path. Temporary exit/sensitivity results disappear immediately when their controls change or the base becomes stale; neither can write the saved payload.
+
+The final projection runtime uses a separate database/app on ports 55447/3147. The earlier summary runtime and data are retained. The [projection handoff](roi-projections.md) records the exact source candidate, production build, 61 passing focused regressions, native desktop/390px flows, screenshots, database observation and desktop-release receipt. No engine, persistence, shared sidebar, publication or push change is included in this extension.

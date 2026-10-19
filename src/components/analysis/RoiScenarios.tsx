@@ -27,7 +27,7 @@ export function RoiScenarios({
   const [horizon, setHorizon] = useState(10);
   const calculated = useMemo(() => {
     try {
-      return snapshot ? calculatePayload(snapshot) : null;
+      return snapshot ? calculatePayload({ ...snapshot, benchmarks: [] }) : null;
     } catch {
       return null;
     }

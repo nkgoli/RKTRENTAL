@@ -284,7 +284,8 @@ export function analysisService(session: Manager, db: PrismaClient) {
     if (status === 'READY' && missing.length) return { ...fail('MISSING_DATA'), issues: missing };
     try {
       // Full merged validation also prevents invalid scenario overrides from being stored as calculable state.
-      if (!missing.length) calculatePayload(payload);
+      if (!missing.length)
+        calculatePayload(status === 'DRAFT' ? { ...payload, benchmarks: [] } : payload);
     } catch (error) {
       return { ...fail('INVALID'), issues: issues(error) };
     }

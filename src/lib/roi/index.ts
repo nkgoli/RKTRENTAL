@@ -398,3 +398,5 @@ export function compareWithBenchmarks(result: RoiAnalysis, benchmarks: Benchmark
   assertSafeOutput(comparison, 'Comparison');
   return comparison;
 }
+/** Imported, unrefreshed source metadata; source claims are not verified quotes. */
+export { getAllBenchmarks } from './benchmarks/data/market-data';

@@ -641,3 +641,88 @@ it('retains scenario edits through conflicts and invalid navigation recovery, th
   fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
   expect(screen.queryByLabelText('Scenario name')).toBeNull();
 });
+
+it('saves benchmark selections across panels and restores them by property', async () => {
+  await open();
+  fireEvent.click(screen.getByRole('tab', { name: 'Compare' }));
+  let panel = within(screen.getByRole('tabpanel', { name: 'Compare' }));
+  fireEvent.click(panel.getByRole('checkbox', { name: 'S&P 500' }));
+  fireEvent.click(panel.getByRole('checkbox', { name: 'US Bonds' }));
+  fireEvent.click(panel.getByRole('checkbox', { name: 'Nasdaq 100' }));
+  expect(panel.getByText(/Selection limit/)).toBeTruthy();
+  expect((panel.getByRole('checkbox', { name: 'Nasdaq 100' }) as HTMLInputElement).checked).toBe(
+    false,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+  expect(panel.getByRole('region', { name: 'Same-capital asset comparison' })).toBeTruthy();
+  fireEvent.click(screen.getByRole('tab', { name: 'Summary' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+  await waitFor(() => expect(saveRoiAnalysisAction).toHaveBeenCalled());
+  const request = vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as {
+    payload: ReturnType<typeof make>;
+  };
+  expect(request.payload.benchmarks.map((b) => b.type)).toEqual(['sp500', 'bonds']);
+  expect(request.payload.scenarios).toEqual([]);
+  vi.mocked(loadSavedRoiAnalysisAction).mockResolvedValue({
+    ok: true,
+    data: {
+      payload: request.payload,
+      revision: 1,
+      status: 'DRAFT',
+      propertyId: 'a',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+      missing: [],
+    },
+  } as never);
+  fireEvent.click(screen.getByRole('button', { name: 'Reload saved analysis' }));
+  await screen.findByText(/Loaded draft/);
+  fireEvent.click(screen.getByRole('tab', { name: 'Benchmarks' }));
+  panel = within(screen.getByRole('tabpanel', { name: 'Benchmarks' }));
+  expect((panel.getByRole('checkbox', { name: 'US Bonds' }) as HTMLInputElement).checked).toBe(
+    true,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
+  vi.mocked(loadSavedRoiAnalysisAction).mockResolvedValue({ ok: true, data: null });
+  fireEvent.click(screen.getByRole('button', { name: /Property b/ }));
+  await screen.findByText(/New analysis/);
+  fireEvent.click(screen.getByRole('tab', { name: 'Compare' }));
+  expect(
+    (
+      within(screen.getByRole('tabpanel', { name: 'Compare' })).getByRole('checkbox', {
+        name: 'US Bonds',
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(false);
+});
+
+it('keeps invalid custom text across sections, focuses correction and saves explicit assumptions', async () => {
+  await open();
+  fireEvent.click(screen.getByRole('tab', { name: 'Compare' }));
+  let panel = within(screen.getByRole('tabpanel', { name: 'Compare' }));
+  fireEvent.click(panel.getByRole('button', { name: 'Add custom reference' }));
+  fireEvent.change(panel.getByLabelText('Custom name'), { target: { value: 'My reference' } });
+  fireEvent.change(panel.getByLabelText(/Custom total return/), { target: { value: 'oops' } });
+  fireEvent.click(screen.getByRole('tab', { name: 'Summary' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+  await waitFor(() => expect(document.activeElement?.id).toBe('benchmarks.0.historicalCAGR'));
+  panel = within(screen.getByRole('tabpanel', { name: 'Compare' }));
+  expect((panel.getByLabelText(/Custom total return/) as HTMLInputElement).value).toBe('oops');
+  fireEvent.change(panel.getByLabelText(/Custom total return/), { target: { value: '-5' } });
+  fireEvent.change(panel.getByLabelText(/Custom yield/), { target: { value: '0' } });
+  fireEvent.change(panel.getByLabelText(/Custom volatility/), { target: { value: '12' } });
+  fireEvent.change(panel.getByLabelText(/Custom source/), {
+    target: { value: 'Manager reference period 2000-2024; unverified' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+  await waitFor(() => expect(saveRoiAnalysisAction).toHaveBeenCalledTimes(1));
+  const request = vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as {
+    payload: ReturnType<typeof make>;
+  };
+  expect(request.payload.benchmarks[0]).toMatchObject({
+    name: 'My reference',
+    historicalCAGR: -5,
+    averageYield: 0,
+    volatility: 12,
+  });
+});

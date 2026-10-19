@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -16,6 +16,13 @@ import {
   loadSavedRoiAnalysisAction,
   saveRoiAnalysisAction,
 } from '@/app/(manager)/roi-analysis/actions';
+import {
+  customDraft,
+  applyCustomBenchmarks,
+  type CustomBenchmarkDraft,
+} from '@/lib/analysis/benchmarks';
+import { RoiBenchmarks } from './RoiBenchmarks';
+import type { BenchmarkData } from '@/lib/roi';
 import { RoiScenarios } from './RoiScenarios';
 import { applyScenarios, scenarioDrafts, type ScenarioDraft } from '@/lib/analysis/scenarios';
 import { PropertySelector } from './PropertySelector';
@@ -68,6 +75,8 @@ export function RoiWorkspace({
   const [selected, setSelected] = useState('');
   const [payload, setPayload] = useState<AnalysisPayload | null>(null);
   const [values, setValues] = useState<Values>({});
+  const [customBenchmark, setCustomBenchmark] = useState<CustomBenchmarkDraft>(customDraft([]));
+  const [benchmarks, setBenchmarks] = useState<BenchmarkData[]>([]);
   const [scenarios, setScenarios] = useState<ScenarioDraft[]>([]);
   const [tax, setTax] = useState(false);
   const [revision, setRevision] = useState(0);
@@ -93,6 +102,8 @@ export function RoiWorkspace({
 
   function install(p: AnalysisPayload, rev: number) {
     setPayload(p);
+    setBenchmarks(p.benchmarks);
+    setCustomBenchmark(customDraft(p.benchmarks));
     setScenarios(scenarioDrafts(p));
     setValues(valuesFrom(p));
     setTax(!!p.options.tax);
@@ -100,7 +111,7 @@ export function RoiWorkspace({
     setDirty(false);
     setConflict(false);
     try {
-      setResult(calculatePayload(p).base);
+      setResult(calculatePayload({ ...p, benchmarks: [] }).base);
       setCalculatedPayload(p);
       setCalculationVersion((v) => v + 1);
       setErrors([]);
@@ -244,7 +255,13 @@ export function RoiWorkspace({
     queueMicrotask(() => returnFocus.current?.focus());
   }
   function focusField(path: string) {
-    setView(path.startsWith('scenarios') ? 'scenarios' : 'summary');
+    setView(
+      path.startsWith('benchmarks')
+        ? 'compare'
+        : path.startsWith('scenarios')
+          ? 'scenarios'
+          : 'summary',
+    );
     setTimeout(() => {
       const field =
         document.getElementById(path) ?? document.getElementById('input.purchase.purchasePrice');
@@ -293,7 +310,16 @@ export function RoiWorkspace({
   function validate(calculate: boolean) {
     if (!payload) return null;
     try {
-      const p = PayloadSchema.parse(applyScenarios(applyValues(payload, values, tax), scenarios));
+      const p = PayloadSchema.parse(
+        applyScenarios(
+          applyValues(
+            { ...payload, benchmarks: applyCustomBenchmarks(benchmarks, customBenchmark) },
+            values,
+            tax,
+          ),
+          scenarios,
+        ),
+      );
       const changed = allFields.filter((f) => values[f.path] !== valuesFrom(payload)[f.path]);
       p.evidence = [
         ...p.evidence.filter(
@@ -307,7 +333,7 @@ export function RoiWorkspace({
         })),
       ];
       if (calculate) {
-        const calculated = calculatePayload(p).base;
+        const calculated = calculatePayload({ ...p, benchmarks: [] }).base;
         setResult(calculated);
         setCalculatedPayload(p);
         setCalculationVersion((v) => v + 1);
@@ -319,6 +345,7 @@ export function RoiWorkspace({
       const found = issues(error).map((i) => ({
         ...i,
         path:
+          i.path.startsWith('benchmarks') ||
           i.path.startsWith('scenarios') ||
           i.path.startsWith('options') ||
           i.path.startsWith('input')
@@ -518,10 +545,43 @@ export function RoiWorkspace({
                     { id: 'summary', label: 'Summary' },
                     { id: 'charts', label: 'Charts' },
                     { id: 'scenarios', label: 'Scenarios' },
+                    { id: 'benchmarks', label: 'Benchmarks' },
+                    { id: 'compare', label: 'Compare' },
                   ]}
                   value={view}
                   onChange={setView}
                 />
+                {['benchmarks', 'compare'].map((panel) => (
+                  <div
+                    key={panel}
+                    id={`roi-section-panel-${panel}`}
+                    role="tabpanel"
+                    aria-labelledby={`roi-section-tab-${panel}`}
+                    hidden={view !== panel}
+                  >
+                    <RoiBenchmarks
+                      key={`${selected}-${panel}`}
+                      selected={benchmarks}
+                      custom={customBenchmark}
+                      onCustomChange={(d) => {
+                        setCustomBenchmark(d);
+                        setDirty(true);
+                        setStale(true);
+                      }}
+                      errors={errors}
+                      onChange={(b) => {
+                        setBenchmarks(b);
+                        setDirty(true);
+                        setStale(true);
+                      }}
+                      snapshot={calculatedPayload}
+                      stale={stale}
+                      saving={saving}
+                      compare={panel === 'compare'}
+                      propertyName={property?.name ?? 'Property'}
+                    />
+                  </div>
+                ))}
                 <div
                   id="roi-section-panel-scenarios"
                   role="tabpanel"

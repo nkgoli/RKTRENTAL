@@ -1,6 +1,6 @@
 # Light tenant Home and Lease handoff
 
-Implemented **Implement light tenant Home and Lease screens**. Source, automated checks and comparison captures are ready. The required existing-Edge desktop/390px check is **not run**: access was requested through the manager after preparing the isolated runtime; no access decision has arrived. This is a committed implementation candidate, not native acceptance, integration, publication or deployment.
+Implemented **Implement light tenant Home and Lease screens**. Source, automated checks and comparison captures are ready. The required existing-Edge desktop/390px check is **pending / not run**. The manager confirmed that existing-Edge access will be coordinated after readiness; this task must not acquire the desktop or request a human window independently. This is a committed implementation candidate, not native acceptance, integration, publication or deployment.
 
 ## Candidate and runtime
 
@@ -67,4 +67,39 @@ All links below are task-owned screenshot files. After images are from the produ
 
 Application changes: `src/app/(tenant)/home/page.tsx`, `home/PortalIcon.tsx`, `lease/page.tsx`, `TenantPhoto.tsx`, `portal.module.css`. Tests: `tests/tenant-portal/portal.spec.ts`, `ux.spec.ts`, `light-home-lease.test.tsx`. Handoff: this document. Evidence: the thirteen individually linked PNGs above. Git is the authoritative manifest of submitted changes; ignored fixture/runtime directories and database files are not submitted.
 
-The remaining decision is native existing-Edge access or manager-provided native verification for this exact implementation at desktop and 390px. Keep the task awaiting that check; do not interpret this handoff as native acceptance or final task closure. The production runtime and isolated database remain running for it.
+The remaining decision is native existing-Edge access or manager-provided native verification for this exact implementation at desktop and 390px. Keep the task awaiting that check; do not interpret this handoff as native acceptance or final task closure. The production runtime and isolated database remain running for it. Readiness was rechecked after the manager response: both ports 3226 and 55426 were listening, build ID unchanged, application source unchanged and index clean. The observed ready HEAD was `101b31799ee25f529423adb3f3384accd7e65a43`; the following documentation-only commit is identified by the typed readiness report.
+
+### Remaining native checklist
+
+After the manager grants access, record the exact final HEAD, build ID, existing Edge version and actual desktop/390px viewport dimensions.
+
+1. Open `/home` and `/lease` with the isolated seeded tenant session at desktop and 390px. Inspect compact type, approved icons, contrast, wrapping and horizontal clipping; capture both routes at each width.
+2. Scroll to the final actions and photos. Confirm the fixed bar stays visible and content/actions clear it; check the active tab and section-anchor destinations.
+3. Use Tab, Shift+Tab and Enter through quick actions, lease sections and document controls. Confirm visible focus, navigation and access to the last document action above the bar.
+4. Open the tenant's PDF preview and download, then inspect authenticated photos. Confirm the existing new-tab/download behavior; record actual success or endpoint failure. Do not submit payments or repairs.
+5. Return Home and verify navigation/account recovery as needed. Add native screenshots and observed limitations to this handoff; report the native check as passed only after it runs, then request final task completion.
+
+### Runtime continuity and restart
+
+At readiness, the owned production process is session `48991` and the isolated database process is session `32185`. Those process handles may not survive turnover; probe ports first and reuse this verified runtime when still available. The comparison server is stopped. Database data, local seeded storage, dependencies and ignored baseline reconstruction remain on disk.
+
+From the assigned checkout, restart the existing isolated database only if port 55426 is no longer listening:
+
+```powershell
+$env:ROCKETRENTAL_DB_PORT = '55426'
+$env:ROCKETRENTAL_DB_DIR = Join-Path (Get-Location) 'prisma/.home-lease-review-postgres'
+node --import ./prisma/os-userinfo.mjs prisma/local-postgres.mjs
+```
+
+In a separate PowerShell process in the same checkout, reuse the already built candidate when `.next/BUILD_ID` matches the recorded build. Set a fresh local review auth secret if the prior process environment is unavailable; this requires a new seeded-tenant sign-in.
+
+```powershell
+$env:DATABASE_URL = 'postgresql://rocketrental:rocketrental@localhost:55426/rocketrental?schema=public'
+$env:STORAGE_LOCAL_DIR = Join-Path (Get-Location) '.data/storage'
+$env:ROCKETRENTAL_AUTH_SECRET = [guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N')
+$env:ROCKETRENTAL_SANDBOX = 'true'
+$env:ROCKETRENTAL_AUTH_COOKIE_SECURE = 'false'
+node node_modules/next/dist/bin/next start -p 3226
+```
+
+Do not reinitialize, migrate or reseed the preserved fixture database just to restart it. If a rebuild is necessary, stop the owned app runtime before `npm.cmd run build` so Prisma's Windows DLL is released, and record the replacement build ID before native checks. No older dashboard desktop grant applies here.

@@ -10,6 +10,7 @@ import {
   type DealInput,
   type AnalysisOptions,
   type BenchmarkData,
+  DealInputSchema,
 } from '../../src/lib/roi';
 
 // Deliberately independent fixture: no source sample/default constructor.
@@ -68,6 +69,32 @@ const benchmark: BenchmarkData = {
 };
 
 describe('independent cash and return references', () => {
+  it('preserves an accepted zero ARV through value, equity, sale and summary', () => {
+    const d = deal();
+    d.purchase.afterRepairValue = 0;
+    d.financing.loanAmount = 60000;
+    d.appreciationExit.annualAppreciation = 10;
+    const r = analyze(d, options);
+    expect(r.annualCashflows[0].propertyValue).toBe(0);
+    expect(r.annualCashflows[0].equity).toBe(-57999.96);
+    expect(r.equityTimeline.every((p) => p.propertyValue === 0)).toBe(true);
+    expect(r.equityTimeline.at(-1)!.equity).toBe(-57999.96);
+    expect(r.saleProceeds).toEqual({
+      grossSalePrice: 0,
+      sellingCosts: 0,
+      netSaleProceeds: 0,
+      loanPayoff: 57999.96,
+      netProceeds: -57999.96,
+    });
+    expect(r.summaryMetrics.totalReturn).toBe(-89200);
+    expect(r.cashflows).toEqual([-40000, -49200]);
+    expect(r.summaryMetrics.npv).toBeCloseTo(-40000 - 49200 / 1.08, 8);
+    expect(compareWithBenchmarks(r, [benchmark]).assets[0].finalValue).toBe(-49200);
+    const missing = deal();
+    expect(analyze(missing, options).saleProceeds.grossSalePrice).toBe(100000);
+    d.appreciationExit.salePriceOverride = 50000;
+    expect(analyze(d, options).saleProceeds.grossSalePrice).toBe(50000);
+  });
   it('keeps capital reserves out of NOI while reducing spendable cash flow and IRR', () => {
     const d = deal();
     d.expenses.capex = 1200;
@@ -198,6 +225,7 @@ describe('missing, invalid and uncomputable values', () => {
     expect(omitted).toBe(0);
     expect(() => analyze({ ...d, income }, options)).toThrow();
     expect(() => analyze({}, options)).toThrow();
+    expect(() => analyze(d, { startDate: options.startDate } as AnalysisOptions)).toThrow();
   });
   it.each([NaN, Infinity, -1, 1e11])('rejects invalid purchase price %s', (price) => {
     const d = deal();
@@ -249,6 +277,67 @@ describe('missing, invalid and uncomputable values', () => {
 });
 
 describe('tax, scenarios and comparisons', () => {
+  it('accepts property IDs through every public analysis path without omitting the ID', () => {
+    const d = { ...deal(), propertyId: 'cm7a2nx9b0000u8hc4cj87t3p' };
+    const original = structuredClone(d);
+    expect(DealInputSchema.parse(d).propertyId).toBe(d.propertyId);
+    expect(analyze(d, options).summaryMetrics.noi).toBe(10800);
+    expect(
+      analyzeWithScenario(d, { income: { monthlyRent: 2000 } }, options).summaryMetrics.noi,
+    ).toBe(22800);
+    const scenarios = compareScenarios(
+      d,
+      [{ id: 'rent', overrides: { income: { monthlyRent: 2000 } } }],
+      options,
+    );
+    expect(scenarios.baseline.summaryMetrics.noi).toBe(10800);
+    expect(scenarios.scenarios[0].result.summaryMetrics.noi).toBe(22800);
+    expect(
+      calculateSensitivityRange(d, 'income', 'monthlyRent', [0, 2000], options).map(
+        (p) => p.result.summaryMetrics.noi,
+      ),
+    ).toEqual([-1200, 22800]);
+    expect(d).toEqual(original);
+    expect(() => analyze({ ...d, propertyId: '' }, options)).toThrow();
+    expect(() => analyze({ ...d, propertyId: 'x'.repeat(201) }, options)).toThrow();
+    expect(
+      analyze({ ...d, propertyId: '550e8400-e29b-41d4-a716-446655440000' }, options).summaryMetrics
+        .noi,
+    ).toBe(10800);
+  });
+  it('rejects a 100%-CAGR benchmark for a safe low-growth 50-year property', () => {
+    const d = deal();
+    d.appreciationExit.holdingPeriodYears = 50;
+    const r = analyze(d, options);
+    expect(r.saleProceeds.grossSalePrice).toBe(100000);
+    expect(() => compareWithBenchmarks(r, [{ ...benchmark, historicalCAGR: 100 }])).toThrow(
+      /Comparison output outside safe monetary precision/,
+    );
+  });
+  it('enforces the comparison boundary on both sides using independent powers of two', () => {
+    const d = deal();
+    d.appreciationExit.holdingPeriodYears = 29;
+    const safe = compareWithBenchmarks(analyze(d, options), [
+      { ...benchmark, historicalCAGR: 100 },
+    ]);
+    expect(safe.assets[1].finalValue).toBe(100000 * 2 ** 29);
+    expect(safe.assets[1].finalValue).toBeLessThan(Number.MAX_SAFE_INTEGER / 100);
+    d.appreciationExit.holdingPeriodYears = 30;
+    expect(100000 * 2 ** 30).toBeGreaterThan(Number.MAX_SAFE_INTEGER / 100);
+    expect(() =>
+      compareWithBenchmarks(analyze(d, options), [{ ...benchmark, historicalCAGR: 100 }]),
+    ).toThrow(RangeError);
+  });
+  it('checks intermediate comparison points and ratios, not only final wealth', () => {
+    const d = deal();
+    d.appreciationExit.holdingPeriodYears = 2;
+    const r = analyze(d, options);
+    r.annualCashflows[0].equity = Number.MAX_SAFE_INTEGER / 100 + 1;
+    expect(() => compareWithBenchmarks(r, [benchmark])).toThrow(RangeError);
+    const tiny = analyze(deal(), options);
+    tiny.summaryMetrics.totalCashRequired = 1e-20;
+    expect(() => compareWithBenchmarks(tiny, [benchmark])).toThrow(RangeError);
+  });
   it('scenario tables and sensitivity points use the validated engine', () => {
     const d = deal();
     const comparison = compareScenarios(

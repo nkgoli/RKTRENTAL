@@ -1,8 +1,8 @@
 # ROI Analysis and Rent Analysis design handoff
 
-The six screens in **Designs/rocketrental-analysis, revision 27** replace the heading-only companion with property-selected dashboards in RocketRental’s compact manager shell. The linked walkthrough uses Maple Court, with ROI at property scope and Rent Analysis at Unit 4B scope.
+The six screens in **Designs/rocketrental-analysis, revision 36** provide property-selected dashboards in RocketRental’s compact manager shell. The linked walkthrough uses Maple Court, with ROI at property scope and Rent Analysis at Unit 4B scope. This revision reconciles Summary, Charts, Scenarios and phone with the supported RocketRental ROI engine; selection, Rent Analysis, tokens, stylesheet and all existing screen links are preserved.
 
-This is a design deliverable. It does not implement routes, calculations, persistence, provider integrations or lease mutations. The sole repository deliverable is this document.
+The companion remains a static design, not an implementation of routes, forms, persistence, provider integrations or lease mutations. Its fixture is now executed through `src/lib/roi/index.ts` and independently checked in `tests/roi/maple-court.test.ts`; the related engine contract is in [realroi-integration.md](realroi-integration.md).
 
 ## Design and source baseline
 
@@ -12,6 +12,7 @@ This is a design deliverable. It does not implement routes, calculations, persis
 - RocketRental checkout inspected at `17e17da48df8cd851427e69e69526da2f43e357c`.
 - RealROI source inspected using GitHub fetch/fetch_file at pinned commit [0b12c76fea3958b98f4a722f5acf3336f1fd7d45](https://github.com/nkgoli/RealROI/tree/0b12c76fea3958b98f4a722f5acf3336f1fd7d45). It is a separate source repository, not a local dependency added by this task.
 - No input attachments were listed. No running application database was queried; fixtures are labeled examples, not observations of a user’s live portfolio.
+- Foundation engine commit `535e1688d89bb81d0267c4f94660a8983b485579` and handoff commit `763b3ce8bfc4ec9490c91105e3103fb681fad7b4` were verified as ancestors in the assigned checkout. Revision 27 of all six companion screens was re-read before correction; upstream coverage below is retained, while the supported public module governs calculation semantics.
 
 The companion retains its token record: primary `#1e3a8a`, white background/surface, text `#17142b`, muted `#64748b`, accent `#e0a283`, danger `#dc2626`, Inter, Space Grotesk headings, 8 px radius and spacing unit. The sidebar uses the existing navy `#0b2545`; the layout uses flat borders, restrained status colors, a 240 px sidebar and 32 px desktop content gutters. Phone gutters are 16 px. Body text is 14 px, notes generally 12 px, and phone inputs are 16 px with 44 px actions. There are no new image assets or dependencies.
 
@@ -103,17 +104,18 @@ Minimum ROI persistence needs an organization/property association, schema versi
 
 The current Property model has purchasePrice, downPayment, loanAmount and annualDebtService, but not the full rate/term/growth/expense/tax assumption set. Current Unit/Lease data can seed rent; an aggregate full-occupancy baseline must identify how vacant units are treated. Do not infer loan rate/term from annualDebtService or silently import generic RealROI example values.
 
-Keep currency conversions at an explicit adapter boundary: existing returns helpers use cents, RealROI DealInput uses dollar amounts, and displayed percentages may originate as ratio fractions. RocketRental IDs are not RealROI’s optional UUID-shaped propertyId; use the application’s authorized foreign key and omit/map the engine’s optional ID rather than passing an incompatible identifier.
+Keep currency conversions at an explicit adapter boundary: existing returns helpers use cents, public DealInput uses dollar amounts, and displayed percentages may originate as ratio fractions. The public and internal revalidation schemas both accept RocketRental CUIDs and other nonempty IDs up to 200 characters. Pass the authorized property ID directly; no omission workaround is needed. The engine does not perform organization authorization.
 
 Metric definitions must stay visible:
 
-- Year 1 cap rate: modeled NOI / purchase price.
-- Cash-on-cash: annual cash flow after debt / total cash required, including closing and applicable acquisition costs.
+- NOI: effective gross income minus operating expenses. Debt service and capital reserves are separate deductions below NOI; reserves are not assumed deductible or recovered at exit.
+- Year 1 cap rate: modeled NOI / purchase price. DSCR: NOI / actual modeled debt service. Neither deducts capital reserves in its numerator.
+- Cash-on-cash: annual cash flow after debt and reserves / total cash required, including closing and applicable acquisition costs.
 - IRR: annualized cash-flow-timed return including sale proceeds. Leveraged and unleveraged IRR are separate.
 - Total ROI: total profit / initial cash over the entire hold, not an annual percentage.
 - Equity: projected property value less debt, before selling costs. Net sale proceeds deduct selling costs and payoff.
-- NPV: show the discount rate; the inspected pipeline defaults to 8%.
-- Compare’s annualized value growth uses ending equity plus accumulated cash, before sale costs. It must not be labeled as the Summary IRR.
+- NPV: require and display an explicit discount assumption. The sample deliberately chooses 8%; there is no silent default.
+- Compare’s final wealth is net liquidation proceeds plus accumulated spendable cash, after selling costs and debt payoff. Property cash is not reinvested; benchmark total-return CAGR includes reinvested distributions. Annualized wealth growth is not the timing-aware Summary IRR. As the supported API specifies, intermediate points show equity plus cash; only the final point liquidates. Label that change explicitly on the growth chart.
 - Existing recorded Returns ROI uses cash flow plus assumed appreciation. Do not combine it into the projection series or silently rename it as IRR.
 - Missing/undefined/non-finite outcomes display “—” with a reason. All-cash DSCR is “Not applicable”; no cash-flow payback within the hold is “Beyond hold,” not zero.
 
@@ -121,9 +123,19 @@ Metric definitions must stay visible:
 
 Maple Court identity, 12 units, 11 occupied, purchase price $2,830,000, down payment $850,000 and loan $1,980,000 come from the inspected seed. The rent baseline is $23,000/month: $21,400 occupied lease rent plus $1,600 listed for vacant Unit 3A. Main design occupancy figures may differ; this companion is labeled as an illustrative sample.
 
-Planning base assumptions are 6.5% interest, 30-year amortization/term, $56,600 closing costs, 5% vacancy, 2% rent growth, 2% expense growth, 3% appreciation, 10-year hold and 6% selling costs. Annual taxes are $30,000, insurance $9,600, maintenance/CapEx each 5% of gross rent, and management 8% of effective income. Other modeled costs are zero; taxes are off. These are editable examples, not values read from a live account.
+Planning base assumptions are 6.5% interest, 30-year amortization/term, $56,600 closing costs, 5% vacancy, 2% rent growth, 2% expense growth, 3% appreciation, 10-year hold and 6% selling costs. Annual property tax is $30,000, insurance $9,600, maintenance/CapEx each 5% of gross rent, and management 8% of effective income. Other modeled costs are deliberately zero; tax analysis is off. The sample explicitly chooses an 8% NPV discount rate and `2026-10-19T00:00:00Z` start date. These are editable examples, not values read from a live account. Year-one dollar expense baselines, including percentage-derived costs and reserves, grow at 2% from year two; percentages are not reapplied to future rent.
 
-Illustrative arithmetic yields $906,600 initial cash, $174,024 Year 1 NOI, about $150,179 annual modeled debt service, $23,845 annual cash flow, 6.1% cap rate, 2.6% cash-on-cash and 10.7% leveraged IRR. The seed’s annualDebtService is $36,000; the UI expressly distinguishes that record from the new amortized model. These figures were checked by independent arithmetic using the inspected formulas, not by executing or certifying the RealROI package. Engine rounding may produce small differences.
+The executable fixture is `tests/roi/fixtures/maple-court.ts`; its synthetic CUID tests identity handling without claiming a live property record. Public-engine output yields $906,600 initial cash, $262,200 Year 1 effective income, $74,376 operating expenses and **$187,824 NOI**. Deduct $150,179.40 debt service and $13,800 capital reserves to obtain **$23,844.60 spendable cash flow**. The displayed cap rate is **6.6%**, DSCR **1.25×**, expense ratio **28.4%**, cash-on-cash **2.6%**, leveraged IRR **10.7%** and unleveraged IRR **8.2%**. NPV at the chosen 8% is $226,885.85. The seed’s annualDebtService is $36,000; the UI distinguishes that record from the amortized model. Displays round to whole dollars and shown ratio precision; calculations retain cents, including the final adjusted mortgage payment.
+
+| Model year | Effective income | Operating expenses |         NOI | Debt service | Capital reserves |  Cash flow | Accumulated cash |
+| ---------- | ---------------: | -----------------: | ----------: | -----------: | ---------------: | ---------: | ---------------: |
+| 1          |      $262,200.00 |         $74,376.00 | $187,824.00 |  $150,179.40 |       $13,800.00 | $23,844.60 |       $23,844.60 |
+| 5          |      $283,813.68 |         $80,506.92 | $203,306.76 |  $150,179.40 |       $14,937.60 | $38,189.76 |      $154,730.76 |
+| 10         |      $313,353.24 |         $88,886.16 | $224,467.08 |  $150,179.40 |       $16,492.32 | $57,795.36 |      $403,720.32 |
+
+Year 10 property value is $3,803,283.35 and debt is $1,678,566.85: equity is $2,124,716.50 before selling costs. Selling costs of $228,197 leave $1,896,519.50 net sale proceeds. Adding accumulated cash produces **$2,300,239.82 final wealth**, $1,393,639.82 profit and 153.7% total ROI. Compare uses 9.8% annualized wealth growth, not the 10.7% timed IRR. The unchanged sample S&P 500 assumption finishes at $2,460,586, or **+$160,346 / +0.7 percentage points** versus the property; bonds finish at $1,476,756, or **−$823,484 / −4.8 points**. Final-value ranking is S&P 500, Maple Court, US Bonds. Tables, charts, bars, deltas and phone equivalents use these same outputs.
+
+Optimistic Year 1 NOI is $192,902.40, cap rate 6.8%, DSCR 1.28× and cash flow $28,923; Conservative NOI is $180,206.40, cap rate 6.4%, DSCR 1.20× and cash flow $16,227. Both retain the same debt service and $13,800 reserves. Their growth/vacancy assumptions remain explicit in the scenario table. The 3×3 rent/vacancy sensitivity matrix is also executed through the public engine.
 
 The rent fixture uses the linked main design’s 2 bd / 2 ba / 950 sqft subject because those optional features are not populated by the inspected seed. It is labeled “Demo subject”; production must review missing features. Six comps were reproduced from MockCompsProvider’s deterministic search for postal code 78704, 2 beds, 950 sqft, a 2-mile radius, Any baths, 808–1093 sqft and 90 days. The generated bath values are 1 or 1.5; selecting 2 baths would return no matches. Their rents are $2,050, $2,050, $2,175, $2,100, $2,300 and $2,350. Existing core formulas produce a $2,145 suggestion, $2,065–$2,270 range, median rent $2,138 and Medium confidence. Unit 4B’s seed lease/listed/saved-market values are each $1,850. The example sync timestamp and confirmation are illustrative.
 
@@ -156,10 +168,10 @@ The production tab implementation should provide appropriate tab semantics and k
 3. Benchmark rates and source periods are bundled historical constants, not independently verified or current data. The design labels that provenance explicitly.
 4. The benchmark component’s match-cashflows state is presented in UI copy but is not used to change its calculation. It is disabled in the design until a real calculation exists.
 5. The source’s property volatility proxy is not measured market volatility. The property is omitted from the reference risk scatter; unsupported risk/stability/risk-adjusted radar scores become a dimension table with missing-data labels.
-6. The imported engine includes CapEx reserves in its expense total and modeled NOI. Preserve that visible definition or explicitly resolve a metric-contract change; do not silently equate it with recorded operating NOI.
+6. The supported engine intentionally corrects upstream reserve treatment: operating expenses and NOI exclude CapEx reserves; spendable cash flow deducts reserves after debt. Use the public API rather than copying upstream formulas or the superseded revision 27 illustrative values. Recorded Returns still reflect a different observed accounting period and data source.
 7. Tax output is a simplified model with assumptions including depreciation and recapture; it is optional and labeled an estimate. No tax rates were asserted as applicable to the user. Review the engine’s basis/exit logic before enabling tax output as a production feature.
-8. A distinct loan term/amortization period and sale override need adapter verification. The source schema alone does not prove balloon/override behavior is coherent across every panel.
-9. No RealROI app build, package import, database migration, live provider call or application regression suite was run for this design-only task.
+8. Public-engine tests cover balloon payoff, sale override and explicit zero ARV. Balloon balances are paid at maturity, never forgiven. Omitted ARV uses purchase price; zero ARV is preserved even when equity or net proceeds become negative. Application forms must preserve these distinctions.
+9. Focused public-engine regressions, type/lint and companion design checks accompany this correction. No upstream app build, database migration, live provider call or production application end-to-end validation is claimed.
 
 ## Implementation slices
 
@@ -172,21 +184,32 @@ The production tab implementation should provide appropriate tab semantics and k
 
 ## Verification evidence
 
-Every final assigned screen was rendered and visually inspected with design_screenshot against **revision 27**. These coordinates are reproducible design evidence; screenshots are in the task’s tool trace, not fabricated repository image paths.
+The correction was checked against **Designs/rocketrental-analysis revision 36**. Summary and Scenarios were rendered at revision 31 and are byte-identical in the final revision. Charts and phone were re-rendered at revision 36 after repairs. Design screenshots are retained in the tool trace; browser screenshots and the static audit are attached evidence under `tests/roi/evidence/`.
 
-| Screen             | Width   | Final screenshot revision | Observed result                                                                               |
-| ------------------ | ------- | ------------------------- | --------------------------------------------------------------------------------------------- |
-| analysis-selection | 1280 px | 27                        | Complete portfolio/selection/actions; no visible clipping                                     |
-| roi-summary        | 1280 px | 27                        | Metrics, statement, chart and assumption column readable; year-end label repaired             |
-| roi-projections    | 1280 px | 27                        | Cash-flow chart, bar labels and exact table readable; clipped bar captions repaired           |
-| roi-scenarios      | 1280 px | 27                        | Scenario controls, assumptions, cards and chart readable                                      |
-| rent-analysis      | 1280 px | 27                        | Filters, summary/apply/table fit; map price-label overlaps repaired                           |
-| analysis-phone     | 390 px  | 27                        | Stacked ROI, wrapping tabs, readable chart labels and 44 px actions; no visible page overflow |
+| Check                                      | Observed result                                                                                                                                                                                                                           |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Summary, 1280 px                           | Correct NOI/reserve statement, 6.6% cap rate, 1.25x DSCR, explicit sample assumptions; readable compact layout                                                                                                                            |
+| Charts, 1280 px design render              | Correct income bridge and separate reserve column; final revision has no malformed/duplicated bridge content                                                                                                                              |
+| Six desktop chart panels, browser          | Tab/ArrowRight selected Cash Flow, Equity, Expenses, Amortization, Exit and Sensitivity; visible focus, data and plots inspected. Alternate-panel screenshots were captured at a 1020 px browser width, then comparison checks at 1280 px |
+| Desktop Scenarios/Benchmarks/Compare       | Keyboard selection passed; final wealth, ranking and growth bars agree. Shift+Tab and Enter followed Charts to Scenarios through the internal screen link                                                                                 |
+| Phone, 390 px                              | Summary, Cash Flow, Expenses, Scenarios, Benchmarks and Compare inspected; native panel keyboard selection passed. Original 400-unit chart geometry restored to retain readable labels. Wide tables remain internally scrollable          |
+| Structure at revision 36                   | Six screens, all 68 existing links preserved in order, valid destinations, unique element IDs and valid label targets. Selection and Rent Analysis markup, shared CSS and tokens remain unchanged                                         |
+| Click and measured DOM-overflow automation | Inconclusive: click/evaluate requests stalled and were terminated. Keyboard, navigation, snapshots and screenshots subsequently succeeded; no measured overflow or click pass is claimed                                                  |
+| Browser console                            | Observed only missing favicon (404) in the successful phone session; no application runtime is being tested                                                                                                                               |
 
-Additional design_screenshot inspections: Equity revision 11, Expenses 12, Amortization 13, Exit 14, Sensitivity 15; Benchmarks 17 and Compare 18; phone Rent 19, phone property selection 20 and phone Cash Flow 26. The panel content remains in the final design. Final refinements enlarged small chart labels, corrected the negative sensitivity cell and numbered the phone map/table consistently. Temporary revision 25 had an invalid default-selection toggle during screenshot setup; it was immediately repaired in 26 and the final ROI default restored in 27.
+Selected evidence: `desktop-summary.png`, `desktop-expenses.png`, `desktop-exit.png`, `desktop-equity.png`, `desktop-amortization.png`, `desktop-sensitivity.png`, `desktop-benchmarks.png`, `desktop-compare.png`, `phone-summary.png`, `phone-cashflow.png`, `phone-expenses.png`, `phone-scenarios.png`, `phone-benchmarks.png`, `phone-compare.png` and `design-audit.json` under `tests/roi/evidence/`. Desktop Summary, Expenses and Exit were also captured at revision 36 and 1280 px after the final operating-total caption and one-dollar Year 5 display correction. No screenshot is claimed to prove application persistence, live data, or production accessibility.
 
-A static navigation audit found **68 screen links**, all targeting one of the six submitted screens, no duplicate element IDs and no label targets missing their input. Native radio panels and details were inspected in rendered alternate states. This checks design structure; it does not prove application routing, calculation or persistence.
+### Finding-to-fix map
 
-Configured Playwright successfully opened the private Charts design target at 1280 px and returned its accessibility snapshot, including the rewritten internal screen links, selected Cash Flow radio and all six chart controls. Subsequent evaluation, click and browser-code requests hung without returning and were terminated. Therefore keyboard/click behavior and measured DOM-overflow checks are **inconclusive**, not reported as passing. No Preview publication or live-app interaction was claimed. Private design-target URLs are intentionally not recorded.
+| Foundation finding                                         | Fix and evidence                                                                                                                                                              |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CUID accepted publicly but rejected internally             | One shared opaque-ID schema; direct public analyze, scenario comparison, override and sensitivity tests carry a CUID throughout                                               |
+| Accepted zero ARV silently replaced                        | Nullish fallbacks in cash flows, equity, sale and pipeline; independent zero-value/debt/sale/NPV/total-return regression                                                      |
+| Benchmark projection exceeds safe precision                | Shared recursive numeric-output guard for analysis and comparison; 50-year overflow, independent 29/30-year powers-of-two boundary, intermediate-series and ratio regressions |
+| Reserves reduce NOI, cap rate and DSCR in design           | Public fixture separates $74,376 operating cost, $187,824 NOI, $150,179.40 debt and $13,800 reserves; corrected desktop/phone metrics, bridges, tables and charts             |
+| Comparison excludes exit costs                             | Final $2,300,239.82 wealth, 9.8% annualized wealth growth, revised deltas/ranks and graph endpoint; interim equity/cash convention labeled explicitly                         |
+| Silent discount assumption and uncertain sample provenance | Required discount option; 8% and model start date explicitly chosen in the fixture, seed-derived inputs separately labeled; NPV and unleveraged IRR independently checked     |
 
-Repository validation is limited to Markdown formatting and Git diff/ownership checks on this handoff. No application source, dependencies or main-design tokens were changed by this task.
+The focused suite passes **34 tests** across `tests/roi/engine.test.ts` and `tests/roi/maple-court.test.ts`. TypeScript and ESLint checks are scoped to the ROI module, tests and fixture/exporter; Markdown formatting and `git diff --check` also pass. No whole-project suite, upstream app build, application UI integration, merge, push or Preview publication is claimed.
+
+Regenerate numeric evidence from the repository root with `node --import ./prisma/os-userinfo.mjs --import tsx tests/roi/fixtures/export-maple-court.ts`. It writes `tests/roi/maple-court-outputs.json` using only supported public calls. Run regressions with `npm.cmd exec -- vitest run --config vitest.config.ts tests/roi`. The declared Zod 3.25.76 dependency was absent from the provisioned environment and was installed locally under the owned ROI directory for checks; no package manifest or lockfile changed.

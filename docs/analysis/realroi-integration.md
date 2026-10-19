@@ -6,7 +6,7 @@ Adapted from user-authorized [nkgoli/RealROI](https://github.com/nkgoli/RealROI/
 
 `src/lib/roi/index.ts` is the supported framework-independent entry point. `core/`, `utils/`, and `benchmarks/` retain adapted upstream calculation structure for traceability; their exports are internal implementation details, with upstream sample helpers and legacy conventions. Do not integrate against internal helpers or legacy schemas. Unused source UI-oriented scenario/comparison barrels, memoization and the incorrect legacy tax pipeline were omitted. The public facade validates assumptions, fixes demonstrated numeric behavior, and defines missing-value semantics. Only dependency change: runtime `zod` ^3.25.76 (resolved 3.25.76, MIT); no React, database or network dependency in the engine. Existing Next/React dependencies were not changed.
 
-Read design revision 337, screens **Returns and metrics** (`returns`) and **Property returns** (`property-returns`), and diagram revision 4 nodes `f-returns-1/2/3`. This module complements recorded Returns; it does not replace their ledger-based numbers, period selection, charts, income statement, year-over-year views, or export. No UI, persistence, or design was changed.
+The foundation read main-design revision 337, screens **Returns and metrics** (`returns`) and **Property returns** (`property-returns`), and diagram revision 4 nodes `f-returns-1/2/3`. This module complements recorded Returns; it does not replace their ledger-based numbers, period selection, charts, income statement, year-over-year views, or export. The correction updates companion **Designs/rocketrental-analysis revision 36**, Summary, Charts, Scenarios and phone, to use this public engine. Application UI and persistence remain outside this change.
 
 ## Public functions and types
 
@@ -36,6 +36,14 @@ Summary/Charts source coverage is carried by the summary, breakdowns, monthly/an
 - Source expense projections retain a fixed year-one dollar baseline (including percentage-derived expenses) grown by annualExpenseGrowth. They do not recompute management/maintenance percentages against later rent. Break-even holds that modeled expense baseline fixed and can exceed 100%; it is not a variable-cost optimization. No rent-by-lease schedule, adjustable-rate debt, refinancing, rate resets, extra payments or inflation-adjusted returns are modeled.
 - Monthly rounded cash flows are summed into annual series. Analytic year-one summary expenses/NOI can differ from the sum of rounded monthly amounts by a few cents. Do not add summary and annual figures together.
 
+The public and internal revalidation schemas now share the same opaque, nonempty property ID constraint (1–200 characters). CUIDs, seed IDs and UUIDs pass directly through `analyze`, scenarios and sensitivity. Do not strip a valid property ID to work around validation; organization/property authorization still belongs to the application.
+
+An omitted ARV uses purchase price; an explicitly supplied **zero ARV remains zero** in property value, equity, sale and summary. Debt can make equity and net proceeds negative. A positive explicit sale override still controls the sale. This differs from a missing value; no positive fallback may silently replace zero.
+
+Both `analyze` and `compareWithBenchmarks` recursively validate **every numeric output**, including intermediate projections and derived return ratios, against finite values and `Number.MAX_SAFE_INTEGER / 100` (90,071,992,547,409.9 currency units). A 50-year, flat-growth property can be safe while a valid 100%-CAGR benchmark is unsafe. The comparison throws `RangeError('Comparison output outside safe monetary precision')`; show comparison unavailable and preserve the inputs, never a partial ranking or misleading rounded value. Independent powers-of-two boundary tests cover a safe 29-year and unsafe 30-year comparison at 100% CAGR on 100,000 initial capital.
+
+NPV requires an explicit `options.discountRate`; neither the public API nor the internal pipeline supplies an 8% fallback. Missing options fail public validation. The companion's 8% rate is a deliberately chosen sample assumption, alongside an explicit model start date, not an observed property input or product default.
+
 ## Demonstrated corrections from pinned source
 
 | Source behavior                                                                                                                                               | Adaptation and independent evidence                                                                                                                                                                                                                                                                                                  |
@@ -52,6 +60,14 @@ Summary/Charts source coverage is carried by the summary, breakdowns, monthly/an
 | Clock, local month overflow and performance timing made results nondeterministic.                                                                             | Explicit public date/rate options and UTC clamping; repeated analyses deep-equal in tests.                                                                                                                                                                                                                                           |
 
 Independent tests also cover PMT against the annuity formula, first-month interest/principal, closed-form balance within rounding tolerance, zero rates, early payoff, losses, acquisition costs, sale override, appreciation, growth, zero equity/income, invalid numbers/terms/rates, 50-year IRR, scenario immutability and benchmark total return without double-counted dividends.
+
+## Companion fixture and correction evidence
+
+`tests/roi/fixtures/maple-court.ts` deliberately combines seed-derived purchase/loan/rent inputs with explicitly chosen financing, growth, expense, exit and discount assumptions. It calls the supported public API with a synthetic CUID. `tests/roi/maple-court.test.ts` independently reconciles NOI/reserves, discounted cash flows and net liquidation ranking. Generate `tests/roi/maple-court-outputs.json` with `node --import ./prisma/os-userinfo.mjs --import tsx tests/roi/fixtures/export-maple-court.ts`; it includes annual series, sale, amortization, scenarios, benchmarks and the sensitivity matrix.
+
+The base has $262,200 effective income, $74,376 operating expenses, $187,824 NOI, $150,179.40 debt service and $13,800 reserves, leaving $23,844.60 cash flow. Displayed cap rate is 6.6%, DSCR 1.25× and OER 28.4%. Ten-year net liquidation plus cash is $2,300,239.82; annualized wealth growth is 9.7579%, distinct from 10.7267% timed leveraged IRR. Unleveraged IRR is 8.1524%; NPV at the explicitly chosen 8% is $226,885.85. The sample S&P 500 finishes $160,346.18 above the property, followed by the property then bonds. No live portfolio or current market observations are claimed.
+
+The foundation findings map to direct regressions: CUID through all analysis paths; zero ARV through value/equity/sale/summary; finite comparison safety on both sides of the precision boundary; intermediate projection and ratio checks; and independent fixture reconciliation. The focused suite passes 34 tests. Scoped TypeScript/ESLint, formatting and diff checks accompany the submission. [design.md](design.md#verification-evidence) records companion revisions, retained source coverage, desktop/phone screenshots and keyboard checks, plus inconclusive click/DOM-measurement automation. No whole-project test suite or application integration is claimed.
 
 ## Tax and comparison limitations
 

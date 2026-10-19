@@ -104,7 +104,7 @@ export function generateAnnualCashflows(
   const appreciationRate = fromPercent(input.appreciationExit.annualAppreciation);
 
   // Use ARV as the base property value for appreciation calculations
-  const afterRepairValue = input.purchase.afterRepairValue || input.purchase.purchasePrice;
+  const afterRepairValue = input.purchase.afterRepairValue ?? input.purchase.purchasePrice;
 
   for (let year = 1; year <= years; year++) {
     const startMonth = (year - 1) * 12;

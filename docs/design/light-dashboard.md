@@ -50,7 +50,7 @@ Final browser console contained only the existing missing `/favicon.ico` 404. Th
 - `tests/dashboard/evidence/desktop-after.png` and `phone-after.png`: real production dashboard at 1440 and 390 CSS pixels, with monthly disclosure open on phone.
 - `tests/dashboard/evidence/native-desktop-before.png`: existing Edge session baseline, Windows MCP snapshot at 2560 x 1600 display resolution. Desktop lease was acquired and released.
 
-**Required final native Edge desktop/390px review is pending.** Earlier leased windows lost browser focus. During the later human-granted window, the manager reported that Edge could not reach the review server; no final native check passed and no final screenshot was obtained. The remaining obstacle is runtime/browser reachability, not an absent human grant. The manager coordinates desktop use; no new desktop window is established by this handoff. Passing isolated Playwright results remain valid, but task acceptance must wait for the required native review. Empty/error states have component coverage, not an induced production database-outage browser test.
+**Native Edge desktop/390px review completed 2026-10-19 22:11–22:13 UTC.** The manager's fresh human grant `eeb730ea81ec54ea51aeb06f9d35188eed9b85b3b12166b2107633853ea25ac5` covered one bounded window in the existing Edge session; the observations are recorded in the completed native review section below. Empty/error states have component coverage, not an induced production database-outage browser test.
 
 ### Coordinated review outcome and takeover reconciliation
 
@@ -60,7 +60,30 @@ The previous owner's bounded-hold checkpoint records that the production build a
 
 The initial takeover reconciliation reconfirmed the unchanged candidate `5c0e16fdcfa7c5fb19658d67dd23eebe0c3b078e`, all four admitted foundation ancestors, production build `AFP2Fu5f6Vc4ZfOZT7itT`, and the five existing evidence images listed above. No final native image was present. Neither review port had a listener, and the retained fixture had no active `postmaster.pid`. That reconciliation was committed as `c4c1b69af79c693bb92d75329ad5aaa35d3e9620` before the authorized persistent-runtime preparation below.
 
-Completion still needs native desktop/390px screenshots plus disclosure and contextual-link observations. Runtime reachability from the reviewing browser must be established during manager-coordinated access before those checks can be claimed. The source, fixture, logs and existing screenshots remain preserved.
+Native desktop/390px screenshots plus disclosure and contextual-link observations were subsequently completed in the manager-coordinated window recorded below. The source, fixture, logs and existing screenshots remain preserved.
+
+### Native Edge review completed — 2026-10-19 22:11–22:13 UTC
+
+The manager's fresh human grant `eeb730ea81ec54ea51aeb06f9d35188eed9b85b3b12166b2107633853ea25ac5` produced one bounded native window in the existing Edge session. The temporary review tab `712378470` signed in successfully to `http://localhost:3228/dashboard` at about **22:11:45 UTC**. The manager verified the preserved build `AFP2Fu5f6Vc4ZfOZT7itT`, implementation `741b0b78069842a77d2930d8b46aeffeaec281e0` and runtime-helper/handoff commit `8cf0b08d11269523ec54e0a15438c991338ae750` (stat of those two files only). These are attributed manager observations; this takeover did not repeat the native work.
+
+| Observation | Result |
+| --- | --- |
+| Desktop composition, width 1699 | Collection/history layout, KPI strip, leases/attention and properties/activity passed in top and lower viewport captures. |
+| Displayed fixture values | 91% occupancy (41/45); 1 lease within 60 days; 5 repairs, 1 urgent; $60,390 of $73,630 collected (82%); $13,240 unpaid. |
+| Phone 390 x 844 | Stacked sections, amounts, lease/property identities and readable controls passed; `scrollWidth = innerWidth = 390`, including the expanded monthly table. |
+| Keyboard and disclosure | Selecting 12M produced `/dashboard?range=12M`; Enter on **View monthly amounts** expanded it; Tab moved focus to the region labelled **Monthly rent collection amounts** with a visible blue focus ring. The table showed 12 rows: Oct 26 $60,390 collected / $73,630 due / $13,240 outstanding; Nov 25 zeros; Dec 25 $1,850 / $1,850 / $0. Shift+Tab from the disclosure reached 5Y; Tab into the region also worked at 390. |
+| Late-payment link | **Review balances** opened `/payments?filter=late` with Late (3) rows for Chloe Fisher, Lily Dixon and Samuel Hunt. Payments defines late excluding autopay/covered pending while the dashboard shows 8 past-due leases; the observed semantics are recorded without claiming equal counts. Back returned the selected 12M URL. |
+| Lease link | Alex Rivera opened `/leases/seed-lease-maple-11`, heading **Maple Court · Unit 4B Lease**, Alex Rivera, $1,850, ends Nov 30. |
+| Property link | The Maple Court card opened `/properties/seed-property-maple`, heading **Maple Court**, address 214 Maple Ave, Austin, with the all-unit selector. Back returned the dashboard at 12M. |
+| Mutations | None; no financial or lease data was changed. |
+
+The manager's screenshots are transcript images from that turn, titled **Capture the native desktop dashboard**, **Capture keyboard focus and phone chart layout**, **Verify phone disclosure focus and the late-payment link**, **Verify the lease identity and capture phone properties/activity**, **Capture phone property cards and test their destination**, **Capture lower desktop composition and return to the phone header**, and **Capture the phone dashboard at the top**. They have no filesystem paths and are not claimed as files in this checkout. A full-page screenshot timed out; the successful viewport captures cover the composition and no full-page success is claimed.
+
+The viewport override was reset, final independent metrics were **1699 x 884**, the temporary tab was closed, and the original user tabs were untouched. `release_desktop` returned `released: true` at **22:13:53 UTC**, before the 15-minute deadline. No further Edge grant is needed for this checklist.
+
+### Guarded runtime cleanup
+
+After the native window closed, `tests/dashboard/native-review.ps1 -Action Stop -WhatIf` verified the recorded Next PID `46580` and PostgreSQL PID `8064` identities without stopping either. The real `Stop` then stopped only those verified processes. PostgreSQL logged a clean fast shutdown at **22:24:09 UTC**; the fixture's `postmaster.pid` was removed. Independent checks after shutdown found **0** listeners on ports 3228 and 55428 and **0** matching processes. The fixture directory, logs and evidence images remain on disk; no migration, reseed, reset or unrelated process change was performed.
 
 ### Authentication repair — ready for the active native review
 
@@ -152,13 +175,13 @@ After review, stop only the task-owned Next process and shut down the retained d
 
 Keep the fixture directory and existing screenshots. Record the new native screenshots under `tests/dashboard/evidence/`, the final observed flow outcomes here, and the exact resulting candidate in the typed task report.
 
-### Pending native checklist
+### Native checklist — completed
 
-Resolve the browser/runtime reachability discrepancy and wait for the manager's explicit coordinated-window signal; silence does not establish availability. Reuse the retained fixture cluster and production build above without migrating, reseeding or rebuilding. Complete only the missing native observations; preserve passing checks.
+The manager completed this checklist in the bounded window above. The retained fixture cluster and production build were reused without migrating, reseeding or rebuilding; passing checks were preserved.
 
-1. Acquire one bounded desktop lease and use only the dashboard review tab in the existing Edge session.
-2. At desktop width, inspect collection/history, leases/attention and property/activity composition; capture the final native screenshot against the preserved baseline.
-3. Emulate 390 x 844 CSS pixels; inspect stacking, readable amounts, property identities and page overflow. Capture the final native phone screenshot.
-4. Use keyboard focus and Enter on **View monthly amounts**, then Tab into **Monthly rent collection amounts**. Confirm exact values and the selected URL range remain available.
-5. Open the existing late-payment, lease and property contextual links, confirming their intended identities; return to the dashboard. These flows already pass in isolated Playwright and need only the missing native observation.
-6. Restore the review tab's device emulation and browser state, release the lease promptly, stop only the task-owned runtime, and record observations/screenshots in this handoff. Preserve every passing check unless source or relevant runtime changes.
+1. One bounded desktop lease was used in the existing Edge session.
+2. Desktop composition was inspected and captured against the preserved baseline.
+3. 390 x 844 emulation was inspected and captured, including stacking, amounts, identities and page overflow.
+4. Keyboard focus and Enter on **View monthly amounts**, then Tab into **Monthly rent collection amounts**, confirmed the exact values and the selected URL range.
+5. The late-payment, lease and property contextual links were opened and their intended identities confirmed; the dashboard was restored.
+6. Device emulation and browser state were restored, the lease was released at 22:13:53 UTC, and the task-owned runtime was stopped under the guarded helper. Fixture and evidence are preserved.

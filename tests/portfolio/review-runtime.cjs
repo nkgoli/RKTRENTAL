@@ -5,7 +5,9 @@ const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 
 const workspace = path.resolve(__dirname, '../..');
-const runtimeRoot = path.join(__dirname, '.runtime');
+const revision = process.env.PORTFOLIO_REVIEW_REVISION ?? '';
+if (revision && !/^[a-z0-9-]+$/.test(revision)) throw new Error('Review revision must be a simple directory name.');
+const runtimeRoot = path.join(__dirname, '.runtime', revision);
 const snapshot = path.join(runtimeRoot, 'app');
 const identityFile = path.join(runtimeRoot, 'identity.json');
 const mode = process.argv[2];

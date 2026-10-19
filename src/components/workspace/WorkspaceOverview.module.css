@@ -24,9 +24,12 @@
 .facts { display: grid; grid-template-columns: minmax(84px, .7fr) minmax(0, 1.3fr); gap: 10px 14px; margin: 0; font-size: 13px; }
 .facts dt { color: var(--design-muted); }
 .facts dd { min-width: 0; margin: 0; color: var(--design-text); font-weight: 600; overflow-wrap: anywhere; }
-.facts dd input, .facts dd select { width: 100%; min-width: 0; }
+.facts dd input, .facts dd select { width: 100%; min-width: 0; min-height: 40px; padding: 9px 11px; border: 1px solid var(--rr-border-strong); border-radius: 8px; background: var(--design-surface); color: var(--design-text); font: inherit; font-weight: 400; }
+.facts dd input:focus-visible, .facts dd select:focus-visible { outline: 2px solid var(--design-primary); outline-offset: 2px; }
+.facts dd input[aria-invalid="true"], .facts dd select[aria-invalid="true"] { border-color: var(--design-danger); }
+.facts dd input:read-only, .facts dd select:disabled { background: #f1f5f9; color: var(--design-muted); opacity: 1; }
 .facts dt { align-self: center; }
-.facts dd .hint { display: block; margin-top: 4px; font-weight: 400; }
+.facts dd :global(.hint) { display: block; margin-top: 5px; color: var(--design-muted); font-size: 12px; font-weight: 400; line-height: 1.4; }
 .editActions { display: flex; gap: 8px; margin-top: 16px; }
 .facts dd :global(.badge) { margin: 0 4px 4px 0; }
 .steps { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
@@ -57,4 +60,9 @@
   .stripHead { align-items: flex-start; flex-wrap: wrap; gap: 8px; }
   .facts { grid-template-columns: minmax(72px, .65fr) minmax(0, 1.35fr); gap: 8px 12px; }
   .editActions { flex-wrap: wrap; }
+  .facts:has(input) { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .facts:has(input) dt:not(:first-child) { margin-top: 8px; }
+}
+@media (pointer: coarse) {
+  .facts dd input, .facts dd select, .editActions button { min-height: 44px; }
 }

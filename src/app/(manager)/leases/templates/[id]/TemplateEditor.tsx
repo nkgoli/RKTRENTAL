@@ -133,8 +133,11 @@ export function TemplateEditor({
         setDirty(false);
         setInvalid(false);
       }
-      if (result.template) router.push(`/leases/templates/${result.template.id}`);
-      router.refresh();
+      if (result.template && (duplicate || !initial)) {
+        router.push(`/leases/templates/${result.template.id}`);
+      } else {
+        router.refresh();
+      }
       setMessage(`Saved version ${result.template?.version ?? 1}.`);
     } catch {
       setMessage('The template could not be saved. Your edits are still here; try again.');
@@ -152,7 +155,6 @@ export function TemplateEditor({
         return;
       }
       router.push('/leases/templates');
-      router.refresh();
     } catch {
       setMessage('The template could not be deleted. Try again.');
     } finally {

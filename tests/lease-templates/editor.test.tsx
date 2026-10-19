@@ -76,9 +76,11 @@ it('saves a version in the editor and duplicates to the returned identity', asyn
   render(<TemplateEditor initial={initial} properties={[]} />);
   await user.click(screen.getByRole('button', { name: 'Save template' }));
   await screen.findByText('Saved version 4.');
-  expect(mocks.push).toHaveBeenLastCalledWith('/leases/templates/fixture');
+  expect(mocks.push).not.toHaveBeenCalled();
+  expect(mocks.refresh).toHaveBeenCalledOnce();
   await user.click(screen.getByRole('button', { name: 'Duplicate' }));
   await waitFor(() => expect(mocks.push).toHaveBeenLastCalledWith('/leases/templates/copy'));
+  expect(mocks.refresh).toHaveBeenCalledOnce();
   expect(mocks.save.mock.calls[1][0].id).toBeUndefined();
 });
 
@@ -102,4 +104,5 @@ it('sets property defaults and preserves deletion denial before an unused deleti
   expect(mocks.push).not.toHaveBeenCalled();
   await user.click(screen.getByRole('button', { name: 'Delete when unused' }));
   await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/leases/templates'));
+  expect(mocks.refresh).toHaveBeenCalledOnce();
 });

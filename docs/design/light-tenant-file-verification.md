@@ -38,4 +38,3 @@ After the manager releases review, run `runtime.ps1 stop` with process-inspectio
 Pending manager observations and capture references. Previous cancelled download and upload approvals remain explicitly unverified. This Task has performed no native chooser selection, upload or download, acquired no desktop, and requested no human approval directly. Runtime release is pending review; it is not claimed complete. No push, merge, publication or deployment.
 
 Setup observations: initial sandboxed Prisma engine download failed; approved engine generation succeeded. PostgreSQL initially logged a restricted-token warning but initialized successfully and seeded normally. Next reported its existing multiple-lockfile workspace-root warning. Read-only process inspection required elevation because sandbox CIM access was denied.
-

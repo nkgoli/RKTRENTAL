@@ -2,11 +2,11 @@ import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
 import { scopeFilterFrom, scopeQuery, type ScopeFilter } from '@/lib/workspace/scope';
-import { Badge, Card, Tabs } from '@/components/ui';
-import { KpiCard } from '@/components/dashboard/KpiCard';
+import { Avatar, Badge, Card, Tabs } from '@/components/ui';
+import { Icon } from '@/components/shell/Icons';
 import { PAGE_SIZE, Pagination } from '@/components/ui/Pagination';
 import { requireManagerRole } from '@/lib/auth/access';
-import { formatMoney } from '@/lib/properties/format';
+import { formatMoney, initials } from '@/lib/properties/format';
 import { signLabel, term } from '@/lib/leases/format';
 import { leasesDb, type LeaseListItem } from '@/lib/leases/queries';
 import { EmptyState } from '@/components/RouteStates';
@@ -34,6 +34,15 @@ function tabHref(tab: Tab, q: string, page = 1, scope: ScopeFilter = {}) {
 function leaseHref(id: string, scope: ScopeFilter) {
   const query = scopeQuery(scope).toString();
   return query ? `/leases/${id}?${query}` : `/leases/${id}`;
+}
+
+function setupHref(scope: ScopeFilter, entry?: { draft?: string; renew?: string }) {
+  const query = scopeQuery(scope);
+  if (scope.propertyId) query.set('property', scope.propertyId);
+  if (scope.unitId) query.set('unit', scope.unitId);
+  if (entry?.draft) query.set('draft', entry.draft);
+  if (entry?.renew) query.set('renew', entry.renew);
+  return query.size ? `/leases/new?${query}` : '/leases/new';
 }
 
 export default async function LeasesPage({
@@ -79,28 +88,48 @@ export default async function LeasesPage({
   };
 
   return (
-    <>
+    <div className={styles.page}>
       <ScopedWorkspace organizationId={session.organizationId} filter={scope} activeTab="leases" />
       <PageHeader
         eyebrow="Leasing"
         actions={[
           { label: 'Review applications', href: '/applications' },
           { label: 'Lease templates', href: '/leases/templates' },
-          { label: '+ New lease', href: '/leases/new', primary: true },
+          { label: '+ New lease', href: setupHref(scope), primary: true },
         ]}
       />
-      <section className="kpis" aria-label="Lease stats">
-        <KpiCard
-          label="Active leases"
-          value={counts.active}
-          note="Current leases in your portfolio"
-        />
-        <KpiCard
-          label="Expiring in 60 days"
-          value={counts.expiring}
-          note="Active leases ending in the next 60 days"
-        />
-        <KpiCard label="Awaiting e-signature" value={counts.awaiting} note="Pending signatures" />
+      <section className={styles.pulse} aria-label="Lease stats">
+        {[
+          {
+            label: 'Active leases',
+            value: counts.active,
+            note: 'Current leases in your portfolio',
+            icon: 'leases' as const,
+          },
+          {
+            label: 'Expiring in 60 days',
+            value: counts.expiring,
+            note: 'Active leases ending in the next 60 days',
+            icon: 'leases' as const,
+          },
+          {
+            label: 'Awaiting e-signature',
+            value: counts.awaiting,
+            note: 'Pending signatures',
+            icon: 'tenants' as const,
+          },
+        ].map((stat) => (
+          <div className={styles.stat} key={stat.label}>
+            <span className={styles.icon}>
+              <Icon name={stat.icon} />
+            </span>
+            <div>
+              <p>{stat.label}</p>
+              <strong>{stat.value}</strong>
+              <small>{stat.note}</small>
+            </div>
+          </div>
+        ))}
       </section>
       <Card flush>
         <div className={styles.portfolioHeader}>
@@ -118,8 +147,8 @@ export default async function LeasesPage({
               )}
               {scope.unitId && <input type="hidden" name="unitId" value={scope.unitId} />}
               <label className="search">
-                <span aria-hidden="true">⌕</span>
                 <input
+                  type="search"
                   name="q"
                   defaultValue={q}
                   aria-label="Search leases"
@@ -189,7 +218,7 @@ export default async function LeasesPage({
                           ? tabHref(tab, '', 1, scope)
                           : tab !== 'active'
                             ? tabHref('active', '', 1, scope)
-                            : '/leases/new'
+                            : setupHref(scope)
                       }
                     />
                   </td>
@@ -201,8 +230,9 @@ export default async function LeasesPage({
                 const property = lease.unit.property;
                 return (
                   <tr key={lease.id}>
-                    <td>
+                    <td data-label="Tenant">
                       <div className="cell-main">
+                        <Avatar initials={initials(tenant?.name ?? 'No tenant')} size="sm" />
                         <div>
                           <strong>
                             {tenant ? (
@@ -217,7 +247,7 @@ export default async function LeasesPage({
                         </div>
                       </div>
                     </td>
-                    <td>
+                    <td data-label="Property / unit">
                       <strong>
                         <Link href={`/properties/${property.id}`}>{property.name}</Link>
                       </strong>
@@ -232,16 +262,16 @@ export default async function LeasesPage({
                         </>
                       )}
                     </td>
-                    <td>
+                    <td data-label="Lease term">
                       <Link href={leaseHref(lease.id, scope)}>
                         {term(lease.startDate, lease.endDate)}
                       </Link>
                     </td>
-                    <td className="num">
+                    <td className="num" data-label="Rent / month">
                       <strong>{formatMoney(Number(lease.monthlyRent))}</strong>
                       <small className="muted">/mo</small>
                     </td>
-                    <td>
+                    <td data-label="E-sign status">
                       <Badge
                         tone={
                           lease.eSignStatus === 'SIGNED'
@@ -260,7 +290,7 @@ export default async function LeasesPage({
                           className={`btn btn-${lease.status === 'DRAFT' ? 'secondary' : 'ghost'} btn-sm`}
                           href={
                             lease.status === 'DRAFT'
-                              ? `/leases/new?draft=${lease.id}`
+                              ? setupHref(scope, { draft: lease.id })
                               : leaseHref(lease.id, scope)
                           }
                         >
@@ -269,7 +299,7 @@ export default async function LeasesPage({
                         {lease.status === 'ACTIVE' && (
                           <Link
                             className="btn btn-ghost btn-sm"
-                            href={`/leases/new?renew=${lease.id}`}
+                            href={setupHref(scope, { renew: lease.id })}
                           >
                             Renew
                           </Link>
@@ -290,6 +320,6 @@ export default async function LeasesPage({
           href={(n) => tabHref(tab, q, n, scope)}
         />
       </Card>
-    </>
+    </div>
   );
 }

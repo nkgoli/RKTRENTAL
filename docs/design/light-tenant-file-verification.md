@@ -12,7 +12,7 @@ The isolated integrated runtime is ready for manager-coordinated native existing
 - Fixture root relative to this checkout: `tests/tenant-file-verification/.review-app/.file-review/`. Fresh standard synthetic seed: 19 migrations, 4 properties, 45 units, 41 occupied leases. No existing database was reseeded.
 - Native chooser input: `tests/tenant-file-verification/.review-app/.file-review/harmless-photo.png` (1812 bytes, PNG signature checked), SHA-256 `541DA3F37782728F70757596784A59EA0A3FAE9A72992C25663FFC4501BC3D91`.
 - Expected lease bytes: `tests/tenant-file-verification/.review-app/.file-review/synthetic-lease.pdf` (1061 bytes), SHA-256 `79651ED35BEE69D467A986FABBB45C60FC3A6EE1277AFEB3F105FAA0DCDAA52D`. Source storage object: `.file-review/storage/seed/seed-doc-alex-lease`; document ID `seed-doc-alex-lease`, visible title Signed lease agreement.pdf. The copy is a comparison fixture, not a native download result.
-- Seeded tenant: `alex.rivera@email.com`, standard synthetic password `AlexDemo#2026`. Runtime auth secret stays in ignored local data and is not submitted.
+- Seeded tenant: Alex Rivera. Use the existing authorized fixture sign-in process. Credentials and the runtime auth secret are omitted from the handoff.
 
 Read the earlier Home/Lease and Repairs handoffs and revision 27 Lease/Lease desktop and Repairs/Repairs desktop design markup. Existing successful checks remain attributed to those handoffs; endpoint/Chromium results do not prove native file outcomes.
 
@@ -38,3 +38,4 @@ After the manager releases review, run `runtime.ps1 stop` with process-inspectio
 Pending manager observations and capture references. Previous cancelled download and upload approvals remain explicitly unverified. This Task has performed no native chooser selection, upload or download, acquired no desktop, and requested no human approval directly. Runtime release is pending review; it is not claimed complete. No push, merge, publication or deployment.
 
 Setup observations: initial sandboxed Prisma engine download failed; approved engine generation succeeded. PostgreSQL initially logged a restricted-token warning but initialized successfully and seeded normally. Next reported its existing multiple-lockfile workspace-root warning. Read-only process inspection required elevation because sandbox CIM access was denied.
+

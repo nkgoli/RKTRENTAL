@@ -1,17 +1,7 @@
 import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
-import {
-  Avatar,
-  Badge,
-  Button,
-  Card,
-  cx,
-  Pagination,
-  SearchInput,
-  Stat,
-  Table,
-  TableHead,
-} from '@/components/ui';
+import { Icon } from '@/components/shell/Icons';
+import { Avatar, Badge, Button, Card, cx } from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import { formatDate, formatMoney, initials } from '@/lib/tenants/format';
 import { organizationTenants, PAGE_SIZE } from '@/lib/tenants/queries';
@@ -24,8 +14,8 @@ import {
 } from '@/lib/tenants/status';
 import { addTenantAction } from './actions';
 import { AddTenantForm } from './TenantForms';
-import { EmptyState } from '@/components/RouteStates';
 import { StatusView } from './StatusView';
+import { TenantPager } from './Pager';
 import styles from './tenants.module.css';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -75,33 +65,35 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
       ? href({ q, property, status, page: Math.min(page, pages) })
       : `/tenants?${new URLSearchParams({ ...(q ? { q } : {}), ...(property ? { property } : {}), period })}`;
   const detailHref = (id: string) => `/tenants/${id}?${new URLSearchParams({ returnTo })}`;
+  const filtered = Boolean(q || property || status !== 'all');
 
   return (
-    <>
+    <div className={styles.scope}>
       <PageHeader
-        eyebrow="People"
+        eyebrow="Workspace / People"
         title="Tenants"
         actions={[
           { label: '+ Add tenant', href: `${href({ property })}#add-tenant`, primary: true },
         ]}
       />
 
-      <nav className={styles.viewTabs} aria-label="Tenant views">
+      <nav className={styles.tabs} aria-label="Tenant views">
         <Link
           href={href({ q, property })}
           aria-current={view === 'directory' ? 'page' : undefined}
-          className={view === 'directory' ? styles.selectedTab : ''}
+          className={view === 'directory' ? styles.selectedTab : undefined}
         >
           Directory
         </Link>
         <Link
           href={`/tenants?${new URLSearchParams({ ...(q ? { q } : {}), ...(property ? { property } : {}) })}`}
           aria-current={view === 'status' ? 'page' : undefined}
-          className={view === 'status' ? styles.selectedTab : ''}
+          className={view === 'status' ? styles.selectedTab : undefined}
         >
           Status
         </Link>
       </nav>
+
       {view === 'status' ? (
         <StatusView
           rows={setupRows}
@@ -113,48 +105,62 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
         />
       ) : (
         <>
-          <div className="kpis">
-            <Stat label="Active tenants" value={stats.activeTenants} />
-            <Stat
-              label="Move-ins (30 days)"
-              value={stats.moveIns30}
-              tone="up"
-              delta="Leases started"
-            />
-            <Stat
-              label="Leases ending in 60 days"
-              value={stats.endingSoon}
-              tone={stats.endingSoon ? 'down' : 'neutral'}
-              delta="Renewals to review"
-            />
-            <Stat
-              label="Outstanding balance"
-              value={formatMoney(stats.outstandingCents / 100)}
-              tone={stats.lateTenants ? 'down' : 'neutral'}
-              delta={`${stats.lateTenants} ${stats.lateTenants === 1 ? 'tenant' : 'tenants'}`}
-            />
+          <div className={styles.kpis}>
+            <div className={styles.kpi}>
+              <p>Active tenants</p>
+              <strong>{stats.activeTenants}</strong>
+              <small>Portfolio total</small>
+            </div>
+            <div className={styles.kpi}>
+              <p>Move-ins (30 days)</p>
+              <strong>{stats.moveIns30}</strong>
+              <small>Leases started</small>
+            </div>
+            <div className={styles.kpi}>
+              <p>Leases ending in 60 days</p>
+              <strong>{stats.endingSoon}</strong>
+              <small>Renewals to review</small>
+            </div>
+            <div className={styles.kpi}>
+              <p>Outstanding balance</p>
+              <strong>{formatMoney(stats.outstandingCents / 100)}</strong>
+              <small>
+                {stats.lateTenants} {stats.lateTenants === 1 ? 'tenant' : 'tenants'}
+              </small>
+            </div>
           </div>
 
-          <section className={styles.directoryControls} aria-label="Directory filters">
-            <div className={styles.statusHeading}>
+          <Card className={styles.pad}>
+            <div className={styles.sectionHead}>
               <div>
                 <h2>Directory</h2>
-                <p className="muted">
+                <p>
                   {total} {total === 1 ? 'tenant' : 'tenants'} in this view · Portfolio totals above
                 </p>
               </div>
-              {(q || property || status !== 'all') && (
-                <Link href={href({})} className="btn btn-ghost btn-sm">
+              {filtered && (
+                <Link className="btn btn-ghost btn-sm" href={href({})}>
                   Clear filters
                 </Link>
               )}
             </div>
-            <form method="get" action="/tenants" role="search" className={styles.filterForm}>
+            <form
+              method="get"
+              action="/tenants"
+              role="search"
+              aria-label="Directory filters"
+              className={styles.filters}
+            >
               <input type="hidden" name="view" value="directory" />
               {status !== 'all' && <input type="hidden" name="status" value={status} />}
-              <label className={styles.searchField}>
+              <label className={styles.filterField}>
                 <span>Search tenants</span>
-                <SearchInput name="q" defaultValue={q} placeholder="Name, email, phone or unit" />
+                <input
+                  type="search"
+                  name="q"
+                  defaultValue={q}
+                  placeholder="Name, email, phone or unit"
+                />
               </label>
               <label className={styles.filterField}>
                 <span>Property</span>
@@ -171,11 +177,11 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
                 Apply filters
               </Button>
             </form>
-            <nav className="chips" aria-label="Filter by status">
+            <nav className={styles.chips} aria-label="Filter by status">
               {STATUS_FILTERS.map((s) => (
                 <Link
                   key={s}
-                  className={cx('chip', status === s && 'active')}
+                  className={cx(styles.chip, status === s && styles.chipActive)}
                   aria-current={status === s ? 'true' : undefined}
                   href={href({ q, property, status: s })}
                 >
@@ -183,114 +189,113 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
                 </Link>
               ))}
             </nav>
-          </section>
+          </Card>
 
-          <Card flush className={styles.directoryCard}>
-            <Table>
-              <TableHead
-                columns={[
-                  'Tenant',
-                  'Property / unit',
-                  'Lease end',
-                  <span key="b" className="num" style={{ display: 'block' }}>
-                    Balance
-                  </span>,
-                  'Status',
-                  '',
-                ]}
-              />
-              <tbody>
-                {rows.length === 0 && (
+          <Card flush className={styles.tableCard}>
+            {rows.length === 0 ? (
+              <div className={styles.empty}>
+                <Icon name="tenants" />
+                <h3>{filtered ? 'No tenants match this view' : 'No tenants yet'}</h3>
+                <p>
+                  {filtered
+                    ? 'Clear the filters to see all tenants.'
+                    : 'Add a tenant to keep contact and lease details together.'}
+                </p>
+                <Link
+                  className="btn btn-secondary"
+                  href={filtered ? href({}) : '#add-tenant'}
+                >
+                  {filtered ? 'Clear filters' : 'Add a tenant'}
+                </Link>
+              </div>
+            ) : (
+              <table className={styles.table}>
+                <thead>
                   <tr>
-                    <td colSpan={6}>
-                      <EmptyState
-                        title={
-                          q || property || status !== 'all'
-                            ? 'No tenants match this view'
-                            : 'No tenants yet'
-                        }
-                        description={
-                          q || property || status !== 'all'
-                            ? 'Clear the filters to see all tenants.'
-                            : 'Add a tenant to keep contact and lease details together.'
-                        }
-                        action={
-                          q || property || status !== 'all' ? 'Clear filters' : 'Add a tenant'
-                        }
-                        href={q || property || status !== 'all' ? href({}) : '#add-tenant'}
-                      />
-                    </td>
+                    <th scope="col">Tenant</th>
+                    <th scope="col">Property / unit</th>
+                    <th scope="col">Lease end</th>
+                    <th scope="col">Balance</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
                   </tr>
-                )}
-                {rows.map((row) => (
-                  <tr key={row.id}>
-                    <td>
-                      <Link className="cell-main" href={detailHref(row.id)}>
-                        <Avatar initials={initials(row.name)} />
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.id}>
+                      <th scope="row">
+                        <Link className={styles.person} href={detailHref(row.id)}>
+                          <Avatar initials={initials(row.name)} />
+                          <span>
+                            <strong>{row.name}</strong>
+                            <small>{row.email ?? row.phone ?? 'No contact on file'}</small>
+                          </span>
+                        </Link>
+                      </th>
+                      <td data-label="Property / unit">
                         <span>
-                          <strong>{row.name}</strong>
-                          <small>{row.email ?? row.phone ?? 'No contact on file'}</small>
+                          {row.property && row.unit ? (
+                            <>
+                              <Link href={`/properties/${row.property.id}`}>
+                                {row.property.name}
+                              </Link>
+                              <small>
+                                {row.property.isImplicit ? (
+                                  'Single-unit'
+                                ) : (
+                                  <Link
+                                    href={`/properties/${row.property.id}?unit=${encodeURIComponent(row.unit.id)}`}
+                                  >
+                                    Unit {row.unit.number}
+                                  </Link>
+                                )}
+                              </small>
+                            </>
+                          ) : (
+                            <span className={styles.muted}>Not assigned</span>
+                          )}
                         </span>
-                      </Link>
-                    </td>
-                    <td data-label="Property / unit">
-                      <span>
-                        {row.property && row.unit ? (
-                          <>
-                            <Link href={`/properties/${row.property.id}`}>{row.property.name}</Link>
-                            {row.property.isImplicit ? (
-                              <small className="muted"> · Single-unit</small>
-                            ) : (
-                              <>
-                                {' '}
-                                ·{' '}
-                                <Link
-                                  href={`/properties/${row.property.id}?unit=${encodeURIComponent(row.unit.id)}`}
-                                >
-                                  Unit {row.unit.number}
-                                </Link>
-                              </>
-                            )}
-                          </>
+                      </td>
+                      <td data-label="Lease end">
+                        {row.lease ? (
+                          <Link href={`/leases/${row.lease.id}`}>
+                            {formatDate(row.lease.endDate)}
+                          </Link>
                         ) : (
-                          <span className="muted">—</span>
+                          <span className={styles.muted}>—</span>
                         )}
-                      </span>
-                    </td>
-                    <td data-label="Lease end">
-                      {row.lease ? (
-                        <Link href={`/leases/${row.lease.id}`}>
-                          {formatDate(row.lease.endDate)}
-                        </Link>
-                      ) : (
-                        <span className="muted">—</span>
-                      )}
-                    </td>
-                    <td
-                      data-label="Balance"
-                      className="num"
-                      style={row.balanceCents > 0 ? { color: 'var(--design-danger)' } : undefined}
-                    >
-                      {formatMoney(row.balanceCents / 100)}
-                    </td>
-                    <td data-label="Status">
-                      <Badge tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</Badge>
-                    </td>
-                    <td>
-                      <Link className="btn btn-ghost btn-sm" href={detailHref(row.id)}>
-                        View
-                      </Link>{' '}
-                      {row.lease && (
-                        <Link className="btn btn-ghost btn-sm" href={`/leases/${row.lease.id}`}>
-                          Lease
-                        </Link>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-            <Pagination
+                      </td>
+                      <td
+                        data-label="Balance"
+                        className={cx(styles.num, row.balanceCents > 0 && styles.dangerText)}
+                      >
+                        {formatMoney(row.balanceCents / 100)}
+                      </td>
+                      <td data-label="Status">
+                        <Badge tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</Badge>
+                      </td>
+                      <td className={styles.rowActions}>
+                        <div className={styles.actions}>
+                          <Link
+                            className={styles.link}
+                            href={detailHref(row.id)}
+                            aria-label={`View ${row.name}`}
+                          >
+                            View
+                          </Link>
+                          {row.lease && (
+                            <Link className={styles.link} href={`/leases/${row.lease.id}`}>
+                              Lease
+                            </Link>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            <TenantPager
               page={Math.min(page, pages)}
               total={total}
               size={PAGE_SIZE}
@@ -306,6 +311,6 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
           />
         </>
       )}
-    </>
+    </div>
   );
 }

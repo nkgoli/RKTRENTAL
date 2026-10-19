@@ -1,19 +1,10 @@
-import { Fragment } from 'react';
 import Link from 'next/link';
-import {
-  Avatar,
-  Button,
-  Card,
-  cx,
-  Pagination,
-  pageFrom,
-  paginate,
-  SearchInput,
-  TrendChip,
-} from '@/components/ui';
+import { Alert, Avatar, Badge, Button, Card, cx, pageFrom, paginate } from '@/components/ui';
+import { Icon } from '@/components/shell/Icons';
 import { formatDate, initials } from '@/lib/tenants/format';
 import type { organizationTenants } from '@/lib/tenants/queries';
-import { EmptyState } from '@/components/RouteStates';
+import type { SetupState } from '@/lib/tenants/status';
+import { TenantPager } from './Pager';
 import styles from './tenants.module.css';
 
 type SetupRow = Awaited<ReturnType<ReturnType<typeof organizationTenants>['setupRows']>>[number];
@@ -43,6 +34,25 @@ const checklistLabels = [
   'Autopay on',
   'Card on file',
 ];
+const NOT_TRACKED = new Set<(typeof checklistFields)[number]>([
+  'invited',
+  'accepted',
+  'bankVerified',
+]);
+
+function stateLabel(field: (typeof checklistFields)[number], state: SetupState) {
+  if (NOT_TRACKED.has(field)) return 'Not tracked';
+  if (state === 'complete') return '✓ Complete';
+  if (state === 'incomplete') return '! Incomplete';
+  return '— Not applicable';
+}
+
+function stateClass(field: (typeof checklistFields)[number], state: SetupState) {
+  if (NOT_TRACKED.has(field)) return styles.unknown;
+  if (state === 'complete') return styles.complete;
+  if (state === 'incomplete') return styles.incomplete;
+  return styles.unknown;
+}
 
 export function StatusView({
   rows,
@@ -71,43 +81,48 @@ export function StatusView({
     );
   });
   const current = pageFrom(page, shown.length);
+  const paged = paginate(shown, current);
   const attention = shown.filter(
     (row) => row.checklist.bankAdded === 'incomplete' || row.checklist.autopayOn === 'incomplete',
   ).length;
+
   return (
-    <section className={styles.statusSection} aria-labelledby="tenant-status-title">
-      <div className={styles.statusHeading}>
+    <section className={styles.status} aria-labelledby="tenant-status-title">
+      <div className={styles.sectionHead}>
         <div>
           <h2 id="tenant-status-title">Tenant status</h2>
-          <p className="muted">Who has finished setup — and who still needs a nudge.</p>
-        </div>
-        <div className={styles.headingPeople}>
-          <TrendChip warm>{attention} need attention</TrendChip>
+          <p>Who has finished setup — and who still needs a nudge.</p>
         </div>
       </div>
-      <div className={styles.statusControls}>
-        <div className="chips" aria-label="Lease period">
-          <Link
-            className={cx('chip', period === 'current' && 'active')}
-            aria-current={period === 'current' ? 'true' : undefined}
-            href={href(q, property)}
-          >
-            Current tenants
-          </Link>
-          <Link
-            className={cx('chip', period === 'upcoming' && 'active')}
-            aria-current={period === 'upcoming' ? 'true' : undefined}
-            href={href(q, property, 'upcoming')}
-          >
-            Upcoming tenants
-          </Link>
-        </div>
+
+      <div className={styles.period} role="group" aria-label="Lease period">
+        <Link
+          className={cx(styles.periodLink, period === 'current' && styles.periodActive)}
+          aria-current={period === 'current' ? 'true' : undefined}
+          href={href(q, property)}
+        >
+          Current tenants
+        </Link>
+        <Link
+          className={cx(styles.periodLink, period === 'upcoming' && styles.periodActive)}
+          aria-current={period === 'upcoming' ? 'true' : undefined}
+          href={href(q, property, 'upcoming')}
+        >
+          Upcoming tenants
+        </Link>
       </div>
-      <form action="/tenants" method="get" role="search" className={styles.filterForm}>
+
+      <form
+        action="/tenants"
+        method="get"
+        role="search"
+        aria-label="Status filters"
+        className={styles.filters}
+      >
         {period === 'upcoming' && <input type="hidden" name="period" value="upcoming" />}
-        <label className={styles.searchField}>
+        <label className={styles.filterField}>
           <span>Search tenants</span>
-          <SearchInput name="q" defaultValue={q} placeholder="Property, tenant or email" />
+          <input type="search" name="q" defaultValue={q} placeholder="Property, tenant or email" />
         </label>
         <label className={styles.filterField}>
           <span>Property</span>
@@ -129,145 +144,99 @@ export function StatusView({
           </Link>
         )}
       </form>
-      <div className={styles.legend} aria-label="Checklist legend">
-        <span>
-          <b className={styles.complete}>✓</b> Complete
-        </span>
-        <span>
-          <b className={styles.incomplete}>!</b> Incomplete
-        </span>
-        <span>
-          <b className={styles.na}>—</b> Not applicable
-        </span>
+
+      <div className={styles.actions} style={{ justifyContent: 'space-between' }}>
+        <p className={styles.meta}>
+          {period === 'upcoming' ? 'Draft leases' : 'Active leases'} · {shown.length}{' '}
+          {shown.length === 1 ? 'tenant' : 'tenants'} in this view
+        </p>
+        <Badge tone="warning">
+          {attention} need{attention === 1 ? 's' : ''} attention
+        </Badge>
       </div>
-      <Card flush>
-        <div
-          className={styles.tableScroll}
-          role="region"
-          aria-label="Tenant setup checklist"
-          tabIndex={0}
-        >
-          <table className={styles.statusTable}>
-            <thead>
-              <tr>
-                <th scope="col">Lease</th>
-                <th scope="col">Tenant info</th>
-                {checklistLabels.map((label) => (
-                  <th scope="col" key={label}>
-                    {label}
-                  </th>
-                ))}
-                <th scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.length === 0 && (
-                <tr>
-                  <td colSpan={9}>
-                    <EmptyState
-                      title="No tenants match this view"
-                      description="Try another property, tenant, or lease period."
-                      action="View current tenants"
-                      href="/tenants"
-                    />
-                  </td>
-                </tr>
-              )}
-              {paginate(shown, current).map((row) => {
-                return (
-                  <Fragment key={`${row.leaseId}:${row.tenant.id}`}>
-                    <tr>
-                      <td>
-                        <span className="cell-main">
-                          <span>
-                            <strong>
-                              <Link href={`/properties/${row.property.id}`}>
-                                {row.property.name}
-                              </Link>{' '}
-                              ·{' '}
-                              <Link
-                                href={`/properties/${row.property.id}?unit=${encodeURIComponent(row.unit.id)}`}
-                              >
-                                {row.unit.isImplicit ? 'Single-unit' : `Unit ${row.unit.number}`}
-                              </Link>
-                            </strong>
-                            <small>
-                              <Link href={`/leases/${row.leaseId}`}>
-                                {formatDate(row.startDate)} – {formatDate(row.endDate)}
-                              </Link>
-                            </small>
-                          </span>
-                        </span>
-                      </td>
-                      <td>
-                        <Link
-                          className="cell-main"
-                          href={`/tenants/${row.tenant.id}?${new URLSearchParams({ returnTo: href(q, property, period, current) })}`}
-                        >
-                          <Avatar initials={initials(row.tenant.name)} />
-                          <span>
-                            <strong>{row.tenant.name}</strong>
-                            <small>
-                              {row.tenant.email ?? row.tenant.phone ?? 'No contact on file'}
-                            </small>
-                          </span>
-                        </Link>
-                      </td>
-                      {checklistFields.map((field) => {
-                        const state = row.checklist[field];
-                        return (
-                          <td
-                            key={field}
-                            className={styles.checkCell}
-                            data-label={checklistLabels[checklistFields.indexOf(field)]}
-                          >
-                            <span
-                              className={styles[state === 'not-applicable' ? 'na' : state]}
-                              title={state === 'not-applicable' ? 'Not applicable' : state}
-                              aria-label={`${checklistLabels[checklistFields.indexOf(field)]}: ${state}`}
-                            >
-                              {state === 'complete' ? '✓' : state === 'incomplete' ? '!' : '—'}
-                            </span>
-                          </td>
-                        );
-                      })}
-                      <td className={styles.actions}>
-                        <button
-                          type="button"
-                          className="btn btn-ghost btn-sm"
-                          disabled
-                          title="Messaging is not available"
-                        >
-                          Message
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-ghost btn-sm"
-                          disabled
-                          title="Invitations are not available"
-                        >
-                          Resend invite
-                        </button>
-                      </td>
-                    </tr>
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
+
+      <Card flush className={styles.statusCard}>
+        <div role="region" aria-label="Tenant setup checklist">
+          {paged.length === 0 ? (
+            <div className={styles.empty}>
+              <Icon name="tenants" />
+              <h3>No tenants match this view</h3>
+              <p>Try another property, tenant, or lease period.</p>
+              <Link className="btn btn-secondary" href="/tenants">
+                View current tenants
+              </Link>
+            </div>
+          ) : (
+            paged.map((row) => (
+              <article className={styles.setup} key={`${row.leaseId}:${row.tenant.id}`}>
+                <div className={styles.setupInfo}>
+                  <Link
+                    className={styles.person}
+                    href={`/tenants/${row.tenant.id}?${new URLSearchParams({ returnTo: href(q, property, period, current) })}`}
+                  >
+                    <Avatar initials={initials(row.tenant.name)} />
+                    <span>
+                      <strong>{row.tenant.name}</strong>
+                      <small>{row.tenant.email ?? row.tenant.phone ?? 'No contact on file'}</small>
+                    </span>
+                  </Link>
+                  <div className={styles.setupLinks}>
+                    <Link href={`/properties/${row.property.id}`}>{row.property.name}</Link>
+                    <Link
+                      href={`/properties/${row.property.id}?unit=${encodeURIComponent(row.unit.id)}`}
+                    >
+                      {row.unit.isImplicit ? 'Single-unit' : `Unit ${row.unit.number}`}
+                    </Link>
+                  </div>
+                  <Link className={styles.meta} href={`/leases/${row.leaseId}`}>
+                    {formatDate(row.startDate)} – {formatDate(row.endDate)}
+                  </Link>
+                  {row.leaseStatus === 'DRAFT' && <Badge tone="info">Draft lease</Badge>}
+                </div>
+                <dl className={styles.checks}>
+                  {checklistFields.map((field, index) => {
+                    const state = row.checklist[field];
+                    return (
+                      <div key={field}>
+                        <dt>{checklistLabels[index]}</dt>
+                        <dd className={stateClass(field, state)}>{stateLabel(field, state)}</dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+              </article>
+            ))
+          )}
+          <TenantPager
+            page={current}
+            total={shown.length}
+            noun="tenants"
+            href={(n) => href(q, property, period, n)}
+          />
         </div>
-        <Pagination
-          page={current}
-          total={shown.length}
-          noun="tenants"
-          href={(n) => href(q, property, period, n)}
-        />
       </Card>
-      <p className="muted">
-        Invitation, acceptance and bank verification are not tracked yet. Card on file is not
-        applicable when a tenant uses ACH autopay without a card. Messaging and invitations are not
-        available.
-      </p>
+
+      <Alert tone="warning">
+        <div>
+          <strong>Some setup steps are not tracked yet.</strong>
+          <p>
+            Invitation, acceptance and bank verification are not tracked. Card on file is not
+            applicable when a tenant uses ACH autopay without a card.
+          </p>
+        </div>
+      </Alert>
+
+      <div className={styles.unavailable}>
+        <p>Messaging and invitations are not available.</p>
+        <div className={styles.actions}>
+          <button className="btn btn-sm" type="button" disabled>
+            Message
+          </button>
+          <button className="btn btn-sm" type="button" disabled>
+            Resend invite
+          </button>
+        </div>
+      </div>
     </section>
   );
 }

@@ -50,7 +50,17 @@ Final browser console contained only the existing missing `/favicon.ico` 404. Th
 - `tests/dashboard/evidence/desktop-after.png` and `phone-after.png`: real production dashboard at 1440 and 390 CSS pixels, with monthly disclosure open on phone.
 - `tests/dashboard/evidence/native-desktop-before.png`: existing Edge session baseline, Windows MCP snapshot at 2560 x 1600 display resolution. Desktop lease was acquired and released.
 
-**Required final native Edge desktop/390px review is pending.** During earlier leased windows, the active tab or foreground window changed between automation actions. The desktop was released without continuing to compete for focus. The manager has confirmed the handover, superseded the duplicate readiness questions, and confirmed that no quiet window is active. The manager coordinates the next window; the builder must not independently request another human window or acquire the desktop. This does not affect the passing isolated Playwright results, but task acceptance must wait for the required native review. Empty/error states have component coverage, not an induced production database-outage browser test.
+**Required final native Edge desktop/390px review is pending.** Earlier leased windows lost browser focus. During the later human-granted window, the manager reported that Edge could not reach the review server; no final native check passed and no final screenshot was obtained. The remaining obstacle is runtime/browser reachability, not an absent human grant. The manager coordinates desktop use; no new desktop window is established by this handoff. Passing isolated Playwright results remain valid, but task acceptance must wait for the required native review. Empty/error states have component coverage, not an induced production database-outage browser test.
+
+### Coordinated review outcome and takeover reconciliation
+
+The manager's report at **2026-10-19 21:12:07 UTC** states that the granted window ended early at **21:11:32 UTC**, with the desktop released. Existing Edge navigations to `http://localhost:3228/sign-in` repeatedly returned `ERR_CONNECTION_REFUSED`; navigation and rebind then timed out, and the Windows-MCP app switch was cancelled. These are attributed manager observations, not successful browser checks by this takeover. Source: committed project message `73c6921b18f3197017ca4e242b98b3a0387688a05db05685e9d4e84e3b37331f`.
+
+The previous owner's bounded-hold checkpoint records that the production build and retained fixture were available through the agreed **21:17:19 UTC** deadline while its process session stayed active. Local Next logs record readiness without an application crash. PostgreSQL logs record readiness at **21:07:46 UTC** and clean shutdown at **21:18:06 UTC**. Server-side readiness and the reported browser connection refusal are different observations; the available evidence does not establish why the browser could not connect.
+
+This takeover reconfirmed the unchanged candidate `5c0e16fdcfa7c5fb19658d67dd23eebe0c3b078e`, all four admitted foundation ancestors, production build `AFP2Fu5f6Vc4ZfOZT7itT`, and the five existing evidence images listed above. No final native image was present. Neither review port had a listener, and the retained fixture had no active `postmaster.pid`. No server restart, desktop acquisition, rebuild, migration, reseed or repeated passing suite was performed.
+
+Completion still needs native desktop/390px screenshots plus disclosure and contextual-link observations. Runtime reachability from the reviewing browser must be established during manager-coordinated access before those checks can be claimed. The source, fixture, logs and existing screenshots remain preserved.
 
 ### Runtime readiness for manager coordination
 
@@ -93,7 +103,7 @@ Keep the fixture directory and existing screenshots. Record the new native scree
 
 ### Pending native checklist
 
-Wait for the manager's explicit quiet-window signal; silence does not establish availability. Reuse the retained fixture cluster and production build above without migrating, reseeding or rebuilding. Complete only the missing native observations; preserve passing checks.
+Resolve the browser/runtime reachability discrepancy and wait for the manager's explicit coordinated-window signal; silence does not establish availability. Reuse the retained fixture cluster and production build above without migrating, reseeding or rebuilding. Complete only the missing native observations; preserve passing checks.
 
 1. Acquire one bounded desktop lease and use only the dashboard review tab in the existing Edge session.
 2. At desktop width, inspect collection/history, leases/attention and property/activity composition; capture the final native screenshot against the preserved baseline.

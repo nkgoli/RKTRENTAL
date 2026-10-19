@@ -1,6 +1,6 @@
 [CmdletBinding(SupportsShouldProcess)]
 param(
-    [ValidateSet('Start', 'Launch', 'Status', 'Stop')]
+    [ValidateSet('Start', 'Launch', 'RestartNext', 'LaunchNext', 'Status', 'Stop')]
     [string]$Action = 'Status'
 )
 
@@ -52,13 +52,33 @@ function Assert-ReadyToStart {
     }
 }
 
-if ($Action -eq 'Start') {
-    Assert-ReadyToStart
+function Start-ReviewNext {
+    $env:DATABASE_URL = 'postgresql://rocketrental:rocketrental@localhost:55428/rocketrental?schema=public'
+    $secretBytes = New-Object byte[] 48
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try { $rng.GetBytes($secretBytes) } finally { $rng.Dispose() }
+    $env:ROCKETRENTAL_AUTH_SECRET = [Convert]::ToBase64String($secretBytes)
+    # This fixture is served over local HTTP only; never change the system environment.
+    $env:ROCKETRENTAL_AUTH_COOKIE_SECURE = 'false'
+    $nodeExe = (Get-Command node.exe).Source
+    $logStem = 'persistent-native-next-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
+    try {
+        $process = Start-Process -FilePath $nodeExe -ArgumentList @(('"{0}"' -f $nextEntry), 'start', '-p', '3228') -WorkingDirectory $reviewRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $runtimeDir ($logStem + '.stdout.log')) -RedirectStandardError (Join-Path $runtimeDir ($logStem + '.stderr.log'))
+        return (Get-Identity $process $nodeExe)
+    } finally {
+        $env:ROCKETRENTAL_AUTH_SECRET = $null
+        [Array]::Clear($secretBytes, 0, $secretBytes.Length)
+    }
+}
+
+if ($Action -in @('Start', 'RestartNext')) {
+    if ($Action -eq 'Start') { Assert-ReadyToStart }
     # WMI creates the hidden launcher outside the tool runner's process tree/job.
     # The launcher exits after starting the services; no hold loop is required.
     $powershellExe = (Get-Command powershell.exe).Source
     $startup = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ ShowWindow = [uint16]0 }
-    $commandLine = '"{0}" -NoProfile -NonInteractive -WindowStyle Hidden -File "{1}" -Action Launch' -f $powershellExe, $PSCommandPath
+    $launchAction = if ($Action -eq 'RestartNext') { 'LaunchNext' } else { 'Launch' }
+    $commandLine = '"{0}" -NoProfile -NonInteractive -WindowStyle Hidden -File "{1}" -Action {2}' -f $powershellExe, $PSCommandPath, $launchAction
     $result = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
         CommandLine = $commandLine
         CurrentDirectory = $reviewRoot
@@ -83,11 +103,7 @@ if ($Action -eq 'Launch') {
         $postgres = Start-Process -FilePath $postgresExe -ArgumentList @('-D', ('"{0}"' -f $fixtureDir), '-p', '55428') -WorkingDirectory $reviewRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $runtimeDir 'persistent-native-postgres.stdout.log') -RedirectStandardError (Join-Path $runtimeDir 'persistent-native-postgres.stderr.log')
         $state.postgres = Get-Identity $postgres $postgresExe
         $state | ConvertTo-Json -Depth 4 | Set-Content $stateFile -Encoding UTF8
-        # These are the retained local-only fixture credentials from scripts/embedded-postgres.mjs.
-        $env:DATABASE_URL = 'postgresql://rocketrental:rocketrental@localhost:55428/rocketrental?schema=public'
-        $nodeExe = (Get-Command node.exe).Source
-        $next = Start-Process -FilePath $nodeExe -ArgumentList @(('"{0}"' -f $nextEntry), 'start', '-p', '3228') -WorkingDirectory $reviewRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $runtimeDir 'persistent-native-next.stdout.log') -RedirectStandardError (Join-Path $runtimeDir 'persistent-native-next.stderr.log')
-        $state.next = Get-Identity $next $nodeExe
+        $state.next = Start-ReviewNext
         $state | ConvertTo-Json -Depth 4 | Set-Content $stateFile -Encoding UTF8
     } catch {
         $_.Exception.Message | Set-Content $launchError -Encoding UTF8
@@ -101,6 +117,17 @@ $state = Get-Content $stateFile -Raw | ConvertFrom-Json
 if ($state.checkout -ne $reviewRoot) { throw 'Runtime state belongs to another checkout.' }
 $postgres = if ($state.postgres) { Get-OwnedProcess $state.postgres }
 $next = if ($state.next) { Get-OwnedProcess $state.next }
+
+if ($Action -eq 'LaunchNext') {
+    if (-not $postgres) { throw 'Retained database is not running; it was not restarted.' }
+    if ((Get-Content (Join-Path $reviewRoot '.next/BUILD_ID') -Raw).Trim() -ne $expectedBuild) { throw 'Tested build changed.' }
+    if ($next) { Stop-Process -Id $next.Id; $next.WaitForExit() }
+    if (@(Get-NetTCPConnection -LocalPort 3228 -State Listen -ErrorAction SilentlyContinue).Count) { throw 'Port 3228 remains occupied; no replacement was launched.' }
+    $state.next = Start-ReviewNext
+    $state.launcherPid = $PID
+    $state | ConvertTo-Json -Depth 4 | Set-Content $stateFile -Encoding UTF8
+    return
+}
 
 if ($Action -eq 'Stop') {
     if ($next -and $PSCmdlet.ShouldProcess("Next PID $($next.Id)", 'Stop verified review process')) {

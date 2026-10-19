@@ -62,7 +62,25 @@ The initial takeover reconciliation reconfirmed the unchanged candidate `5c0e16f
 
 Completion still needs native desktop/390px screenshots plus disclosure and contextual-link observations. Runtime reachability from the reviewing browser must be established during manager-coordinated access before those checks can be claimed. The source, fixture, logs and existing screenshots remain preserved.
 
-### Persistent rescue runtime — running
+### Authentication repair — ready for the active native review
+
+During the manager-controlled review, the sign-in page loaded but manager login failed because the hidden Next process lacked `ROCKETRENTAL_AUTH_SECRET`. This is a runtime-environment defect in the review helper; the earlier public-page HTTP checks did not exercise authentication.
+
+At **2026-10-19 22:10:18 UTC**, only the verified Next process was restarted. The helper now generates a fresh 48-byte cryptographic secret in memory for each Next launch, passes it through the child environment, and clears its launcher copy. The value is never printed, written to runtime metadata or committed. The local HTTP fixture also sets `ROCKETRENTAL_AUTH_COOKIE_SECURE=false` only in that launch environment, as required by the existing session API for HTTP development. No machine/user environment or system security setting was changed.
+
+The seeded manager sign-in was verified through local HTTP: POST returned **303 to `/dashboard`**, issued a session cookie, and a subsequent request carrying that cookie returned **200** with real collection content and Alex Rivera's lease. No cookie value was printed. An initial extra probe expected a Location header from a streamed sign-in page and was inconclusive; the corrected assertion checks the actual protected dashboard and passed. PowerShell syntax and patch hygiene passed. Native Edge acceptance remains a separate manager observation.
+
+Current Next identity: **PID `46580`**, created **`2026-10-19T22:10:18.1737260Z`**, listening on `[::]:3228`. Its hidden launcher **PID `5864`** exited. PostgreSQL **PID `8064`** and its original creation time remain unchanged. Both loopback sign-in URLs returned 200 at **22:10:36 UTC**. Build `AFP2Fu5f6Vc4ZfOZT7itT` and fixture were reused without rebuilding, migrating or reseeding. The runtime remains running for the manager's review.
+
+For an authorized Next-only environment refresh, the helper now supports:
+
+```powershell
+& ./tests/dashboard/native-review.ps1 -Action RestartNext
+```
+
+This validates the recorded Next PID/creation time/executable, retains the running database, and uses a hidden WMI launcher for the replacement Next process. New Next logs have timestamped filenames, preserving the earlier failure log. Restarting Next generates a new secret and invalidates earlier review sessions; sign in again afterward.
+
+### Initial persistent rescue runtime — Next identity superseded above
 
 Following the manager's preparation instruction, the retained fixture and existing build were started at **2026-10-19 21:47:29 UTC**. A hidden WMI-created PowerShell launcher started the ordinary `postgres.exe` and `next start` commands with `Start-Process -WindowStyle Hidden`, then exited. Both service processes were subsequently observed outside any Windows job, with no main window. They remain available after the launching command returns; no blocking hold loop or turn-end shutdown is used.
 

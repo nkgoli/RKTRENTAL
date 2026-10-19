@@ -1,7 +1,7 @@
 # Rent Analysis workspace
 
 Direct manager entry: `/rent-analysis`. Local verification entry:
-`http://127.0.0.1:3146/rent-analysis` (manager sign-in required).
+`http://127.0.0.1:3148/rent-analysis` (correction runtime; manager sign-in required).
 
 ## Navigation and integration
 
@@ -9,7 +9,7 @@ Direct manager entry: `/rent-analysis`. Local verification entry:
 - `?property=<id>`: saved unit estimates and separate current lease/listed/market rents. No property-wide blended comps.
 - `?property=<id>&unit=<id>`: scoped comparison workbench. An implicit unit of a `SINGLE_UNIT` property opens directly without a unit picker.
 - Unknown, archived, foreign and mismatched identities show selection recovery, never a fallback property/unit. The page catches data-loading failures through its route error boundary; retry retains the URL.
-- Unit picker and filters preserve property/unit/filter query context. Changing property starts fresh. Exclusions remain local to the workbench and reset after refresh/filter changes.
+- Unit picker and filters preserve property/unit/filter query context. Overview unit-row links carry only explicit, validated filter choices, including empty size bounds. Absent or invalid choices fall back to the destination subject's defaults. Changing property starts fresh. Exclusions remain local to the workbench and reset after refresh/filter changes.
 - Open in Listing uses the allowlisted navigation builder and the same validated filters. Lease links carry both property and unit and open the existing create-lease flow; this page does not change leases.
 
 Sidebar wiring remains a subsequent coordinated integration in the shared shell owner’s scope. Add a manager navigation entry named **Rent Analysis** targeting `/rent-analysis`; do not preselect a property. This candidate does not implement ROI Analysis or claim the whole two-feature request complete. No shared selector or shell files were changed.
@@ -77,3 +77,47 @@ Windows MCP acquired the desktop and used a new tab in the human’s existing Ed
 | Mismatched property/unit | Maple + Elm unit yields selection recovery, no fallback workbench | `native-rejected-scope-390.png` |
 
 The task tab and DevTools were closed and desktop ownership released. Existing user tabs were preserved. No upstream push or Preview publication was performed. Sandbox data is not a live-market verification; provider outage recovery is implemented but a live external provider was not configured or claimed.
+
+## Recovery correction — 2026-10-19
+
+**Preserve filters across unit links and recover failed market-rent applications** starts from candidate `95af5cd5e001b2629ecc371fa603f7eaacddc286`, verified as an ancestor of this checkout's initial `8eb95af5bff33f02302e98458baccd08ee0cb41b`. The initial implementation evidence above is historical; this correction used the separate runtime and database below. Design revision 36's rent and phone layouts remain in place.
+
+Overview links now use the existing query builder with explicit filters validated through `parseFilters`. They preserve the same authorized property and selected unit. Invalid identity rejection, change-property selection and same-subject reset are unchanged. The new helper does not freeze the previous unit's implicit defaults into the next link.
+
+The apply field holds an exact string draft, including spaces, currency signs, commas and decimal places. React's [form action behavior](https://react.dev/reference/react-dom/components/form) resets uncontrolled fields when the action resolves, including an action returning a validation result. A controlled field prevents that reset and also keeps user edits when exclusions change the suggestion. Pending submissions announce their status, make the amount read-only and disable the submit button. Errors use an associated alert, validation marks the field invalid, and focus returns for correction. Editing clears stale validation feedback; uncertainty stays visible until another result arrives.
+
+Lookup failures return a confirmed rejection before a write is attempted. A thrown write or lost response returns an **unknown** outcome: the UI says the update may have been saved and explains that retrying sets the amount again. It never claims that an uncertain write left rent unchanged. Successful writes remain successful even if subsequent view revalidation fails; the confirmation explains the refresh limitation and displays the acknowledged amount. Authentication/authorization redirects still propagate through Next, including the client recovery wrapper. The existing organization-scoped market-rent service remains the sole write path.
+
+### Automated evidence
+
+- Before the fix: **8 failed / 15 passed** across the three targeted regression files. Failures reproduced missing row-link filters, exact draft replacement, exclusion-driven draft replacement, thrown lookup/write/cache errors and lost-response page replacement. [Original regression output](../../tests/rent-analysis/evidence/recovery-before.txt).
+- After the fix: **57 passed / 9 files** with `npm.cmd test -- tests/rent-analysis tests/comps tests/rent-comps --reporter=verbose`. Includes pending/focus/correction interactions, client and server redirects, lookup rejection, write uncertainty, revalidation-after-save and existing Listing/legacy/navigation/calculation/persistence contracts. [Passing output](../../tests/rent-analysis/evidence/recovery-after.txt).
+- `npm.cmd run typecheck`: passed. [Typecheck output](../../tests/rent-analysis/evidence/recovery-typecheck.txt).
+- Scoped ESLint over the changed route, workbench, action/state, navigation, tests and verification helpers with `--max-warnings=0`: passed.
+- `RENT_VERIFICATION_ID=c0e3b203 node --import ./prisma/os-userinfo.mjs --import tsx tests/rent-analysis/verification-build.mjs`: passed, including compilation, lint/type validation and static generation. [Build output](../../tests/rent-analysis/evidence/recovery-build.txt). Next's existing multiple-lockfile workspace-root warning remains; it did not fail the build. Output is `.next/build-c0e3b203`; only the task-owned verification TypeScript config acquired generated includes.
+
+### Isolated persistence and runtime
+
+This checkout had no inherited dependencies or database files. Locked installs and Prisma Client 6.19.3 were prepared here. A new PostgreSQL 16.14 cluster at `.orchestra/task-c0e3b203-db`, port **55438**, database `rocketrental`, received all 19 migrations and the deterministic seed: 69 units and 410 leases. SQL `current_database()`, `inet_server_port()` and `current_setting('data_directory')` confirmed the identity. No other runtime or database was modified.
+
+The development runtime uses **127.0.0.1:3148**, `.next/verification-c0e3b203`, `tests/rent-analysis/tsconfig.verification.json`, sandbox comps and local HTTP authentication. Launch with `RENT_VERIFICATION_ID=c0e3b203`, `RENT_VERIFICATION_DATABASE_PORT=55438`, `PORT=3148`, and the isolated `DATABASE_URL` before running the existing `verification-runtime.mjs` helper. The runtime/database are retained for review; their outputs do not replace shared build output. No shared `.env` was edited.
+
+`node tests/rent-analysis/recovery-database.mjs baseline` saved a local comparison at `.orchestra/task-c0e3b203-before.json`. `unchanged` after native invalid submission and after the injected write exception proved **all 69 complete unit rows and all 410 complete lease rows identical**. `fault-on` installed a temporary trigger that rejects market-rent writes for `demo-unit-maple-7` only; `fault-off` removed both trigger and function before retry. The action conservatively treated the thrown write as uncertain even though the probe's database comparison established rollback.
+
+After correction, `applied` proved only `demo-unit-maple-7.marketRent` (**1920 → 1725.50**), its actor/name/time audit fields and automatic `updatedAt` changed. Listed rent stayed **1835**, current lease **1855**; all 410 complete lease rows and 68 other complete unit rows stayed identical. Database data remains local, outside submitted artifacts.
+
+### Native Edge coverage
+
+Windows MCP used a new task tab in the human's existing Edge window (window handle 526058), a 2560×1600 desktop, and Edge responsive emulation at **390×844 CSS pixels**. Native input/scroll/keyboard interactions exercised the real application; screenshots were saved by the Windows MCP capture helper.
+
+| Flow | Observed result | Evidence |
+| --- | --- | --- |
+| Desktop overview navigation + reload | Unit 3B → overview Unit 3A preserved radius 3, beds 2, baths any, empty min/max size, days 90, status all; Ctrl+R kept them | [Desktop filtered row](../../tests/rent-analysis/evidence/recovery-filtered-row-desktop.png) |
+| Desktop validation | Malformed `2190 $0.00 ` retained after Enter, inline error and focused field; database unchanged | [Desktop validation](../../tests/rent-analysis/evidence/recovery-validation-desktop.png) |
+| Desktop thrown write | Typed ` $1,725.50 ` retained, including both spaces (verified by native select/copy); inline uncertain-outcome message; form/URL remained usable | [Desktop write failure](../../tests/rent-analysis/evidence/recovery-write-error-desktop.png) |
+| Phone recovery | Unknown-outcome message and retained amount fit 390px; subsequent ` $0.00 ` validation retained the draft and focus | [Phone write failure](../../tests/rent-analysis/evidence/recovery-write-error-390.png), [phone validation](../../tests/rent-analysis/evidence/recovery-validation-390.png) |
+| Phone correction | Enter with ` $1,725.50 ` succeeded after the trigger was removed; confirmation, market value and actor appeared; exact draft remained | [Phone correction](../../tests/rent-analysis/evidence/recovery-corrected-390.png) |
+| Phone overview navigation + reload | Unit 3A → overview Unit 3B kept all explicit filters through Ctrl+R | [Phone filtered row](../../tests/rent-analysis/evidence/recovery-filtered-row-390.png) |
+| Intentional resets | Min sqft 9999 produced no comps; Reset filters cleared the filter query but retained Maple/3B and restored size defaults 774–1047. Change property returned bare `/rent-analysis` and property selection | [Phone reset](../../tests/rent-analysis/evidence/recovery-reset-390.png) |
+
+The task tab and DevTools were closed; desktop ownership was released. Existing user tabs and other runtimes were preserved. Native evidence covers validation and a real database-write exception. Lookup failures, post-commit acknowledgement loss and transport errors are simulated in focused regressions; a real network outage or live external comps provider is not claimed. Drafts are local to the current workbench and intentionally reset when changing subject/filter context or reloading; URL filters survive reload. Sidebar/shared-shell integration and ROI remain outside this correction. This is a local Git candidate, with no merge, push or Preview publication claimed.

@@ -14,7 +14,9 @@
     "../../tests/**/*.ts",
     "../../tests/**/*.tsx",
     ".next/build-102d7024/types/**/*.ts",
-    ".next/verification-102d7024/types/**/*.ts"
+    ".next/build-c0e3b203/types/**/*.ts",
+    ".next/verification-102d7024/types/**/*.ts",
+    ".next/verification-c0e3b203/types/**/*.ts"
   ],
   "exclude": [
     "../../node_modules",

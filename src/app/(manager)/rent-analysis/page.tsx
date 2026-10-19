@@ -8,7 +8,11 @@ import { PageHeader } from '@/components/shell/PageHeader';
 import { Card } from '@/components/ui';
 import { EmptyState } from '@/components/RouteStates';
 import { formatAddress, formatMoney } from '@/lib/properties/format';
-import { buildCompsHref, rentAnalysisContext } from '@/lib/comps/navigation';
+import {
+  buildCompsHref,
+  explicitFiltersFromQuery,
+  rentAnalysisContext,
+} from '@/lib/comps/navigation';
 import styles from './rent.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -106,6 +110,9 @@ export default async function RentAnalysisPage({
     );
   }
   const { property } = resolved;
+  const explicitFilters = explicitFiltersFromQuery(
+    Object.fromEntries(Object.entries(query).map(([key, value]) => [key, first(value)])),
+  );
   const facts = await db.property.findFirst({
     where: { id: property.id, organizationId: session.organizationId, archivedAt: null },
     select: {
@@ -191,7 +198,12 @@ export default async function RentAnalysisPage({
                       return (
                         <tr key={u.id}>
                           <th>
-                            <Link href={buildCompsHref(rentAnalysisContext(property.id, u.id))}>
+                            <Link
+                              href={buildCompsHref(
+                                rentAnalysisContext(property.id, u.id),
+                                explicitFilters,
+                              )}
+                            >
                               Unit {u.number}
                             </Link>
                           </th>

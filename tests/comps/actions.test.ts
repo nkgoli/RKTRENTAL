@@ -29,9 +29,84 @@ function form(values: Record<string, string>) {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
+  vi.mocked(requireManagerRole).mockResolvedValue({
+    organizationId: 'org-session',
+    subjectId: 'manager-1',
+    name: 'Manager One',
+  } as Awaited<ReturnType<typeof requireManagerRole>>);
   mocks.units.mockResolvedValue([{ id: 'u-4b' }]);
   mocks.apply.mockResolvedValue({ ok: true, rent: 2100 });
+});
+
+describe('recoverable market rent application', () => {
+  it('returns a confirmed non-write when the pricing lookup fails', async () => {
+    mocks.units.mockRejectedValueOnce(new Error('database connection unavailable'));
+    await expect(
+      applyRentAction({}, form({ unitId: 'u-4b', rent: ' $2,100.50 ' })),
+    ).resolves.toMatchObject({
+      ok: false,
+      outcome: 'rejected',
+      message: expect.stringContaining('No rent was changed'),
+    });
+    expect(mocks.apply).not.toHaveBeenCalled();
+  });
+
+  it('reports an uncertain outcome when the write acknowledgement is lost', async () => {
+    mocks.apply.mockRejectedValueOnce(new Error('connection lost after write'));
+    const result = await applyRentAction({}, form({ unitId: 'u-4b', rent: ' $2,100.50 ' }));
+    expect(result).toMatchObject({
+      ok: false,
+      outcome: 'unknown',
+      message: expect.stringContaining('may have been saved'),
+    });
+    expect(result.message).not.toMatch(/unchanged|no rent was changed/i);
+    expect(mocks.revalidate).not.toHaveBeenCalled();
+  });
+
+  it('retains confirmed save status when view revalidation fails', async () => {
+    mocks.revalidate.mockImplementationOnce(() => {
+      throw new Error('cache unavailable');
+    });
+    await expect(
+      applyRentAction({}, form({ unitId: 'u-4b', rent: '2100' })),
+    ).resolves.toMatchObject({ ok: true, rent: 2100, message: expect.stringContaining('saved') });
+  });
+
+  it('allows a rejected value to be corrected using the same authorized unit', async () => {
+    mocks.apply.mockResolvedValueOnce({
+      ok: false,
+      error: 'Enter a monthly rent between $1 and $100,000.',
+    });
+    const rejected = await applyRentAction({}, form({ unitId: 'u-4b', rent: ' $0.00 ' }));
+    expect(rejected.ok).toBe(false);
+    expect(mocks.revalidate).not.toHaveBeenCalled();
+    const corrected = await applyRentAction(
+      rejected,
+      form({ unitId: 'u-4b', rent: ' $2,100.50 ' }),
+    );
+    expect(corrected.ok).toBe(true);
+    expect(mocks.apply.mock.calls[1]).toEqual([
+      'org-session',
+      'u-4b',
+      ' $2,100.50 ',
+      { id: 'manager-1', name: 'Manager One' },
+    ]);
+  });
+
+  it('preserves authentication and authorization redirects', async () => {
+    for (const path of ['/sign-in', '/tenant']) {
+      const redirect = Object.assign(new Error('NEXT_REDIRECT'), {
+        digest: `NEXT_REDIRECT;replace;${path};307;`,
+      });
+      vi.mocked(requireManagerRole).mockRejectedValueOnce(redirect);
+      await expect(applyRentAction({}, form({ unitId: 'u-4b', rent: '2100' }))).rejects.toBe(
+        redirect,
+      );
+    }
+    expect(mocks.units).not.toHaveBeenCalled();
+    expect(mocks.apply).not.toHaveBeenCalled();
+  });
 });
 
 describe('comps actions authorization and revalidation', () => {
@@ -65,7 +140,7 @@ describe('comps actions authorization and revalidation', () => {
   it('does not revalidate or report success when the unit is outside the organization', async () => {
     mocks.apply.mockResolvedValue({ ok: false, error: 'Unit not found.' });
     const result = await applyRentAction({}, form({ unitId: 'other-org-unit', rent: '2100' }));
-    expect(result).toEqual({ ok: false, message: 'Unit not found.' });
+    expect(result).toMatchObject({ ok: false, outcome: 'rejected', message: 'Unit not found.' });
     expect(mocks.revalidate).not.toHaveBeenCalled();
   });
 

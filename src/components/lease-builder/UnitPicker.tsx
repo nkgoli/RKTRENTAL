@@ -31,7 +31,10 @@ export function UnitPicker({
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </Link>
-        <div className={styles.place}>Create lease</div>
+        <div className={styles.place}>
+          <span className={styles.topCaption}>Leasing workspace</span>
+          Create lease
+        </div>
       </header>
       <div className={styles.layout} style={{ gridTemplateColumns: 'minmax(0, 640px)' }}>
         <section className={styles.card} aria-labelledby="pick-title">

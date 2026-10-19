@@ -6,6 +6,8 @@ import { formatUsd } from '@/lib/ledger/core';
 import { formatBytes, formatDate } from '@/lib/properties/format';
 import { statusLabel } from '@/lib/leases/format';
 import { canPreview, fileBadge, loadTenantLease } from '@/lib/tenant-portal';
+import { TenantPhoto } from '../TenantPhoto';
+import styles from '../portal.module.css';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +19,12 @@ export default async function TenantLeasePage() {
     return (
       <>
         <h1 style={{ fontSize: 'var(--rr-h1)' }}>My lease</h1>
-        <EmptyState title="No active lease yet" description="Your property manager will add it here once it is set up." action="Check again" href="/lease" />
+        <EmptyState
+          title="No active lease yet"
+          description="Your property manager will add it here once it is set up."
+          action="Check again"
+          href="/lease"
+        />
       </>
     );
   }
@@ -33,16 +40,22 @@ export default async function TenantLeasePage() {
         </p>
       </div>
 
-      <section className="card" aria-labelledby="current-lease">
+      <nav className={styles.sectionLinks} aria-label="Lease sections">
+        <a href="#overview">Current lease</a>
+        <a href="#documents">Documents ({view.documents.length})</a>
+        {view.photos.length > 0 && <a href="#photos">Unit photos</a>}
+      </nav>
+
+      <section className="card" id="overview" aria-labelledby="current-lease">
         <div className="card-header">
-          <h3 id="current-lease" style={{ fontSize: 15 }}>
+          <h2 id="current-lease" style={{ fontSize: 18 }}>
             Current lease
-          </h3>
+          </h2>
           <Badge tone={view.status === 'ACTIVE' ? 'success' : 'neutral'}>
             {statusLabel(view.status)}
           </Badge>
         </div>
-        <dl className="kv" style={{ gridTemplateColumns: '110px 1fr' }}>
+        <dl className="kv" style={{ gridTemplateColumns: '88px minmax(0, 1fr)' }}>
           <dt>Property</dt>
           <dd>{view.premises.replace(' · ', ' — ')}</dd>
           {others.length > 0 && (
@@ -95,18 +108,22 @@ export default async function TenantLeasePage() {
 
       <section className="card" id="documents" aria-labelledby="lease-documents">
         <div className="card-header">
-          <h3 id="lease-documents" style={{ fontSize: 15 }}>
+          <h2 id="lease-documents" style={{ fontSize: 18 }}>
             Lease &amp; documents
-          </h3>
+          </h2>
           <Badge tone="info">
             {view.documents.length} {view.documents.length === 1 ? 'file' : 'files'}
           </Badge>
         </div>
-        {view.documents.length === 0 && <p className="muted">Your lease and notices will appear here when your manager adds them.</p>}
+        {view.documents.length === 0 && (
+          <p className="muted">
+            Your lease and notices will appear here when your manager adds them.
+          </p>
+        )}
         {view.documents.map((doc) => {
           const badge = fileBadge(doc.mimeType);
           return (
-            <div className="file" key={doc.id}>
+            <div className={styles.document} key={doc.id}>
               <span className={badge === 'doc' ? 'file-icon' : `file-icon ${badge}`}>
                 {badge === 'doc' ? 'DOC' : badge.toUpperCase()}
               </span>
@@ -116,14 +133,14 @@ export default async function TenantLeasePage() {
                   {formatDate(doc.createdAt)} · {formatBytes(doc.sizeBytes)}
                 </small>
               </span>
-              <span className="row" style={{ gap: 6 }}>
+              <span className={styles.documentActions}>
                 {canPreview(doc.mimeType) && (
                   <a
                     className="btn btn-ghost btn-sm"
                     href={doc.previewUrl}
                     target="_blank"
                     rel="noreferrer"
-                    aria-label={`Preview ${doc.name}`}
+                    aria-label={`Preview ${doc.name} (opens in a new tab)`}
                   >
                     Preview
                   </a>
@@ -142,21 +159,18 @@ export default async function TenantLeasePage() {
       </section>
 
       {view.photos.length > 0 && (
-        <section aria-labelledby="unit-photos">
+        <section id="photos" aria-labelledby="unit-photos">
           <h2 id="unit-photos" style={{ fontSize: 'var(--rr-h3)', marginBottom: 8 }}>
             Unit photos
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {view.photos.map((photo) => (
-              <div className="photo" key={photo.id}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={photo.url}
-                  alt={photo.caption ?? photo.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-                {photo.caption && <span className="caption">{photo.caption}</span>}
-              </div>
+              <TenantPhoto
+                key={photo.id}
+                src={photo.url}
+                alt={photo.caption ?? photo.name}
+                caption={photo.caption}
+              />
             ))}
           </div>
           <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
@@ -164,7 +178,6 @@ export default async function TenantLeasePage() {
           </p>
         </section>
       )}
-
     </>
   );
 }

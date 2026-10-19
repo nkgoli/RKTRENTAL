@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/Button';
 import { getSession } from '@/lib/auth/server-session';
+import { roleHome } from '@/lib/auth/policy';
 import styles from '../auth.module.css';
 import { signOutAction } from './actions';
 
@@ -21,6 +22,9 @@ export default async function SignOutPage() {
           <form className={styles.form} action={signOutAction}>
             <Button type="submit" variant="primary" block>
               Sign out of RocketRental
+            </Button>
+            <Button href={roleHome(session.role)} block>
+              Stay signed in
             </Button>
           </form>
         ) : (

@@ -6,6 +6,7 @@ import { cx } from '../ui/cx';
 import { AccountMenu } from './AccountMenu';
 import { findTenantTab, isActive, tenantTabs } from './nav';
 import focus from './focus.module.css';
+import styles from './tenant-shell.module.css';
 
 export function TenantShell({
   children,
@@ -19,30 +20,36 @@ export function TenantShell({
 
   return (
     <>
-    <a className={focus.skip} href="#tenant-main">Skip to main content</a>
-    <div className={`phone ${focus.scope}`}>
-      <header className="phone-top">
-        <span className="brand-mark">R</span>
-        <span className="title">{current?.label ?? 'RocketRental'}</span>
-        <AccountMenu initials={initials} />
-      </header>
-      <main className="phone-body" id="tenant-main" tabIndex={-1}>{children}</main>
-      <nav className="tabbar" aria-label="Tenant">
-        {tenantTabs.map((tab) => {
-          const active = isActive(pathname, tab.href);
-          return (
-            <a
-              key={tab.href}
-              href={tab.href}
-              className={cx(active && 'active')}
-              aria-current={active ? 'page' : undefined}
-            >
-              {tab.label}
-            </a>
-          );
-        })}
-      </nav>
-    </div>
+      <a className={focus.skip} href="#tenant-main">
+        Skip to main content
+      </a>
+      <div className={`phone ${focus.scope} ${styles.shell}`}>
+        <header className={`phone-top ${styles.header}`}>
+          <a className="brand-mark" href="/home" aria-label="RocketRental home">
+            R
+          </a>
+          <span className="title">{current?.label ?? 'RocketRental'}</span>
+          <AccountMenu initials={initials} />
+        </header>
+        <main className={`phone-body ${styles.body}`} id="tenant-main" tabIndex={-1}>
+          {children}
+        </main>
+        <nav className={`tabbar ${styles.navigation}`} aria-label="Tenant">
+          {tenantTabs.map((tab) => {
+            const active = isActive(pathname, tab.href);
+            return (
+              <a
+                key={tab.href}
+                href={tab.href}
+                className={cx(active && 'active')}
+                aria-current={active ? 'page' : undefined}
+              >
+                {tab.label}
+              </a>
+            );
+          })}
+        </nav>
+      </div>
     </>
   );
 }

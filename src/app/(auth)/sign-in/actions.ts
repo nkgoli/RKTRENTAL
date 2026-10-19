@@ -16,7 +16,8 @@ export async function signInAction(formData: FormData): Promise<void> {
   const password = String(formData.get('password') ?? '');
   const next = String(formData.get('next') ?? '');
   const identity = await authenticateCredentials(email, password);
-  if (!identity) redirect('/sign-in?error=invalid');
+  if (!identity)
+    redirect(`/sign-in?error=invalid${next ? `&next=${encodeURIComponent(next)}` : ''}`);
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, await createSessionToken(identity), {

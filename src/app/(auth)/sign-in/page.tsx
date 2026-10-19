@@ -1,9 +1,8 @@
 import { redirect } from 'next/navigation';
-import { Button } from '@/components/ui/Button';
 import { roleHome } from '@/lib/auth/policy';
 import { getSession } from '@/lib/auth/server-session';
 import styles from '../auth.module.css';
-import { signInAction } from './actions';
+import { SignInForm } from './SignInForm';
 
 type SignInPageProps = {
   searchParams: Promise<{ error?: string; loggedOut?: string; next?: string }>;
@@ -26,28 +25,19 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         <p className={styles.description}>Sign in to manage your rental account.</p>
 
         {params.error === 'invalid' && (
-          <p className={styles.error} role="alert">
-            Email or password was not recognized.
+          <p id="sign-in-error" className={styles.error} role="alert">
+            Email or password was not recognized. Check your details and try again.
           </p>
         )}
-        {params.loggedOut && <p className={styles.success}>You have been signed out.</p>}
+        {params.loggedOut && (
+          <p className={styles.success} role="status">
+            You have been signed out.
+          </p>
+        )}
 
-        <form className={styles.form} action={signInAction}>
-          <input type="hidden" name="next" value={params.next ?? ''} />
-          <label className={styles.field}>
-            <span>Email address</span>
-            <input autoComplete="username" name="email" type="email" required />
-          </label>
-          <label className={styles.field}>
-            <span>Password</span>
-            <input autoComplete="current-password" name="password" type="password" required />
-          </label>
-          <Button type="submit" variant="primary" block>
-            Sign in
-          </Button>
-        </form>
+        <SignInForm next={params.next ?? ''} invalid={params.error === 'invalid'} />
         <p className={styles.footnote}>
-          Your account role determines which RocketRental pages you can open.
+          Need access or help signing in? Contact your property manager or account administrator.
         </p>
       </section>
     </main>

@@ -1,0 +1,128 @@
+.shell {
+  max-width: 640px;
+  min-height: 100dvh;
+  --rr-h2: 18px;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-height: 64px;
+  padding: 10px 16px;
+}
+
+.header :global(.brand-mark) {
+  width: 36px;
+  height: 36px;
+}
+.body {
+  gap: 20px;
+  padding: 20px 16px 100px;
+  min-width: 0;
+}
+.body > * {
+  min-width: 0;
+}
+.body :global(.card),
+.body :global(.phone-hero) {
+  box-shadow: none;
+}
+.body :global(.phone-hero) {
+  border-top: 3px solid var(--design-primary);
+}
+.body :global(.amount) {
+  font-variant-numeric: tabular-nums;
+  font-size: 30px;
+}
+.body :global(.tile-grid) {
+  gap: 8px;
+}
+.body :global(.tile) {
+  padding: 12px;
+  gap: 6px;
+  min-width: 0;
+}
+.body :global(.tile small) {
+  line-height: 1.45;
+}
+.body :global(.tile-icon) {
+  width: 28px;
+  height: 28px;
+}
+.body :global(.card-header),
+.body :global(.row.between) {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.body :global(.kv) {
+  gap: 8px 12px;
+}
+.body :global(.kv dd) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.body :global(.file-meta strong) {
+  overflow-wrap: anywhere;
+}
+.body :global(.btn),
+.body :global(.check) {
+  min-height: 44px;
+}
+.body :global(.field input),
+.body :global(.field select),
+.body :global(.field textarea) {
+  font-size: 16px;
+}
+.body :global(.option) {
+  padding: 12px;
+  cursor: pointer;
+}
+.body :global(.option input),
+.body :global(.check input) {
+  flex: none;
+}
+.body [id] {
+  scroll-margin-top: 84px;
+}
+.body :is(input, textarea, select, button, a) {
+  scroll-margin-block: 90px;
+}
+
+.navigation {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100%, 640px);
+  z-index: 30;
+  padding: 6px 8px max(8px, env(safe-area-inset-bottom));
+}
+.navigation a {
+  min-height: 48px;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+.navigation a:global(.active) {
+  background: var(--rr-primary-tint);
+}
+.navigation a::before {
+  height: 2px;
+  width: 20px;
+}
+
+@media (min-width: 600px) {
+  .body {
+    padding: 24px 24px 100px;
+  }
+  .header {
+    padding-inline: 24px;
+  }
+}
+@media (max-width: 400px) {
+  .shell {
+    border: 0;
+  }
+}

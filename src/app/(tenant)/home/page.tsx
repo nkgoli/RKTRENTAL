@@ -56,9 +56,17 @@ function RentHero({ view }: { view: TenantHomeView }) {
           Pay now
         </Link>
       )}
-      <p style={{ fontSize: 12, textAlign: 'center', marginTop: 10 }}>
-        From {view.managerName}, your property manager
-      </p>
+      {due.pendingCents > 0 && (
+        <p style={{ fontSize: 13, marginTop: 8 }}>
+          {formatUsd(due.pendingCents)} bank payment pending. Check Pay for its status.
+        </p>
+      )}
+      {settled && (
+        <Link href="/pay" className="btn btn-secondary btn-block" style={{ marginTop: 12 }}>
+          View payments &amp; receipts
+        </Link>
+      )}
+      <p style={{ fontSize: 12, marginTop: 10 }}>From {view.managerName}, your property manager</p>
     </section>
   );
 }
@@ -73,7 +81,12 @@ export default async function TenantHomePage() {
         <div>
           <h1 style={{ fontSize: 'var(--rr-h1)' }}>Welcome home</h1>
         </div>
-        <EmptyState title="No active lease yet" description="Your property manager will add it here once it is set up." action="Check again" href="/home" />
+        <EmptyState
+          title="No active lease yet"
+          description="Your property manager will add it here once it is set up."
+          action="Check again"
+          href="/home"
+        />
       </>
     );
   }
@@ -158,9 +171,9 @@ export default async function TenantHomePage() {
       {repair && (
         <section className="card" aria-labelledby="open-repair">
           <div className="card-header" style={{ marginBottom: 8 }}>
-            <h3 id="open-repair" style={{ fontSize: 15 }}>
+            <h2 id="open-repair" style={{ fontSize: 18 }}>
               Open repair request
-            </h3>
+            </h2>
             <Badge tone="warning">{repairStatusLabel(repair.status)}</Badge>
           </div>
           <p style={{ fontWeight: 600 }}>{repair.title}</p>
@@ -169,7 +182,11 @@ export default async function TenantHomePage() {
             {repair.vendorName ? ' · Vendor assigned' : ''} · {view.managerName} will confirm a
             visit window.
           </p>
-          <Progress value={repairProgress(repair.status)} label={`${repair.title} repair progress`} style={{ margin: '12px 0 8px' }} />
+          <Progress
+            value={repairProgress(repair.status)}
+            label={`${repair.title} repair progress`}
+            style={{ margin: '12px 0 8px' }}
+          />
           <div className="row between">
             <small className="muted">Received → Scheduled → Done</small>
             <Link href="/repairs" style={{ fontSize: 13, fontWeight: 600 }}>
@@ -187,7 +204,10 @@ export default async function TenantHomePage() {
           <p className="muted">Payments and notices will show up here.</p>
         ) : (
           // Announcements are a short list, not a stack of coloured banners.
-          <ul className="card" style={{ listStyle: 'none', margin: 0, padding: '4px var(--rr-card-pad)' }}>
+          <ul
+            className="card"
+            style={{ listStyle: 'none', margin: 0, padding: '4px var(--rr-card-pad)' }}
+          >
             {view.activity.slice(0, 4).map((item) => (
               <li key={item.id} className="list-item" style={{ padding: '8px 0' }}>
                 <span className="file-meta">

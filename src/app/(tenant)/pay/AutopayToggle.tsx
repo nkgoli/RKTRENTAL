@@ -2,9 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { Switch } from '@/components/ui/Forms';
 import { formatUsd } from '@/lib/tenant-pay/core';
 import { setAutopayAction } from './actions';
+import styles from '../portal.module.css';
 
 export function AutopayToggle({
   leaseId,
@@ -26,6 +26,7 @@ export function AutopayToggle({
   const hasMethod = Boolean(paymentMethodId);
 
   const toggle = (next: boolean) => {
+    if (pending) return;
     if (!hasMethod && next) {
       setError('Add a payment method before turning on autopay.');
       return;
@@ -33,30 +34,56 @@ export function AutopayToggle({
     setError(null);
     setOn(next);
     startTransition(async () => {
-      const result = await setAutopayAction({ leaseId, enabled: next, paymentMethodId });
-      if (!result.ok) {
+      try {
+        const result = await setAutopayAction({ leaseId, enabled: next, paymentMethodId });
+        if (!result.ok) {
+          setOn(!next);
+          setError(result.error ?? 'Autopay could not be updated.');
+          return;
+        }
+        router.refresh();
+      } catch {
         setOn(!next);
-        setError(result.error ?? 'Autopay could not be updated.');
-        return;
+        setError('Autopay could not be updated. Check your connection and try again.');
       }
-      router.refresh();
     });
   };
 
   return (
     <section className="card" aria-labelledby="autopay-title">
-      <div className="row between">
+      <div className={styles.autopayRow}>
         <span>
           <strong id="autopay-title" style={{ display: 'block', fontSize: 14 }}>
             Autopay
           </strong>
           <small className="muted">
-            Currently {on ? 'on' : 'off'} · Pay {formatUsd(monthlyRentCents)} on the {rentDueDay}{[1, 21].includes(rentDueDay) ? 'st' : [2, 22].includes(rentDueDay) ? 'nd' : [3, 23].includes(rentDueDay) ? 'rd' : 'th'} each month
+            Currently {on ? 'on' : 'off'} · Pay {formatUsd(monthlyRentCents)} on the {rentDueDay}
+            {[1, 21].includes(rentDueDay)
+              ? 'st'
+              : [2, 22].includes(rentDueDay)
+                ? 'nd'
+                : [3, 23].includes(rentDueDay)
+                  ? 'rd'
+                  : 'th'}{' '}
+            each month
           </small>
         </span>
-        <Switch on={on} label="Autopay" onChange={toggle} />
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on}
+          aria-label="Autopay"
+          aria-describedby="autopay-status"
+          className={`switch${on ? ' on' : ''}`}
+          disabled={pending}
+          onClick={() => toggle(!on)}
+        />
       </div>
-      <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
+      <p
+        id="autopay-status"
+        role={error ? 'alert' : 'status'}
+        className={error ? styles.error : styles.status}
+      >
         {pending
           ? 'Saving…'
           : error

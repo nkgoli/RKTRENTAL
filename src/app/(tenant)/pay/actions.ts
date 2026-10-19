@@ -31,6 +31,7 @@ const methodOf = (value: string): PayMethodType | null =>
 export async function payRentAction(data: FormData) {
   const session = await requireTenantRole();
   if (!session.tenantId) back('payment-failed');
+  if (text(data, 'confirmPayment') !== 'yes') back('review-required');
   const cents = parseDollars(text(data, 'amount'));
   if (!cents) back('invalid-amount');
   const method = methodOf(text(data, 'method'));

@@ -1,0 +1,96 @@
+'use client';
+
+import { useState } from 'react';
+import { FileUploader } from '@/components/upload';
+import { CATEGORIES, ENTRY_OPTIONS, MAX_PHOTOS, URGENCY_OPTIONS } from './format';
+import styles from './repairs.module.css';
+
+export function RepairForm() {
+  const [error, setError] = useState(false);
+  const [pending, setPending] = useState(false);
+  return (
+    <form
+      className="form"
+      method="post"
+      action="/repairs/submit"
+      encType="multipart/form-data"
+      aria-busy={pending}
+      onSubmit={(event) => {
+        const description = event.currentTarget.elements.namedItem(
+          'description',
+        ) as HTMLTextAreaElement;
+        if (!description.value.trim()) {
+          event.preventDefault();
+          setError(true);
+          description.focus();
+          return;
+        }
+        if (pending) {
+          event.preventDefault();
+          return;
+        }
+        setPending(true);
+      }}
+    >
+      <label className="field">
+        Category
+        <select name="category" defaultValue={CATEGORIES[0]}>
+          {CATEGORIES.map((c) => (
+            <option key={c}>{c}</option>
+          ))}
+        </select>
+      </label>
+      <label className="field">
+        What needs fixing?
+        <textarea
+          name="description"
+          aria-invalid={error}
+          aria-describedby={error ? 'repair-error repair-hint' : 'repair-hint'}
+          onChange={() => setError(false)}
+          required
+          maxLength={2800}
+          placeholder="e.g. Kitchen faucet leaks under the sink…"
+        />
+        <span className="hint" id="repair-hint">
+          Add where it is and when it started, so the vendor brings the right parts.
+        </span>
+      </label>
+      {error && (
+        <p className={styles.error} id="repair-error" role="alert">
+          Describe what needs fixing before sending your request.
+        </p>
+      )}
+      <div className="field">
+        <span>Photos</span>
+        <FileUploader kind="photo" formField="photos" max={MAX_PHOTOS} label="Photos" />
+      </div>
+      <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+        <legend style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Entry permission</legend>
+        <div className="stack" style={{ gap: 8 }}>
+          {Object.entries(ENTRY_OPTIONS).map(([value, label], index) => (
+            <label className={styles.option} key={value}>
+              <input type="radio" name="entry" value={value} defaultChecked={index === 0} />
+              <span style={{ flex: 1, fontSize: 14 }}>{label}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <label className="field">
+        Urgency
+        <select name="urgency" defaultValue="NORMAL">
+          {URGENCY_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <span className="hint">
+          For emergencies (burst pipe, no heat) also call your property manager.
+        </span>
+      </label>
+      <button className="btn btn-primary btn-block" type="submit" disabled={pending}>
+        {pending ? 'Sending request…' : 'Submit request'}
+      </button>
+    </form>
+  );
+}

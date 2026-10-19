@@ -1,11 +1,33 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/Button';
 import { cx } from '@/components/ui/cx';
 import { cardFeeCents, formatUsd, MOCK_TOKENS } from '@/lib/tenant-pay/core';
 import type { SavedMethod } from '@/lib/tenant-pay/service';
 import { addPaymentMethodAction, payRentAction } from './actions';
+import styles from '../portal.module.css';
+
+function ConfirmButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" name="confirmPayment" value="yes" variant="primary" disabled={pending}>
+      {pending ? 'Submitting payment…' : 'Confirm payment'}
+    </Button>
+  );
+}
+
+function AddMethodButton({ type }: { type: 'ach' | 'card' }) {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" variant="secondary" block disabled={pending}>
+      {pending
+        ? 'Adding method…'
+        : `+ Add ${type === 'ach' ? 'bank account' : 'card'} (${MOCK_TOKENS[type].detail})`}
+    </Button>
+  );
+}
 
 type Option = {
   key: string;
@@ -58,6 +80,10 @@ export function PayForm({
   const [selectedKey, setSelectedKey] = useState(options[0]?.key ?? 'mock:ach');
   const [amount, setAmount] = useState((totalDueCents / 100).toFixed(2));
   const [confirming, setConfirming] = useState(false);
+  const confirmation = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (confirming) confirmation.current?.focus();
+  }, [confirming]);
   const selected = options.find((o) => o.key === selectedKey) ?? options[0];
   const amountCents = parseAmountCents(amount);
   const feeCents = selected?.type === 'card' ? cardFeeCents(amountCents, passFees) : 0;
@@ -69,43 +95,61 @@ export function PayForm({
       <h2 id="payment-method-title" style={{ fontSize: 16, marginBottom: 12 }}>
         Payment method
       </h2>
-      <form action={payRentAction} className="stack" style={{ gap: 10 }}>
+      <form
+        action={payRentAction}
+        className="stack"
+        style={{ gap: 12 }}
+        onSubmit={(event) => {
+          const submitter = (event.nativeEvent as SubmitEvent).submitter;
+          if (!confirming || !amountValid || submitter?.getAttribute('name') !== 'confirmPayment') {
+            event.preventDefault();
+            if (amountValid) setConfirming(true);
+          }
+        }}
+      >
         <input type="hidden" name="leaseId" value={leaseId} />
         <input type="hidden" name="method" value={selected?.type ?? 'ach'} />
         <input type="hidden" name="providerToken" value={selected?.token ?? ''} />
         <input type="hidden" name="paymentMethodId" value={selected?.methodId ?? ''} />
-        {options.map((option) => {
-          const fee =
-            option.type === 'card' && passFees
-              ? ` · +${formatUsd(cardFeeCents(amountCents || totalDueCents, true))} fee (2.9%)`
-              : '';
-          return (
-            <label
-              key={option.key}
-              className={cx('option', selectedKey === option.key && 'selected')}
-            >
-              <input
-                type="radio"
-                name="pay-option"
-                checked={selectedKey === option.key}
-                onChange={() => {
-                  setSelectedKey(option.key);
-                  setConfirming(false);
-                }}
-              />
-              <span style={{ flex: 1 }}>
-                <strong style={{ display: 'block', fontSize: 14 }}>{option.title}</strong>
-                <small className="muted">
-                  {option.detail}
-                  {fee}
-                </small>
-              </span>
-            </label>
-          );
-        })}
+        <fieldset className={styles.methodFields} aria-labelledby="payment-method-title">
+          {options.map((option) => {
+            const fee =
+              option.type === 'card' && passFees
+                ? ` · +${formatUsd(cardFeeCents(amountCents || totalDueCents, true))} fee (2.9%)`
+                : '';
+            return (
+              <label
+                key={option.key}
+                className={cx('option', selectedKey === option.key && 'selected')}
+              >
+                <input
+                  type="radio"
+                  name="pay-option"
+                  checked={selectedKey === option.key}
+                  onChange={() => {
+                    setSelectedKey(option.key);
+                    setConfirming(false);
+                  }}
+                />
+                <span style={{ flex: 1 }}>
+                  <strong style={{ display: 'block', fontSize: 14 }}>{option.title}</strong>
+                  <small className="muted">
+                    {option.detail}
+                    {fee}
+                  </small>
+                </span>
+              </label>
+            );
+          })}
+        </fieldset>
 
         {/* The method above already names the account; this only explains who holds the details. */}
-        <p className="muted" role="note" aria-label="Provider hosted payment field" style={{ fontSize: 12 }}>
+        <p
+          className="muted"
+          role="note"
+          aria-label="Provider hosted payment field"
+          style={{ fontSize: 12 }}
+        >
           Account details are entered with your payment provider; RocketRental never sees or stores
           them.
         </p>
@@ -116,13 +160,27 @@ export function PayForm({
             name="amount"
             inputMode="decimal"
             aria-label="Amount"
+            aria-invalid={!amountValid}
+            aria-describedby={!amountValid ? 'amount-error amount-total' : 'amount-total'}
             value={amount}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                if (amountValid) setConfirming(true);
+              }
+            }}
             onChange={(event) => {
               setAmount(event.target.value);
               setConfirming(false);
             }}
           />
-          <span className="hint">
+          {!amountValid && (
+            <span id="amount-error" className={styles.error} role="alert">
+              Enter an amount from $0.01 to {formatUsd(totalDueCents)}, with no more than two
+              decimal places.
+            </span>
+          )}
+          <span className="hint" id="amount-total">
             {feeCents > 0
               ? `Card fee ${formatUsd(feeCents)} (2.9%) · Total charged ${formatUsd(chargedCents)}`
               : `Total charged ${formatUsd(chargedCents)}`}
@@ -136,6 +194,7 @@ export function PayForm({
 
         {!confirming ? (
           <Button
+            id="review-payment"
             variant="primary"
             block
             disabled={!amountValid || !selected}
@@ -144,18 +203,29 @@ export function PayForm({
             Pay {formatUsd(chargedCents || totalDueCents)}
           </Button>
         ) : (
-          <div className="card" role="group" aria-label="Confirm payment" style={{ padding: 14 }}>
-            <strong style={{ display: 'block', fontSize: 14 }}>Confirm payment</strong>
-            <p className="muted" style={{ fontSize: 13, margin: '6px 0 12px' }}>
+          <div
+            ref={confirmation}
+            tabIndex={-1}
+            className={styles.confirmation}
+            role="group"
+            aria-labelledby="confirm-payment-title"
+          >
+            <h3 id="confirm-payment-title">Confirm payment</h3>
+            <p>
               Pay {formatUsd(amountCents)} by {selected?.title.toLowerCase()}
               {feeCents > 0 ? ` plus a ${formatUsd(feeCents)} card fee` : ''} —{' '}
               {formatUsd(chargedCents)} in total?
             </p>
-            <div className="row" style={{ gap: 8 }}>
-              <Button type="submit" variant="primary">
-                Confirm payment
+            <div className={styles.confirmationActions}>
+              <ConfirmButton />
+              <Button
+                onClick={() => {
+                  setConfirming(false);
+                  requestAnimationFrame(() => document.getElementById('review-payment')?.focus());
+                }}
+              >
+                Back
               </Button>
-              <Button onClick={() => setConfirming(false)}>Back</Button>
             </div>
           </div>
         )}
@@ -177,9 +247,7 @@ export function AddPaymentMethods() {
         <form key={type} action={addPaymentMethodAction}>
           <input type="hidden" name="method" value={type} />
           <input type="hidden" name="providerToken" value={MOCK_TOKENS[type].token} />
-          <Button type="submit" variant="secondary" block>
-            + Add {type === 'ach' ? 'bank account' : 'card'} ({MOCK_TOKENS[type].detail})
-          </Button>
+          <AddMethodButton type={type} />
         </form>
       ))}
     </div>

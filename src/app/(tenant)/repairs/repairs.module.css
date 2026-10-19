@@ -70,4 +70,11 @@
   padding: 8px 12px;
   border-radius: 6px;
   border: 1px solid var(--rr-border-strong);
+  min-height: 44px;
+  font-size: 16px;
+}
+
+.error {
+  color: var(--rr-bad);
+  font-size: 13px;
 }

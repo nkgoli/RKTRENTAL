@@ -1,25 +1,25 @@
 .page {
   display: grid;
-  min-height: 100vh;
+  min-height: 100dvh;
   place-items: center;
-  padding: 24px;
+  padding: 24px 16px;
   background: var(--design-background);
 }
 
 .card {
   width: min(100%, 440px);
-  padding: 32px;
+  padding: 24px;
   border: 1px solid var(--rr-border);
   border-radius: 12px;
   background: var(--design-surface);
-  box-shadow: var(--rr-shadow);
+  box-shadow: none;
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
   color: var(--design-text);
   font-size: 16px;
   font-weight: 600;
@@ -49,13 +49,13 @@
 }
 
 .description {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   color: var(--design-muted);
 }
 
 .form {
   display: grid;
-  gap: 18px;
+  gap: 16px;
 }
 
 .field {
@@ -67,17 +67,19 @@
 
 .field input {
   width: 100%;
-  min-height: 42px;
+  min-height: 44px;
   padding: 9px 12px;
   border: 1px solid var(--rr-border-strong);
   border-radius: var(--design-radius);
   background: var(--design-surface);
   color: var(--design-text);
   font: inherit;
+  font-size: 16px;
 }
 
 .field input:focus-visible {
-  outline: 3px solid var(--rr-primary-tint);
+  outline: 3px solid var(--design-primary);
+  outline-offset: 2px;
   border-color: var(--design-primary);
 }
 
@@ -99,13 +101,38 @@
 }
 
 .footnote {
-  margin-top: 22px;
+  margin-top: 20px;
   color: var(--design-muted);
   font-size: 12px;
 }
 
 @media (max-width: 480px) {
   .card {
-    padding: 24px;
+    padding: 20px;
   }
+}
+
+.password {
+  position: relative;
+}
+.password input {
+  padding-right: 72px;
+}
+.reveal {
+  position: absolute;
+  right: 4px;
+  top: 2px;
+  height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--design-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.form :global(.btn) {
+  min-height: 44px;
 }

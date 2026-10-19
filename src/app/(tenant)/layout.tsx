@@ -5,5 +5,7 @@ import { initials } from '@/lib/properties/format';
 
 export default async function TenantLayout({ children }: { children: ReactNode }) {
   const session = await getSession();
-  return <TenantShell initials={session ? initials(session.name) : undefined}>{children}</TenantShell>;
+  return (
+    <TenantShell initials={session ? initials(session.name) : undefined}>{children}</TenantShell>
+  );
 }

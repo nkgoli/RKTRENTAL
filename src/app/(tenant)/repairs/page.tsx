@@ -1,11 +1,13 @@
 import { Badge, type BadgeTone } from '@/components/ui/Badge';
 import { Alert, Progress } from '@/components/ui/Feedback';
-import { FileUploader } from '@/components/upload';
 import { requireTenantRole } from '@/lib/auth/access';
 import { repairProgress, repairStatusLabel } from '@/lib/tenant-portal';
 import { commentRepairAction } from './actions';
 import { loadTenantRepairs } from './data';
-import { CATEGORIES, ENTRY_OPTIONS, MAX_PHOTOS, parseDescription, URGENCY_OPTIONS } from './format';
+import { MAX_PHOTOS, parseDescription } from './format';
+import { RepairForm } from './RepairForm';
+import { TenantPhoto } from '../TenantPhoto';
+import portal from '../portal.module.css';
 import styles from './repairs.module.css';
 import { EmptyState } from '@/components/RouteStates';
 
@@ -53,21 +55,30 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
     return (
       <>
         <h1 style={{ fontSize: 'var(--rr-h1)' }}>Repairs</h1>
-        <EmptyState title="No active lease" description="There is no active lease on your account yet, so you cannot send a repair request." action="Check again" href="/repairs" />
+        <EmptyState
+          title="No active lease"
+          description="There is no active lease on your account yet, so you cannot send a repair request."
+          action="Check again"
+          href="/repairs"
+        />
       </>
     );
   }
 
   // Only photos this tenant can open: their lease's uploads, or unit photos without a lease.
   const visiblePhotos = <T extends { document: { leaseId: string | null } | null }>(photos: T[]) =>
-    photos.filter(({ document }) => document && (!document.leaseId || document.leaseId === view.leaseId));
+    photos.filter(
+      ({ document }) => document && (!document.leaseId || document.leaseId === view.leaseId),
+    );
 
   return (
     <>
       <div>
         <h1 style={{ fontSize: 'var(--rr-h1)' }}>Repairs</h1>
         <p className="muted" style={{ fontSize: 13, marginTop: 2 }}>
-          {view.propertyName}{view.unitLabel ? ` · ${view.unitLabel}` : ''} · Your manager will assign a vendor and confirm timing.
+          {view.propertyName}
+          {view.unitLabel ? ` · ${view.unitLabel}` : ''} · Your manager will assign a vendor and
+          confirm timing.
         </p>
       </div>
 
@@ -77,77 +88,30 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
         </Alert>
       )}
 
-      <section className="card" aria-labelledby="new-request-title">
+      <nav className={portal.sectionLinks} aria-label="Repair sections">
+        <a href="#new-request">New repair request</a>
+        <a href="#your-requests">Your requests ({view.requests.length})</a>
+      </nav>
+      <section className="card" id="new-request" aria-labelledby="new-request-title">
         <div className="card-header">
-          <h3 id="new-request-title" style={{ fontSize: 15 }}>
+          <h2 id="new-request-title" style={{ fontSize: 18 }}>
             New repair request
-          </h3>
+          </h2>
           {view.unitLabel && <Badge tone="info">{view.unitLabel}</Badge>}
         </div>
-        <form className="form" method="post" action="/repairs/submit" encType="multipart/form-data">
-          <label className="field">
-            Category
-            <select name="category" defaultValue={CATEGORIES[0]}>
-              {CATEGORIES.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            What needs fixing?
-            <textarea
-              name="description"
-              required
-              maxLength={2800}
-              placeholder="e.g. Kitchen faucet leaks under the sink…"
-            />
-            <span className="hint">
-              Add where it is and when it started, so the vendor brings the right parts.
-            </span>
-          </label>
-          <div className="field">
-            <span>Photos</span>
-            <FileUploader kind="photo" formField="photos" max={MAX_PHOTOS} label="Photos" />
-          </div>
-          <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
-            <legend style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
-              Entry permission
-            </legend>
-            <div className="stack" style={{ gap: 8 }}>
-              {Object.entries(ENTRY_OPTIONS).map(([value, label], index) => (
-                <label className={styles.option} key={value}>
-                  <input type="radio" name="entry" value={value} defaultChecked={index === 0} />
-                  <span style={{ flex: 1, fontSize: 14 }}>{label}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          <label className="field">
-            Urgency
-            <select name="urgency" defaultValue="NORMAL">
-              {URGENCY_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-            <span className="hint">
-              For emergencies (burst pipe, no heat) also call your property manager.
-            </span>
-          </label>
-          <button className="btn btn-primary btn-block" type="submit">
-            Submit request
-          </button>
-        </form>
+        <RepairForm />
       </section>
 
-      <section aria-labelledby="your-requests-title">
+      <section id="your-requests" aria-labelledby="your-requests-title">
         <h2 id="your-requests-title" style={{ fontSize: 'var(--rr-h3)', marginBottom: 8 }}>
           Your requests
         </h2>
         <div className="stack" style={{ gap: 12 }}>
           {view.requests.length === 0 && (
-            <p className="muted">No repair requests yet. Describe what needs fixing above and your manager will follow up.</p>
+            <p className="muted">
+              No repair requests yet. Describe what needs fixing above and your manager will follow
+              up.
+            </p>
           )}
           {view.requests.map((request) => {
             const { category, text } = parseDescription(request.description);
@@ -168,7 +132,10 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
                   {request.vendorName ? ` · Vendor: ${request.vendorName}` : ''}
                 </p>
                 {request.status !== 'CANCELLED' && (
-                  <Progress value={repairProgress(request.status)} label={`${request.title} repair progress`} />
+                  <Progress
+                    value={repairProgress(request.status)}
+                    label={`${request.title} repair progress`}
+                  />
                 )}
                 {text && (
                   <p style={{ fontSize: 13, marginTop: 8, whiteSpace: 'pre-wrap' }}>{text}</p>
@@ -177,18 +144,14 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
                   <div className={styles.photos}>
                     {visiblePhotos(request.photos).map(({ id, document }) =>
                       document ? (
-                        <div
+                        <TenantPhoto
                           key={id}
-                          role="img"
-                          aria-label={`${request.title} photo: ${document.name}`}
-                          className={styles.photo}
-                          style={{
-                            backgroundImage: `url(${
-                              document.leaseId
-                                ? `/api/files/${document.id}/preview`
-                                : `/lease/photos/${document.id}`
-                            })`,
-                          }}
+                          alt={`${request.title} photo: ${document.name}`}
+                          src={
+                            document.leaseId
+                              ? `/api/files/${document.id}/preview`
+                              : `/lease/photos/${document.id}`
+                          }
                         />
                       ) : null,
                     )}
@@ -233,7 +196,6 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
           })}
         </div>
       </section>
-
     </>
   );
 }

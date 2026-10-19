@@ -7,12 +7,17 @@ import { graceEnd } from '@/lib/ledger/core';
 import { formatUsd, loadTenantPayView, monthLabel } from '@/lib/tenant-pay';
 import { AutopayToggle } from './AutopayToggle';
 import { AddPaymentMethods, PayForm } from './PayForm';
+import styles from '../portal.module.css';
 
 export const dynamic = 'force-dynamic';
 
 type SearchParams = Promise<{ notice?: string }>;
 
 const notices: Record<string, { tone: 'success' | 'warning'; text: string }> = {
+  'review-required': {
+    tone: 'warning',
+    text: 'Review the amount and payment method, then confirm your payment.',
+  },
   paid: {
     tone: 'success',
     text: 'Payment received. Your receipt is below and your balance is updated.',
@@ -65,7 +70,12 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
             {session.name}
           </p>
         </div>
-        <EmptyState title="No active lease" description="There is no active lease on your account yet, so there is nothing to pay." action="Check again" href="/pay" />
+        <EmptyState
+          title="No active lease"
+          description="There is no active lease on your account yet, so there is nothing to pay."
+          action="Check again"
+          href="/pay"
+        />
       </>
     );
   }
@@ -95,9 +105,9 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
 
       <section className="card" aria-labelledby="amount-due-title">
         <div className="card-header">
-          <h3 id="amount-due-title" style={{ fontSize: 15 }}>
+          <h2 id="amount-due-title" style={{ fontSize: 18 }}>
             Amount due
-          </h3>
+          </h2>
           {dueDate ? (
             <Badge tone="info">Due {shortDate(dueDate)}</Badge>
           ) : (
@@ -120,7 +130,7 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
             <div style={{ borderTop: '1px solid var(--rr-border)', margin: '14px 0' }} />
             <div className="row between">
               <strong>Total due{dueDate ? ` ${shortDate(dueDate)}` : ''}</strong>
-              <strong style={{ fontSize: 'var(--rr-h2)' }}>{formatUsd(amountDue.totalDueCents)}</strong>
+              <strong className={styles.total}>{formatUsd(amountDue.totalDueCents)}</strong>
             </div>
             {amountDue.pendingCents > 0 && (
               <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
@@ -130,7 +140,7 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
             )}
             <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
               {grace && view.graceDays > 0 ? `No late fee if paid by ${shortDate(grace)}. ` : ''}
-              Receipts are emailed instantly.
+              Your payment status and receipt will appear below.
             </p>
           </>
         ) : (
@@ -169,9 +179,9 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
 
       <section className="card" aria-labelledby="receipts-title">
         <div className="card-header">
-          <h3 id="receipts-title" style={{ fontSize: 15 }}>
+          <h2 id="receipts-title" style={{ fontSize: 18 }}>
             Recent receipts
-          </h3>
+          </h2>
           <Link href="/lease" style={{ fontSize: 13, fontWeight: 600 }}>
             Documents →
           </Link>
@@ -184,9 +194,7 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
               </span>
               <span style={{ flex: 1 }}>
                 <strong style={{ display: 'block', fontSize: 14 }}>{receipt.label}</strong>
-                <small className="muted">
-                  {shortDate(receipt.date)}
-                </small>
+                <small className="muted">{shortDate(receipt.date)}</small>
               </span>
               <span style={{ textAlign: 'right' }}>
                 <strong style={{ display: 'block', fontSize: 14 }}>

@@ -8,6 +8,7 @@ import { Avatar, Badge } from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
 import { LeaseDocumentGrid } from './LeaseDocumentGrid';
+import { LeaseSectionNavigation } from './LeaseSectionNavigation';
 import styles from './lease-detail.module.css';
 import { dateInput } from '@/lib/leases/core';
 import { EVENT_LABEL } from '@/lib/leases/events';
@@ -194,7 +195,10 @@ export default async function LeaseDetailPage({
           </span>
         </section>
 
-        <nav className={`${workspaceStyles.tabs} ${styles.tabs}`} aria-label="Lease sections">
+        <LeaseSectionNavigation
+          activeTab={activeTab}
+          className={`${workspaceStyles.tabs} ${styles.tabs}`}
+        >
           {LEASE_TABS.map((tab) => (
             <Link
               key={tab.key}
@@ -206,7 +210,7 @@ export default async function LeaseDetailPage({
               {tab.label}
             </Link>
           ))}
-        </nav>
+        </LeaseSectionNavigation>
         <div className={styles.panel} id={`lease-${activeTab}`}>
           {activeTab === 'overview' && (
             <>

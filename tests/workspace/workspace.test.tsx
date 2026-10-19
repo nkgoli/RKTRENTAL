@@ -92,7 +92,13 @@ describe('property and unit workspace render', () => {
     expect(html).toContain('Net operating income');
     expect(html).toContain('Cash flow');
     expect(html).not.toContain('Collected vs due');
-    expect(html).toContain('Unit 4B monthly income versus expenses over the selected range');
+    expect(html).toContain(`role="img" aria-label="Unit 4B: ${period.label}"`);
+    expect(html).toContain(`aria-label="Unit 4B: ${period.label} chart" tabindex="0"`);
+    expect(html).toContain(`aria-label="Unit 4B: ${period.label} amounts" tabindex="0"`);
+    expect(html).toContain('<summary>View exact amounts</summary>');
+    expect(html).toContain('Income, expenses and NOI · USD');
+    expect(html).toContain('Oct ’26: income $18,000.00, expenses $3,000.00');
+    expect(html).toContain('<th scope="row">Oct ’26</th><td class="num">$18,000.00</td><td class="num">$3,000.00</td><td class="num">$15,000.00</td>');
     expect(html).toContain('Income statement');
     expect(html).not.toContain('Expense breakdown');
   });

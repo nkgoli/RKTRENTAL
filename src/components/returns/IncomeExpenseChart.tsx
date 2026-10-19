@@ -1,10 +1,17 @@
+'use client';
+
 import { bucketLabel, type SeriesPoint } from '@/lib/returns/period';
 import styles from './returns.module.css';
 
 const money = (cents: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 
-/** A readable chart and an equivalent, keyboard-accessible table of exact ledger amounts. */
+/**
+ * Keep SVG titles in the same client tree as their SVG. Separately streamed title
+ * elements stall production App Router transitions to this report. SSR hydration
+ * alone does not exercise that path; tests/returns/navigation.spec.ts does.
+ * The exact-amount table remains available alongside the chart and in server HTML.
+ */
 export function IncomeExpenseChart({ rows, label }: { rows: SeriesPoint[]; label: string }) {
   const max = Math.max(1, ...rows.flatMap((row) => [row.incomeCents, row.expensesCents]));
   const hasActivity = rows.some((row) => row.incomeCents !== 0 || row.expensesCents !== 0);

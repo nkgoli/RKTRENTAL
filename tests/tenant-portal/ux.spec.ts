@@ -59,6 +59,11 @@ for (const width of [390, 1280]) {
     await amount.fill('1850.00');
     await amount.press('Enter');
     await expect(page.getByRole('group', { name: 'Confirm payment' })).toBeFocused();
+    const reviewBounds = await page.getByRole('group', { name: 'Confirm payment' }).boundingBox();
+    const navigationBounds = await page
+      .getByRole('navigation', { name: 'Tenant', exact: true })
+      .boundingBox();
+    expect(reviewBounds!.y + reviewBounds!.height).toBeLessThanOrEqual(navigationBounds!.y);
     await page.getByRole('button', { name: 'Back', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Pay $1,850', exact: true })).toBeFocused();
 

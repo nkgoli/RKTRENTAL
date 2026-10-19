@@ -59,6 +59,7 @@
   font-size: 13px;
 }
 .confirmation {
+  scroll-margin-block: 90px;
   padding: 16px;
   border: 1px solid var(--design-primary);
   border-radius: var(--rr-card-radius);

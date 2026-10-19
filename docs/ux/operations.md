@@ -51,6 +51,34 @@ node --env-file=C:/Users/nkgol/RocketRental/.env --import file:///C:/Users/nkgol
 
 The whole project suite was not run. Existing data-changing Playwright maintenance/document scripts were updated for the new dialog and labelled file links, but are not part of the 21 Vitest tests and have not been run against the shared database. The [production build log](../../tests/workspace/operations/evidence/production-build.txt) records the final successful build. Owned source files match that snapshot ignoring whitespace; the local runtime launcher also passes `node --check`.
 
+### Shared development runtime follow-up
+
+The manager's later runtime instruction was applied on 18 October 2026. `http://localhost:3102` was unoccupied and now serves the current request checkout through `tests/workspace/operations/shared-dev.cjs`. It is left running for the other area checks.
+
+| Identity | Observed value |
+| --- | --- |
+| URL / binding | `http://localhost:3102`, loopback `127.0.0.1:3102` |
+| Launcher PID | `34524` |
+| Listening Next server PID | `17756`, child of `34524` |
+| Source checkout | `C:\Users\nkgol\RocketRental\.orchestra\workspaces\@6fmicph499j20nbevsv\repository` |
+| Generated project directory | `tests/workspace/operations/.dev-runtime` within that checkout |
+| Development output | `tests/workspace/operations/.dev-runtime/.next-ux-dev` within that checkout |
+| Next version / mode | `15.5.27`, development |
+
+The launcher uses ordinary Next CLI configuration in the generated project directory, importing the checkout's Next configuration and setting `distDir` there. It copies and watches `src` and `public`; changes, additions and removals propagate after a short debounce. Regular copies are necessary because this installed Windows Next watcher did not discover routes through a directory junction. Package/configuration changes require restarting this launcher. The generated files are ignored, and the source checkout remains authoritative.
+
+The launch command, started as a hidden background process with logs in the evidence directory, is:
+
+```powershell
+node --env-file=C:/Users/nkgol/RocketRental/.env --import file:///C:/Users/nkgol/RocketRental/.orchestra/workspaces/@6fmicph499j20nbevsv/repository/prisma/os-userinfo.mjs tests/workspace/operations/shared-dev.cjs
+```
+
+The process-local database, authentication and storage settings match the existing reviewed local demo runtime. No committed configuration, environment file, database or storage contents were changed. No production build ran during this follow-up. The checkout's Next config, TypeScript config and existing `.next` build/routes manifests retained their pre-launch SHA-256 hashes. A temporary file in the owned maintenance component directory verified create, update and removal propagation; it was removed from both source and runtime. Launcher syntax passed `node --check`. An unauthenticated `/maintenance` request followed the expected sign-in redirect and returned HTTP 200 with the configured Content-Security-Policy.
+
+The root `3100` server remained PID `33572` and returned HTTP 200. The reported foundation PID `5432` no longer existed, no process listened on `3101`, and the checkout had no `.next/BUILD_ID` before this launch. Thus the prior foundation build `jLhDn7QEs_m9wijKeQoL5` could not be restarted from the observed output. That output was left untouched; restoration of the foundation runtime remains unresolved. The isolated reviewed production runtime on `3112` was also preserved.
+
+The follow-up obtained desktop ownership and switched to the existing Personal Edge session with Windows MCP. The desktop then returned to the human's ChatGPT settings while navigation was attempted. Desktop ownership was released immediately. No new `3102` screenshot is claimed, and its authenticated app render has not yet been rechecked. The completed desktop/phone interaction evidence below remains evidence of the unchanged application implementation on `3112`; the [shared runtime verification record](../../tests/workspace/operations/evidence/shared-dev-verification.txt) records the narrower launch and source-sync checks.
+
 ## Native Edge results
 
 Windows MCP drove the existing Personal Edge app session, taking and releasing desktop ownership between review sessions. Desktop captures use the maximized 2560 × 1600 display; phone captures use that same tab in Edge device emulation at 390 × 844. No separate browser session substituted for these checks.

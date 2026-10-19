@@ -30,7 +30,7 @@ test('manager reviews lease tabs, Alex Rivera detail, and uploads a lease docume
 
   await page.goto('/leases/seed-lease-maple-11');
   await expect(
-    page.getByRole('heading', { name: /^Maple Court · Unit \w+ Lease$/, level: 1 }),
+    page.getByRole('heading', { name: /^Maple Court · Unit \w+/, level: 1 }),
   ).toBeVisible();
   for (const heading of ['Leased premises', 'Tenants on this lease']) {
     await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();

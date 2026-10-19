@@ -32,7 +32,29 @@ describe('lease document rename', () => {
     form.set('id', 'doc-1');
     form.set('leaseId', 'lease-1');
     form.set('name', '   ');
-    await renameLeaseDocumentAction(form);
+    expect(await renameLeaseDocumentAction(form)).toEqual({ message: 'Enter a document name.' });
     expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it('reports a missing or unauthorized document without claiming success', async () => {
+    const form = new FormData();
+    form.set('id', 'missing-document');
+    form.set('leaseId', 'lease-1');
+    form.set('name', 'Agreement.pdf');
+    updateMany.mockResolvedValueOnce({ count: 0 });
+    expect(await renameLeaseDocumentAction(form)).toEqual({
+      message: 'This document is no longer available.',
+    });
+  });
+
+  it('returns recoverable feedback for a failed rename', async () => {
+    const form = new FormData();
+    form.set('id', 'doc-1');
+    form.set('leaseId', 'lease-1');
+    form.set('name', 'Agreement.pdf');
+    updateMany.mockRejectedValueOnce(new Error('Database unavailable'));
+    expect(await renameLeaseDocumentAction(form)).toEqual({
+      message: 'The file could not be renamed. Please try again.',
+    });
   });
 });

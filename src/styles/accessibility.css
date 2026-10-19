@@ -1,0 +1,85 @@
+/* Shared interaction baseline, including public and tenant surfaces. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--design-primary);
+  outline-offset: 3px;
+}
+.search:focus-within {
+  outline: 3px solid var(--design-primary);
+  outline-offset: 3px;
+}
+.sidebar :where(a, button):focus-visible {
+  outline-color: #fff;
+}
+.tabs {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-top: 4px;
+}
+.tabs a {
+  flex: none;
+}
+.card-header {
+  flex-wrap: wrap;
+}
+.card-header > a {
+  font-size: 13px;
+  font-weight: 600;
+}
+:where(.table, .kv, .stat, .kpi) {
+  font-variant-numeric: tabular-nums;
+}
+.btn-secondary:hover,
+.btn-light:hover {
+  background: var(--rr-hover);
+}
+.btn:disabled {
+  opacity: 0.65;
+}
+.field [aria-invalid='true'] {
+  border-color: var(--rr-bad);
+}
+.sidebar-foot small {
+  display: block;
+}
+@media (max-width: 600px) {
+  .topbar {
+    gap: 12px;
+  }
+  .topbar-actions {
+    flex-basis: 100%;
+  }
+  .topbar-actions .btn {
+    flex: 1;
+  }
+  .page {
+    padding-inline: 16px;
+  }
+  .topbar {
+    padding-inline: 16px;
+  }
+}
+@media (pointer: coarse) {
+  .btn,
+  .topbar-actions .btn,
+  .menu-btn,
+  .drawer-close,
+  .nav a,
+  a.chip,
+  button.chip {
+    min-height: 44px;
+  }
+  .field input,
+  .field select,
+  .field textarea {
+    font-size: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}

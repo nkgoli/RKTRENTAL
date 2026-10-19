@@ -20,7 +20,9 @@ export function RouteError({
     <section className={styles.error} role="alert">
       {tenant ? <h1>Something went wrong</h1> : <h2>Something went wrong</h2>}
       <p>We couldn’t load this page. Please try again.</p>
-      <button className="btn btn-primary" onClick={() => { reset(); window.location.reload(); }} type="button">Try again</button>
+      <button className="btn btn-primary" onClick={reset} type="button">
+        Try again
+      </button>
     </section>
   );
 }

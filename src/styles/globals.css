@@ -8,7 +8,7 @@
   --design-background: #ffffff;
   --design-surface: #ffffff;
   --design-text: #17142b;
-  --design-muted: #64748b;
+  --design-muted: #526176;
   --design-accent: #e0a283;
   --design-danger: #dc2626;
   --design-radius: 12px;
@@ -39,7 +39,7 @@
   --rr-card-pad: 16px;
   --rr-card-radius: var(--design-radius);
   --rr-card-border: 1px solid var(--rr-border);
-  --rr-card-shadow: 0 1px 2px rgb(23 20 43 / 0.05);
+  --rr-card-shadow: none;
   --rr-h1: 26px;
   --rr-h2: 18px;
   --rr-h3: 15px;
@@ -212,7 +212,7 @@ p {
   background: #e8eefc;
   color: var(--rr-navy);
   font-weight: 600;
-  box-shadow: 0 1px 2px rgb(4 12 30 / 0.35), 0 4px 10px rgb(4 12 30 / 0.3);
+  box-shadow: none;
 }
 .nav a.active svg {
   color: #1e3a8a;
@@ -234,7 +234,8 @@ p {
   border-top: 1px solid rgb(255 255 255 / 0.16);
 }
 .sidebar-foot {
-  display: flex;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   padding: 10px;
@@ -260,7 +261,10 @@ p {
 }
 .sidebar-foot .btn-ghost {
   color: #dbe4f0;
-  margin-left: auto;
+  grid-column: 2;
+  justify-self: start;
+  height: 26px;
+  padding: 0;
 }
 
 /* Hamburger, drawer, scrim: below 1024px the sidebar is an overlay drawer. */
@@ -312,7 +316,8 @@ p {
   max-width: 86vw;
   z-index: 50;
   overflow-y: auto;
-  box-shadow: 0 12px 40px rgb(4 12 30 / 0.5);
+  box-shadow: 8px 0 24px rgb(4 12 30 / 0.15);
+  overscroll-behavior: contain;
 }
 .app.drawer-open .scrim {
   display: block;
@@ -1581,9 +1586,6 @@ button.switch {
   }
   .kanban {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .topbar > div:not(.topbar-actions) {
-    flex: 1 1 calc(100% - 52px);
   }
   .topbar-actions {
     flex-wrap: wrap;

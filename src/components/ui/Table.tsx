@@ -14,7 +14,9 @@ export function TableHead({ columns }: { columns: ReactNode[] }) {
     <thead>
       <tr>
         {columns.map((c, i) => (
-          <th key={i}>{c}</th>
+          <th key={i} scope="col">
+            {c}
+          </th>
         ))}
       </tr>
     </thead>

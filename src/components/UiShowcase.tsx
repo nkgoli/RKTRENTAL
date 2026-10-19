@@ -1,3 +1,7 @@
+'use client';
+
+import { useState } from 'react';
+import { EmptyState, LoadingState } from './RouteStates';
 import { Alert, Progress, Steps } from './ui/Feedback';
 import { Avatar, Badge, Chip, Chips } from './ui/Badge';
 import { Button } from './ui/Button';
@@ -18,8 +22,21 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export function UiShowcase() {
+  const [autopay, setAutopay] = useState(true);
+  const [reminders, setReminders] = useState(false);
   return (
     <div className="stack" style={{ gap: 32 }}>
+      <Section title="Page states">
+        <div className="grid-2">
+          <EmptyState
+            title="No results yet"
+            description="Change the filters or add your first item."
+            action="Back to dashboard"
+            href="/dashboard"
+          />
+          <LoadingState />
+        </div>
+      </Section>
       <Section title="Buttons">
         <div className="row" style={{ flexWrap: 'wrap' }}>
           <Button variant="primary">Primary</Button>
@@ -154,10 +171,10 @@ export function UiShowcase() {
             </Field>
             <Check label="Send the lease for e-signature" defaultChecked />
             <div className="row">
-              <Switch on label="Autopay" />
-              <span>Autopay on</span>
-              <Switch on={false} label="Late fee reminders" />
-              <span>Reminders off</span>
+              <Switch on={autopay} label="Autopay" onChange={setAutopay} />
+              <span>Autopay {autopay ? 'on' : 'off'}</span>
+              <Switch on={reminders} label="Late fee reminders" onChange={setReminders} />
+              <span>Reminders {reminders ? 'on' : 'off'}</span>
             </div>
           </form>
         </Card>

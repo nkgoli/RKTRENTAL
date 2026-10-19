@@ -117,6 +117,34 @@ describe('ManagerShell drawer', () => {
     expect(document.activeElement).toBe(closeX());
   });
 
+  it('isolates the page and locks scrolling until the menu closes', async () => {
+    const user = userEvent.setup();
+    document.body.style.overflow = 'auto';
+    render(ui());
+    await user.click(hamburger());
+    expect(document.getElementById('main-content')!.hasAttribute('inert')).toBe(true);
+    expect(document.body.style.overflow).toBe('hidden');
+    await user.keyboard('{Escape}');
+    expect(document.getElementById('main-content')!.hasAttribute('inert')).toBe(false);
+    expect(document.body.style.overflow).toBe('auto');
+    document.body.style.overflow = '';
+  });
+
+  it('skips hidden controls when cycling keyboard focus', async () => {
+    const user = userEvent.setup();
+    render(ui());
+    await user.click(hamburger());
+    const hidden = document.createElement('button');
+    hidden.hidden = true;
+    sidebar().append(hidden);
+    const last = within(sidebar()).getByRole('link', { name: 'Sign out' });
+    last.focus();
+    await user.tab();
+    expect(document.activeElement).toBe(
+      within(sidebar()).getByRole('link', { name: 'RocketRental' }),
+    );
+  });
+
   it('traps Tab and Shift+Tab inside the drawer', async () => {
     const user = userEvent.setup();
     render(ui());

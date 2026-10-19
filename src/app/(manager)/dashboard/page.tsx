@@ -1,4 +1,4 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 import { MiniCover } from '@/components/dashboard/MiniCover';
 import { loadDashboardView, initialsOf } from '@/components/dashboard/assemble';
 import { trendOf } from '@/components/dashboard/trend';
@@ -34,7 +34,13 @@ export default async function DashboardPage({
   const session = await requireManagerRole();
   const now = new Date();
   const range = collectionRangeFrom((await searchParams).range);
-  const dashboard = await loadDashboardView(session.organizationId, now, undefined, formatUsd, range);
+  const dashboard = await loadDashboardView(
+    session.organizationId,
+    now,
+    undefined,
+    formatUsd,
+    range,
+  );
   const collectionPercent = dashboard.rentDueCents
     ? Math.min(100, Math.round((dashboard.rentCollectedCents / dashboard.rentDueCents) * 100))
     : 0;
@@ -49,7 +55,7 @@ export default async function DashboardPage({
           <div className="card-header">
             <div>
               <p className={styles.eyebrow}>{dashboard.monthLabel}</p>
-              <h3>Rent collection this month</h3>
+              <h2>Rent collection this month</h2>
             </div>
             <Link href="/payments">Open payments</Link>
           </div>
@@ -61,13 +67,16 @@ export default async function DashboardPage({
                 {trend && <TrendChip warm={trend.warm}>{trend.label}</TrendChip>}
               </p>
             </div>
-            <OccupancyRing value={collectionPercent} label={`${collectionPercent}% of rent collected`} />
+            <OccupancyRing
+              value={collectionPercent}
+              label={`${collectionPercent}% of rent collected`}
+            />
           </div>
           <CollectionChart months={dashboard.collection} range={range} />
           <p className={styles.note} style={{ margin: '4px 0 14px' }}>
             {dashboard.collection[0]?.label}
-            {dashboard.collection.length > 12 ? ` ${dashboard.collection[0]?.key.slice(0, 4)}` : ''}–
-            {dashboard.collection.at(-1)?.label} collected against rent due
+            {dashboard.collection.length > 12 ? ` ${dashboard.collection[0]?.key.slice(0, 4)}` : ''}
+            –{dashboard.collection.at(-1)?.label} collected against rent due
           </p>
           <dl className={styles.facts}>
             <div>
@@ -93,8 +102,10 @@ export default async function DashboardPage({
 
         <article className="card">
           <div className="card-header">
-            <h3>Leases expiring soon</h3>
-            <Link href="/leases?tab=expiring">View all</Link>
+            <h2>Leases expiring soon</h2>
+            <Link href="/leases?tab=expiring" aria-label="View all expiring leases">
+              View all
+            </Link>
           </div>
           {dashboard.expiringLeases.length ? (
             <ol className={styles.timeline}>
@@ -133,7 +144,7 @@ export default async function DashboardPage({
       <section className={styles.split}>
         <article className="card">
           <div className="card-header">
-            <h3>Needs attention</h3>
+            <h2>Needs attention</h2>
           </div>
           <div className={styles.attentionList}>
             {dashboard.overdueLeaseCount ? (
@@ -144,12 +155,16 @@ export default async function DashboardPage({
                     {dashboard.overdueLeaseCount === 1 ? 'lease is' : 'leases are'} past due
                   </strong>
                   <p>{formatUsd(dashboard.overdueCents)} past grace</p>
-                  <AvatarStack initials={dashboard.pastDueTenants.map((tenant) => tenant.initials)} />
+                  <AvatarStack
+                    initials={dashboard.pastDueTenants.map((tenant) => tenant.initials)}
+                  />
                 </div>
                 <Link href="/payments?filter=late">Review balances</Link>
               </div>
             ) : (
-              <div className={`${styles.alert} ${styles.successAlert}`}>No overdue rent balances.</div>
+              <div className={`${styles.alert} ${styles.successAlert}`}>
+                No overdue rent balances.
+              </div>
             )}
             <div className={styles.alert}>
               <div>
@@ -165,7 +180,8 @@ export default async function DashboardPage({
               <div>
                 <strong>Open maintenance requests</strong>
                 <p>
-                  {dashboard.openMaintenanceRequests} open · {dashboard.urgentMaintenanceRequests} urgent
+                  {dashboard.openMaintenanceRequests} open · {dashboard.urgentMaintenanceRequests}{' '}
+                  urgent
                 </p>
               </div>
               <Link href="/maintenance">Maintenance</Link>
@@ -175,8 +191,8 @@ export default async function DashboardPage({
 
         <article className="card">
           <div className="card-header">
-            <h3>Recent activity</h3>
-            <Link href="/payments">All activity</Link>
+            <h2>Recent activity</h2>
+            <Link href="/payments">View payments</Link>
           </div>
           {dashboard.activity.length ? (
             <ul className={styles.activity}>
@@ -191,11 +207,13 @@ export default async function DashboardPage({
                       {item.title}
                     </Link>
                     <small>
-                      {item.description} · <Link href={item.propertyHref}>{item.propertyName}</Link> ·{' '}
-                      <Link href={item.unitHref}>{item.unitLabel}</Link> · {when(item.happenedAt)}
+                      {item.description} · <Link href={item.propertyHref}>{item.propertyName}</Link>{' '}
+                      · <Link href={item.unitHref}>{item.unitLabel}</Link> · {when(item.happenedAt)}
                     </small>
                   </div>
-                  <span className={`${styles.badge} ${styles[`${item.tone}Badge`]}`}>{item.status}</span>
+                  <span className={`${styles.badge} ${styles[`${item.tone}Badge`]}`}>
+                    {item.status}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -207,7 +225,7 @@ export default async function DashboardPage({
 
       <section className="card" aria-label="Properties">
         <div className="card-header">
-          <h3>Properties</h3>
+          <h2>Properties</h2>
           <Link href="/properties">All properties</Link>
         </div>
         {dashboard.properties.length ? (
@@ -240,4 +258,3 @@ export default async function DashboardPage({
     </section>
   );
 }
-

@@ -1,0 +1,3855 @@
+﻿{
+  "schemaVersion": "rocketrental.visual-coverage.v1",
+  "title": "Map every screen and state for the visual rollout",
+  "observedAt": "2026-10-19",
+  "repository": {
+    "id": "repository:1ace516f-ddc8-43b2-8a40-4ce6d93792ad",
+    "generation": 1,
+    "worktree": "C:/Users/nkgol/RocketRental/.orchestra/workspaces/@4p8djcnyudt4zky3k84/repository",
+    "branch": "orchestra/work-2gcjdifqik3o7helc0b-57tsyxms4e6q44k78lj",
+    "baseCommit": "b62f7666dbe4c644f825904201bf29b2b6bb8fdf",
+    "observedHead": "b62f7666dbe4c644f825904201bf29b2b6bb8fdf",
+    "initialTree": "clean",
+    "delivery": "candidate only; no merge/push/publication requested"
+  },
+  "method": "Enumerated all src/app/**/page.tsx and layout/loading/error/not-found boundaries using PowerShell Get-ChildItem; inspected routes/nav/wizard/ROI components and collected source-line state anchors across all app/components TSX. rg unavailable. State anchors are discovery evidence, not individual runtime verification.",
+  "statusDefinitions": {
+    "pending": "rollout work or state design extension remains",
+    "design": "reference exists, not implementation parity",
+    "implemented": "new rollout source completed (none asserted)",
+    "verified": "new rollout runtime checks passed (none asserted)"
+  },
+  "designs": [
+    {
+      "name": "rocketrental-app",
+      "revision": 337,
+      "screens": [
+        {
+          "id": "manager-dashboard",
+          "title": "Manager dashboard",
+          "status": "design"
+        },
+        {
+          "id": "properties",
+          "title": "Properties",
+          "status": "design"
+        },
+        {
+          "id": "property-detail",
+          "title": "Property detail",
+          "status": "design"
+        },
+        {
+          "id": "tenants",
+          "title": "Tenants",
+          "status": "design"
+        },
+        {
+          "id": "tenant-detail",
+          "title": "Tenant detail",
+          "status": "design"
+        },
+        {
+          "id": "leases",
+          "title": "Leases",
+          "status": "design"
+        },
+        {
+          "id": "lease-create",
+          "title": "Create lease Â· Lease term",
+          "status": "design"
+        },
+        {
+          "id": "screening",
+          "title": "Applications and screening",
+          "status": "design"
+        },
+        {
+          "id": "payments",
+          "title": "Payments",
+          "status": "design"
+        },
+        {
+          "id": "maintenance",
+          "title": "Maintenance",
+          "status": "design"
+        },
+        {
+          "id": "documents",
+          "title": "Documents",
+          "status": "design"
+        },
+        {
+          "id": "integrations",
+          "title": "Integrations",
+          "status": "design"
+        },
+        {
+          "id": "tenant-home",
+          "title": "Tenant home",
+          "status": "design"
+        },
+        {
+          "id": "tenant-pay-rent",
+          "title": "Tenant pay rent",
+          "status": "design"
+        },
+        {
+          "id": "tenant-lease",
+          "title": "Tenant lease and documents",
+          "status": "design"
+        },
+        {
+          "id": "tenant-maintenance",
+          "title": "Tenant repair request",
+          "status": "design"
+        },
+        {
+          "id": "rent-comps",
+          "title": "Rent comps",
+          "status": "design"
+        },
+        {
+          "id": "returns",
+          "title": "Returns and metrics",
+          "status": "design"
+        },
+        {
+          "id": "unit-detail",
+          "title": "Unit detail",
+          "status": "design"
+        },
+        {
+          "id": "lease-detail",
+          "title": "Lease detail Â· Overview",
+          "status": "design"
+        },
+        {
+          "id": "dashboard-tablet",
+          "title": "Manager dashboard (tablet)",
+          "status": "design"
+        },
+        {
+          "id": "dashboard-tablet-menu",
+          "title": "Manager dashboard (tablet, menu open)",
+          "status": "design"
+        },
+        {
+          "id": "unit-returns",
+          "title": "Unit returns",
+          "status": "design"
+        },
+        {
+          "id": "property-returns",
+          "title": "Property returns",
+          "status": "design"
+        },
+        {
+          "id": "property-listing",
+          "title": "Property listing",
+          "status": "design"
+        },
+        {
+          "id": "sfh-listing",
+          "title": "Single-family listing",
+          "status": "design"
+        },
+        {
+          "id": "property-leases",
+          "title": "Property leases",
+          "status": "design"
+        },
+        {
+          "id": "property-payments",
+          "title": "Property payments",
+          "status": "design"
+        },
+        {
+          "id": "lease-create-rent",
+          "title": "Create lease Â· Rent, deposit \u0026 fees",
+          "status": "design"
+        },
+        {
+          "id": "lease-create-attachments",
+          "title": "Create lease Â· Attachments",
+          "status": "design"
+        },
+        {
+          "id": "lease-templates",
+          "title": "Lease templates",
+          "status": "design"
+        },
+        {
+          "id": "lease-template-edit",
+          "title": "Edit lease template",
+          "status": "design"
+        },
+        {
+          "id": "lease-create-clauses",
+          "title": "Create lease Â· Clauses",
+          "status": "design"
+        },
+        {
+          "id": "lease-create-rules",
+          "title": "Create lease Â· Rules",
+          "status": "design"
+        },
+        {
+          "id": "lease-create-disclosures",
+          "title": "Create lease Â· Disclosures",
+          "status": "design"
+        },
+        {
+          "id": "lease-renewal-clauses",
+          "title": "Renew lease Â· Clauses",
+          "status": "design"
+        },
+        {
+          "id": "property-payments-multiunit",
+          "title": "Property payments (multi-unit)",
+          "status": "design"
+        },
+        {
+          "id": "maintenance-empty",
+          "title": "Maintenance (no requests yet)",
+          "status": "design"
+        },
+        {
+          "id": "lease-detail-agreement",
+          "title": "Lease detail Â· Agreement",
+          "status": "design"
+        },
+        {
+          "id": "lease-detail-documents",
+          "title": "Lease detail Â· Documents",
+          "status": "design"
+        }
+      ]
+    },
+    {
+      "name": "rocketrental-account-recovery",
+      "revision": 5,
+      "screens": [
+        {
+          "id": "auth-sign-in",
+          "title": "Sign in",
+          "status": "design"
+        },
+        {
+          "id": "auth-sign-out",
+          "title": "Sign out",
+          "status": "design"
+        },
+        {
+          "id": "tenant-states",
+          "title": "Tenant loading, empty and recovery states",
+          "status": "design"
+        }
+      ]
+    },
+    {
+      "name": "rocketrental-analysis",
+      "revision": 36,
+      "screens": [
+        {
+          "id": "analysis-selection",
+          "title": "Choose a property",
+          "status": "design"
+        },
+        {
+          "id": "roi-summary",
+          "title": "ROI Analysis Â· Summary and assumptions",
+          "status": "design"
+        },
+        {
+          "id": "roi-projections",
+          "title": "ROI Analysis Â· Projections and charts",
+          "status": "design"
+        },
+        {
+          "id": "roi-scenarios",
+          "title": "ROI Analysis Â· Scenarios and comparisons",
+          "status": "design"
+        },
+        {
+          "id": "rent-analysis",
+          "title": "Rent Analysis Â· Market comparison",
+          "status": "design"
+        },
+        {
+          "id": "analysis-phone",
+          "title": "Analysis Â· Phone layouts",
+          "status": "design"
+        }
+      ]
+    },
+    {
+      "name": "rocketrental-dashboard-mischief-manager",
+      "revision": 5,
+      "screens": [
+        {
+          "id": "dashboard-reference",
+          "title": "Dashboard Â· Mischief Manager visual reference",
+          "status": "design"
+        }
+      ]
+    }
+  ],
+  "themePrecedence": "Approved dashboard reference revision 5 supplies new light palette; main app/account/analysis preserve screen content and behavior. Reusable visual-system sibling must resolve tokens before implementation. Existing source uses navy/coral; no all-screen light parity claimed.",
+  "mindmap": {
+    "cite": "Diagrams/rocketrental-mindmap",
+    "revision": 4,
+    "branches": {
+      "f-props": ["portfolio"],
+      "f-tenants": ["people"],
+      "f-leasing": ["leasing", "people"],
+      "f-docs": ["operations", "portfolio", "leasing", "tenant"],
+      "f-pay": ["money", "tenant"],
+      "f-returns": ["returns", "analysis"],
+      "f-comps": ["pricing"],
+      "f-int": ["money"],
+      "f-maint": ["operations", "tenant"],
+      "f-portals": ["foundation", "tenant"],
+      "c-ux": ["all slices"]
+    },
+    "scope": "Existing UI only; no new owner/vendor/admin portals, inbox, screening/payment providers or roadmap features."
+  },
+  "retainedDependencies": [
+    {
+      "task": "task:a2b3eb0d-aa22-5577-ac3d-7ee5ae450859",
+      "title": "Define the approved reusable visual system",
+      "state": "IN_PROGRESS",
+      "purpose": "Token/component contract before light theme rollout"
+    },
+    {
+      "task": "task:2c1bafd8-99b1-5c18-bb6b-181642054857",
+      "title": "Implement light theme, shared controls and navigation",
+      "state": "CLAIMED",
+      "purpose": "Consumes this map and reusable visual system"
+    }
+  ],
+  "routes": [
+    {
+      "route": "/",
+      "source": "src/app/page.tsx",
+      "ownerSlice": "entry",
+      "designScreens": [],
+      "states": "Role-aware redirect; no standalone screen",
+      "status": {
+        "design": "pending",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": []
+    },
+    {
+      "route": "/sign-in",
+      "source": "src/app/(auth)/sign-in/page.tsx",
+      "ownerSlice": "account",
+      "designScreens": [
+        {
+          "design": "rocketrental-account-recovery",
+          "screenId": "auth-sign-in"
+        }
+      ],
+      "states": "Password show/hide, required/invalid credentials, signing in, signed-out feedback/help",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": ["tests/auth/access.spec.ts", "tests/auth/form.test.tsx"]
+    },
+    {
+      "route": "/sign-out",
+      "source": "src/app/(auth)/sign-out/page.tsx",
+      "ownerSlice": "account",
+      "designScreens": [
+        {
+          "design": "rocketrental-account-recovery",
+          "screenId": "auth-sign-out"
+        }
+      ],
+      "states": "Account confirmation/stay signed in; already signed out",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": ["tests/auth/access.spec.ts", "tests/auth/form.test.tsx"]
+    },
+    {
+      "route": "/applications",
+      "source": "src/app/(manager)/applications/page.tsx",
+      "ownerSlice": "people",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "screening"
+        }
+      ],
+      "states": "Global applicant review; consent, pending/failed/report results, reason-gated approve/decline and saving",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/screening/applications.spec.ts",
+        "tests/screening/decision-audit.test.ts",
+        "tests/screening/policy.test.ts",
+        "tests/screening/redirect.test.ts",
+        "tests/screening/review-forms.test.tsx",
+        "tests/screening/webhook.test.ts",
+        "tests/tenants/forms-ux.test.tsx",
+        "tests/tenants/navigation.test.ts",
+        "tests/tenants/people-ux.spec.ts",
+        "tests/tenants/status-checklist.test.ts",
+        "tests/tenants/status-view.test.tsx",
+        "tests/tenants/tenants.spec.ts"
+      ]
+    },
+    {
+      "route": "/dashboard",
+      "source": "src/app/(manager)/dashboard/page.tsx",
+      "ownerSlice": "foundation",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "manager-dashboard"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "dashboard-tablet"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "dashboard-tablet-menu"
+        },
+        {
+          "design": "rocketrental-dashboard-mischief-manager",
+          "screenId": "dashboard-reference"
+        }
+      ],
+      "states": "Ranges, exact-value table, no activity, KPI and property covers",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/a11y/foundation.spec.ts",
+        "tests/a11y/pages.spec.ts",
+        "tests/dashboard/assemble.test.ts",
+        "tests/dashboard/chart.test.tsx",
+        "tests/dashboard/dashboard.spec.ts",
+        "tests/dashboard/dashboard.test.ts",
+        "tests/dashboard/render.test.tsx",
+        "tests/ui/components.test.tsx",
+        "tests/ui/manager-shell.test.tsx",
+        "tests/ui/pagination.test.tsx",
+        "tests/ui/responsive-css.test.ts"
+      ]
+    },
+    {
+      "route": "/documents",
+      "source": "src/app/(manager)/documents/page.tsx",
+      "ownerSlice": "operations",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "documents"
+        }
+      ],
+      "states": "Library and section filters/pagination; empty/no matches; upload destination/no destination; file preview/download/delete",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/documents/controls.test.tsx",
+        "tests/documents/documents.spec.ts",
+        "tests/maintenance/actions.test.ts",
+        "tests/maintenance/feedback.test.tsx",
+        "tests/maintenance/list-query.test.ts",
+        "tests/maintenance/maintenance.spec.ts",
+        "tests/upload/FileUploader.test.tsx"
+      ]
+    },
+    {
+      "route": "/integrations",
+      "source": "src/app/(manager)/integrations/page.tsx",
+      "ownerSlice": "money",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "integrations"
+        }
+      ],
+      "states": "Connected/disconnected/sandbox/live status, activity vs sync, provider errors, settings/save feedback",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/integrations/active.test.ts",
+        "tests/integrations/integrations.spec.ts",
+        "tests/integrations/integrations.test.ts",
+        "tests/integrations/sync-state.test.ts",
+        "tests/ledger/core.test.ts",
+        "tests/ledger/lease-setup.test.ts",
+        "tests/ledger/payment-reference.test.ts",
+        "tests/ledger/payments-actions.test.ts",
+        "tests/ledger/payments.spec.ts",
+        "tests/ledger/statement.test.ts",
+        "tests/ledger/store.test.ts"
+      ]
+    },
+    {
+      "route": "/leases",
+      "source": "src/app/(manager)/leases/page.tsx",
+      "ownerSlice": "leasing",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "leases"
+        }
+      ],
+      "states": "Active/draft/past filters; no active/no matches; renewal entry",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/lease-create/drafts.test.ts",
+        "tests/lease-create/lease-create.spec.ts",
+        "tests/lease-create/lease-create.test.ts",
+        "tests/lease-create/standard-v2.test.ts",
+        "tests/lease-create/templates.test.ts",
+        "tests/lease-create/term.test.ts",
+        "tests/lease-create/workflow-ux.test.tsx",
+        "tests/leases/lease-document-action.test.ts",
+        "tests/leases/lease-document-grid.test.tsx",
+        "tests/leases/lease-workspace.test.tsx",
+        "tests/leases/leases.spec.ts",
+        "tests/leases/leases.test.ts"
+      ]
+    },
+    {
+      "route": "/leases/new",
+      "source": "src/app/(manager)/leases/new/page.tsx",
+      "ownerSlice": "leasing",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "lease-create"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "lease-create-rent"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "lease-create-clauses"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "lease-create-rules"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "lease-create-disclosures"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "lease-create-attachments"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "lease-renewal-clauses"
+        }
+      ],
+      "states": "Unit picker; draft resume/fresh/renew/applicant; ten steps; validation summary/focus; save/exit/send pending/failure",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/lease-create/drafts.test.ts",
+        "tests/lease-create/lease-create.spec.ts",
+        "tests/lease-create/lease-create.test.ts",
+        "tests/lease-create/standard-v2.test.ts",
+        "tests/lease-create/templates.test.ts",
+        "tests/lease-create/term.test.ts",
+        "tests/lease-create/workflow-ux.test.tsx",
+        "tests/leases/lease-document-action.test.ts",
+        "tests/leases/lease-document-grid.test.tsx",
+        "tests/leases/lease-workspace.test.tsx",
+        "tests/leases/leases.spec.ts",
+        "tests/leases/leases.test.ts"
+      ]
+    },
+    {
+      "route": "/leases/templates",
+      "source": "src/app/(manager)/leases/templates/page.tsx",
+      "ownerSlice": "leasing",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "lease-templates"
+        }
+      ],
+      "states": "Template list/empty/create",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/lease-create/drafts.test.ts",
+        "tests/lease-create/lease-create.spec.ts",
+        "tests/lease-create/lease-create.test.ts",
+        "tests/lease-create/standard-v2.test.ts",
+        "tests/lease-create/templates.test.ts",
+        "tests/lease-create/term.test.ts",
+        "tests/lease-create/workflow-ux.test.tsx",
+        "tests/leases/lease-document-action.test.ts",
+        "tests/leases/lease-document-grid.test.tsx",
+        "tests/leases/lease-workspace.test.tsx",
+        "tests/leases/leases.spec.ts",
+        "tests/leases/leases.test.ts"
+      ]
+    },
+    {
+      "route": "/leases/templates/[id]",
+      "source": "src/app/(manager)/leases/templates/[id]/page.tsx",
+      "ownerSlice": "leasing",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "lease-template-edit"
+        }
+      ],
+      "states": "Clauses/rules/disclosures/fees/default-property editing; validation/save/delete/unsaved states",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/lease-create/drafts.test.ts",
+        "tests/lease-create/lease-create.spec.ts",
+        "tests/lease-create/lease-create.test.ts",
+        "tests/lease-create/standard-v2.test.ts",
+        "tests/lease-create/templates.test.ts",
+        "tests/lease-create/term.test.ts",
+        "tests/lease-create/workflow-ux.test.tsx",
+        "tests/leases/lease-document-action.test.ts",
+        "tests/leases/lease-document-grid.test.tsx",
+        "tests/leases/lease-workspace.test.tsx",
+        "tests/leases/leases.spec.ts",
+        "tests/leases/leases.test.ts"
+      ]
+    },
+    {
+      "route": "/leases/[id]",
+      "source": "src/app/(manager)/leases/[id]/page.tsx",
+      "ownerSlice": "leasing",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "lease-detail"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "lease-detail-agreement"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "lease-detail-documents"
+        }
+      ],
+      "states": "Overview/Agreement/Documents/Payments/Activity; terms/notice/terminate confirmation; no snapshot/documents/charges/signature; upload/delete document confirmation",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/lease-create/drafts.test.ts",
+        "tests/lease-create/lease-create.spec.ts",
+        "tests/lease-create/lease-create.test.ts",
+        "tests/lease-create/standard-v2.test.ts",
+        "tests/lease-create/templates.test.ts",
+        "tests/lease-create/term.test.ts",
+        "tests/lease-create/workflow-ux.test.tsx",
+        "tests/leases/lease-document-action.test.ts",
+        "tests/leases/lease-document-grid.test.tsx",
+        "tests/leases/lease-workspace.test.tsx",
+        "tests/leases/leases.spec.ts",
+        "tests/leases/leases.test.ts"
+      ]
+    },
+    {
+      "route": "/maintenance",
+      "source": "src/app/(manager)/maintenance/page.tsx",
+      "ownerSlice": "operations",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "maintenance"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "maintenance-empty"
+        }
+      ],
+      "states": "Board/list/filter/empty/no matches; new dialog; priority/photos/vendor/comments/actions",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/documents/controls.test.tsx",
+        "tests/documents/documents.spec.ts",
+        "tests/maintenance/actions.test.ts",
+        "tests/maintenance/feedback.test.tsx",
+        "tests/maintenance/list-query.test.ts",
+        "tests/maintenance/maintenance.spec.ts",
+        "tests/upload/FileUploader.test.tsx"
+      ]
+    },
+    {
+      "route": "/payments",
+      "source": "src/app/(manager)/payments/page.tsx",
+      "ownerSlice": "money",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "payments"
+        }
+      ],
+      "states": "Month/scope/rent roll, no charges; late fee eligibility/errors; pending/autopay; payouts/refunds feedback",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/integrations/active.test.ts",
+        "tests/integrations/integrations.spec.ts",
+        "tests/integrations/integrations.test.ts",
+        "tests/integrations/sync-state.test.ts",
+        "tests/ledger/core.test.ts",
+        "tests/ledger/lease-setup.test.ts",
+        "tests/ledger/payment-reference.test.ts",
+        "tests/ledger/payments-actions.test.ts",
+        "tests/ledger/payments.spec.ts",
+        "tests/ledger/statement.test.ts",
+        "tests/ledger/store.test.ts"
+      ]
+    },
+    {
+      "route": "/properties",
+      "source": "src/app/(manager)/properties/page.tsx",
+      "ownerSlice": "portfolio",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "properties"
+        }
+      ],
+      "states": "All/multi/single/vacant/archived filters; no properties/no matches; add dialog; field errors/saving",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/portfolio/forms.test.tsx",
+        "tests/portfolio/portfolio.spec.ts",
+        "tests/portfolio/routing.test.ts",
+        "tests/properties/listing-mode.test.ts",
+        "tests/properties/properties.spec.ts",
+        "tests/workspace/documents-redirect.test.tsx",
+        "tests/workspace/media.test.tsx",
+        "tests/workspace/routes.test.ts",
+        "tests/workspace/scope.test.ts",
+        "tests/workspace/scoped-tabs.test.tsx",
+        "tests/workspace/timeline.test.ts",
+        "tests/workspace/workspace.test.tsx",
+        "tests/workspace/leasing/scope.test.ts",
+        "tests/workspace/operations/operations.test.tsx"
+      ]
+    },
+    {
+      "route": "/properties/[id]",
+      "source": "src/app/(manager)/properties/[id]/page.tsx",
+      "ownerSlice": "portfolio",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "property-detail"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "unit-detail"
+        }
+      ],
+      "states": "Property/unit overview via unit query; facts/edit/archive, add/delete unit confirmation, media upload/reorder/cover/preview failure",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/portfolio/forms.test.tsx",
+        "tests/portfolio/portfolio.spec.ts",
+        "tests/portfolio/routing.test.ts",
+        "tests/properties/listing-mode.test.ts",
+        "tests/properties/properties.spec.ts",
+        "tests/workspace/documents-redirect.test.tsx",
+        "tests/workspace/media.test.tsx",
+        "tests/workspace/routes.test.ts",
+        "tests/workspace/scope.test.ts",
+        "tests/workspace/scoped-tabs.test.tsx",
+        "tests/workspace/timeline.test.ts",
+        "tests/workspace/workspace.test.tsx",
+        "tests/workspace/leasing/scope.test.ts",
+        "tests/workspace/operations/operations.test.tsx"
+      ]
+    },
+    {
+      "route": "/properties/[id]/applications",
+      "source": "src/app/(manager)/properties/[id]/applications/page.tsx",
+      "ownerSlice": "people",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "screening"
+        }
+      ],
+      "states": "Scoped applicants, filters/no matches; report pending/none; consent/reason-gated decisions",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/screening/applications.spec.ts",
+        "tests/screening/decision-audit.test.ts",
+        "tests/screening/policy.test.ts",
+        "tests/screening/redirect.test.ts",
+        "tests/screening/review-forms.test.tsx",
+        "tests/screening/webhook.test.ts",
+        "tests/tenants/forms-ux.test.tsx",
+        "tests/tenants/navigation.test.ts",
+        "tests/tenants/people-ux.spec.ts",
+        "tests/tenants/status-checklist.test.ts",
+        "tests/tenants/status-view.test.tsx",
+        "tests/tenants/tenants.spec.ts"
+      ]
+    },
+    {
+      "route": "/properties/[id]/documents",
+      "source": "src/app/(manager)/properties/[id]/documents/page.tsx",
+      "ownerSlice": "portfolio",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "property-detail"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "unit-detail"
+        }
+      ],
+      "states": "Compatibility redirect to overview; no Documents tab",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/portfolio/forms.test.tsx",
+        "tests/portfolio/portfolio.spec.ts",
+        "tests/portfolio/routing.test.ts",
+        "tests/properties/listing-mode.test.ts",
+        "tests/properties/properties.spec.ts",
+        "tests/workspace/documents-redirect.test.tsx",
+        "tests/workspace/media.test.tsx",
+        "tests/workspace/routes.test.ts",
+        "tests/workspace/scope.test.ts",
+        "tests/workspace/scoped-tabs.test.tsx",
+        "tests/workspace/timeline.test.ts",
+        "tests/workspace/workspace.test.tsx",
+        "tests/workspace/leasing/scope.test.ts",
+        "tests/workspace/operations/operations.test.tsx"
+      ]
+    },
+    {
+      "route": "/properties/[id]/leases",
+      "source": "src/app/(manager)/properties/[id]/leases/page.tsx",
+      "ownerSlice": "leasing",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "property-leases"
+        }
+      ],
+      "states": "Current/drafts/past; empty; renew/create; preserve unit scope",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/lease-create/drafts.test.ts",
+        "tests/lease-create/lease-create.spec.ts",
+        "tests/lease-create/lease-create.test.ts",
+        "tests/lease-create/standard-v2.test.ts",
+        "tests/lease-create/templates.test.ts",
+        "tests/lease-create/term.test.ts",
+        "tests/lease-create/workflow-ux.test.tsx",
+        "tests/leases/lease-document-action.test.ts",
+        "tests/leases/lease-document-grid.test.tsx",
+        "tests/leases/lease-workspace.test.tsx",
+        "tests/leases/leases.spec.ts",
+        "tests/leases/leases.test.ts"
+      ]
+    },
+    {
+      "route": "/properties/[id]/listing",
+      "source": "src/app/(manager)/properties/[id]/listing/page.tsx",
+      "ownerSlice": "pricing",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "property-listing"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "sfh-listing"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "rent-comps"
+        }
+      ],
+      "states": "Multi-unit market rent list vs single-unit comps; filters/map/table; no comps; exclusions; apply pending/success/failure/unknown",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/comps/actions.test.ts",
+        "tests/comps/filter-bar.test.tsx",
+        "tests/comps/market-rent.test.ts",
+        "tests/comps/navigation.test.ts",
+        "tests/comps/panel.test.tsx",
+        "tests/rent-analysis/page.test.tsx",
+        "tests/rent-analysis/selection.test.ts",
+        "tests/rent-comps/comps.test.ts",
+        "tests/rent-comps/rent-comps.spec.ts",
+        "tests/rent-comps/workbench.test.tsx"
+      ]
+    },
+    {
+      "route": "/properties/[id]/maintenance",
+      "source": "src/app/(manager)/properties/[id]/maintenance/page.tsx",
+      "ownerSlice": "operations",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "maintenance"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "maintenance-empty"
+        }
+      ],
+      "states": "Scoped list/board, filters/no matches; request dialog; photos unavailable; vendor/status/comments",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/documents/controls.test.tsx",
+        "tests/documents/documents.spec.ts",
+        "tests/maintenance/actions.test.ts",
+        "tests/maintenance/feedback.test.tsx",
+        "tests/maintenance/list-query.test.ts",
+        "tests/maintenance/maintenance.spec.ts",
+        "tests/upload/FileUploader.test.tsx"
+      ]
+    },
+    {
+      "route": "/properties/[id]/payments",
+      "source": "src/app/(manager)/properties/[id]/payments/page.tsx",
+      "ownerSlice": "money",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "property-payments"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "property-payments-multiunit"
+        }
+      ],
+      "states": "Charge/record payment forms, ledger empty/filter states; property/unit context",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/integrations/active.test.ts",
+        "tests/integrations/integrations.spec.ts",
+        "tests/integrations/integrations.test.ts",
+        "tests/integrations/sync-state.test.ts",
+        "tests/ledger/core.test.ts",
+        "tests/ledger/lease-setup.test.ts",
+        "tests/ledger/payment-reference.test.ts",
+        "tests/ledger/payments-actions.test.ts",
+        "tests/ledger/payments.spec.ts",
+        "tests/ledger/statement.test.ts",
+        "tests/ledger/store.test.ts"
+      ]
+    },
+    {
+      "route": "/properties/[id]/returns",
+      "source": "src/app/(manager)/properties/[id]/returns/page.tsx",
+      "ownerSlice": "returns",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "property-returns"
+        },
+        {
+          "design": "rocketrental-app",
+          "screenId": "unit-returns"
+        }
+      ],
+      "states": "Ranges/custom dates; chart/table; income statement/year comparison; missing values/empty periods",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/metrics/scoped.test.ts",
+        "tests/returns/calculations.test.ts",
+        "tests/returns/navigation.spec.ts",
+        "tests/returns/presentation.test.tsx",
+        "tests/returns/ranges.db.test.ts",
+        "tests/returns/ranges.test.ts",
+        "tests/returns/returns.spec.ts"
+      ]
+    },
+    {
+      "route": "/properties/[id]/units/[unitId]",
+      "source": "src/app/(manager)/properties/[id]/units/[unitId]/page.tsx",
+      "ownerSlice": "portfolio",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "unit-detail"
+        }
+      ],
+      "states": "Compatibility redirect, only listing/returns tab values retained; ownership checked at destination",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/portfolio/forms.test.tsx",
+        "tests/portfolio/portfolio.spec.ts",
+        "tests/portfolio/routing.test.ts",
+        "tests/properties/listing-mode.test.ts",
+        "tests/properties/properties.spec.ts",
+        "tests/workspace/documents-redirect.test.tsx",
+        "tests/workspace/media.test.tsx",
+        "tests/workspace/routes.test.ts",
+        "tests/workspace/scope.test.ts",
+        "tests/workspace/scoped-tabs.test.tsx",
+        "tests/workspace/timeline.test.ts",
+        "tests/workspace/workspace.test.tsx",
+        "tests/workspace/leasing/scope.test.ts",
+        "tests/workspace/operations/operations.test.tsx"
+      ]
+    },
+    {
+      "route": "/rent-analysis",
+      "source": "src/app/(manager)/rent-analysis/page.tsx",
+      "ownerSlice": "pricing",
+      "designScreens": [
+        {
+          "design": "rocketrental-analysis",
+          "screenId": "analysis-selection"
+        },
+        {
+          "design": "rocketrental-analysis",
+          "screenId": "rent-analysis"
+        },
+        {
+          "design": "rocketrental-analysis",
+          "screenId": "analysis-phone"
+        }
+      ],
+      "states": "Choose/search property; no properties/no matches/invalid selection; choose unit/no units; comps/apply feedback; loading/retry",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/comps/actions.test.ts",
+        "tests/comps/filter-bar.test.tsx",
+        "tests/comps/market-rent.test.ts",
+        "tests/comps/navigation.test.ts",
+        "tests/comps/panel.test.tsx",
+        "tests/rent-analysis/page.test.tsx",
+        "tests/rent-analysis/selection.test.ts",
+        "tests/rent-comps/comps.test.ts",
+        "tests/rent-comps/rent-comps.spec.ts",
+        "tests/rent-comps/workbench.test.tsx"
+      ]
+    },
+    {
+      "route": "/rent-comps",
+      "source": "src/app/(manager)/rent-comps/page.tsx",
+      "ownerSlice": "pricing",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "rent-comps"
+        }
+      ],
+      "states": "Hidden navigation compatibility entry redirects through unit listing; no units empty",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/comps/actions.test.ts",
+        "tests/comps/filter-bar.test.tsx",
+        "tests/comps/market-rent.test.ts",
+        "tests/comps/navigation.test.ts",
+        "tests/comps/panel.test.tsx",
+        "tests/rent-analysis/page.test.tsx",
+        "tests/rent-analysis/selection.test.ts",
+        "tests/rent-comps/comps.test.ts",
+        "tests/rent-comps/rent-comps.spec.ts",
+        "tests/rent-comps/workbench.test.tsx"
+      ]
+    },
+    {
+      "route": "/returns",
+      "source": "src/app/(manager)/returns/page.tsx",
+      "ownerSlice": "returns",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "returns"
+        }
+      ],
+      "states": "Portfolio/property filters and ranges; no properties/expenses; expense entry/errors; export",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/metrics/scoped.test.ts",
+        "tests/returns/calculations.test.ts",
+        "tests/returns/navigation.spec.ts",
+        "tests/returns/presentation.test.tsx",
+        "tests/returns/ranges.db.test.ts",
+        "tests/returns/ranges.test.ts",
+        "tests/returns/returns.spec.ts"
+      ]
+    },
+    {
+      "route": "/roi-analysis",
+      "source": "src/app/(manager)/roi-analysis/page.tsx",
+      "ownerSlice": "analysis",
+      "designScreens": [
+        {
+          "design": "rocketrental-analysis",
+          "screenId": "analysis-selection"
+        },
+        {
+          "design": "rocketrental-analysis",
+          "screenId": "roi-summary"
+        },
+        {
+          "design": "rocketrental-analysis",
+          "screenId": "roi-projections"
+        },
+        {
+          "design": "rocketrental-analysis",
+          "screenId": "roi-scenarios"
+        },
+        {
+          "design": "rocketrental-analysis",
+          "screenId": "analysis-phone"
+        }
+      ],
+      "states": "Property chooser; Summary/Charts/Scenarios/Benchmarks/Compare; load/retry; missing assumptions/validation; save dialog; chart data tables",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/analysis/actions.test.ts",
+        "tests/analysis/benchmarks.test.ts",
+        "tests/analysis/contract.test.ts",
+        "tests/analysis/persistence.test.ts",
+        "tests/analysis/projections.test.ts",
+        "tests/analysis/scenarios.test.ts",
+        "tests/analysis/validation.test.ts",
+        "tests/analysis/workspace.test.tsx",
+        "tests/analysis-navigation/entry.test.tsx",
+        "tests/roi/engine.test.ts",
+        "tests/roi/maple-court.test.ts"
+      ]
+    },
+    {
+      "route": "/tenants",
+      "source": "src/app/(manager)/tenants/page.tsx",
+      "ownerSlice": "people",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "tenants"
+        }
+      ],
+      "states": "Directory/status/checklists, search/filter/pagination, no tenants/no matches; add form/pending/errors/no vacant unit",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/screening/applications.spec.ts",
+        "tests/screening/decision-audit.test.ts",
+        "tests/screening/policy.test.ts",
+        "tests/screening/redirect.test.ts",
+        "tests/screening/review-forms.test.tsx",
+        "tests/screening/webhook.test.ts",
+        "tests/tenants/forms-ux.test.tsx",
+        "tests/tenants/navigation.test.ts",
+        "tests/tenants/people-ux.spec.ts",
+        "tests/tenants/status-checklist.test.ts",
+        "tests/tenants/status-view.test.tsx",
+        "tests/tenants/tenants.spec.ts"
+      ]
+    },
+    {
+      "route": "/tenants/[id]",
+      "source": "src/app/(manager)/tenants/[id]/page.tsx",
+      "ownerSlice": "people",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "tenant-detail"
+        }
+      ],
+      "states": "Edit/contact/note/move-in/out; no lease/payments/documents/activity/contact; invite unavailable explanation",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/screening/applications.spec.ts",
+        "tests/screening/decision-audit.test.ts",
+        "tests/screening/policy.test.ts",
+        "tests/screening/redirect.test.ts",
+        "tests/screening/review-forms.test.tsx",
+        "tests/screening/webhook.test.ts",
+        "tests/tenants/forms-ux.test.tsx",
+        "tests/tenants/navigation.test.ts",
+        "tests/tenants/people-ux.spec.ts",
+        "tests/tenants/status-checklist.test.ts",
+        "tests/tenants/status-view.test.tsx",
+        "tests/tenants/tenants.spec.ts"
+      ]
+    },
+    {
+      "route": "/home",
+      "source": "src/app/(tenant)/home/page.tsx",
+      "ownerSlice": "tenant",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "tenant-home"
+        }
+      ],
+      "states": "Due/pending/no active lease; repairs/announcements empty",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/tenant-pay/action.test.ts",
+        "tests/tenant-pay/core.test.ts",
+        "tests/tenant-pay/form.test.tsx",
+        "tests/tenant-pay/pay.spec.ts",
+        "tests/tenant-pay/service.test.ts",
+        "tests/tenant-portal/portal.spec.ts",
+        "tests/tenant-portal/portal.test.ts",
+        "tests/tenant-portal/states.test.tsx",
+        "tests/tenant-portal/ux.spec.ts",
+        "tests/tenant-repairs/form.test.tsx",
+        "tests/tenant-repairs/format.test.ts",
+        "tests/tenant-repairs/repairs.spec.ts"
+      ]
+    },
+    {
+      "route": "/lease",
+      "source": "src/app/(tenant)/lease/page.tsx",
+      "ownerSlice": "tenant",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "tenant-lease"
+        }
+      ],
+      "states": "No active lease/documents/photos; download/preview; photo unavailable",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/tenant-pay/action.test.ts",
+        "tests/tenant-pay/core.test.ts",
+        "tests/tenant-pay/form.test.tsx",
+        "tests/tenant-pay/pay.spec.ts",
+        "tests/tenant-pay/service.test.ts",
+        "tests/tenant-portal/portal.spec.ts",
+        "tests/tenant-portal/portal.test.ts",
+        "tests/tenant-portal/states.test.tsx",
+        "tests/tenant-portal/ux.spec.ts",
+        "tests/tenant-repairs/form.test.tsx",
+        "tests/tenant-repairs/format.test.ts",
+        "tests/tenant-repairs/repairs.spec.ts"
+      ]
+    },
+    {
+      "route": "/pay",
+      "source": "src/app/(tenant)/pay/page.tsx",
+      "ownerSlice": "tenant",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "tenant-pay-rent"
+        }
+      ],
+      "states": "Amount/method validation; review/confirm/cancel; submitting/receipt/failure; no active lease; autopay pending",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/tenant-pay/action.test.ts",
+        "tests/tenant-pay/core.test.ts",
+        "tests/tenant-pay/form.test.tsx",
+        "tests/tenant-pay/pay.spec.ts",
+        "tests/tenant-pay/service.test.ts",
+        "tests/tenant-portal/portal.spec.ts",
+        "tests/tenant-portal/portal.test.ts",
+        "tests/tenant-portal/states.test.tsx",
+        "tests/tenant-portal/ux.spec.ts",
+        "tests/tenant-repairs/form.test.tsx",
+        "tests/tenant-repairs/format.test.ts",
+        "tests/tenant-repairs/repairs.spec.ts"
+      ]
+    },
+    {
+      "route": "/repairs",
+      "source": "src/app/(tenant)/repairs/page.tsx",
+      "ownerSlice": "tenant",
+      "designScreens": [
+        {
+          "design": "rocketrental-app",
+          "screenId": "tenant-maintenance"
+        }
+      ],
+      "states": "New repair/photo form validation/submitting/error; no requests; status/details/comments",
+      "status": {
+        "design": "design",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/tenant-pay/action.test.ts",
+        "tests/tenant-pay/core.test.ts",
+        "tests/tenant-pay/form.test.tsx",
+        "tests/tenant-pay/pay.spec.ts",
+        "tests/tenant-pay/service.test.ts",
+        "tests/tenant-portal/portal.spec.ts",
+        "tests/tenant-portal/portal.test.ts",
+        "tests/tenant-portal/states.test.tsx",
+        "tests/tenant-portal/ux.spec.ts",
+        "tests/tenant-repairs/form.test.tsx",
+        "tests/tenant-repairs/format.test.ts",
+        "tests/tenant-repairs/repairs.spec.ts"
+      ]
+    },
+    {
+      "route": "/ui",
+      "source": "src/app/ui/page.tsx",
+      "ownerSlice": "foundation",
+      "designScreens": [],
+      "states": "Existing development UI showcase; explicit design gap: no dedicated artifact screen",
+      "status": {
+        "design": "pending",
+        "implementation": "pending",
+        "verification": "pending"
+      },
+      "evidenceRequired": [
+        "native desktop before/after",
+        "native 390px before/after",
+        "keyboard/focus and overflow",
+        "state variants listed here"
+      ],
+      "checks": [
+        "tests/a11y/foundation.spec.ts",
+        "tests/a11y/pages.spec.ts",
+        "tests/dashboard/assemble.test.ts",
+        "tests/dashboard/chart.test.tsx",
+        "tests/dashboard/dashboard.spec.ts",
+        "tests/dashboard/dashboard.test.ts",
+        "tests/dashboard/render.test.tsx",
+        "tests/ui/components.test.tsx",
+        "tests/ui/manager-shell.test.tsx",
+        "tests/ui/pagination.test.tsx",
+        "tests/ui/responsive-css.test.ts"
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "source": "src/app/error.tsx",
+      "design": "gap: adapt shared recovery reference",
+      "status": "pending"
+    },
+    {
+      "source": "src/app/layout.tsx",
+      "design": "gap: adapt shared recovery reference",
+      "status": "pending"
+    },
+    {
+      "source": "src/app/loading.tsx",
+      "design": "gap: adapt shared recovery reference",
+      "status": "pending"
+    },
+    {
+      "source": "src/app/not-found.tsx",
+      "design": "gap: adapt shared recovery reference",
+      "status": "pending"
+    },
+    {
+      "source": "src/app/(manager)/error.tsx",
+      "design": "gap: adapt shared recovery reference",
+      "status": "pending"
+    },
+    {
+      "source": "src/app/(manager)/layout.tsx",
+      "design": "gap: adapt shared recovery reference",
+      "status": "pending"
+    },
+    {
+      "source": "src/app/(manager)/loading.tsx",
+      "design": "gap: adapt shared recovery reference",
+      "status": "pending"
+    },
+    {
+      "source": "src/app/(manager)/not-found.tsx",
+      "design": "gap: adapt shared recovery reference",
+      "status": "pending"
+    },
+    {
+      "source": "src/app/(manager)/documents/error.tsx",
+      "design": "gap: adapt shared recovery reference",
+      "status": "pending"
+    },
+    {
+      "source": "src/app/(manager)/maintenance/error.tsx",
+      "design": "gap: adapt shared recovery reference",
+      "status": "pending"
+    },
+    {
+      "source": "src/app/(manager)/properties/[id]/layout.tsx",
+      "design": "gap: adapt shared recovery reference",
+      "status": "pending"
+    },
+    {
+      "source": "src/app/(manager)/properties/[id]/maintenance/error.tsx",
+      "design": "gap: adapt shared recovery reference",
+      "status": "pending"
+    },
+    {
+      "source": "src/app/(manager)/rent-analysis/error.tsx",
+      "design": "gap: adapt shared recovery reference",
+      "status": "pending"
+    },
+    {
+      "source": "src/app/(manager)/rent-analysis/loading.tsx",
+      "design": "gap: adapt shared recovery reference",
+      "status": "pending"
+    },
+    {
+      "source": "src/app/(tenant)/error.tsx",
+      "design": "rocketrental-account-recovery/tenant-states",
+      "status": "pending"
+    },
+    {
+      "source": "src/app/(tenant)/layout.tsx",
+      "design": "rocketrental-account-recovery/tenant-states",
+      "status": "pending"
+    },
+    {
+      "source": "src/app/(tenant)/loading.tsx",
+      "design": "rocketrental-account-recovery/tenant-states",
+      "status": "pending"
+    },
+    {
+      "source": "src/app/(tenant)/not-found.tsx",
+      "design": "rocketrental-account-recovery/tenant-states",
+      "status": "pending"
+    }
+  ],
+  "designGaps": [
+    "Four wizard steps have no dedicated main-app design screen: Tenants, Options, Lessor, Review/send; unit picker and draft-resume states also need explicit design extension.",
+    "Lease detail Payments and Activity tabs have no dedicated screen IDs; use existing implementation behavior and design their variants before styling.",
+    "ROI Benchmarks and Compare panels, benchmark editing and save dialog have no dedicated screen IDs; roi-scenarios is only partial coverage.",
+    "ROI chart subviews Cash Flow, Equity, Expenses, Amortization, Exit and Sensitivity require variant coverage beyond roi-projections.",
+    "Manager/public loading/error/not-found and operations/rent-analysis local boundaries lack dedicated matching screens; tenant-states is a reusable reference, not proof of complete manager design.",
+    "Property/unit add/edit/archive/delete controls, upload/preview/delete confirmations, payment/refund/expense/provider settings feedback are state-level design extensions; overview screens do not certify every form/error/dialog.",
+    "/ui showcase has no dedicated design; / is a redirect, not a new product screen.",
+    "Phone variants for most manager pages are absent as dedicated IDs; dashboard tablet/menu and analysis-phone do not cover every manager page.",
+    "Property/unit applications and maintenance reuse global screens with scoped chrome; no separate scoped IDs. Tenant empty/payment/repair/photo failure variants need state-specific coverage beyond tenant-states."
+  ],
+  "slices": [
+    {
+      "id": "foundation",
+      "order": 1,
+      "dependsOn": [],
+      "owner": "proposed distinct implementation owner; no assignment made",
+      "status": "pending",
+      "note": "Theme, icons, controls, shell then dashboard; token contract first.",
+      "ownedFiles": [
+        "src/app/(manager)/dashboard/dashboard.module.css",
+        "src/app/(manager)/dashboard/page.tsx",
+        "src/app/(manager)/error.tsx",
+        "src/app/(manager)/layout.tsx",
+        "src/app/(manager)/loading.tsx",
+        "src/app/(manager)/not-found.tsx",
+        "src/app/error.tsx",
+        "src/app/layout.tsx",
+        "src/app/loading.tsx",
+        "src/app/not-found.tsx",
+        "src/app/ui/page.tsx",
+        "src/components/dashboard/assemble.ts",
+        "src/components/dashboard/CollectionChart.module.css",
+        "src/components/dashboard/CollectionChart.tsx",
+        "src/components/dashboard/hero.module.css",
+        "src/components/dashboard/icons.tsx",
+        "src/components/dashboard/KpiCard.tsx",
+        "src/components/dashboard/MiniCover.tsx",
+        "src/components/dashboard/trend.ts",
+        "src/components/PlaceholderPage.tsx",
+        "src/components/RouteError.tsx",
+        "src/components/route-states.module.css",
+        "src/components/RouteStates.tsx",
+        "src/components/shell/AccountMenu.tsx",
+        "src/components/shell/drawer.ts",
+        "src/components/shell/focus.module.css",
+        "src/components/shell/Icons.tsx",
+        "src/components/shell/ManagerShell.tsx",
+        "src/components/shell/nav.ts",
+        "src/components/shell/PageHeader.tsx",
+        "src/components/shell/tenant-shell.module.css",
+        "src/components/shell/TenantShell.tsx",
+        "src/components/ui/AutoSubmitSelect.tsx",
+        "src/components/ui/Badge.tsx",
+        "src/components/ui/Button.tsx",
+        "src/components/ui/Card.tsx",
+        "src/components/ui/cx.ts",
+        "src/components/ui/Feedback.tsx",
+        "src/components/ui/Files.tsx",
+        "src/components/ui/Flair.tsx",
+        "src/components/ui/Forms.tsx",
+        "src/components/ui/index.ts",
+        "src/components/ui/Kanban.tsx",
+        "src/components/ui/Pagination.tsx",
+        "src/components/ui/Table.tsx",
+        "src/components/ui/Tabs.tsx",
+        "src/components/UiShowcase.tsx",
+        "src/styles/accessibility.css",
+        "src/styles/globals.css"
+      ],
+      "checks": [
+        "tests/a11y/foundation.spec.ts",
+        "tests/a11y/pages.spec.ts",
+        "tests/dashboard/assemble.test.ts",
+        "tests/dashboard/chart.test.tsx",
+        "tests/dashboard/dashboard.spec.ts",
+        "tests/dashboard/dashboard.test.ts",
+        "tests/dashboard/render.test.tsx",
+        "tests/ui/components.test.tsx",
+        "tests/ui/manager-shell.test.tsx",
+        "tests/ui/pagination.test.tsx",
+        "tests/ui/responsive-css.test.ts"
+      ]
+    },
+    {
+      "id": "portfolio",
+      "order": 2,
+      "dependsOn": ["foundation"],
+      "owner": "proposed distinct implementation owner; no assignment made",
+      "status": "pending",
+      "note": "Workspace chrome belongs here; nested panel files excluded and delegated below.",
+      "ownedFiles": [
+        "src/app/(manager)/properties/[id]/documents/page.tsx",
+        "src/app/(manager)/properties/[id]/layout.tsx",
+        "src/app/(manager)/properties/[id]/page.tsx",
+        "src/app/(manager)/properties/[id]/units/[unitId]/page.tsx",
+        "src/app/(manager)/properties/[id]/units/[unitId]/workspace.module.css",
+        "src/app/(manager)/properties/[id]/workspace.module.css",
+        "src/app/(manager)/properties/_components/AddPropertyDialog.tsx",
+        "src/app/(manager)/properties/_components/FieldError.tsx",
+        "src/app/(manager)/properties/_components/ManagedUploads.tsx",
+        "src/app/(manager)/properties/_components/Media.tsx",
+        "src/app/(manager)/properties/_components/PropertyForm.tsx",
+        "src/app/(manager)/properties/_components/UnitForm.tsx",
+        "src/app/(manager)/properties/page.tsx",
+        "src/app/(manager)/properties/properties.module.css",
+        "src/components/units/DeleteUnitControl.tsx",
+        "src/components/workspace/InlineFacts.tsx",
+        "src/components/workspace/LeaseTimeline.module.css",
+        "src/components/workspace/LeaseTimeline.tsx",
+        "src/components/workspace/PropertyListing.module.css",
+        "src/components/workspace/PropertyListing.tsx",
+        "src/components/workspace/ReturnsWorkspace.module.css",
+        "src/components/workspace/ReturnsWorkspace.tsx",
+        "src/components/workspace/ScopedWorkspace.tsx",
+        "src/components/workspace/UnitSwitcher.tsx",
+        "src/components/workspace/Workspace.module.css",
+        "src/components/workspace/Workspace.tsx",
+        "src/components/workspace/WorkspaceHeader.tsx",
+        "src/components/workspace/WorkspaceMedia.module.css",
+        "src/components/workspace/WorkspaceMedia.tsx",
+        "src/components/workspace/WorkspaceOverview.module.css",
+        "src/components/workspace/WorkspaceOverview.tsx",
+        "src/components/workspace/WorkspacePlaceholder.tsx",
+        "src/components/workspace/WorkspaceTabs.tsx",
+        "src/components/workspace/index.ts",
+        "src/components/workspace/routes.ts"
+      ],
+      "checks": [
+        "tests/portfolio/forms.test.tsx",
+        "tests/portfolio/portfolio.spec.ts",
+        "tests/portfolio/routing.test.ts",
+        "tests/properties/listing-mode.test.ts",
+        "tests/properties/properties.spec.ts",
+        "tests/workspace/documents-redirect.test.tsx",
+        "tests/workspace/media.test.tsx",
+        "tests/workspace/routes.test.ts",
+        "tests/workspace/scope.test.ts",
+        "tests/workspace/scoped-tabs.test.tsx",
+        "tests/workspace/timeline.test.ts",
+        "tests/workspace/workspace.test.tsx",
+        "tests/workspace/leasing/scope.test.ts",
+        "tests/workspace/operations/operations.test.tsx"
+      ]
+    },
+    {
+      "id": "people",
+      "order": 3,
+      "dependsOn": ["portfolio"],
+      "owner": "proposed distinct implementation owner; no assignment made",
+      "status": "pending",
+      "note": "Tenant forms/directory/detail and application review only.",
+      "ownedFiles": [
+        "src/app/(manager)/applications/ReviewForms.tsx",
+        "src/app/(manager)/applications/applications.module.css",
+        "src/app/(manager)/applications/page.tsx",
+        "src/app/(manager)/properties/[id]/applications/page.tsx",
+        "src/app/(manager)/tenants/StatusView.tsx",
+        "src/app/(manager)/tenants/TenantForms.tsx",
+        "src/app/(manager)/tenants/[id]/page.tsx",
+        "src/app/(manager)/tenants/page.tsx",
+        "src/app/(manager)/tenants/tenants.module.css",
+        "src/components/workspace/panels/leasing/ApplicationsPanel.tsx",
+        "src/components/workspace/panels/leasing/LeasesPanel.tsx",
+        "src/components/workspace/panels/leasing/LeasingStats.tsx",
+        "src/components/workspace/panels/leasing/actions.ts",
+        "src/components/workspace/panels/leasing/applications-ux.module.css",
+        "src/components/workspace/panels/leasing/index.ts",
+        "src/components/workspace/panels/leasing/leases-ux.module.css",
+        "src/components/workspace/panels/leasing/leasing.module.css",
+        "src/components/workspace/panels/leasing/scope.ts"
+      ],
+      "checks": [
+        "tests/screening/applications.spec.ts",
+        "tests/screening/decision-audit.test.ts",
+        "tests/screening/policy.test.ts",
+        "tests/screening/redirect.test.ts",
+        "tests/screening/review-forms.test.tsx",
+        "tests/screening/webhook.test.ts",
+        "tests/tenants/forms-ux.test.tsx",
+        "tests/tenants/navigation.test.ts",
+        "tests/tenants/people-ux.spec.ts",
+        "tests/tenants/status-checklist.test.ts",
+        "tests/tenants/status-view.test.tsx",
+        "tests/tenants/tenants.spec.ts"
+      ]
+    },
+    {
+      "id": "leasing",
+      "order": 4,
+      "dependsOn": ["portfolio"],
+      "owner": "proposed distinct implementation owner; no assignment made",
+      "status": "pending",
+      "note": "Lease directories/templates, ten-step wizard and detail tabs.",
+      "ownedFiles": [
+        "src/app/(manager)/leases/LeaseForms.tsx",
+        "src/app/(manager)/leases/[id]/LeaseDocumentGrid.tsx",
+        "src/app/(manager)/leases/[id]/LeaseSectionNavigation.tsx",
+        "src/app/(manager)/leases/[id]/lease-detail.module.css",
+        "src/app/(manager)/leases/[id]/page.tsx",
+        "src/app/(manager)/leases/leases-ux.module.css",
+        "src/app/(manager)/leases/new/page.tsx",
+        "src/app/(manager)/leases/page.tsx",
+        "src/app/(manager)/leases/templates/[id]/TemplateEditor.tsx",
+        "src/app/(manager)/leases/templates/[id]/page.tsx",
+        "src/app/(manager)/leases/templates/[id]/template-editor.module.css",
+        "src/app/(manager)/leases/templates/page.tsx",
+        "src/app/(manager)/properties/[id]/leases/page.tsx",
+        "src/components/lease-builder/LeaseBuilder.tsx",
+        "src/components/lease-builder/TemplateTermsStep.tsx",
+        "src/components/lease-builder/UnitPicker.tsx",
+        "src/components/lease-builder/index.ts",
+        "src/components/lease-builder/lease-builder.module.css",
+        "src/components/lease-builder/steps.tsx",
+        "src/components/lease-builder/useBuilderShell.ts"
+      ],
+      "checks": [
+        "tests/lease-create/drafts.test.ts",
+        "tests/lease-create/lease-create.spec.ts",
+        "tests/lease-create/lease-create.test.ts",
+        "tests/lease-create/standard-v2.test.ts",
+        "tests/lease-create/templates.test.ts",
+        "tests/lease-create/term.test.ts",
+        "tests/lease-create/workflow-ux.test.tsx",
+        "tests/leases/lease-document-action.test.ts",
+        "tests/leases/lease-document-grid.test.tsx",
+        "tests/leases/lease-workspace.test.tsx",
+        "tests/leases/leases.spec.ts",
+        "tests/leases/leases.test.ts"
+      ]
+    },
+    {
+      "id": "money",
+      "order": 5,
+      "dependsOn": ["portfolio"],
+      "owner": "proposed distinct implementation owner; no assignment made",
+      "status": "pending",
+      "note": "Payments panel and provider UI together.",
+      "ownedFiles": [
+        "src/app/(manager)/integrations/FeeSwitch.tsx",
+        "src/app/(manager)/integrations/page.tsx",
+        "src/app/(manager)/payments/page.tsx",
+        "src/app/(manager)/payments/payments.module.css",
+        "src/app/(manager)/properties/[id]/payments/page.tsx",
+        "src/components/integrations/ProviderLogo.tsx",
+        "src/components/integrations/integrations.module.css",
+        "src/components/integrations/provider-logo.module.css",
+        "src/components/integrations/sync-state.ts",
+        "src/components/workspace/panels/leasing/PaymentsBoard.tsx",
+        "src/components/workspace/panels/leasing/PaymentsPanel.tsx",
+        "src/components/workspace/panels/leasing/payments.module.css"
+      ],
+      "checks": [
+        "tests/integrations/active.test.ts",
+        "tests/integrations/integrations.spec.ts",
+        "tests/integrations/integrations.test.ts",
+        "tests/integrations/sync-state.test.ts",
+        "tests/ledger/core.test.ts",
+        "tests/ledger/lease-setup.test.ts",
+        "tests/ledger/payment-reference.test.ts",
+        "tests/ledger/payments-actions.test.ts",
+        "tests/ledger/payments.spec.ts",
+        "tests/ledger/statement.test.ts",
+        "tests/ledger/store.test.ts"
+      ]
+    },
+    {
+      "id": "returns",
+      "order": 6,
+      "dependsOn": ["portfolio"],
+      "owner": "proposed distinct implementation owner; no assignment made",
+      "status": "pending",
+      "note": "Returns workspace/chart and reports only.",
+      "ownedFiles": [
+        "src/app/(manager)/properties/[id]/returns/page.tsx",
+        "src/app/(manager)/returns/page.tsx",
+        "src/components/returns/IncomeExpenseChart.tsx",
+        "src/components/returns/RangePicker.tsx",
+        "src/components/returns/report-activity.ts",
+        "src/components/returns/returns.module.css"
+      ],
+      "checks": [
+        "tests/metrics/scoped.test.ts",
+        "tests/returns/calculations.test.ts",
+        "tests/returns/navigation.spec.ts",
+        "tests/returns/presentation.test.tsx",
+        "tests/returns/ranges.db.test.ts",
+        "tests/returns/ranges.test.ts",
+        "tests/returns/returns.spec.ts"
+      ]
+    },
+    {
+      "id": "operations",
+      "order": 7,
+      "dependsOn": ["portfolio"],
+      "owner": "proposed distinct implementation owner; no assignment made",
+      "status": "pending",
+      "note": "Maintenance panel/dialog and document library/upload controls.",
+      "ownedFiles": [
+        "src/app/(manager)/documents/DocumentFilters.tsx",
+        "src/app/(manager)/documents/UploadDocumentForm.tsx",
+        "src/app/(manager)/documents/documents.module.css",
+        "src/app/(manager)/documents/error.tsx",
+        "src/app/(manager)/documents/page.tsx",
+        "src/app/(manager)/maintenance/error.tsx",
+        "src/app/(manager)/maintenance/maintenance.module.css",
+        "src/app/(manager)/maintenance/page.tsx",
+        "src/app/(manager)/properties/[id]/maintenance/error.tsx",
+        "src/app/(manager)/properties/[id]/maintenance/page.tsx",
+        "src/components/maintenance/MaintenanceListControls.tsx",
+        "src/components/maintenance/OperationsError.tsx",
+        "src/components/maintenance/RequestActionForm.tsx",
+        "src/components/maintenance/RequestDetails.tsx",
+        "src/components/maintenance/RequestPhoto.tsx",
+        "src/components/maintenance/maintenance.module.css",
+        "src/components/maintenance/request-actions.ts",
+        "src/components/maintenance/request-photos.ts",
+        "src/components/upload/FileUploader.module.css",
+        "src/components/upload/FileUploader.tsx",
+        "src/components/upload/index.ts",
+        "src/components/workspace/panels/operations/NewMaintenanceRequestDialog.tsx",
+        "src/components/workspace/panels/operations/PropertyMaintenanceList.tsx",
+        "src/components/workspace/panels/operations/operations.module.css"
+      ],
+      "checks": [
+        "tests/documents/controls.test.tsx",
+        "tests/documents/documents.spec.ts",
+        "tests/maintenance/actions.test.ts",
+        "tests/maintenance/feedback.test.tsx",
+        "tests/maintenance/list-query.test.ts",
+        "tests/maintenance/maintenance.spec.ts",
+        "tests/upload/FileUploader.test.tsx"
+      ]
+    },
+    {
+      "id": "analysis",
+      "order": 8,
+      "dependsOn": ["foundation"],
+      "owner": "proposed distinct implementation owner; no assignment made",
+      "status": "pending",
+      "note": "ROI only, including PropertySelector shared contract; pricing consumes without editing.",
+      "ownedFiles": [
+        "src/app/(manager)/roi-analysis/page.tsx",
+        "src/components/analysis/PropertySelector.tsx",
+        "src/components/analysis/RoiBenchmarks.tsx",
+        "src/components/analysis/RoiProjections.tsx",
+        "src/components/analysis/RoiScenarios.tsx",
+        "src/components/analysis/RoiWorkspace.tsx",
+        "src/components/analysis/analysis.module.css",
+        "src/components/analysis/fields.ts",
+        "src/components/analysis/projections.module.css",
+        "src/components/analysis/scenarios.module.css"
+      ],
+      "checks": [
+        "tests/analysis/actions.test.ts",
+        "tests/analysis/benchmarks.test.ts",
+        "tests/analysis/contract.test.ts",
+        "tests/analysis/persistence.test.ts",
+        "tests/analysis/projections.test.ts",
+        "tests/analysis/scenarios.test.ts",
+        "tests/analysis/validation.test.ts",
+        "tests/analysis/workspace.test.tsx",
+        "tests/analysis-navigation/entry.test.tsx",
+        "tests/roi/engine.test.ts",
+        "tests/roi/maple-court.test.ts"
+      ]
+    },
+    {
+      "id": "pricing",
+      "order": 9,
+      "dependsOn": ["portfolio", "analysis"],
+      "owner": "proposed distinct implementation owner; no assignment made",
+      "status": "pending",
+      "note": "Comps workbench, scoped listing and Rent Analysis; preserve PropertySelector contract.",
+      "ownedFiles": [
+        "src/app/(manager)/properties/[id]/listing/page.tsx",
+        "src/app/(manager)/rent-analysis/error.tsx",
+        "src/app/(manager)/rent-analysis/loading.tsx",
+        "src/app/(manager)/rent-analysis/page.tsx",
+        "src/app/(manager)/rent-analysis/rent.module.css",
+        "src/app/(manager)/rent-comps/CompsWorkbench.tsx",
+        "src/app/(manager)/rent-comps/FilterBar.tsx",
+        "src/app/(manager)/rent-comps/comps.module.css",
+        "src/app/(manager)/rent-comps/page.tsx",
+        "src/components/properties/listing.ts",
+        "src/components/rent-comps/RentCompsPanel.tsx"
+      ],
+      "checks": [
+        "tests/comps/actions.test.ts",
+        "tests/comps/filter-bar.test.tsx",
+        "tests/comps/market-rent.test.ts",
+        "tests/comps/navigation.test.ts",
+        "tests/comps/panel.test.tsx",
+        "tests/rent-analysis/page.test.tsx",
+        "tests/rent-analysis/selection.test.ts",
+        "tests/rent-comps/comps.test.ts",
+        "tests/rent-comps/rent-comps.spec.ts",
+        "tests/rent-comps/workbench.test.tsx"
+      ]
+    },
+    {
+      "id": "tenant",
+      "order": 10,
+      "dependsOn": ["foundation"],
+      "owner": "proposed distinct implementation owner; no assignment made",
+      "status": "pending",
+      "note": "Tenant page/forms; shared TenantShell remains foundation-owned.",
+      "ownedFiles": [
+        "src/app/(tenant)/TenantPhoto.tsx",
+        "src/app/(tenant)/error.tsx",
+        "src/app/(tenant)/home/page.tsx",
+        "src/app/(tenant)/layout.tsx",
+        "src/app/(tenant)/lease/page.tsx",
+        "src/app/(tenant)/loading.tsx",
+        "src/app/(tenant)/not-found.tsx",
+        "src/app/(tenant)/pay/AutopayToggle.tsx",
+        "src/app/(tenant)/pay/PayForm.tsx",
+        "src/app/(tenant)/pay/page.tsx",
+        "src/app/(tenant)/portal.module.css",
+        "src/app/(tenant)/repairs/RepairForm.tsx",
+        "src/app/(tenant)/repairs/page.tsx",
+        "src/app/(tenant)/repairs/repairs.module.css"
+      ],
+      "checks": [
+        "tests/tenant-pay/action.test.ts",
+        "tests/tenant-pay/core.test.ts",
+        "tests/tenant-pay/form.test.tsx",
+        "tests/tenant-pay/pay.spec.ts",
+        "tests/tenant-pay/service.test.ts",
+        "tests/tenant-portal/portal.spec.ts",
+        "tests/tenant-portal/portal.test.ts",
+        "tests/tenant-portal/states.test.tsx",
+        "tests/tenant-portal/ux.spec.ts",
+        "tests/tenant-repairs/form.test.tsx",
+        "tests/tenant-repairs/format.test.ts",
+        "tests/tenant-repairs/repairs.spec.ts"
+      ]
+    },
+    {
+      "id": "account",
+      "order": 11,
+      "dependsOn": ["foundation"],
+      "owner": "proposed distinct implementation owner; no assignment made",
+      "status": "pending",
+      "note": "Auth pages/forms; public and tenant boundaries consume shared recovery controls.",
+      "ownedFiles": [
+        "src/app/(auth)/auth.module.css",
+        "src/app/(auth)/sign-in/SignInForm.tsx",
+        "src/app/(auth)/sign-in/page.tsx",
+        "src/app/(auth)/sign-out/page.tsx"
+      ],
+      "checks": ["tests/auth/access.spec.ts", "tests/auth/form.test.tsx"]
+    }
+  ],
+  "stateEvidence": [
+    {
+      "excerpt": "import { LoadingState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/loading.tsx",
+      "line": 1
+    },
+    {
+      "excerpt": "export default function Loading() {",
+      "source": "src/app/loading.tsx",
+      "line": 4
+    },
+    {
+      "excerpt": "\u003cLoadingState /\u003e",
+      "source": "src/app/loading.tsx",
+      "line": 8
+    },
+    {
+      "excerpt": "This link may have changed or the page is no longer available.",
+      "source": "src/app/not-found.tsx",
+      "line": 14
+    },
+    {
+      "excerpt": "\u003cp id=\"sign-in-error\" className={styles.error} role=\"alert\"\u003e",
+      "source": "src/app/(auth)/sign-in/page.tsx",
+      "line": 28
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"primary\" block disabled={pending}\u003e",
+      "source": "src/app/(auth)/sign-in/SignInForm.tsx",
+      "line": 12
+    },
+    {
+      "excerpt": "{pending ? \u0027Signing inâ€¦\u0027 : \u0027Sign in\u0027}",
+      "source": "src/app/(auth)/sign-in/SignInForm.tsx",
+      "line": 13
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"primary\" block\u003e",
+      "source": "src/app/(auth)/sign-out/page.tsx",
+      "line": 23
+    },
+    {
+      "excerpt": "import { LoadingState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(manager)/loading.tsx",
+      "line": 1
+    },
+    {
+      "excerpt": "export default function Loading() {",
+      "source": "src/app/(manager)/loading.tsx",
+      "line": 3
+    },
+    {
+      "excerpt": "return \u003cLoadingState /\u003e;",
+      "source": "src/app/(manager)/loading.tsx",
+      "line": 4
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(manager)/not-found.tsx",
+      "line": 1
+    },
+    {
+      "excerpt": "return \u003cEmptyState title=\"Page not found\" description=\"The page may have moved or you may no longer have access to it.\" action=\"Back to dashboard\" href=\"/dashboard\" /\u003e;",
+      "source": "src/app/(manager)/not-found.tsx",
+      "line": 4
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(manager)/applications/page.tsx",
+      "line": 2
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"secondary\"\u003e",
+      "source": "src/app/(manager)/applications/page.tsx",
+      "line": 227
+    },
+    {
+      "excerpt": "note={(countByStatus.get(\u0027REVIEW\u0027) ?? 0) \u003e 0 ? \u0027Consent recorded\u0027 : \u0027No reports ready\u0027}",
+      "source": "src/app/(manager)/applications/page.tsx",
+      "line": 273
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/applications/page.tsx",
+      "line": 360
+    },
+    {
+      "excerpt": "title=\"No applications in this view\"",
+      "source": "src/app/(manager)/applications/page.tsx",
+      "line": 361
+    },
+    {
+      "excerpt": ": \u0027No screening report yet\u0027}",
+      "source": "src/app/(manager)/applications/page.tsx",
+      "line": 447
+    },
+    {
+      "excerpt": "? \u0027No records found\u0027",
+      "source": "src/app/(manager)/applications/page.tsx",
+      "line": 474
+    },
+    {
+      "excerpt": "? \u0027No filings found\u0027",
+      "source": "src/app/(manager)/applications/page.tsx",
+      "line": 485
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"secondary\" disabled={disabled || pending}\u003e",
+      "source": "src/app/(manager)/applications/ReviewForms.tsx",
+      "line": 11
+    },
+    {
+      "excerpt": "{pending ? \u0027Requesting screeningâ€¦\u0027 : again ? \u0027Run screening again\u0027 : \u0027Run screening\u0027}",
+      "source": "src/app/(manager)/applications/ReviewForms.tsx",
+      "line": 12
+    },
+    {
+      "excerpt": "type=\"submit\"",
+      "source": "src/app/(manager)/applications/ReviewForms.tsx",
+      "line": 22
+    },
+    {
+      "excerpt": "type=\"submit\"",
+      "source": "src/app/(manager)/applications/ReviewForms.tsx",
+      "line": 31
+    },
+    {
+      "excerpt": "{pending ? \u0027Saving decisionâ€¦\u0027 : \u0027Approve\u0027}",
+      "source": "src/app/(manager)/applications/ReviewForms.tsx",
+      "line": 37
+    },
+    {
+      "excerpt": "\u003cp className={styles.empty}\u003eNo active leases end in the next 90 days.\u003c/p\u003e",
+      "source": "src/app/(manager)/dashboard/page.tsx",
+      "line": 139
+    },
+    {
+      "excerpt": "No overdue rent balances.",
+      "source": "src/app/(manager)/dashboard/page.tsx",
+      "line": 166
+    },
+    {
+      "excerpt": "No properties yet. \u003cLink href=\"/properties?add=1\"\u003eAdd your first property\u003c/Link\u003e.",
+      "source": "src/app/(manager)/dashboard/page.tsx",
+      "line": 254
+    },
+    {
+      "excerpt": "\u003cbutton className=\"btn btn-secondary\" type=\"submit\"\u003e",
+      "source": "src/app/(manager)/documents/DocumentFilters.tsx",
+      "line": 81
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(manager)/documents/page.tsx",
+      "line": 2
+    },
+    {
+      "excerpt": "\u0027No tenant\u0027;",
+      "source": "src/app/(manager)/documents/page.tsx",
+      "line": 88
+    },
+    {
+      "excerpt": "label: `${unit.property.name} Â· ${unitLabel} â€” ${tenant?.name ?? \u0027No tenant\u0027}`,",
+      "source": "src/app/(manager)/documents/page.tsx",
+      "line": 255
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/documents/page.tsx",
+      "line": 340
+    },
+    {
+      "excerpt": "libraryFiles.length ? \u0027No files match these filters\u0027 : \u0027No documents or photos yet\u0027",
+      "source": "src/app/(manager)/documents/page.tsx",
+      "line": 342
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/documents/page.tsx",
+      "line": 415
+    },
+    {
+      "excerpt": "title=\"No lease documents in this view\"",
+      "source": "src/app/(manager)/documents/page.tsx",
+      "line": 416
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/documents/page.tsx",
+      "line": 452
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/documents/page.tsx",
+      "line": 514
+    },
+    {
+      "excerpt": "title=\"No photos in this view\"",
+      "source": "src/app/(manager)/documents/page.tsx",
+      "line": 515
+    },
+    {
+      "excerpt": "\u003coption value=\"\"\u003eNo available destinations\u003c/option\u003e",
+      "source": "src/app/(manager)/documents/UploadDocumentForm.tsx",
+      "line": 93
+    },
+    {
+      "excerpt": ": \u0027No destinations of this type. Choose another type, or add a lease, property or unit first.\u0027}",
+      "source": "src/app/(manager)/documents/UploadDocumentForm.tsx",
+      "line": 125
+    },
+    {
+      "excerpt": "\u0027No sync recorded\u0027",
+      "source": "src/app/(manager)/integrations/page.tsx",
+      "line": 83
+    },
+    {
+      "excerpt": "? \u0027Simulated activity only. No live provider transactions.\u0027",
+      "source": "src/app/(manager)/integrations/page.tsx",
+      "line": 90
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"danger\" size=\"sm\"\u003e",
+      "source": "src/app/(manager)/integrations/page.tsx",
+      "line": 115
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"primary\" size=\"sm\"\u003e",
+      "source": "src/app/(manager)/integrations/page.tsx",
+      "line": 128
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"primary\" size=\"sm\"\u003e",
+      "source": "src/app/(manager)/integrations/page.tsx",
+      "line": 193
+    },
+    {
+      "excerpt": "note={attention.length ? \u0027Check sync errors below\u0027 : \u0027No reported errors\u0027}",
+      "source": "src/app/(manager)/integrations/page.tsx",
+      "line": 274
+    },
+    {
+      "excerpt": "\u003cdiv role=\"alert\"\u003e{error}\u003c/div\u003e",
+      "source": "src/app/(manager)/integrations/page.tsx",
+      "line": 279
+    },
+    {
+      "excerpt": "role=\"alert\"",
+      "source": "src/app/(manager)/integrations/page.tsx",
+      "line": 290
+    },
+    {
+      "excerpt": "{errors.startDate \u0026\u0026 \u003csmall role=\"alert\"\u003e{errors.startDate}\u003c/small\u003e}",
+      "source": "src/app/(manager)/leases/LeaseForms.tsx",
+      "line": 46
+    },
+    {
+      "excerpt": "{errors.endDate \u0026\u0026 \u003csmall role=\"alert\"\u003e{errors.endDate}\u003c/small\u003e}",
+      "source": "src/app/(manager)/leases/LeaseForms.tsx",
+      "line": 57
+    },
+    {
+      "excerpt": "{errors.monthlyRent \u0026\u0026 \u003csmall role=\"alert\"\u003e{errors.monthlyRent}\u003c/small\u003e}",
+      "source": "src/app/(manager)/leases/LeaseForms.tsx",
+      "line": 70
+    },
+    {
+      "excerpt": "{errors.deposit \u0026\u0026 \u003csmall role=\"alert\"\u003e{errors.deposit}\u003c/small\u003e}",
+      "source": "src/app/(manager)/leases/LeaseForms.tsx",
+      "line": 81
+    },
+    {
+      "excerpt": "{errors.lateFee \u0026\u0026 \u003csmall role=\"alert\"\u003e{errors.lateFee}\u003c/small\u003e}",
+      "source": "src/app/(manager)/leases/LeaseForms.tsx",
+      "line": 93
+    },
+    {
+      "excerpt": "{errors.graceDays \u0026\u0026 \u003csmall role=\"alert\"\u003e{errors.graceDays}\u003c/small\u003e}",
+      "source": "src/app/(manager)/leases/LeaseForms.tsx",
+      "line": 105
+    },
+    {
+      "excerpt": "{state.errors?.unitId \u0026\u0026 \u003csmall role=\"alert\"\u003e{state.errors.unitId}\u003c/small\u003e}",
+      "source": "src/app/(manager)/leases/LeaseForms.tsx",
+      "line": 141
+    },
+    {
+      "excerpt": "{state.errors?.tenantId \u0026\u0026 \u003csmall role=\"alert\"\u003e{state.errors.tenantId}\u003c/small\u003e}",
+      "source": "src/app/(manager)/leases/LeaseForms.tsx",
+      "line": 153
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"primary\" disabled={pending}\u003e",
+      "source": "src/app/(manager)/leases/LeaseForms.tsx",
+      "line": 168
+    },
+    {
+      "excerpt": "{pending ? \u0027Savingâ€¦\u0027 : renewId ? \u0027Create renewal draft\u0027 : \u0027Create lease\u0027}",
+      "source": "src/app/(manager)/leases/LeaseForms.tsx",
+      "line": 169
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"primary\" disabled={pending}\u003e",
+      "source": "src/app/(manager)/leases/LeaseForms.tsx",
+      "line": 182
+    },
+    {
+      "excerpt": "{pending ? \u0027Savingâ€¦\u0027 : \u0027Save terms\u0027}",
+      "source": "src/app/(manager)/leases/LeaseForms.tsx",
+      "line": 183
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"primary\" disabled={activating}\u003e",
+      "source": "src/app/(manager)/leases/LeaseForms.tsx",
+      "line": 198
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"danger\" disabled={terminating}\u003e",
+      "source": "src/app/(manager)/leases/LeaseForms.tsx",
+      "line": 208
+    },
+    {
+      "excerpt": "{state.errors?.moveOutDate \u0026\u0026 \u003csmall role=\"alert\"\u003e{state.errors.moveOutDate}\u003c/small\u003e}",
+      "source": "src/app/(manager)/leases/LeaseForms.tsx",
+      "line": 252
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"secondary\" disabled={pending}\u003e",
+      "source": "src/app/(manager)/leases/LeaseForms.tsx",
+      "line": 255
+    },
+    {
+      "excerpt": "{pending ? \u0027Savingâ€¦\u0027 : \u0027Record notice\u0027}",
+      "source": "src/app/(manager)/leases/LeaseForms.tsx",
+      "line": 256
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(manager)/leases/page.tsx",
+      "line": 12
+    },
+    {
+      "excerpt": "\u003cbutton type=\"submit\" className=\"btn btn-secondary btn-sm\"\u003e",
+      "source": "src/app/(manager)/leases/page.tsx",
+      "line": 129
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/leases/page.tsx",
+      "line": 171
+    },
+    {
+      "excerpt": "q || tab !== \u0027active\u0027 ? \u0027No leases match this view\u0027 : \u0027No active leases yet\u0027",
+      "source": "src/app/(manager)/leases/page.tsx",
+      "line": 173
+    },
+    {
+      "excerpt": "\u0027No tenant\u0027",
+      "source": "src/app/(manager)/leases/page.tsx",
+      "line": 213
+    },
+    {
+      "excerpt": "No templates yet. Create a template to reuse wording and fees across your",
+      "source": "src/app/(manager)/leases/templates/page.tsx",
+      "line": 51
+    },
+    {
+      "excerpt": "No properties yet. Save this template now and set a default after adding a",
+      "source": "src/app/(manager)/leases/templates/[id]/TemplateEditor.tsx",
+      "line": 459
+    },
+    {
+      "excerpt": "if (!window.confirm(`Delete ${name}? This cannot be undone.`)) return;",
+      "source": "src/app/(manager)/leases/[id]/LeaseDocumentGrid.tsx",
+      "line": 24
+    },
+    {
+      "excerpt": "if (!documents.length) return \u003cp className=\"muted\"\u003eNo lease documents yet.\u003c/p\u003e;",
+      "source": "src/app/(manager)/leases/[id]/LeaseDocumentGrid.tsx",
+      "line": 29
+    },
+    {
+      "excerpt": "\u003cbutton type=\"submit\"\u003eSave name\u003c/button\u003e",
+      "source": "src/app/(manager)/leases/[id]/LeaseDocumentGrid.tsx",
+      "line": 69
+    },
+    {
+      "excerpt": ": \u0027No tenants yet\u0027}",
+      "source": "src/app/(manager)/leases/[id]/page.tsx",
+      "line": 190
+    },
+    {
+      "excerpt": "{!lease.tenants.length \u0026\u0026 \u003cp className=\"muted\"\u003eNo tenants yet.\u003c/p\u003e}",
+      "source": "src/app/(manager)/leases/[id]/page.tsx",
+      "line": 283
+    },
+    {
+      "excerpt": "{isPrimary ? \u0027Primary tenant\u0027 : \u0027Tenant\u0027} Â· {tenant.email ?? \u0027No email\u0027}",
+      "source": "src/app/(manager)/leases/[id]/page.tsx",
+      "line": 295
+    },
+    {
+      "excerpt": "\u003cdd\u003e{noticeGiven ? formatDate(lease.noticeGivenAt!) : \u0027No notice given\u0027}\u003c/dd\u003e",
+      "source": "src/app/(manager)/leases/[id]/page.tsx",
+      "line": 314
+    },
+    {
+      "excerpt": "No agreement snapshot is recorded for this lease. Check Documents for an",
+      "source": "src/app/(manager)/leases/[id]/page.tsx",
+      "line": 414
+    },
+    {
+      "excerpt": "\u003cdd\u003e{noticeGiven ? formatDate(lease.noticeGivenAt!) : \u0027No notice given\u0027}\u003c/dd\u003e",
+      "source": "src/app/(manager)/leases/[id]/page.tsx",
+      "line": 437
+    },
+    {
+      "excerpt": "No charges due yet.",
+      "source": "src/app/(manager)/leases/[id]/page.tsx",
+      "line": 524
+    },
+    {
+      "excerpt": ": \u0027No completed signature recorded yet.\u0027}",
+      "source": "src/app/(manager)/leases/[id]/page.tsx",
+      "line": 544
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(manager)/maintenance/page.tsx",
+      "line": 8
+    },
+    {
+      "excerpt": ": \u0027No urgent requests\u0027",
+      "source": "src/app/(manager)/maintenance/page.tsx",
+      "line": 141
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/maintenance/page.tsx",
+      "line": 152
+    },
+    {
+      "excerpt": "title=\"No repair requests yet\"",
+      "source": "src/app/(manager)/maintenance/page.tsx",
+      "line": 153
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/maintenance/page.tsx",
+      "line": 160
+    },
+    {
+      "excerpt": "title=\"No repair requests match this view\"",
+      "source": "src/app/(manager)/maintenance/page.tsx",
+      "line": 161
+    },
+    {
+      "excerpt": "No requests",
+      "source": "src/app/(manager)/maintenance/page.tsx",
+      "line": 185
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(manager)/payments/page.tsx",
+      "line": 2
+    },
+    {
+      "excerpt": "\u0027fee-paid\u0027: { tone: \u0027warning\u0027, text: \u0027Rent is paid, so no late fee applies.\u0027 },",
+      "source": "src/app/(manager)/payments/page.tsx",
+      "line": 56
+    },
+    {
+      "excerpt": "\u0027fee-no-rent-charge\u0027: { tone: \u0027warning\u0027, text: \u0027There is no rent charge for that month.\u0027 },",
+      "source": "src/app/(manager)/payments/page.tsx",
+      "line": 58
+    },
+    {
+      "excerpt": "\u0027payouts-none\u0027: { tone: \u0027success\u0027, text: \u0027No owner payouts are waiting to be sent.\u0027 },",
+      "source": "src/app/(manager)/payments/page.tsx",
+      "line": 63
+    },
+    {
+      "excerpt": "No leases in this month and scope. Choose another month or view leases.",
+      "source": "src/app/(manager)/payments/page.tsx",
+      "line": 194
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"primary\" disabled={overview.rows.length === 0}\u003e",
+      "source": "src/app/(manager)/payments/page.tsx",
+      "line": 224
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/payments/page.tsx",
+      "line": 291
+    },
+    {
+      "excerpt": "title=\"No rent charges in this view\"",
+      "source": "src/app/(manager)/payments/page.tsx",
+      "line": 292
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" size=\"sm\"\u003e",
+      "source": "src/app/(manager)/payments/page.tsx",
+      "line": 353
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" size=\"sm\" variant=\"ghost\"\u003e",
+      "source": "src/app/(manager)/payments/page.tsx",
+      "line": 372
+    },
+    {
+      "excerpt": "{payout.ownerName ?? \u0027No owner assigned\u0027} Â· {formatUsd(payout.collectedCents)}{\u0027 \u0027}",
+      "source": "src/app/(manager)/payments/page.tsx",
+      "line": 413
+    },
+    {
+      "excerpt": "type=\"submit\"",
+      "source": "src/app/(manager)/payments/page.tsx",
+      "line": 430
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(manager)/properties/page.tsx",
+      "line": 8
+    },
+    {
+      "excerpt": "if (p.unitCount === 0) return { label: \u0027No units yet\u0027, warm: true };",
+      "source": "src/app/(manager)/properties/page.tsx",
+      "line": 28
+    },
+    {
+      "excerpt": "\u003cbutton className=\"btn btn-secondary btn-sm\" type=\"submit\"\u003eSearch\u003c/button\u003e",
+      "source": "src/app/(manager)/properties/page.tsx",
+      "line": 84
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/properties/page.tsx",
+      "line": 142
+    },
+    {
+      "excerpt": "title={q || filter !== \u0027all\u0027 ? \u0027No properties match this view\u0027 : \u0027No properties yet\u0027}",
+      "source": "src/app/(manager)/properties/page.tsx",
+      "line": 143
+    },
+    {
+      "excerpt": "\u003cdialog",
+      "source": "src/app/(manager)/properties/_components/AddPropertyDialog.tsx",
+      "line": 31
+    },
+    {
+      "excerpt": "\u003cspan id={id} className=\"hint\" role=\"alert\" style={{ color: \u0027var(--design-danger)\u0027 }}\u003e",
+      "source": "src/app/(manager)/properties/_components/FieldError.tsx",
+      "line": 4
+    },
+    {
+      "excerpt": "\u003cp role=\"alert\" style={{ color: \u0027var(--design-danger)\u0027 }}\u003e",
+      "source": "src/app/(manager)/properties/_components/ManagedUploads.tsx",
+      "line": 81
+    },
+    {
+      "excerpt": "\u003coption value=\"\"\u003eNo owner\u003c/option\u003e",
+      "source": "src/app/(manager)/properties/_components/PropertyForm.tsx",
+      "line": 91
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"primary\" disabled={pending}\u003e",
+      "source": "src/app/(manager)/properties/_components/PropertyForm.tsx",
+      "line": 105
+    },
+    {
+      "excerpt": "{pending ? \u0027Savingâ€¦\u0027 : \u0027Save property\u0027}",
+      "source": "src/app/(manager)/properties/_components/PropertyForm.tsx",
+      "line": 106
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant={archived ? \u0027secondary\u0027 : \u0027danger\u0027} disabled={pending}\u003e",
+      "source": "src/app/(manager)/properties/_components/PropertyForm.tsx",
+      "line": 123
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"primary\" block disabled={pending}\u003e",
+      "source": "src/app/(manager)/properties/_components/UnitForm.tsx",
+      "line": 74
+    },
+    {
+      "excerpt": "{pending ? \u0027Savingâ€¦\u0027 : \u0027Save unit\u0027}",
+      "source": "src/app/(manager)/properties/_components/UnitForm.tsx",
+      "line": 75
+    },
+    {
+      "excerpt": "\u003csection className=\"card stack\" role=\"alert\"\u003e",
+      "source": "src/app/(manager)/rent-analysis/error.tsx",
+      "line": 5
+    },
+    {
+      "excerpt": "export default function LoadingRentAnalysis() {",
+      "source": "src/app/(manager)/rent-analysis/loading.tsx",
+      "line": 1
+    },
+    {
+      "excerpt": "\u003ch1\u003eLoading Rent Analysisâ€¦\u003c/h1\u003e",
+      "source": "src/app/(manager)/rent-analysis/loading.tsx",
+      "line": 4
+    },
+    {
+      "excerpt": "\u003cp\u003eLoading your properties and comparable rentals. Your selection is kept.\u003c/p\u003e",
+      "source": "src/app/(manager)/rent-analysis/loading.tsx",
+      "line": 5
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(manager)/rent-analysis/page.tsx",
+      "line": 9
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/rent-analysis/page.tsx",
+      "line": 35
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/rent-analysis/page.tsx",
+      "line": 88
+    },
+    {
+      "excerpt": "title={properties.length ? \u0027No matching properties\u0027 : \u0027No properties yet\u0027}",
+      "source": "src/app/(manager)/rent-analysis/page.tsx",
+      "line": 89
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/rent-analysis/page.tsx",
+      "line": 128
+    },
+    {
+      "excerpt": "Choose a unit to compare. A multi-unit property has no blended comparable rent.",
+      "source": "src/app/(manager)/rent-analysis/page.tsx",
+      "line": 176
+    },
+    {
+      "excerpt": "\u003cp\u003eNo available units. Add or restore a unit in Properties.\u003c/p\u003e",
+      "source": "src/app/(manager)/rent-analysis/page.tsx",
+      "line": 228
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(manager)/rent-comps/CompsWorkbench.tsx",
+      "line": 7
+    },
+    {
+      "excerpt": "{nearest.length === 0 \u0026\u0026 \u003cp className=\"muted\"\u003eNo included comps.\u003c/p\u003e}",
+      "source": "src/app/(manager)/rent-comps/CompsWorkbench.tsx",
+      "line": 194
+    },
+    {
+      "excerpt": "{summary ? `${summary.count} comps` : \u0027No comps\u0027}",
+      "source": "src/app/(manager)/rent-comps/CompsWorkbench.tsx",
+      "line": 210
+    },
+    {
+      "excerpt": "{pending ? \u0027Applyingâ€¦\u0027 : `Apply to ${props.unitLabel}`}",
+      "source": "src/app/(manager)/rent-comps/CompsWorkbench.tsx",
+      "line": 325
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/rent-comps/CompsWorkbench.tsx",
+      "line": 403
+    },
+    {
+      "excerpt": "title=\"No comparable rentals match\"",
+      "source": "src/app/(manager)/rent-comps/CompsWorkbench.tsx",
+      "line": 404
+    },
+    {
+      "excerpt": "\u003cbutton type=\"submit\" className=\"btn btn-secondary btn-sm\"\u003e",
+      "source": "src/app/(manager)/rent-comps/FilterBar.tsx",
+      "line": 165
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(manager)/rent-comps/page.tsx",
+      "line": 2
+    },
+    {
+      "excerpt": "\u003cEmptyState title=\"No units to compare yet\" description=\"Add a property and unit to compare it with nearby rentals.\" action=\"Go to properties\" href=\"/properties\" /\u003e",
+      "source": "src/app/(manager)/rent-comps/page.tsx",
+      "line": 16
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(manager)/returns/page.tsx",
+      "line": 3
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"secondary\" size=\"sm\"\u003e",
+      "source": "src/app/(manager)/returns/page.tsx",
+      "line": 138
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/returns/page.tsx",
+      "line": 150
+    },
+    {
+      "excerpt": "title=\"No properties to report\"",
+      "source": "src/app/(manager)/returns/page.tsx",
+      "line": 151
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/returns/page.tsx",
+      "line": 386
+    },
+    {
+      "excerpt": "title=\"No expenses this period\"",
+      "source": "src/app/(manager)/returns/page.tsx",
+      "line": 387
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"primary\"\u003e",
+      "source": "src/app/(manager)/returns/page.tsx",
+      "line": 506
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(manager)/tenants/page.tsx",
+      "line": 27
+    },
+    {
+      "excerpt": "prospect: \u0027No lease\u0027,",
+      "source": "src/app/(manager)/tenants/page.tsx",
+      "line": 40
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"secondary\"\u003e",
+      "source": "src/app/(manager)/tenants/page.tsx",
+      "line": 170
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/tenants/page.tsx",
+      "line": 206
+    },
+    {
+      "excerpt": "? \u0027No tenants match this view\u0027",
+      "source": "src/app/(manager)/tenants/page.tsx",
+      "line": 209
+    },
+    {
+      "excerpt": ": \u0027No tenants yet\u0027",
+      "source": "src/app/(manager)/tenants/page.tsx",
+      "line": 210
+    },
+    {
+      "excerpt": "\u003csmall\u003e{row.email ?? row.phone ?? \u0027No contact on file\u0027}\u003c/small\u003e",
+      "source": "src/app/(manager)/tenants/page.tsx",
+      "line": 232
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(manager)/tenants/StatusView.tsx",
+      "line": 16
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"secondary\"\u003e",
+      "source": "src/app/(manager)/tenants/StatusView.tsx",
+      "line": 123
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(manager)/tenants/StatusView.tsx",
+      "line": 167
+    },
+    {
+      "excerpt": "title=\"No tenants match this view\"",
+      "source": "src/app/(manager)/tenants/StatusView.tsx",
+      "line": 168
+    },
+    {
+      "excerpt": "{row.tenant.email ?? row.tenant.phone ?? \u0027No contact on file\u0027}",
+      "source": "src/app/(manager)/tenants/StatusView.tsx",
+      "line": 211
+    },
+    {
+      "excerpt": "\u003cspan id={id} className=\"hint\" role=\"alert\" style={{ color: \u0027var(--design-danger)\u0027 }}\u003e",
+      "source": "src/app/(manager)/tenants/TenantForms.tsx",
+      "line": 21
+    },
+    {
+      "excerpt": "\u003cdiv className=\"alert warning\" role=\"alert\"\u003e",
+      "source": "src/app/(manager)/tenants/TenantForms.tsx",
+      "line": 56
+    },
+    {
+      "excerpt": "\u003coption value=\"\"\u003eNo unit yet\u003c/option\u003e",
+      "source": "src/app/(manager)/tenants/TenantForms.tsx",
+      "line": 105
+    },
+    {
+      "excerpt": ": \u0027No vacant units available\u0027",
+      "source": "src/app/(manager)/tenants/TenantForms.tsx",
+      "line": 127
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"primary\" disabled={pending}\u003e",
+      "source": "src/app/(manager)/tenants/TenantForms.tsx",
+      "line": 168
+    },
+    {
+      "excerpt": "{pending ? \u0027Savingâ€¦\u0027 : \u0027Save tenant\u0027}",
+      "source": "src/app/(manager)/tenants/TenantForms.tsx",
+      "line": 169
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"secondary\" size=\"sm\" disabled={pending}\u003e",
+      "source": "src/app/(manager)/tenants/TenantForms.tsx",
+      "line": 212
+    },
+    {
+      "excerpt": "{pending ? \u0027Savingâ€¦\u0027 : \u0027Save note\u0027}",
+      "source": "src/app/(manager)/tenants/TenantForms.tsx",
+      "line": 213
+    },
+    {
+      "excerpt": "\u003cdiv className=\"alert warning\" role=\"alert\"\u003e",
+      "source": "src/app/(manager)/tenants/TenantForms.tsx",
+      "line": 249
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"primary\" disabled={pending}\u003e",
+      "source": "src/app/(manager)/tenants/TenantForms.tsx",
+      "line": 338
+    },
+    {
+      "excerpt": "{pending ? \u0027Savingâ€¦\u0027 : \u0027Save changes\u0027}",
+      "source": "src/app/(manager)/tenants/TenantForms.tsx",
+      "line": 339
+    },
+    {
+      "excerpt": "\u003cdiv className=\"alert warning\" role=\"alert\"\u003e",
+      "source": "src/app/(manager)/tenants/[id]/page.tsx",
+      "line": 166
+    },
+    {
+      "excerpt": "No lease yet. Create a lease to assign a unit and record the rental terms.",
+      "source": "src/app/(manager)/tenants/[id]/page.tsx",
+      "line": 319
+    },
+    {
+      "excerpt": "No payments recorded.",
+      "source": "src/app/(manager)/tenants/[id]/page.tsx",
+      "line": 357
+    },
+    {
+      "excerpt": "\u003cp className=\"muted\"\u003eNo documents on this tenantâ€™s leases.\u003c/p\u003e",
+      "source": "src/app/(manager)/tenants/[id]/page.tsx",
+      "line": 393
+    },
+    {
+      "excerpt": "\u003cspan className=\"muted\"\u003eNo email on file\u003c/span\u003e",
+      "source": "src/app/(manager)/tenants/[id]/page.tsx",
+      "line": 448
+    },
+    {
+      "excerpt": "\u003cspan className=\"muted\"\u003eNo phone on file\u003c/span\u003e",
+      "source": "src/app/(manager)/tenants/[id]/page.tsx",
+      "line": 456
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"primary\" block\u003e",
+      "source": "src/app/(manager)/tenants/[id]/page.tsx",
+      "line": 495
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"danger\" block\u003e",
+      "source": "src/app/(manager)/tenants/[id]/page.tsx",
+      "line": 509
+    },
+    {
+      "excerpt": "{history(detail).length === 0 \u0026\u0026 \u003cp className=\"muted\"\u003eNo activity yet.\u003c/p\u003e}",
+      "source": "src/app/(manager)/tenants/[id]/page.tsx",
+      "line": 538
+    },
+    {
+      "excerpt": "import { LoadingState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(tenant)/loading.tsx",
+      "line": 1
+    },
+    {
+      "excerpt": "export default function Loading() {",
+      "source": "src/app/(tenant)/loading.tsx",
+      "line": 3
+    },
+    {
+      "excerpt": "return \u003cLoadingState tenant /\u003e;",
+      "source": "src/app/(tenant)/loading.tsx",
+      "line": 4
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(tenant)/not-found.tsx",
+      "line": 1
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(tenant)/not-found.tsx",
+      "line": 5
+    },
+    {
+      "excerpt": "\u003cimg src={src} alt={alt} onError={() =\u003e setFailed(true)} loading=\"lazy\" /\u003e",
+      "source": "src/app/(tenant)/TenantPhoto.tsx",
+      "line": 26
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(tenant)/home/page.tsx",
+      "line": 4
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(tenant)/home/page.tsx",
+      "line": 84
+    },
+    {
+      "excerpt": "title=\"No active lease yet\"",
+      "source": "src/app/(tenant)/home/page.tsx",
+      "line": 85
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(tenant)/lease/page.tsx",
+      "line": 3
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(tenant)/lease/page.tsx",
+      "line": 22
+    },
+    {
+      "excerpt": "title=\"No active lease yet\"",
+      "source": "src/app/(tenant)/lease/page.tsx",
+      "line": 23
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(tenant)/pay/page.tsx",
+      "line": 4
+    },
+    {
+      "excerpt": "text: \u0027Enter an amount greater than zero and no more than the amount due.\u0027,",
+      "source": "src/app/(tenant)/pay/page.tsx",
+      "line": 36
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(tenant)/pay/page.tsx",
+      "line": 73
+    },
+    {
+      "excerpt": "title=\"No active lease\"",
+      "source": "src/app/(tenant)/pay/page.tsx",
+      "line": 74
+    },
+    {
+      "excerpt": "description=\"There is no active lease on your account yet, so there is nothing to pay.\"",
+      "source": "src/app/(tenant)/pay/page.tsx",
+      "line": 75
+    },
+    {
+      "excerpt": "{grace \u0026\u0026 view.graceDays \u003e 0 ? `No late fee if paid by ${shortDate(grace)}. ` : \u0027\u0027}",
+      "source": "src/app/(tenant)/pay/page.tsx",
+      "line": 142
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" name=\"confirmPayment\" value=\"yes\" variant=\"primary\" disabled={pending}\u003e",
+      "source": "src/app/(tenant)/pay/PayForm.tsx",
+      "line": 15
+    },
+    {
+      "excerpt": "{pending ? \u0027Submitting paymentâ€¦\u0027 : \u0027Confirm payment\u0027}",
+      "source": "src/app/(tenant)/pay/PayForm.tsx",
+      "line": 16
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"secondary\" block disabled={pending}\u003e",
+      "source": "src/app/(tenant)/pay/PayForm.tsx",
+      "line": 24
+    },
+    {
+      "excerpt": "? `${MOCK_TOKENS[type].detail}${passFees ? \u0027\u0027 : \u0027 Â· No fee\u0027}`",
+      "source": "src/app/(tenant)/pay/PayForm.tsx",
+      "line": 73
+    },
+    {
+      "excerpt": ": `${MOCK_TOKENS[type].detail} Â· No fee Â· 1â€“2 days`,",
+      "source": "src/app/(tenant)/pay/PayForm.tsx",
+      "line": 74
+    },
+    {
+      "excerpt": "\u003cspan id=\"amount-error\" className={styles.error} role=\"alert\"\u003e",
+      "source": "src/app/(tenant)/pay/PayForm.tsx",
+      "line": 178
+    },
+    {
+      "excerpt": "Enter an amount from $0.01 to {formatUsd(totalDueCents)}, with no more than two",
+      "source": "src/app/(tenant)/pay/PayForm.tsx",
+      "line": 179
+    },
+    {
+      "excerpt": "Secured by your payment provider Â· No card data is stored by RocketRental.",
+      "source": "src/app/(tenant)/pay/PayForm.tsx",
+      "line": 233
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/app/(tenant)/repairs/page.tsx",
+      "line": 12
+    },
+    {
+      "excerpt": "\u0027no-lease\u0027: { tone: \u0027warning\u0027, text: \u0027There is no active lease on your account.\u0027 },",
+      "source": "src/app/(tenant)/repairs/page.tsx",
+      "line": 35
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/app/(tenant)/repairs/page.tsx",
+      "line": 58
+    },
+    {
+      "excerpt": "title=\"No active lease\"",
+      "source": "src/app/(tenant)/repairs/page.tsx",
+      "line": 59
+    },
+    {
+      "excerpt": "description=\"There is no active lease on your account yet, so you cannot send a repair request.\"",
+      "source": "src/app/(tenant)/repairs/page.tsx",
+      "line": 60
+    },
+    {
+      "excerpt": "No repair requests yet. Describe what needs fixing above and your manager will follow",
+      "source": "src/app/(tenant)/repairs/page.tsx",
+      "line": 112
+    },
+    {
+      "excerpt": "\u003cbutton className=\"btn btn-secondary btn-sm\" type=\"submit\"\u003e",
+      "source": "src/app/(tenant)/repairs/page.tsx",
+      "line": 189
+    },
+    {
+      "excerpt": "\u003cp className={styles.error} id=\"repair-error\" role=\"alert\"\u003e",
+      "source": "src/app/(tenant)/repairs/RepairForm.tsx",
+      "line": 59
+    },
+    {
+      "excerpt": "For emergencies (burst pipe, no heat) also call your property manager.",
+      "source": "src/app/(tenant)/repairs/RepairForm.tsx",
+      "line": 88
+    },
+    {
+      "excerpt": "\u003cbutton className=\"btn btn-primary btn-block\" type=\"submit\" disabled={pending}\u003e",
+      "source": "src/app/(tenant)/repairs/RepairForm.tsx",
+      "line": 91
+    },
+    {
+      "excerpt": "{pending ? \u0027Sending requestâ€¦\u0027 : \u0027Submit request\u0027}",
+      "source": "src/app/(tenant)/repairs/RepairForm.tsx",
+      "line": 92
+    },
+    {
+      "excerpt": "\u003csection className={styles.error} role=\"alert\"\u003e",
+      "source": "src/components/RouteError.tsx",
+      "line": 20
+    },
+    {
+      "excerpt": "export function EmptyState({",
+      "source": "src/components/RouteStates.tsx",
+      "line": 4
+    },
+    {
+      "excerpt": "export function LoadingState({ tenant = false }: { tenant?: boolean }) {",
+      "source": "src/components/RouteStates.tsx",
+      "line": 24
+    },
+    {
+      "excerpt": "\u003cdiv className={styles.loading} role=\"status\" aria-live=\"polite\" aria-label=\"Loading page\"\u003e",
+      "source": "src/components/RouteStates.tsx",
+      "line": 26
+    },
+    {
+      "excerpt": "\u003cspan className={styles.srOnly}\u003eLoading pageâ€¦\u003c/span\u003e",
+      "source": "src/components/RouteStates.tsx",
+      "line": 27
+    },
+    {
+      "excerpt": "import { EmptyState, LoadingState } from \u0027./RouteStates\u0027;",
+      "source": "src/components/UiShowcase.tsx",
+      "line": 4
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/components/UiShowcase.tsx",
+      "line": 31
+    },
+    {
+      "excerpt": "title=\"No results yet\"",
+      "source": "src/components/UiShowcase.tsx",
+      "line": 32
+    },
+    {
+      "excerpt": "\u003cLoadingState /\u003e",
+      "source": "src/components/UiShowcase.tsx",
+      "line": 37
+    },
+    {
+      "excerpt": "\u003cp\u003eNo properties available. Add an active property to begin.\u003c/p\u003e",
+      "source": "src/components/analysis/PropertySelector.tsx",
+      "line": 43
+    },
+    {
+      "excerpt": "\u003cp\u003eNo properties match your search.\u003c/p\u003e",
+      "source": "src/components/analysis/PropertySelector.tsx",
+      "line": 45
+    },
+    {
+      "excerpt": "before selecting a third. No selection produces no comparison.",
+      "source": "src/components/analysis/RoiBenchmarks.tsx",
+      "line": 76
+    },
+    {
+      "excerpt": "\u003cspan role=\"alert\" key={e.path}\u003e",
+      "source": "src/components/analysis/RoiBenchmarks.tsx",
+      "line": 161
+    },
+    {
+      "excerpt": "Negative final wealth has no annualized growth rate.",
+      "source": "src/components/analysis/RoiBenchmarks.tsx",
+      "line": 286
+    },
+    {
+      "excerpt": "All-cash purchase Â· debt service $0.00. Debt coverage is not applicable; no loan",
+      "source": "src/components/analysis/RoiProjections.tsx",
+      "line": 512
+    },
+    {
+      "excerpt": "\u003cbutton type=\"submit\"\u003eUpdate exit comparison\u003c/button\u003e",
+      "source": "src/components/analysis/RoiProjections.tsx",
+      "line": 712
+    },
+    {
+      "excerpt": "\u003cp role=\"alert\" className={styles.error}\u003e",
+      "source": "src/components/analysis/RoiProjections.tsx",
+      "line": 716
+    },
+    {
+      "excerpt": "\u003cbutton type=\"submit\"\u003eUpdate sensitivity\u003c/button\u003e",
+      "source": "src/components/analysis/RoiProjections.tsx",
+      "line": 921
+    },
+    {
+      "excerpt": "\u003cp role=\"alert\" className={styles.error}\u003e",
+      "source": "src/components/analysis/RoiProjections.tsx",
+      "line": 925
+    },
+    {
+      "excerpt": ": \u0027No valid projection available\u0027}",
+      "source": "src/components/analysis/RoiProjections.tsx",
+      "line": 997
+    },
+    {
+      "excerpt": "\u003cp role=\"alert\" id={`${e.path}-error`} key={errorIndex}\u003e",
+      "source": "src/components/analysis/RoiScenarios.tsx",
+      "line": 175
+    },
+    {
+      "excerpt": "const [loading, setLoading] = useState(false);",
+      "source": "src/components/analysis/RoiWorkspace.tsx",
+      "line": 84
+    },
+    {
+      "excerpt": "setLoading(true);",
+      "source": "src/components/analysis/RoiWorkspace.tsx",
+      "line": 129
+    },
+    {
+      "excerpt": "setLoading(false);",
+      "source": "src/components/analysis/RoiWorkspace.tsx",
+      "line": 140
+    },
+    {
+      "excerpt": "setMessage(\u0027Could not load analysis. Retry loading this property.\u0027);",
+      "source": "src/components/analysis/RoiWorkspace.tsx",
+      "line": 166
+    },
+    {
+      "excerpt": "if (request === token.current) setLoading(false);",
+      "source": "src/components/analysis/RoiWorkspace.tsx",
+      "line": 168
+    },
+    {
+      "excerpt": "setLoading(false);",
+      "source": "src/components/analysis/RoiWorkspace.tsx",
+      "line": 283
+    },
+    {
+      "excerpt": "{!selection.ok \u0026\u0026 \u003cp role=\"alert\"\u003e{failure(selection.code)}\u003c/p\u003e}",
+      "source": "src/components/analysis/RoiWorkspace.tsx",
+      "line": 470
+    },
+    {
+      "excerpt": "{loading ? (",
+      "source": "src/components/analysis/RoiWorkspace.tsx",
+      "line": 494
+    },
+    {
+      "excerpt": "\u003cp\u003eLoading analysis...\u003c/p\u003e",
+      "source": "src/components/analysis/RoiWorkspace.tsx",
+      "line": 495
+    },
+    {
+      "excerpt": "\u003cbutton onClick={() =\u003e load(selected)}\u003eRetry loading\u003c/button\u003e",
+      "source": "src/components/analysis/RoiWorkspace.tsx",
+      "line": 497
+    },
+    {
+      "excerpt": ": \u0027Complete assumptions to calculate. No valid projection is available yet.\u0027}",
+      "source": "src/components/analysis/RoiWorkspace.tsx",
+      "line": 545
+    },
+    {
+      "excerpt": "\u003cdiv className={styles.alert} role=\"alert\" tabIndex={-1} ref={errorSummary}\u003e",
+      "source": "src/components/lease-builder/LeaseBuilder.tsx",
+      "line": 387
+    },
+    {
+      "excerpt": "\u003cbutton type=\"submit\" className={styles.btn} disabled={signing}\u003e",
+      "source": "src/components/lease-builder/LeaseBuilder.tsx",
+      "line": 422
+    },
+    {
+      "excerpt": "{pending ? \u0027Savingâ€¦\u0027 : \u0027Next\u0027}",
+      "source": "src/components/lease-builder/LeaseBuilder.tsx",
+      "line": 454
+    },
+    {
+      "excerpt": "{pending ? \u0027Sendingâ€¦\u0027 : \u0027Send for e-signature\u0027}",
+      "source": "src/components/lease-builder/LeaseBuilder.tsx",
+      "line": 463
+    },
+    {
+      "excerpt": "\u003csmall className={styles.error} role=\"alert\"\u003e",
+      "source": "src/components/lease-builder/steps.tsx",
+      "line": 43
+    },
+    {
+      "excerpt": "\u003csmall\u003e{t.email ?? \u0027No email on file\u0027}\u003c/small\u003e",
+      "source": "src/components/lease-builder/steps.tsx",
+      "line": 490
+    },
+    {
+      "excerpt": "{!tenants.length \u0026\u0026 \u003cp className={styles.sub}\u003eNo tenants yet. Add a tenant first.\u003c/p\u003e}",
+      "source": "src/components/lease-builder/steps.tsx",
+      "line": 495
+    },
+    {
+      "excerpt": "No documents added yet. Include any lease agreement, addenda or disclosure files the",
+      "source": "src/components/lease-builder/steps.tsx",
+      "line": 703
+    },
+    {
+      "excerpt": "\u003cp className={styles.alert} role=\"alert\"\u003e",
+      "source": "src/components/lease-builder/steps.tsx",
+      "line": 708
+    },
+    {
+      "excerpt": "\u003cdiv className={styles.alert} role=\"alert\" style={{ marginTop: 16 }}\u003e",
+      "source": "src/components/lease-builder/steps.tsx",
+      "line": 945
+    },
+    {
+      "excerpt": "through the mock provider (no real email is sent).",
+      "source": "src/components/lease-builder/steps.tsx",
+      "line": 951
+    },
+    {
+      "excerpt": "No units are available in this view. Add a property and unit before creating a",
+      "source": "src/components/lease-builder/UnitPicker.tsx",
+      "line": 70
+    },
+    {
+      "excerpt": "type=\"submit\"",
+      "source": "src/components/lease-builder/UnitPicker.tsx",
+      "line": 79
+    },
+    {
+      "excerpt": "* Submitting resets to page 1 because no page field is sent.",
+      "source": "src/components/maintenance/MaintenanceListControls.tsx",
+      "line": 20
+    },
+    {
+      "excerpt": "\u003cbutton className=\"btn btn-secondary btn-sm\" type=\"submit\"\u003e",
+      "source": "src/components/maintenance/MaintenanceListControls.tsx",
+      "line": 63
+    },
+    {
+      "excerpt": "{total === 0 ? \u0027No matching requests.\u0027 : `${first}\\u2013${last} of ${total}`}",
+      "source": "src/components/maintenance/MaintenanceListControls.tsx",
+      "line": 106
+    },
+    {
+      "excerpt": "\u003csection className=\"card stack\" role=\"alert\"\u003e",
+      "source": "src/components/maintenance/OperationsError.tsx",
+      "line": 11
+    },
+    {
+      "excerpt": "Try loading this view again. Your saved{\u0027 \u0027}",
+      "source": "src/components/maintenance/OperationsError.tsx",
+      "line": 16
+    },
+    {
+      "excerpt": "\u003cp className={styles.error} role=\"alert\"\u003e",
+      "source": "src/components/maintenance/RequestActionForm.tsx",
+      "line": 44
+    },
+    {
+      "excerpt": "\u003cp className={styles.description}\u003e{request.description || \u0027No description provided.\u0027}\u003c/p\u003e",
+      "source": "src/components/maintenance/RequestDetails.tsx",
+      "line": 29
+    },
+    {
+      "excerpt": "\u003cp className=\"muted\"\u003eNo vendors are available for this portfolio.\u003c/p\u003e",
+      "source": "src/components/maintenance/RequestDetails.tsx",
+      "line": 52
+    },
+    {
+      "excerpt": "\u003cbutton className=\"btn btn-secondary btn-sm\" type=\"submit\" disabled={!vendors.length}\u003e",
+      "source": "src/components/maintenance/RequestDetails.tsx",
+      "line": 54
+    },
+    {
+      "excerpt": "\u003cbutton className=\"btn btn-secondary btn-sm\" type=\"submit\"\u003e",
+      "source": "src/components/maintenance/RequestDetails.tsx",
+      "line": 70
+    },
+    {
+      "excerpt": "\u003cp className=\"muted\"\u003eNo photos attached. Add one to help the vendor prepare.\u003c/p\u003e",
+      "source": "src/components/maintenance/RequestDetails.tsx",
+      "line": 91
+    },
+    {
+      "excerpt": "\u003cbutton className=\"btn btn-secondary btn-sm\" type=\"submit\"\u003e",
+      "source": "src/components/maintenance/RequestDetails.tsx",
+      "line": 96
+    },
+    {
+      "excerpt": "\u003cp className=\"muted\"\u003eNo comments yet.\u003c/p\u003e",
+      "source": "src/components/maintenance/RequestDetails.tsx",
+      "line": 110
+    },
+    {
+      "excerpt": "\u003cbutton className=\"btn btn-secondary btn-sm\" type=\"submit\"\u003e",
+      "source": "src/components/maintenance/RequestDetails.tsx",
+      "line": 123
+    },
+    {
+      "excerpt": "loading=\"lazy\"",
+      "source": "src/components/maintenance/RequestPhoto.tsx",
+      "line": 18
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/components/rent-comps/RentCompsPanel.tsx",
+      "line": 3
+    },
+    {
+      "excerpt": "\u003cEmptyState",
+      "source": "src/components/rent-comps/RentCompsPanel.tsx",
+      "line": 62
+    },
+    {
+      "excerpt": "title=\"No rent comps available\"",
+      "source": "src/components/rent-comps/RentCompsPanel.tsx",
+      "line": 63
+    },
+    {
+      "excerpt": "No recorded income or expenses in this period. Choose another range to review earlier",
+      "source": "src/components/returns/IncomeExpenseChart.tsx",
+      "line": 18
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant={period.key === \u0027CUSTOM\u0027 ? \u0027primary\u0027 : \u0027secondary\u0027} size=\"sm\"\u003e",
+      "source": "src/components/returns/RangePicker.tsx",
+      "line": 80
+    },
+    {
+      "excerpt": "/** A filter select that submits its form as soon as the choice changes, so the filter needs no Apply button. */",
+      "source": "src/components/ui/AutoSubmitSelect.tsx",
+      "line": 5
+    },
+    {
+      "excerpt": "if (!window.confirm(\u0027Delete this empty unit? This cannot be undone.\u0027)) event.preventDefault();",
+      "source": "src/components/units/DeleteUnitControl.tsx",
+      "line": 21
+    },
+    {
+      "excerpt": "\u003cbutton className=\"btn btn-ghost btn-sm\" type=\"submit\" disabled={disabled}\u003e",
+      "source": "src/components/units/DeleteUnitControl.tsx",
+      "line": 26
+    },
+    {
+      "excerpt": "status: \u0027queued\u0027 | \u0027uploading\u0027 | \u0027done\u0027 | \u0027error\u0027;",
+      "source": "src/components/upload/FileUploader.tsx",
+      "line": 24
+    },
+    {
+      "excerpt": "updateItem(item.id, { status: \u0027uploading\u0027, progress: 0, error: undefined });",
+      "source": "src/components/upload/FileUploader.tsx",
+      "line": 232
+    },
+    {
+      "excerpt": "\u003cp className={styles.error} role=\"alert\"\u003e",
+      "source": "src/components/upload/FileUploader.tsx",
+      "line": 442
+    },
+    {
+      "excerpt": ": item.status === \u0027uploading\u0027",
+      "source": "src/components/upload/FileUploader.tsx",
+      "line": 459
+    },
+    {
+      "excerpt": "? `Uploading ${item.progress}%`",
+      "source": "src/components/upload/FileUploader.tsx",
+      "line": 460
+    },
+    {
+      "excerpt": "{item.status === \u0027uploading\u0027 || item.status === \u0027queued\u0027 ? (",
+      "source": "src/components/upload/FileUploader.tsx",
+      "line": 466
+    },
+    {
+      "excerpt": "\u003cspan className={styles.error} role=\"alert\"\u003e",
+      "source": "src/components/upload/FileUploader.tsx",
+      "line": 475
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"primary\" size=\"sm\" disabled={pending}\u003e{pending ? \u0027Savingâ€¦\u0027 : \u0027Save\u0027}\u003c/Button\u003e",
+      "source": "src/components/workspace/InlineFacts.tsx",
+      "line": 21
+    },
+    {
+      "excerpt": "\u003coption value=\"\"\u003eNo owner\u003c/option\u003e",
+      "source": "src/components/workspace/InlineFacts.tsx",
+      "line": 163
+    },
+    {
+      "excerpt": "return `${kindLabel[segment.kind]} Â· ${segment.tenantName ?? \u0027No tenant\u0027} Â· ${term} Â· ${formatMoney(segment.monthlyRent)}/mo`;",
+      "source": "src/components/workspace/LeaseTimeline.tsx",
+      "line": 15
+    },
+    {
+      "excerpt": "{timeline.rows.length === 0 \u0026\u0026 \u003cp className=\"muted\"\u003eNo units yet.\u003c/p\u003e}",
+      "source": "src/components/workspace/LeaseTimeline.tsx",
+      "line": 53
+    },
+    {
+      "excerpt": "import { EmptyState } from \u0027@/components/RouteStates\u0027;",
+      "source": "src/components/workspace/PropertyListing.tsx",
+      "line": 8
+    },
+    {
+      "excerpt": "if (!units.length) return \u003cEmptyState title=\"No units to compare yet\" description=\"Add a unit with its size, beds and baths to compare nearby rentals.\" action=\"Go to property\" href={`/properties/${property.id}#add-unit`} /\u003e;",
+      "source": "src/components/workspace/PropertyListing.tsx",
+      "line": 30
+    },
+    {
+      "excerpt": "? \u0027Unit income follows settled payments. Property expenses, debt and value are allocated by scheduled or listed rent; equally when no rent is set.\u0027",
+      "source": "src/components/workspace/ReturnsWorkspace.tsx",
+      "line": 36
+    },
+    {
+      "excerpt": "\u003c/div\u003e) : \u003cp className={styles.empty}\u003eNo photos yet.\u003c/p\u003e}",
+      "source": "src/components/workspace/WorkspaceMedia.tsx",
+      "line": 84
+    },
+    {
+      "excerpt": "\u003cFileList files={files} empty=\"No documents yet.\" /\u003e",
+      "source": "src/components/workspace/WorkspaceMedia.tsx",
+      "line": 89
+    },
+    {
+      "excerpt": "{error \u0026\u0026 \u003cp role=\"alert\" className={styles.error}\u003e{error}\u003c/p\u003e}",
+      "source": "src/components/workspace/WorkspaceMedia.tsx",
+      "line": 107
+    },
+    {
+      "excerpt": "\u003c/\u003e : \u003cp className=\"muted\"\u003eNo rent charges due this month.\u003c/p\u003e}",
+      "source": "src/components/workspace/WorkspaceOverview.tsx",
+      "line": 42
+    },
+    {
+      "excerpt": "{steps.length ? \u003cul className={styles.steps}\u003e{steps.map((step) =\u003e \u003cli key={step.label}\u003e\u003cspan aria-hidden=\"true\"\u003eâ†—\u003c/span\u003e\u003cLink href={step.href}\u003e{step.label}\u003c/Link\u003e\u003c/li\u003e)}\u003c/ul\u003e : \u003cdiv className={styles.clearState}\u003e\u003cp\u003eAll caught up\u003c/p\u003e\u003csmall\u003eNo urgent items need attention.\u003c/small\u003e\u003c/div\u003e}",
+      "source": "src/components/workspace/WorkspaceOverview.tsx",
+      "line": 51
+    },
+    {
+      "excerpt": "{units.length === 0 \u0026\u0026 \u003ctr\u003e\u003ctd colSpan={5} className=\"muted\"\u003eNo active units yet.\u003c/td\u003e\u003c/tr\u003e}",
+      "source": "src/components/workspace/WorkspaceOverview.tsx",
+      "line": 67
+    },
+    {
+      "excerpt": "\u003ctd\u003e{unit.tenant ? \u003cLink href={`/tenants/${unit.tenant.id}`}\u003e{unit.tenant.name}\u003c/Link\u003e : \u003cspan className=\"muted\"\u003eNo tenant\u003c/span\u003e}\u003c/td\u003e",
+      "source": "src/components/workspace/WorkspaceOverview.tsx",
+      "line": 71
+    },
+    {
+      "excerpt": "\u003cstrong\u003eNo active lease on this unit.\u003c/strong\u003e",
+      "source": "src/components/workspace/WorkspaceOverview.tsx",
+      "line": 146
+    },
+    {
+      "excerpt": "/** Archived households (archivedAt set) are closed out and no longer in play. */",
+      "source": "src/components/workspace/panels/leasing/ApplicationsPanel.tsx",
+      "line": 59
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"secondary\" size=\"sm\"\u003e",
+      "source": "src/components/workspace/panels/leasing/ApplicationsPanel.tsx",
+      "line": 145
+    },
+    {
+      "excerpt": "? \u0027No applications yet.\u0027",
+      "source": "src/components/workspace/panels/leasing/ApplicationsPanel.tsx",
+      "line": 180
+    },
+    {
+      "excerpt": "\u003cstrong\u003e{applications.length === 0 ? \u0027No applications yet\u0027 : \u0027Nothing active\u0027}\u003c/strong\u003e",
+      "source": "src/components/workspace/panels/leasing/ApplicationsPanel.tsx",
+      "line": 202
+    },
+    {
+      "excerpt": "empty: \u0027No current lease.\u0027,",
+      "source": "src/components/workspace/panels/leasing/LeasesPanel.tsx",
+      "line": 95
+    },
+    {
+      "excerpt": "empty: \u0027No drafts in progress.\u0027,",
+      "source": "src/components/workspace/panels/leasing/LeasesPanel.tsx",
+      "line": 101
+    },
+    {
+      "excerpt": "empty: \u0027No past leases.\u0027,",
+      "source": "src/components/workspace/panels/leasing/LeasesPanel.tsx",
+      "line": 107
+    },
+    {
+      "excerpt": "\u003cstrong\u003eNo leases yet\u003c/strong\u003e",
+      "source": "src/components/workspace/panels/leasing/LeasesPanel.tsx",
+      "line": 143
+    },
+    {
+      "excerpt": "No leases in this {unitId ? \u0027unit\u0027 : \u0027property\u0027} yet.{\u0027 \u0027}",
+      "source": "src/components/workspace/panels/leasing/PaymentsBoard.tsx",
+      "line": 281
+    },
+    {
+      "excerpt": "\u003cdialog ref={chargeDialog} className={styles.dialog} aria-labelledby=\"charge-heading\"\u003e",
+      "source": "src/components/workspace/panels/leasing/PaymentsBoard.tsx",
+      "line": 478
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"primary\"\u003e",
+      "source": "src/components/workspace/panels/leasing/PaymentsBoard.tsx",
+      "line": 514
+    },
+    {
+      "excerpt": "\u003cdialog ref={paymentDialog} className={styles.dialog} aria-labelledby=\"payment-heading\"\u003e",
+      "source": "src/components/workspace/panels/leasing/PaymentsBoard.tsx",
+      "line": 521
+    },
+    {
+      "excerpt": "\u003cButton type=\"submit\" variant=\"primary\"\u003e",
+      "source": "src/components/workspace/panels/leasing/PaymentsBoard.tsx",
+      "line": 552
+    },
+    {
+      "excerpt": "\u003cdialog",
+      "source": "src/components/workspace/panels/leasing/PaymentsBoard.tsx",
+      "line": 559
+    },
+    {
+      "excerpt": "\u003cp className={styles.note}\u003eNo payments applied yet.\u003c/p\u003e",
+      "source": "src/components/workspace/panels/leasing/PaymentsBoard.tsx",
+      "line": 612
+    },
+    {
+      "excerpt": "\u003cdialog",
+      "source": "src/components/workspace/panels/operations/NewMaintenanceRequestDialog.tsx",
+      "line": 42
+    },
+    {
+      "excerpt": "\u003cbutton className=\"btn btn-primary\" type=\"submit\"\u003e",
+      "source": "src/components/workspace/panels/operations/NewMaintenanceRequestDialog.tsx",
+      "line": 114
+    },
+    {
+      "excerpt": "\u003csection className={`card ${styles.emptyState}`} aria-labelledby=\"repair-requests-heading\"\u003e",
+      "source": "src/components/workspace/panels/operations/PropertyMaintenanceList.tsx",
+      "line": 69
+    },
+    {
+      "excerpt": "\u003ch2 id=\"repair-requests-heading\"\u003eNo repair requests yet\u003c/h2\u003e",
+      "source": "src/components/workspace/panels/operations/PropertyMaintenanceList.tsx",
+      "line": 73
+    },
+    {
+      "excerpt": "No repair requests match these filters.",
+      "source": "src/components/workspace/panels/operations/PropertyMaintenanceList.tsx",
+      "line": 117
+    }
+  ],
+  "sharedComponents": {
+    "theme": ["src/styles/globals.css", "src/styles/accessibility.css"],
+    "icons": ["src/components/shell/Icons.tsx", "src/components/dashboard/icons.tsx"],
+    "ui": [
+      "src/components/ui/AutoSubmitSelect.tsx",
+      "src/components/ui/Badge.tsx",
+      "src/components/ui/Button.tsx",
+      "src/components/ui/Card.tsx",
+      "src/components/ui/cx.ts",
+      "src/components/ui/Feedback.tsx",
+      "src/components/ui/Files.tsx",
+      "src/components/ui/Flair.tsx",
+      "src/components/ui/Forms.tsx",
+      "src/components/ui/index.ts",
+      "src/components/ui/Kanban.tsx",
+      "src/components/ui/Pagination.tsx",
+      "src/components/ui/Table.tsx",
+      "src/components/ui/Tabs.tsx"
+    ],
+    "navigation": [
+      "src/components/shell/nav.ts",
+      "src/components/shell/ManagerShell.tsx",
+      "src/components/shell/TenantShell.tsx",
+      "src/components/workspace/WorkspaceTabs.tsx"
+    ],
+    "covers": [
+      "src/components/dashboard/MiniCover.tsx",
+      "src/components/workspace/WorkspaceMedia.tsx"
+    ],
+    "recovery": ["src/components/RouteStates.tsx", "src/components/RouteError.tsx"]
+  },
+  "verification": {
+    "mapChecks": "JSON parse, route/boundary completeness, source existence, disjoint ownership, 40 app screen membership and diff whitespace checks required before submission.",
+    "runtime": "Not run: mapping-only task. Builders must run relevant listed checks and capture native desktop and 390px before/after for every changed route/state family, keyboard focus/dialog behavior, no overflow, chart/table amounts, scope/query and Back preservation. Use isolated fixtures for writes; do not infer live provider success.",
+    "historical": "docs/ux/full-app-review.md is retained context, not newly run evidence. Its submission identifiers are not Git SHAs; current admitted source membership was enumerated afresh.",
+    "excludedRoutes": "API, download/export, webhook/photo and submission route.ts handlers are action endpoints, not visual screens. Their user-facing success/error/loading feedback is included in consuming routes."
+  }
+}

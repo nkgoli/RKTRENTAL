@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { MiniCover } from '@/components/dashboard/MiniCover';
+import { Icon } from '@/components/shell/Icons';
 import { loadDashboardView, initialsOf } from '@/components/dashboard/assemble';
 import { trendOf } from '@/components/dashboard/trend';
 import { CollectionChart } from '@/components/dashboard/CollectionChart';
-import { AvatarStack, OccupancyRing, TrendChip } from '@/components/ui';
+import { AvatarStack, TrendChip } from '@/components/ui';
 import { collectionRangeFrom } from '@/lib/dashboard/queries';
 import { requireManagerRole } from '@/lib/auth/access';
 import { formatUsd } from '@/lib/ledger';
@@ -50,56 +51,77 @@ export default async function DashboardPage({
 
   return (
     <section className={styles.dashboard} aria-label="Manager dashboard">
-      <section className={styles.split}>
-        <article className={`card ${styles.numbers}`}>
-          <div className="card-header">
-            <div>
-              <p className={styles.eyebrow}>{dashboard.monthLabel}</p>
-              <h2>Rent collection this month</h2>
-            </div>
-            <Link href="/payments">Open payments</Link>
-          </div>
-          <div className={styles.numbersTop}>
-            <div>
-              <div className={styles.bigValue}>{formatUsd(dashboard.rentCollectedCents)}</div>
-              <p className={styles.note}>
-                of {formatUsd(dashboard.rentDueCents)} due ·{' '}
-                {trend && <TrendChip warm={trend.warm}>{trend.label}</TrendChip>}
-              </p>
-            </div>
-            <OccupancyRing
-              value={collectionPercent}
-              label={`${collectionPercent}% of rent collected`}
-            />
-          </div>
-          <CollectionChart months={dashboard.collection} range={range} />
-          <p className={styles.note} style={{ margin: '4px 0 14px' }}>
-            {dashboard.collection[0]?.label}
-            {dashboard.collection.length > 12 ? ` ${dashboard.collection[0]?.key.slice(0, 4)}` : ''}
-            –{dashboard.collection.at(-1)?.label} collected against rent due
+      <dl className={styles.pulse} aria-label="Portfolio at a glance">
+        <div>
+          <dt>Portfolio occupancy</dt>
+          <dd>
+            <strong>{dashboard.occupancyPercent}%</strong>
+            <span>
+              {dashboard.unitsOccupied} of {dashboard.unitsTotal} units occupied
+            </span>
+          </dd>
+        </div>
+        <div>
+          <dt>Leases expiring soon</dt>
+          <dd>
+            <strong>{dashboard.expiringSoonCount}</strong>
+            <span>within 60 days</span>
+          </dd>
+        </div>
+        <div>
+          <dt>Open repairs</dt>
+          <dd>
+            <strong>{dashboard.openMaintenanceRequests}</strong>
+            <span>{dashboard.urgentMaintenanceRequests} urgent</span>
+          </dd>
+        </div>
+      </dl>
+      <section className={styles.collection} aria-label="Rent collection">
+        <div className={styles.current}>
+          <p className={styles.eyebrow}>{dashboard.monthLabel}</p>
+          <h2>Rent collection this month</h2>
+          <div className={styles.bigValue}>{formatUsd(dashboard.rentCollectedCents)}</div>
+          <p className={styles.note}>
+            of <strong>{formatUsd(dashboard.rentDueCents)}</strong> total due
           </p>
-          <dl className={styles.facts}>
-            <div>
-              <dt>Collected</dt>
-              <dd>{formatUsd(dashboard.rentCollectedCents)}</dd>
-            </div>
-            <div>
-              <dt>Unpaid this month</dt>
-              <dd>{formatUsd(outstandingCents)}</dd>
-            </div>
-            <div>
-              <dt>Past due</dt>
-              <dd className={dashboard.overdueCents ? styles.bad : undefined}>
-                {formatUsd(dashboard.overdueCents)}
-              </dd>
-            </div>
-            <div>
-              <dt>Occupancy</dt>
-              <dd>{dashboard.occupancyPercent}%</dd>
-            </div>
-          </dl>
-        </article>
-
+          <div
+            className={styles.progress}
+            role="meter"
+            aria-label="Rent collected"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={collectionPercent}
+            aria-valuetext={
+              dashboard.rentDueCents
+                ? `${formatUsd(dashboard.rentCollectedCents)} of ${formatUsd(dashboard.rentDueCents)} collected`
+                : 'No rent due this month'
+            }
+          >
+            <span style={{ width: `${collectionPercent}%` }} />
+          </div>
+          <div className={styles.collectionStatus}>
+            <strong>{collectionPercent}% collected</strong>
+            <span>Month to date</span>
+          </div>
+          <Link className={styles.outstanding} href="/payments">
+            <span>
+              <strong>{formatUsd(outstandingCents)}</strong> unpaid this month
+            </span>
+            <span aria-hidden="true">&rarr;</span>
+          </Link>
+          {trend && (
+            <p className={styles.note}>
+              <TrendChip warm={trend.warm}>{trend.label}</TrendChip> compared with previous month
+            </p>
+          )}
+        </div>
+        <div className={styles.history}>
+          <h2>Collection history</h2>
+          <p className={styles.note}>Collected against rent due &middot; USD</p>
+          <CollectionChart months={dashboard.collection} range={range} />
+        </div>
+      </section>
+      <div className={styles.split}>
         <article className="card">
           <div className="card-header">
             <h2>Leases expiring soon</h2>
@@ -111,7 +133,9 @@ export default async function DashboardPage({
             <ol className={styles.timeline}>
               {dashboard.expiringLeases.map((lease) => (
                 <li key={lease.id} className={lease.daysUntil <= 60 ? styles.soon : undefined}>
-                  <span className={styles.dot} aria-hidden="true" />
+                  <span className={styles.dot} aria-hidden="true">
+                    {initialsOf(lease.tenantName)}
+                  </span>
                   <div className={styles.timelineBody}>
                     <Link className={styles.tenantLink} href={`/leases/${lease.id}`}>
                       {lease.tenantName}
@@ -139,10 +163,7 @@ export default async function DashboardPage({
             <p className={styles.empty}>No active leases end in the next 90 days.</p>
           )}
         </article>
-      </section>
-
-      <section className={styles.split}>
-        <article className="card">
+        <article className={`card ${styles.attention}`}>
           <div className="card-header">
             <h2>Needs attention</h2>
           </div>
@@ -188,8 +209,47 @@ export default async function DashboardPage({
             </div>
           </div>
         </article>
-
-        <article className="card">
+      </div>
+      <div className={styles.bottom}>
+        <section className="card" aria-label="Properties">
+          <div className="card-header">
+            <h2>Properties</h2>
+            <Link href="/properties">All properties</Link>
+          </div>
+          {dashboard.properties.length ? (
+            <ul className={styles.propertyList}>
+              {dashboard.properties.map((property) => (
+                <li key={property.id}>
+                  <Link className={styles.propertyRow} href={`/properties/${property.id}`}>
+                    {property.cover.coverPhotoId ? (
+                      <MiniCover cover={property.cover} />
+                    ) : (
+                      <span className={styles.building} aria-hidden="true">
+                        <Icon name="properties" />
+                      </span>
+                    )}
+                    <span className={styles.propertyName}>
+                      <strong>{property.name}</strong>
+                      <small>{property.address}</small>
+                    </span>
+                    <span className={styles.propertyUnits}>
+                      {property.occupied} of {property.unitCount} units
+                    </span>
+                    <span className={styles.bar} aria-hidden="true">
+                      <span style={{ width: `${property.occupancyPercent}%` }} />
+                    </span>
+                    <span className={styles.pct}>{property.occupancyPercent}%</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className={styles.empty}>
+              No properties yet. <Link href="/properties?add=1">Add your first property</Link>.
+            </p>
+          )}
+        </section>
+        <article className={styles.activityPanel}>
           <div className="card-header">
             <h2>Recent activity</h2>
             <Link href="/payments">View payments</Link>
@@ -221,40 +281,7 @@ export default async function DashboardPage({
             <p className={styles.empty}>New payments and lease updates will appear here.</p>
           )}
         </article>
-      </section>
-
-      <section className="card" aria-label="Properties">
-        <div className="card-header">
-          <h2>Properties</h2>
-          <Link href="/properties">All properties</Link>
-        </div>
-        {dashboard.properties.length ? (
-          <ul className={styles.propertyList}>
-            {dashboard.properties.map((property) => (
-              <li key={property.id}>
-                <Link className={styles.propertyRow} href={`/properties/${property.id}`}>
-                  <MiniCover cover={property.cover} />
-                  <span className={styles.propertyName}>
-                    <strong>{property.name}</strong>
-                    <small>{property.address}</small>
-                  </span>
-                  <span className={styles.propertyUnits}>
-                    {property.occupied} of {property.unitCount} units
-                  </span>
-                  <span className={styles.bar} aria-hidden="true">
-                    <span style={{ width: `${property.occupancyPercent}%` }} />
-                  </span>
-                  <span className={styles.pct}>{property.occupancyPercent}%</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className={styles.empty}>
-            No properties yet. <Link href="/properties?add=1">Add your first property</Link>.
-          </p>
-        )}
-      </section>
+      </div>
     </section>
   );
 }

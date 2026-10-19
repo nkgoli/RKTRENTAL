@@ -36,24 +36,32 @@ describe('payment review and validation', () => {
     expect(screen.getByRole('alert').textContent).toBe('Nothing was charged.');
   });
 
-  it('disables confirmation while the mocked provider action is pending', async () => {
-    let finish!: () => void;
-    actions.payRentAction.mockImplementationOnce(
-      () =>
-        new Promise<void>((resolve) => {
-          finish = resolve;
-        }),
-    );
+  it('locks native submission synchronously and restores review after browser Back', async () => {
     const user = userEvent.setup();
     renderPay();
     await user.click(screen.getByRole('button', { name: 'Pay $1,850' }));
-    await user.click(screen.getByRole('button', { name: 'Confirm payment' }));
-    const submitting = screen.getByRole('button', { name: 'Submitting payment…' });
+    const confirm = screen.getByRole('button', { name: 'Confirm payment' });
+    const form = confirm.closest('form')!;
+    const first = new SubmitEvent('submit', {
+      bubbles: true,
+      cancelable: true,
+      submitter: confirm,
+    });
+    fireEvent(form, first);
+    expect(first.defaultPrevented).toBe(false);
+    const submitting = screen.getByRole('button', { name: /^Submitting payment/ });
     expect((submitting as HTMLButtonElement).disabled).toBe(true);
     expect(submitting.getAttribute('aria-busy')).toBe('true');
-    await user.click(submitting);
-    expect(actions.payRentAction).toHaveBeenCalledTimes(1);
-    await act(async () => finish());
+    const duplicate = new SubmitEvent('submit', {
+      bubbles: true,
+      cancelable: true,
+      submitter: submitting,
+    });
+    fireEvent(form, duplicate);
+    expect(duplicate.defaultPrevented).toBe(true);
+    fireEvent(window, new PageTransitionEvent('pageshow', { persisted: true }));
+    expect(screen.getByRole('button', { name: 'Pay $1,850' })).toBeTruthy();
+    expect(form.getAttribute('aria-busy')).toBe('false');
   });
 
   it('focuses invalid Amount on attempted submission and never submits', () => {
@@ -115,17 +123,27 @@ describe('payment review and validation', () => {
     expect(actions.payRentAction).not.toHaveBeenCalled();
   });
 
-  it('only calls the mocked payment action after explicit confirmation', async () => {
-    const user = userEvent.setup();
+  it('allows a native POST only after explicit confirmation with the original payment fields', async () => {
     renderPay();
     const form = screen.getByRole('textbox', { name: 'Amount' }).closest('form')!;
-    fireEvent.submit(form);
-    expect(actions.payRentAction).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Confirm payment' }));
-    await waitFor(() => expect(actions.payRentAction).toHaveBeenCalledTimes(1));
-    const submitted = actions.payRentAction.mock.calls[0][0] as FormData;
+    const implicit = new SubmitEvent('submit', { bubbles: true, cancelable: true });
+    fireEvent(form, implicit);
+    expect(implicit.defaultPrevented).toBe(true);
+    const confirm = screen.getByRole('button', { name: 'Confirm payment' });
+    const explicit = new SubmitEvent('submit', {
+      bubbles: true,
+      cancelable: true,
+      submitter: confirm,
+    });
+    fireEvent(form, explicit);
+    expect(explicit.defaultPrevented).toBe(false);
+    expect(form.getAttribute('action')).toBe('/pay/submit');
+    expect(form.getAttribute('method')).toBe('post');
+    const submitted = new FormData(form);
     expect(submitted.get('leaseId')).toBe('isolated-demo-lease');
     expect(submitted.get('amount')).toBe('1850.00');
+    expect(submitted.get('confirmPayment')).toBe('yes');
+    expect(actions.payRentAction).not.toHaveBeenCalled();
   });
 });
 

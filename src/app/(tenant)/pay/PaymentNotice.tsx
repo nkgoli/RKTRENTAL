@@ -22,7 +22,7 @@ export function PaymentNotice({
     (input ?? notice.current)?.focus();
   }, [code, tone, text]);
   return (
-    <div ref={notice} tabIndex={-1}>
+    <div id="payment-result" ref={notice} tabIndex={-1}>
       <Alert tone={tone}>{text}</Alert>
     </div>
   );

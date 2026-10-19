@@ -33,6 +33,10 @@ const notices: Record<string, { tone: 'success' | 'warning' | 'error'; text: str
     tone: 'error',
     text: 'The payment could not be completed. Nothing was charged.',
   },
+  'payment-unconfirmed': {
+    tone: 'error',
+    text: 'We could not confirm the payment result. Check your recent receipts before trying again.',
+  },
   'invalid-amount': {
     tone: 'error',
     text: 'Enter an amount greater than zero and no more than the amount due.',

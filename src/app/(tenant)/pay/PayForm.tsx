@@ -6,13 +6,12 @@ import { Button } from '@/components/ui/Button';
 import { cx } from '@/components/ui/cx';
 import { cardFeeCents, formatUsd, MOCK_TOKENS } from '@/lib/tenant-pay/core';
 import type { SavedMethod } from '@/lib/tenant-pay/service';
-import { addPaymentMethodAction, payRentAction } from './actions';
+import { addPaymentMethodAction } from './actions';
 import portal from '../portal.module.css';
 import styles from './pay.module.css';
 import { PayIcon } from './PayIcon';
 
-function ConfirmButton() {
-  const { pending } = useFormStatus();
+function ConfirmButton({ pending }: { pending: boolean }) {
   return (
     <Button
       type="submit"
@@ -89,11 +88,23 @@ export function PayForm({
   const [selectedKey, setSelectedKey] = useState(options[0]?.key ?? 'mock:ach');
   const [amount, setAmount] = useState((totalDueCents / 100).toFixed(2));
   const [confirming, setConfirming] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const submitted = useRef(false);
   const confirmation = useRef<HTMLDivElement>(null);
   const amountInput = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (confirming) confirmation.current?.focus();
   }, [confirming]);
+  useEffect(() => {
+    const restore = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      submitted.current = false;
+      setSubmitting(false);
+      setConfirming(false);
+    };
+    window.addEventListener('pageshow', restore);
+    return () => window.removeEventListener('pageshow', restore);
+  }, []);
   const selected = options.find((o) => o.key === selectedKey) ?? options[0];
   const amountCents = parseAmountCents(amount);
   const feeCents = selected?.type === 'card' ? cardFeeCents(amountCents, passFees) : 0;
@@ -106,19 +117,29 @@ export function PayForm({
         Payment method
       </h2>
       <form
-        action={payRentAction}
+        action="/pay/submit"
+        method="post"
+        aria-busy={submitting}
         className="stack"
         style={{ gap: 12 }}
         onSubmit={(event) => {
+          if (submitted.current) {
+            event.preventDefault();
+            return;
+          }
           const submitter = (event.nativeEvent as SubmitEvent).submitter;
           if (!confirming || !amountValid || submitter?.getAttribute('name') !== 'confirmPayment') {
             event.preventDefault();
             if (amountValid) setConfirming(true);
             else amountInput.current?.focus();
+            return;
           }
+          submitted.current = true;
+          setSubmitting(true);
         }}
       >
         <input type="hidden" name="leaseId" value={leaseId} />
+        {confirming && <input type="hidden" name="confirmPayment" value="yes" />}
         <input type="hidden" name="method" value={selected?.type ?? 'ach'} />
         <input type="hidden" name="providerToken" value={selected?.token ?? ''} />
         <input type="hidden" name="paymentMethodId" value={selected?.methodId ?? ''} />
@@ -242,8 +263,9 @@ export function PayForm({
               <dd>{formatUsd(chargedCents)}</dd>
             </dl>
             <div className={portal.confirmationActions}>
-              <ConfirmButton />
+              <ConfirmButton pending={submitting} />
               <Button
+                disabled={submitting}
                 onClick={() => {
                   setConfirming(false);
                   requestAnimationFrame(() => document.getElementById('review-payment')?.focus());

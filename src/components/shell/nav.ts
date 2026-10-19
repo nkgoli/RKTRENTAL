@@ -82,6 +82,7 @@ export const managerNav: ManagerNavGroup[] = [
     label: 'Money',
     items: [
       { label: 'Payments', href: '/payments', icon: 'payments' },
+      { label: 'ROI Analysis', href: '/roi-analysis', icon: 'returns' },
       {
         label: 'Returns',
         href: '/returns',

@@ -29,6 +29,8 @@ export type WorkbenchProps = {
   subjectSqft: number | null;
   listedRent: number | null;
   marketRent: number | null;
+  currentLeaseRent?: number | null;
+  propertyId?: string;
   providerName: string;
   syncedAt: string;
   cached: boolean;
@@ -43,6 +45,8 @@ const initialApply: ApplyState = {};
 
 export function CompsWorkbench(props: WorkbenchProps) {
   const { rows, radiusMiles, subjectSqft, listedRent } = props;
+  const baseline = props.currentLeaseRent ?? listedRent;
+  const baselineLabel = props.currentLeaseRent != null ? 'current lease' : 'listed rent';
   const subjectKind = props.propertyLevel ? 'home' : 'unit';
   const [excluded, setExcluded] = useState<Set<string>>(
     () => new Set(rows.filter((row) => row.caveat).map((row) => row.id)),
@@ -167,10 +171,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
             </div>
             {nearest.length === 0 && <p className="muted">No included comps.</p>}
             {nearest.map((row) => (
-              <div
-                key={row.id}
-                className={styles.nearestRow}
-              >
+              <div key={row.id} className={styles.nearestRow}>
                 <span>{row.address}</span>
                 <span className="muted">{row.distanceMiles} mi</span>
                 <strong>{usd(dollars(row.monthlyRentCents))}</strong>
@@ -234,29 +235,40 @@ export function CompsWorkbench(props: WorkbenchProps) {
                 <dd>
                   {summary.medianAgeDays !== null
                     ? `${Math.round(summary.medianAgeDays)} days (median)`
-                    : '—'}
+                    : 'Not set'}
                 </dd>
-                <dt>Your list price</dt>
+                {props.currentLeaseRent !== undefined && (
+                  <>
+                    <dt>Current lease</dt>
+                    <dd>
+                      {props.currentLeaseRent === null ? 'Not set' : usd(props.currentLeaseRent)}
+                    </dd>
+                  </>
+                )}
+                <dt>Listed rent</dt>
                 <dd>
                   {listedRent !== null
                     ? `${usd(listedRent)}${subjectSqft ? ` · $${(listedRent / subjectSqft).toFixed(2)}/sqft` : ''}`
-                    : '—'}
+                    : 'Not set'}
                 </dd>
                 <dt>Market rent</dt>
                 <dd data-testid="current-market-rent">
                   {props.marketRent !== null ? usd(props.marketRent) : 'Not set'}
                 </dd>
               </dl>
+              {!subjectSqft && (
+                <p className="muted">Not adjusted for size. Suggestion uses median rent.</p>
+              )}
               <div className={styles.suggestion}>
                 <p className="eyebrow">Suggested rent</p>
-                  <div className={styles.suggestionValue} data-testid="suggested-rent">
-                    {usd(suggestion.rent)}
-                  </div>
-                {listedRent !== null && suggestion.rent !== listedRent && (
-                  <span className={`delta ${suggestion.rent > listedRent ? 'up' : 'down'}`}>
-                    {suggestion.rent > listedRent ? '↑' : '↓'}{' '}
-                    {usd(Math.abs(suggestion.rent - listedRent))}{' '}
-                    {suggestion.rent > listedRent ? 'over' : 'under'} current listing
+                <div className={styles.suggestionValue} data-testid="suggested-rent">
+                  {usd(suggestion.rent)}
+                </div>
+                {baseline !== null && suggestion.rent !== baseline && (
+                  <span className={`delta ${suggestion.rent > baseline! ? 'up' : 'down'}`}>
+                    {suggestion.rent > baseline! ? '↑' : '↓'}{' '}
+                    {usd(Math.abs(suggestion.rent - baseline!))}{' '}
+                    {suggestion.rent > baseline! ? 'over' : 'under'} {baselineLabel}
                   </span>
                 )}
                 <p className="muted" style={{ marginTop: 8, fontSize: 13 }}>
@@ -282,9 +294,16 @@ export function CompsWorkbench(props: WorkbenchProps) {
                 <button className="btn btn-primary btn-block" disabled={pending}>
                   {pending ? 'Applying…' : `Apply to ${props.unitLabel}`}
                 </button>
-                <p className={styles.scopeNote}>Updates the saved market rent for this {subjectKind}. Existing lease and listed rent stay unchanged.</p>
+                <p className={styles.scopeNote}>
+                  Updates the saved market rent for this {subjectKind}. Existing lease and listed
+                  rent stay unchanged.
+                </p>
                 {state.message && (
-                  <p id={rentMessageId} role="status" className={state.ok ? 'delta up' : 'delta down'}>
+                  <p
+                    id={rentMessageId}
+                    role="status"
+                    className={state.ok ? 'delta up' : 'delta down'}
+                  >
                     {state.ok
                       ? `${state.message} Now ${usd(state.rent ?? 0)} / month.`
                       : state.message}
@@ -298,7 +317,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
               )}
               <Link
                 className="btn btn-secondary btn-block"
-                href={`/leases/new?unit=${props.unitId}`}
+                href={`/leases/new?unit=${encodeURIComponent(props.unitId)}${props.propertyId ? `&property=${encodeURIComponent(props.propertyId)}` : ''}`}
               >
                 {props.occupied ? 'Use for renewal' : 'Create lease'}
               </Link>
@@ -317,74 +336,94 @@ export function CompsWorkbench(props: WorkbenchProps) {
             </span>
           }
         />
-        <div className={styles.tableWrap} role="region" aria-label="Comparable rentals table" tabIndex={0}>
-        <table className="table" aria-label="Comparable rentals">
-          <thead>
-            <tr>
-              <th scope="col" aria-label="Include" />
-              <th scope="col">Address</th>
-              <th scope="col" className="num">Dist.</th>
-              <th scope="col">Bd/Ba</th>
-              <th scope="col" className="num">Sqft</th>
-              <th scope="col" className="num">Rent</th>
-              <th scope="col" className="num">$/sqft</th>
-              <th scope="col">Status</th>
-              <th scope="col">Date</th>
-              <th scope="col">Source</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
+        <div
+          className={styles.tableWrap}
+          role="region"
+          aria-label="Comparable rentals table"
+          tabIndex={0}
+        >
+          <table className="table" aria-label="Comparable rentals">
+            <thead>
               <tr>
-                <td colSpan={10}>
-                  <EmptyState title="No comparable rentals match" description="Widen the search filters to see more nearby rentals." action="Reset filters" href={props.resetHref ?? `/rent-comps?unit=${props.unitId}`} />
-                </td>
+                <th scope="col" aria-label="Include" />
+                <th scope="col">Address</th>
+                <th scope="col" className="num">
+                  Dist.
+                </th>
+                <th scope="col">Bd/Ba</th>
+                <th scope="col" className="num">
+                  Sqft
+                </th>
+                <th scope="col" className="num">
+                  Rent
+                </th>
+                <th scope="col" className="num">
+                  $/sqft
+                </th>
+                <th scope="col">Status</th>
+                <th scope="col">Date</th>
+                <th scope="col">Source</th>
               </tr>
-            )}
-            {rows.map((row) => {
-              const off = excluded.has(row.id);
-              return (
-                <tr key={row.id} className={off ? styles.excluded : undefined}>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={!off}
-                      onChange={() => toggle(row.id)}
-                      aria-label={`Include ${row.address}`}
+            </thead>
+            <tbody>
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={10}>
+                    <EmptyState
+                      title="No comparable rentals match"
+                      description="Widen the search filters to see more nearby rentals."
+                      action="Reset filters"
+                      href={props.resetHref ?? `/rent-comps?unit=${props.unitId}`}
                     />
                   </td>
-                  <td>
-                    <strong>{row.address}</strong>
-                    {row.caveat && (
-                      <>
-                        <br />
-                        <small className="muted">{off ? 'Excluded' : 'Note'}: {row.caveat}</small>
-                      </>
-                    )}
-                  </td>
-                  <td className="num">{row.distanceMiles} mi</td>
-                  <td>
-                    {row.bedrooms}/{row.bathrooms ?? '—'}
-                  </td>
-                  <td className="num">{row.squareFeet}</td>
-                  <td className="num">{usd(dollars(row.monthlyRentCents))}</td>
-                  <td className="num">
-                    ${(row.monthlyRentCents / 100 / row.squareFeet).toFixed(2)}
-                  </td>
-                  <td>
-                    {row.status && (
-                      <Badge tone={row.status === 'leased' ? 'success' : 'info'}>
-                        {row.status === 'leased' ? 'Leased' : 'Listed'}
-                      </Badge>
-                    )}
-                  </td>
-                  <td>{shortDate(row.observedAt)}</td>
-                  <td>{sourceLabel(row.source)}</td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              )}
+              {rows.map((row) => {
+                const off = excluded.has(row.id);
+                return (
+                  <tr key={row.id} className={off ? styles.excluded : undefined}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={!off}
+                        onChange={() => toggle(row.id)}
+                        aria-label={`Include ${row.address}`}
+                      />
+                    </td>
+                    <td>
+                      <strong>{row.address}</strong>
+                      {row.caveat && (
+                        <>
+                          <br />
+                          <small className="muted">
+                            {off ? 'Excluded' : 'Note'}: {row.caveat}
+                          </small>
+                        </>
+                      )}
+                    </td>
+                    <td className="num">{row.distanceMiles} mi</td>
+                    <td>
+                      {row.bedrooms}/{row.bathrooms ?? '—'}
+                    </td>
+                    <td className="num">{row.squareFeet}</td>
+                    <td className="num">{usd(dollars(row.monthlyRentCents))}</td>
+                    <td className="num">
+                      ${(row.monthlyRentCents / 100 / row.squareFeet).toFixed(2)}
+                    </td>
+                    <td>
+                      {row.status && (
+                        <Badge tone={row.status === 'leased' ? 'success' : 'info'}>
+                          {row.status === 'leased' ? 'Leased' : 'Listed'}
+                        </Badge>
+                      )}
+                    </td>
+                    <td>{shortDate(row.observedAt)}</td>
+                    <td>{sourceLabel(row.source)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </Card>
 
@@ -393,7 +432,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
           <div>
             <strong>Data source: {sourceLabel(props.providerName)}</strong>
             <br />
-            Comps come from your connected rent comps provider.{' '}
+            Demo comps · not live market data. Sandbox responses from this build.{' '}
             <Link href="/integrations">Manage in Integrations</Link>. Last synced {props.syncedAt}
             {props.cached ? ' (cached for this unit)' : ''}.
           </div>

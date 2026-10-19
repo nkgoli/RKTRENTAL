@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { requireManagerRole } from '@/lib/auth/access';
 import { COMPS_REVALIDATION_PATHS } from '@/lib/comps/navigation';
-import { applyMarketRent, clearUnitComps } from '@/lib/comps/service';
+import { applyMarketRent, clearUnitComps, listPricingUnits } from '@/lib/comps/service';
 
 /**
  * Refreshes every surface that renders comps or saved market rent: the legacy
@@ -22,6 +22,8 @@ export type ApplyState = { ok?: boolean; message?: string; rent?: number };
 export async function applyRentAction(_prev: ApplyState, formData: FormData): Promise<ApplyState> {
   const session = await requireManagerRole();
   const unitId = String(formData.get('unitId') ?? '');
+  if (!(await listPricingUnits(session.organizationId)).some((unit) => unit.id === unitId))
+    return { ok: false, message: 'Unit not found.' };
   const result = await applyMarketRent(session.organizationId, unitId, formData.get('rent'), {
     id: session.subjectId,
     name: session.name,

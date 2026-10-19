@@ -17,5 +17,14 @@ describe('collection chart accessible amounts', () => {
     expect(html).toContain('$750');
     expect(html).toContain('aria-current="true"');
     expect(html).toContain('/dashboard?range=5Y');
+    expect(html).toContain('scope="col">Outstanding');
+    expect(html).toContain('$250');
+  });
+
+  it('explains unavailable series and never draws invalid geometry', () => {
+    const html = renderToStaticMarkup(<CollectionChart months={[]} range="6M" />);
+    expect(html).toContain('Collection data is unavailable');
+    expect(html).not.toContain('NaN');
+    expect(html).not.toContain('Infinity');
   });
 });

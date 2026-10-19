@@ -400,34 +400,6 @@
   gap: 8px;
   flex-wrap: wrap;
 }
-.page .lt-item-preview {
-  padding: 0 0 13px;
-  border-bottom: 1px solid #e7ecf3;
-}
-.page .lt-item-preview p {
-  color: var(--design-muted);
-  font-size: 12px;
-  line-height: 1.55;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.page .lt-item-preview small {
-  display: block;
-  color: #58687e;
-  font-size: 11px;
-  margin-top: 5px;
-}
-.page .lt-item[open] + .lt-item-preview {
-  padding-top: 10px;
-}
-.page .lt-item[open] + .lt-item-preview p {
-  display: none;
-}
-.page .lt-item[open] + .lt-item-preview small {
-  color: var(--design-accent);
-}
 .page .lt-fees {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -698,38 +670,105 @@
 }
 .reorder {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 8px;
 }
-.reorder input {
-  flex: 1;
+.reorder > div {
+  display: flex;
+  gap: 6px;
 }
-.reorder button {
+.page .reorder button {
   min-width: 36px;
-  border: 1px solid #7e8b9e;
-  border-radius: 7px;
-  background: white;
+  padding: 6px;
+}
+.previewSpacing {
+  padding-bottom: 13px;
+  border-bottom: 1px solid #e7ecf3;
+  margin-top: 6px;
 }
 .page .lt-item-preview {
-  margin-top: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
   color: var(--design-muted);
   font-size: 12px;
+  line-height: 1.55;
   white-space: pre-wrap;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.page .dangerButton {
+  color: var(--design-danger);
+  border-color: transparent;
+  background: transparent;
+}
+.page .dangerButton:hover {
+  background: #fff0f3;
+}
+.page .lt-item-edit .lt-field {
+  display: grid;
+  font-weight: 600;
+  font-size: 12px;
+}
+.page .lt-item-edit .lt-field :where(input, textarea, select) {
+  font-weight: 400;
+  font-size: 13px;
+}
+.page .lt-item-options label {
+  min-height: 36px;
+  align-items: center;
+}
+.page .lt-item-options input {
+  margin: 0;
+  accent-color: var(--design-primary);
+}
+.page .propertyHeading {
+  justify-content: flex-start;
+  padding: 14px;
+}
+.page .propertyHeading h2 {
+  font-size: 16px;
+}
+.propertyIcon {
+  color: #4f70b6;
+  background: #f0f5ff;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  width: 37px;
+  height: 41px;
+  flex-shrink: 0;
+}
+.page .propertyIcon svg {
+  width: 29px;
+  height: 29px;
+}
+.page .lt-property > div {
+  display: grid;
+  gap: 5px;
+}
+.page .lt-property button {
+  padding: 5px 0;
+  min-height: 32px;
+  border-color: transparent;
+  color: var(--design-primary);
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  justify-self: start;
+}
+.page .lt-property > div > span {
+  color: var(--design-accent);
+  font-size: 11px;
+}
 .page .lt-item-meta {
   font-size: 11px;
   color: var(--design-accent);
   margin: 6px 0 12px;
-}
-.page .lt-property {
-  display: grid;
-  gap: 4px;
-}
-.page .lt-property button {
-  justify-self: start;
 }
 .page .lt-savebar strong {
   overflow-wrap: anywhere;
@@ -749,6 +788,15 @@
   }
   .page .lt-item-edit :where(input, textarea, select) {
     font-size: 16px;
+  }
+  .page .lt-item-edit .lt-field :where(input, textarea, select) {
+    font-size: 16px;
+  }
+  .page .lt-item-edit textarea {
+    min-height: 154px;
+  }
+  .page .reorder button {
+    min-width: 44px;
   }
   .page button {
     min-height: 44px;

@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { Icon } from '@/components/shell/Icons';
 import { useEffect, useRef, useState } from 'react';
 import {
   deleteLeaseTemplateAction,
@@ -308,38 +309,48 @@ export function TemplateEditor({
                           </strong>
                           <span>{(expanded[item.id] ?? allExpanded) ? 'Collapse' : 'Expand'}</span>
                         </button>
-                        <p className={styles['lt-item-preview']}>
-                          {item.body.replace(/\{\{([a-z_]+)\}\}/g, '________ ($1)')}
-                        </p>
-                        <p className={styles['lt-item-meta']}>
-                          {CONDITION_LABELS[item.includeWhen]} ·{' '}
-                          {item.required ? 'Required by template' : 'Optional'}
-                        </p>
+                        {!(expanded[item.id] ?? allExpanded) && (
+                          <div className={styles.previewSpacing}>
+                            <p className={styles['lt-item-preview']}>
+                              {item.body.replace(/\{\{([a-z_]+)\}\}/g, '________ ($1)')}
+                            </p>
+                          </div>
+                        )}
                         {(expanded[item.id] ?? allExpanded) && (
                           <div className={styles['lt-item-edit']} id={`template-item-${item.id}`}>
                             <div className={styles['reorder']}>
-                              <button
-                                type="button"
-                                aria-label={`Move ${item.title} up`}
-                                disabled={
-                                  items.filter((entry) => entry.section === section)[0]?.id ===
-                                  item.id
-                                }
-                                onClick={() => move(item.id, -1)}
-                              >
-                                ↑
-                              </button>
-                              <button
-                                type="button"
-                                aria-label={`Move ${item.title} down`}
-                                disabled={
-                                  items.filter((entry) => entry.section === section).at(-1)?.id ===
-                                  item.id
-                                }
-                                onClick={() => move(item.id, 1)}
-                              >
-                                ↓
-                              </button>
+                              <span className={styles['lt-small']}>
+                                Order within {labels[section]}
+                              </span>
+                              <div>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  aria-label={`Move ${item.title} up`}
+                                  disabled={
+                                    items.filter((entry) => entry.section === section)[0]?.id ===
+                                    item.id
+                                  }
+                                  onClick={() => move(item.id, -1)}
+                                >
+                                  ↑
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  aria-label={`Move ${item.title} down`}
+                                  disabled={
+                                    items.filter((entry) => entry.section === section).at(-1)
+                                      ?.id === item.id
+                                  }
+                                  onClick={() => move(item.id, 1)}
+                                >
+                                  ↓
+                                </button>
+                              </div>
+                            </div>
+                            <label className={styles['lt-field']}>
+                              {item.title || 'New item'} title
                               <input
                                 aria-label={`${item.title || 'New item'} title`}
                                 aria-describedby={message ? 'template-feedback' : undefined}
@@ -348,34 +359,37 @@ export function TemplateEditor({
                                 value={item.title}
                                 onChange={(e) => edit(item.id, { title: e.target.value })}
                               />
-                            </div>
-                            <textarea
-                              aria-label={`${item.title || 'New item'} wording`}
-                              aria-describedby={message ? 'template-feedback' : undefined}
-                              aria-invalid={invalid && !item.body.trim()}
-                              placeholder="Write the term in plain language"
-                              value={item.body}
-                              onChange={(e) => edit(item.id, { body: e.target.value })}
-                            />
+                            </label>
+                            <label className={styles['lt-field']}>
+                              {item.title || 'New item'} wording
+                              <textarea
+                                aria-label={`${item.title || 'New item'} wording`}
+                                aria-describedby={message ? 'template-feedback' : undefined}
+                                aria-invalid={invalid && !item.body.trim()}
+                                placeholder="Write the term in plain language"
+                                value={item.body}
+                                onChange={(e) => edit(item.id, { body: e.target.value })}
+                              />
+                            </label>
+                            <label className={styles['lt-field']}>
+                              Include when…{' '}
+                              <select
+                                aria-label={`${item.title || 'New item'} include when`}
+                                value={item.includeWhen}
+                                onChange={(e) =>
+                                  edit(item.id, {
+                                    includeWhen: e.target.value as TemplateItem['includeWhen'],
+                                  })
+                                }
+                              >
+                                {INCLUDE_WHEN.map((condition) => (
+                                  <option key={condition} value={condition}>
+                                    {CONDITION_LABELS[condition]}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
                             <div className={styles['lt-item-options']}>
-                              <label>
-                                Include when…{' '}
-                                <select
-                                  aria-label={`${item.title || 'New item'} include when`}
-                                  value={item.includeWhen}
-                                  onChange={(e) =>
-                                    edit(item.id, {
-                                      includeWhen: e.target.value as TemplateItem['includeWhen'],
-                                    })
-                                  }
-                                >
-                                  {INCLUDE_WHEN.map((condition) => (
-                                    <option key={condition} value={condition}>
-                                      {CONDITION_LABELS[condition]}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
                               <label>
                                 <input
                                   type="checkbox"
@@ -386,6 +400,7 @@ export function TemplateEditor({
                               </label>
                               <button
                                 type="button"
+                                className={`btn btn-secondary ${styles.dangerButton}`}
                                 aria-label={`Remove ${item.title || 'new item'}`}
                                 onClick={() => {
                                   changed();
@@ -397,6 +412,10 @@ export function TemplateEditor({
                             </div>
                           </div>
                         )}
+                        <p className={styles['lt-item-meta']}>
+                          {CONDITION_LABELS[item.includeWhen]} ·{' '}
+                          {item.required ? 'Required by template' : 'Optional'}
+                        </p>
                       </article>
                     ))}
                 </section>
@@ -480,7 +499,10 @@ export function TemplateEditor({
             </div>
           </div>
           <aside className={styles['lt-panel']} id="template-properties">
-            <div className={styles['lt-panel-head']}>
+            <div className={`${styles['lt-panel-head']} ${styles.propertyHeading}`}>
+              <span className={styles['lt-doc-icon']}>
+                <Icon name="properties" />
+              </span>
               <h2>Apply to properties</h2>
             </div>
             <div className={styles['lt-panel-body']}>
@@ -492,19 +514,24 @@ export function TemplateEditor({
               )}
               {properties.map((property) => (
                 <div key={property.id} className={styles['lt-property']}>
-                  <strong>{property.name}</strong>
-                  {property.defaultLeaseTemplateId === initial?.id ? (
-                    <span>Default for this property</span>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      aria-label={`Set as default for ${property.name}`}
-                      onClick={() => setDefault(property.id)}
-                    >
-                      Set as default
-                    </button>
-                  )}
+                  <span className={styles.propertyIcon}>
+                    <Icon name="property-house" />
+                  </span>
+                  <div>
+                    <strong>{property.name}</strong>
+                    {property.defaultLeaseTemplateId === initial?.id ? (
+                      <span>Default for this property</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        aria-label={`Set as default for ${property.name}`}
+                        onClick={() => setDefault(property.id)}
+                      >
+                        Set as default
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
               <p className={styles['lt-feedback']}>

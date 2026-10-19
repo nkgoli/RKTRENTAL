@@ -96,8 +96,45 @@ for (const width of [1440, 390]) {
     if (!baseline) await noOverflow(page);
     await page.locator(`a[href="/leases/templates/${comparisonId}"]:visible`).click();
     await expect(page.getByRole('button', { name: 'Expand all' })).toBeVisible();
+    if (!baseline) {
+      const preview = page.locator('article p[class*="lt-item-preview"]').first();
+      const metrics = await preview.evaluate((el) => {
+        const style = getComputedStyle(el);
+        return {
+          height: el.getBoundingClientRect().height,
+          line: parseFloat(style.lineHeight),
+          padding: style.paddingBottom,
+        };
+      });
+      expect(metrics.padding).toBe('0px');
+      expect(metrics.height).toBeLessThanOrEqual(metrics.line * 2 + 0.5);
+      await expect(page.locator('#template-properties svg')).toHaveCount(5);
+    }
     await capture(page, `editor-${width}`);
     await page.getByRole('button', { name: 'Expand all' }).click();
+    if (!baseline) {
+      await expect(page.locator('article p[class*="lt-item-preview"]')).toHaveCount(0);
+      const title = page.getByLabel('Residential use and complete agreement wording title');
+      await expect(title.locator('..')).toContainText(
+        'Residential use and complete agreement wording title',
+      );
+      await expect(
+        page.getByLabel('Residential use and complete agreement wording wording').locator('..'),
+      ).toContainText('Residential use and complete agreement wording wording');
+      expect(
+        await page
+          .getByRole('button', {
+            name: 'Remove Residential use and complete agreement wording',
+            exact: true,
+          })
+          .evaluate((el) => getComputedStyle(el).color),
+      ).toBe('rgb(180, 35, 62)');
+      await title.focus();
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Shift+Tab');
+      await expect(title).toBeFocused();
+      expect(await title.evaluate((el) => getComputedStyle(el).outlineStyle)).not.toBe('none');
+    }
     await capture(page, `editor-expanded-${width}`);
     if (!baseline) {
       await noOverflow(page);

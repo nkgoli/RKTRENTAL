@@ -137,14 +137,50 @@
 .propertyCard:hover {
   border-color: var(--rr-border-strong);
 }
-.cover > :global(.cover) {
+.cover {
   height: 96px;
-  aspect-ratio: auto;
-  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(120deg, var(--rr-primary-tint), var(--design-background));
   border-bottom: 1px solid var(--rr-border);
+  color: var(--design-primary);
 }
-.cover > :global(.cover)::after {
-  display: none;
+.cover::before,
+.cover::after {
+  content: '';
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border: 1px solid var(--rr-border);
+  border-radius: 50%;
+  right: -72px;
+  top: -70px;
+}
+.cover::after {
+  width: 220px;
+  height: 220px;
+  right: -92px;
+  top: -90px;
+}
+.cover.teal {
+  background: linear-gradient(120deg, #f1fafc, var(--design-background));
+  color: var(--design-accent);
+}
+.cover > svg {
+  width: 64px;
+  height: 64px;
+  position: relative;
+  z-index: 1;
+}
+.coverPhoto {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  z-index: 2;
 }
 .details {
   display: grid;

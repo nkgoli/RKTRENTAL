@@ -1,7 +1,7 @@
 ﻿import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { Icon } from '@/components/shell/Icons';
-import { Card, Cover, Progress, Stat, Table, TableHead } from '@/components/ui';
+import { Card, Progress, Stat, Table, TableHead } from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import { propertiesDb, propertyFilterFrom, type PropertyFilter } from '@/lib/properties/data';
 import { formatAddress, formatMoney } from '@/lib/properties/format';
@@ -202,11 +202,19 @@ export default async function PropertiesPage({
                 className={`card flush ${styles.propertyCard}`}
                 href={`/properties/${p.id}`}
               >
-                <div className={styles.cover}>
-                  <Cover
-                    kind={single ? 'house' : 'apartment'}
-                    src={p.coverPhotoId ? `/api/files/${p.coverPhotoId}/preview` : undefined}
-                  />
+                <div
+                  className={`${styles.cover} ${!single && p.unitCount >= 12 ? styles.teal : ''}`}
+                  aria-hidden="true"
+                >
+                  <Icon name={single ? 'rent-analysis' : 'properties'} />
+                  {p.coverPhotoId && (
+                    <span
+                      className={styles.coverPhoto}
+                      style={{
+                        backgroundImage: `url("/api/files/${encodeURIComponent(p.coverPhotoId)}/preview")`,
+                      }}
+                    />
+                  )}
                 </div>
                 <div className={styles.details}>
                   <h3 className={styles.name} title={p.name}>

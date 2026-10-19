@@ -30,6 +30,7 @@ export function AddPropertyDialog({ owners }: { owners: OwnerOption[] }) {
   }, [wantsOpen]);
 
   function onClose() {
+    document.querySelector<HTMLAnchorElement>('a[href*="add=1"]')?.focus();
     if (!params.has('add')) return;
     const next = new URLSearchParams(params.toString());
     next.delete('add');
@@ -44,6 +45,24 @@ export function AddPropertyDialog({ owners }: { owners: OwnerOption[] }) {
       className={styles.dialog}
       aria-labelledby="add-property-heading"
       onClose={onClose}
+      onKeyDown={(event) => {
+        if (event.key !== 'Tab') return;
+        const elements = Array.from(
+          event.currentTarget.querySelectorAll<HTMLElement>(
+            'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]',
+          ),
+        ).filter((element) => element.getClientRects().length > 0);
+        const first = elements[0];
+        const last = elements[elements.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        }
+        if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }}
       onClick={(ev) => {
         const dialog = ref.current;
         if (!dialog || ev.target !== dialog) return;

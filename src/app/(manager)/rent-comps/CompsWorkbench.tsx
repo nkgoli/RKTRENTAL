@@ -1,11 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState, useId, useMemo, useState } from 'react';
+import { unstable_rethrow } from 'next/navigation';
+import { useActionState, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Alert, Badge, Card, CardHeader } from '@/components/ui';
 import { EmptyState } from '@/components/RouteStates';
 import { MAP, dollars, mapPins, suggestRent, summarize, type CompRow } from '@/lib/comps/core';
 import { applyRentAction, type ApplyState } from './actions';
+import { uncertainApply } from './apply-state';
 import styles from './comps.module.css';
 
 const usd = (value: number) => `$${value.toLocaleString('en-US')}`;
@@ -43,6 +45,17 @@ export type WorkbenchProps = {
 
 const initialApply: ApplyState = {};
 
+async function applyWithRecovery(previous: ApplyState, formData: FormData): Promise<ApplyState> {
+  const submittedRent = String(formData.get('rent') ?? '');
+  try {
+    return { ...(await applyRentAction(previous, formData)), submittedRent };
+  } catch (error) {
+    unstable_rethrow(error);
+    // Network/framework response failures may occur after the server committed.
+    return { ...uncertainApply, submittedRent };
+  }
+}
+
 export function CompsWorkbench(props: WorkbenchProps) {
   const { rows, radiusMiles, subjectSqft, listedRent } = props;
   const baseline = props.currentLeaseRent ?? listedRent;
@@ -59,8 +72,17 @@ export function CompsWorkbench(props: WorkbenchProps) {
   );
   const pins = useMemo(() => mapPins(rows, excluded, radiusMiles), [rows, excluded, radiusMiles]);
   const nearest = [...included].sort((a, b) => a.distanceMiles - b.distanceMiles).slice(0, 4);
-  const [state, apply, pending] = useActionState(applyRentAction, initialApply);
+  const [state, apply, pending] = useActionState(applyWithRecovery, initialApply);
+  const [rentDraft, setRentDraft] = useState<string | null>(null);
+  const rentValue = rentDraft ?? String(suggestion?.rent ?? '');
+  const rentInput = useRef<HTMLInputElement>(null);
   const rentMessageId = useId();
+  const showMessage =
+    !pending && (state.submittedRent === rentValue || state.outcome === 'unknown');
+  const savedRent = state.ok && state.rent !== undefined ? state.rent : props.marketRent;
+  useEffect(() => {
+    if (!pending && state.ok === false) rentInput.current?.focus();
+  }, [pending, state]);
 
   const toggle = (id: string) =>
     setExcluded((current) => {
@@ -253,7 +275,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
                 </dd>
                 <dt>Market rent</dt>
                 <dd data-testid="current-market-rent">
-                  {props.marketRent !== null ? usd(props.marketRent) : 'Not set'}
+                  {savedRent !== null ? usd(savedRent) : 'Not set'}
                 </dd>
               </dl>
               {!subjectSqft && (
@@ -277,17 +299,25 @@ export function CompsWorkbench(props: WorkbenchProps) {
                   {summary.withinOneMile} within 1 mi).
                 </p>
               </div>
-              <form action={apply} className="stack" style={{ gap: 8 }}>
+              <form
+                action={apply}
+                aria-label="Apply market rent"
+                aria-busy={pending}
+                className="stack"
+                style={{ gap: 8 }}
+              >
                 <input type="hidden" name="unitId" value={props.unitId} />
                 <label className="field">
                   Market rent to apply ($ / month)
                   <input
-                    key={suggestion.rent}
+                    ref={rentInput}
                     name="rent"
                     inputMode="decimal"
-                    defaultValue={suggestion.rent}
-                    aria-invalid={state.ok === false}
-                    aria-describedby={state.message ? rentMessageId : undefined}
+                    value={rentValue}
+                    onChange={(event) => setRentDraft(event.target.value)}
+                    readOnly={pending}
+                    aria-invalid={showMessage && !!state.inputError}
+                    aria-describedby={showMessage && state.message ? rentMessageId : undefined}
                     required
                   />
                 </label>
@@ -298,10 +328,11 @@ export function CompsWorkbench(props: WorkbenchProps) {
                   Updates the saved market rent for this {subjectKind}. Existing lease and listed
                   rent stay unchanged.
                 </p>
-                {state.message && (
+                {pending && <p role="status">Applying market rent…</p>}
+                {showMessage && state.message && (
                   <p
                     id={rentMessageId}
-                    role="status"
+                    role={state.ok ? 'status' : 'alert'}
                     className={state.ok ? 'delta up' : 'delta down'}
                   >
                     {state.ok

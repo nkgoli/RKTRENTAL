@@ -67,7 +67,9 @@ export function parseCompsContext(
 export function compsSurfacePath(context: CompsNavContext): string {
   switch (context.surface) {
     case 'listing':
-      return context.propertyId ? `/properties/${encodeURIComponent(context.propertyId)}/listing` : '/rent-comps';
+      return context.propertyId
+        ? `/properties/${encodeURIComponent(context.propertyId)}/listing`
+        : '/rent-comps';
     case 'rent-analysis':
       return '/rent-analysis';
     case 'legacy':
@@ -76,16 +78,52 @@ export function compsSurfacePath(context: CompsNavContext): string {
 }
 
 /** Query keys for the comparison filters; the inverse of `parseFilters`. */
-export function filtersToQuery(filters: CompFilters): Record<string, string> {
-  return {
-    radius: String(filters.radiusMiles),
-    beds: String(filters.bedrooms),
-    baths: filters.bathrooms === null ? 'any' : String(filters.bathrooms),
-    minSqft: filters.minSqft === null ? '' : String(filters.minSqft),
-    maxSqft: filters.maxSqft === null ? '' : String(filters.maxSqft),
-    days: String(filters.days),
-    status: filters.status,
-  };
+const FILTER_KEYS = {
+  radius: 'radiusMiles',
+  beds: 'bedrooms',
+  baths: 'bathrooms',
+  minSqft: 'minSqft',
+  maxSqft: 'maxSqft',
+  days: 'days',
+  status: 'status',
+} as const;
+
+export function filtersToQuery(filters: Partial<CompFilters>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(FILTER_KEYS).flatMap(([key, field]) => {
+      const value = filters[field];
+      return value === undefined
+        ? []
+        : [[key, value === null ? (key === 'baths' ? 'any' : '') : String(value)]];
+    }),
+  );
+}
+
+/** Carry only valid, explicit choices. Absent filters still default to the next unit. */
+export function explicitFiltersFromQuery(
+  params: Record<string, string | undefined>,
+): Partial<CompFilters> {
+  const parsed = parseFilters(params, {
+    postalCode: '',
+    bedrooms: null,
+    bathrooms: null,
+    squareFeet: null,
+    defaultRadiusMiles: 2,
+  });
+  return Object.fromEntries(
+    Object.entries(FILTER_KEYS).flatMap(([key, field]) => {
+      const raw = params[key];
+      if (raw === undefined) return [];
+      const value = parsed[field];
+      const valid =
+        typeof value === 'number'
+          ? raw.trim() !== '' && Number.isFinite(value) && Number(raw) === value
+          : value === null
+            ? raw === (key === 'baths' ? 'any' : '')
+            : raw === value;
+      return valid ? [[field, value]] : [];
+    }),
+  );
 }
 
 /** Parses the filter keys of a query back into validated filters for a subject. */
@@ -101,12 +139,13 @@ export function filtersFromQuery(
  * comparison filters. A `listing` context without a property falls back to the
  * legacy path rather than inventing a property URL.
  */
-export function buildCompsHref(context: CompsNavContext, filters?: CompFilters): string {
+export function buildCompsHref(context: CompsNavContext, filters?: Partial<CompFilters>): string {
   const query = new URLSearchParams();
   if (context.surface === 'rent-analysis' && context.propertyId)
     query.set('property', context.propertyId);
   if (context.unitId) query.set('unit', context.unitId);
-  if (filters) for (const [key, value] of Object.entries(filtersToQuery(filters))) query.set(key, value);
+  if (filters)
+    for (const [key, value] of Object.entries(filtersToQuery(filters))) query.set(key, value);
   const search = query.toString();
   return search ? `${compsSurfacePath(context)}?${search}` : compsSurfacePath(context);
 }
@@ -148,8 +187,11 @@ export function isAllowedCompsPath(value: unknown): boolean {
   if (typeof value !== 'string' || /[\\\r\n]/.test(value)) return false;
   const path = value.split('?')[0];
   if (path.split('/').some((part) => part === '.' || part === '..')) return false;
-  return path === '/rent-comps' || path === '/rent-analysis' ||
-    /^\/properties\/[^/?#%]+\/listing$/.test(path);
+  return (
+    path === '/rent-comps' ||
+    path === '/rent-analysis' ||
+    /^\/properties\/[^/?#%]+\/listing$/.test(path)
+  );
 }
 
 /** Paths refreshed after comps are refreshed or a market rent is applied. */

@@ -67,3 +67,51 @@ it('opens an implicit single-family subject without requiring a unit query', asy
   expect(html).toContain('home true');
   expect(html).not.toContain('Your units');
 });
+
+const unitHref = (html: string) =>
+  new URL(
+    html.match(/href="([^"]+)"[^>]*>Unit 1A<\/a>/)![1].replaceAll('&amp;', '&'),
+    'https://example.test',
+  );
+
+it('carries explicit comparison filters through overview row navigation and refresh', async () => {
+  const filters = {
+    radius: '3',
+    beds: '2',
+    baths: 'any',
+    minSqft: '',
+    maxSqft: '1200',
+    days: '30',
+    status: 'leased',
+  };
+  const query = { property: 'maple', ...filters };
+  const destination = unitHref(await render(query));
+  expect(Object.fromEntries(destination.searchParams)).toEqual({ ...query, unit: 'u1' });
+  const refreshed = await render(Object.fromEntries(destination.searchParams));
+  expect(unitHref(refreshed).href).toBe(destination.href);
+  expect(refreshed).toContain('href="/rent-analysis"'); // Change property intentionally resets.
+});
+
+it('does not propagate invalid filters or invent subject defaults in row links', async () => {
+  const url = unitHref(
+    await render({
+      property: 'maple',
+      radius: '3',
+      beds: '-1',
+      baths: 'Infinity',
+      days: '7',
+      status: 'bad',
+      minSqft: 'bad',
+      returnTo: 'https://evil.test',
+    }),
+  );
+  expect(Object.fromEntries(url.searchParams)).toEqual({
+    property: 'maple',
+    unit: 'u1',
+    radius: '3',
+  });
+  expect(Object.fromEntries(unitHref(await render({ property: 'maple' })).searchParams)).toEqual({
+    property: 'maple',
+    unit: 'u1',
+  });
+});

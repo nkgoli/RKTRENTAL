@@ -29,16 +29,10 @@ test('manager reviews lease tabs, Alex Rivera detail, and uploads a lease docume
   await expect(page).toHaveURL(/tab=ended/);
 
   await page.goto('/leases/seed-lease-maple-11');
-  await expect(page.getByRole('heading', { name: /^Maple Court · Unit \w+ Lease$/, level: 1 })).toBeVisible();
-  for (const heading of [
-    'Leased premises',
-    'Lease terms',
-    'Lease documents',
-    'Tenants on this lease',
-    'Rent ledger',
-    'E-signature history',
-    'Activity',
-  ]) {
+  await expect(
+    page.getByRole('heading', { name: /^Maple Court · Unit \w+ Lease$/, level: 1 }),
+  ).toBeVisible();
+  for (const heading of ['Leased premises', 'Tenants on this lease']) {
     await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
   }
   await expect(page.getByLabel('Lease summary').getByText('Alex Rivera').first()).toBeVisible();
@@ -52,14 +46,32 @@ test('manager reviews lease tabs, Alex Rivera detail, and uploads a lease docume
   );
   await page.screenshot({ path: 'test-results/lease-detail-alex.png', fullPage: true });
 
+  const sections = page.getByRole('navigation', { name: 'Lease sections' });
+  for (const [name, heading] of [
+    ['Agreement', 'Lease terms'],
+    ['Payments', 'Rent ledger'],
+    ['Activity', 'E-signature history'],
+    ['Documents', 'Lease documents'],
+  ]) {
+    await sections.getByRole('link', { name, exact: true }).click();
+    await expect(sections.getByRole('link', { name, exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+  }
+
   const name = `Lease flow ${Date.now()}.pdf`;
-  await page.getByRole('region', { name: 'Upload lease document' }).getByLabel('Choose files').setInputFiles({
-    name,
-    mimeType: 'application/pdf',
-    buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n'),
-  });
-  await expect(page.getByText(name, { exact: true })).toBeVisible();
+  await page
+    .getByRole('region', { name: 'Upload lease document' })
+    .getByLabel('Choose files')
+    .setInputFiles({
+      name,
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n'),
+    });
   const file = page.locator('article', { hasText: name });
+  await expect(file.getByText(name, { exact: true })).toBeVisible();
   const download = file.getByRole('link', { name: /Download/ }).first();
   const href = await download.getAttribute('href');
   expect(href).toMatch(/^\/api\/files\/[^/]+\/download$/);
@@ -73,6 +85,41 @@ test('manager reviews lease tabs, Alex Rivera detail, and uploads a lease docume
 test('lease pages require a manager session', async ({ page }) => {
   await page.goto('/leases');
   await expect(page).toHaveURL(/\/sign-in/);
+});
+
+test('lease workspace supports keyboard navigation and phone layouts', async ({ page }) => {
+  await page.goto('/sign-in');
+  await page.getByLabel('Email address').fill(managerEmail);
+  await page.getByLabel('Password').fill(managerPassword);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await page.goto('/leases/seed-lease-maple-11');
+  const sections = page.getByRole('navigation', { name: 'Lease sections' });
+  await sections.getByRole('link', { name: 'Overview', exact: true }).focus();
+  await page.keyboard.press('Tab');
+  await expect(sections.getByRole('link', { name: 'Agreement', exact: true })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'Lease terms', exact: true })).toBeVisible();
+  await page.getByText('Edit terms', { exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Save terms' })).toBeVisible();
+  await page.getByText('Record notice or move-out', { exact: true }).click();
+  await expect(page.getByLabel('Planned move-out')).toBeVisible();
+  await page.getByRole('button', { name: 'Terminate', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Confirm terminate' })).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Confirm terminate' })).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const name of ['Overview', 'Agreement', 'Documents', 'Payments', 'Activity']) {
+    await sections.getByRole('link', { name, exact: true }).click();
+    await expect(sections.getByRole('link', { name, exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+  }
+  await page.screenshot({ path: 'test-results/lease-activity-phone.png', fullPage: true });
 });
 
 test('manager starts a renewal and reviews re-evaluated template terms', async ({ page }) => {

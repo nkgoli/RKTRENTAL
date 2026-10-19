@@ -1,23 +1,84 @@
 .empty,
 .error {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding: var(--rr-card-pad);
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 24px;
   border: 1px solid var(--rr-border);
   border-radius: var(--design-radius);
   background: var(--design-surface);
   color: var(--design-text);
-  box-shadow: var(--rr-shadow);
+  box-shadow: var(--rr-card-shadow);
 }
-.empty h2 {
-  font-size: var(--rr-h3);
+
+.empty {
+  border-top: 3px solid var(--design-accent);
 }
-.error h1,
+
+.error {
+  border-top: 3px solid var(--design-danger);
+  background: linear-gradient(150deg, var(--rr-bad-bg), var(--design-surface) 66%);
+}
+
+.eyebrow {
+  color: var(--design-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.error .eyebrow {
+  color: var(--design-danger);
+}
+
+.empty h2,
 .error h2 {
-  font-size: var(--rr-h2);
+  font-family: var(--design-heading-font);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
 }
+
+.empty p,
+.error p {
+  max-width: 56ch;
+  color: var(--design-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.stateMark {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid var(--rr-border);
+  border-radius: 8px;
+  background: var(--rr-primary-tint);
+  color: var(--design-primary);
+}
+
+.empty .stateMark {
+  background: var(--rr-ok-bg);
+  color: var(--design-accent);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.actions :global(.btn) {
+  min-height: 44px;
+}
+
 /* Inside a card or table the empty state is just text: no second box. */
 :global(.card) .empty,
 td .empty {
@@ -26,27 +87,37 @@ td .empty {
   box-shadow: none;
   background: transparent;
 }
-.empty p,
-.error p {
-  color: var(--design-muted);
-  max-width: 60ch;
-}
-.emptyMark {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: var(--rr-primary-tint);
-  color: var(--design-primary);
-  font-size: 26px;
-}
+
 .loading {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 16px;
   width: 100%;
+  min-width: 0;
 }
+
+.loadingLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--design-muted);
+  font-size: 13px;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 999px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .hero,
 .tile,
 .heading {
@@ -54,60 +125,61 @@ td .empty {
   border-radius: var(--design-radius);
   background: var(--design-surface);
 }
+
 .hero {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 10px;
-  padding: var(--rr-card-pad);
   min-height: 96px;
+  padding: 20px;
 }
+
 .grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: 12px;
 }
+
 .tile {
   height: 72px;
 }
+
 .heading {
   width: 46%;
   height: 32px;
 }
+
 .lineShort,
 .lineLong,
 .lineMedium {
   height: 13px;
   border-radius: 4px;
-  background: var(--rr-subtle);
+  background: var(--rr-border);
 }
+
 .lineShort {
   width: 22%;
 }
+
 .lineLong {
   width: 72%;
 }
+
 .lineMedium {
   width: 48%;
 }
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
+
 @media (max-width: 700px) {
   .grid {
     grid-template-columns: 1fr;
   }
-  .tile {
-    height: 72px;
-  }
+
   .error {
     padding: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
   }
 }

@@ -51,7 +51,6 @@
 }
 .page :where(button, input, textarea, select) {
   font: inherit;
-  color: inherit;
 }
 .page :where(a, button, input, textarea, select, summary):focus-visible {
   outline: 3px solid var(--design-primary);
@@ -713,6 +712,10 @@
   color: var(--design-muted);
   font-size: 12px;
   white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .page .lt-item-meta {
   font-size: 11px;

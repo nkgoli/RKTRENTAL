@@ -27,7 +27,7 @@ Foundation checks are reused from `light-foundation.md`: 71 component tests, six
 
 All data preparation was confined to the new isolated PostgreSQL cluster on port **55428**, database `rocketrental`, directory `tests/dashboard/.runtime/postgres`. Nineteen migrations deployed and the existing seed created four properties, 45 units, 41 occupied leases and related fixtures. Existing databases were untouched; fixture data stays on disk.
 
-Review server: this checkout, Next 15.5.27, `http://localhost:3228`. Baseline was captured **before source edits**, immediately after admitting the exact foundation. Final browser review uses production build `AFP2Fu5f6Vc4ZfOZT7itT`. Both task-owned web and database processes were stopped after review; fixture data remains on disk.
+Review server: this checkout, Next 15.5.27, `http://localhost:3228`. Baseline was captured **before source edits**, immediately after admitting the exact foundation. Final browser review uses production build `AFP2Fu5f6Vc4ZfOZT7itT`. Earlier review processes were stopped; the persistent rescue runtime described below is now running against the retained fixture.
 
 | Check                                                                               | Observed result                                                                                                                                                                     |
 | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -58,11 +58,44 @@ The manager's report at **2026-10-19 21:12:07 UTC** states that the granted wind
 
 The previous owner's bounded-hold checkpoint records that the production build and retained fixture were available through the agreed **21:17:19 UTC** deadline while its process session stayed active. Local Next logs record readiness without an application crash. PostgreSQL logs record readiness at **21:07:46 UTC** and clean shutdown at **21:18:06 UTC**. Server-side readiness and the reported browser connection refusal are different observations; the available evidence does not establish why the browser could not connect.
 
-This takeover reconfirmed the unchanged candidate `5c0e16fdcfa7c5fb19658d67dd23eebe0c3b078e`, all four admitted foundation ancestors, production build `AFP2Fu5f6Vc4ZfOZT7itT`, and the five existing evidence images listed above. No final native image was present. Neither review port had a listener, and the retained fixture had no active `postmaster.pid`. No server restart, desktop acquisition, rebuild, migration, reseed or repeated passing suite was performed.
+The initial takeover reconciliation reconfirmed the unchanged candidate `5c0e16fdcfa7c5fb19658d67dd23eebe0c3b078e`, all four admitted foundation ancestors, production build `AFP2Fu5f6Vc4ZfOZT7itT`, and the five existing evidence images listed above. No final native image was present. Neither review port had a listener, and the retained fixture had no active `postmaster.pid`. That reconciliation was committed as `c4c1b69af79c693bb92d75329ad5aaa35d3e9620` before the authorized persistent-runtime preparation below.
 
 Completion still needs native desktop/390px screenshots plus disclosure and contextual-link observations. Runtime reachability from the reviewing browser must be established during manager-coordinated access before those checks can be claimed. The source, fixture, logs and existing screenshots remain preserved.
 
-### Runtime readiness for manager coordination
+### Persistent rescue runtime — running
+
+Following the manager's preparation instruction, the retained fixture and existing build were started at **2026-10-19 21:47:29 UTC**. A hidden WMI-created PowerShell launcher started the ordinary `postgres.exe` and `next start` commands with `Start-Process -WindowStyle Hidden`, then exited. Both service processes were subsequently observed outside any Windows job, with no main window. They remain available after the launching command returns; no blocking hold loop or turn-end shutdown is used.
+
+| Item | Observed identity / readiness |
+| --- | --- |
+| Review URL | `http://localhost:3228/dashboard`; signed-out entry `http://localhost:3228/sign-in`. |
+| Windows loopback preflight | At 21:48:08 UTC, both `http://localhost:3228/sign-in` and `http://127.0.0.1:3228/sign-in` returned HTTP 200 with the sign-in form. No discrepancy was observed between these two addresses. |
+| Next | PID `55224`, created `2026-10-19T21:47:29.1422477Z`; `C:/Program Files/nodejs/node.exe`, listening on `[::]:3228`. Successful IPv4 HTTP confirms this listener also accepts `127.0.0.1`. |
+| PostgreSQL | PID `8064`, created `2026-10-19T21:47:29.1026156Z`; this checkout's embedded `postgres.exe`, listening on `127.0.0.1:55428` and `[::1]:55428`. Logs confirm readiness against the cleanly stopped retained fixture. |
+| Checkout / source | Assigned checkout and branch listed above; source HEAD at launch `c4c1b69af79c693bb92d75329ad5aaa35d3e9620`, with unchanged implementation `741b0b78069842a77d2930d8b46aeffeaec281e0`. |
+| Build | Existing `AFP2Fu5f6Vc4ZfOZT7itT`; no rebuild, migration or reseed. |
+| Lifecycle | Launcher PID `43116` exited. Both services remained alive across later commands, were outside Windows jobs and had window handle `0`. No unrelated process was changed. |
+| Helper checks | PowerShell parser passed. `Stop -WhatIf` verified both recorded identities and the fixture PID without stopping either service. |
+
+`tests/dashboard/native-review.ps1` supplies the hidden lifecycle commands. Run from the assigned checkout using ordinary Windows PowerShell with permission to query/create WMI processes:
+
+```powershell
+# Only when the recorded services are stopped; refuses occupied ports or active identities.
+& ./tests/dashboard/native-review.ps1 -Action Start
+
+# Inspect exact identities, listeners and both HTTP loopback checks.
+& ./tests/dashboard/native-review.ps1 -Action Status
+
+# Preview the guarded shutdown; use Stop without -WhatIf only after review is finished.
+& ./tests/dashboard/native-review.ps1 -Action Stop -WhatIf
+& ./tests/dashboard/native-review.ps1 -Action Stop
+```
+
+The helper records PID, creation time, executable, checkout and build in `tests/dashboard/.runtime/native-review.json`. Its stop action refuses reused/mismatched PIDs, checks the fixture's own PID file and uses `pg_ctl stop` for a clean database shutdown. Logs use `persistent-native-*.log` in the same retained runtime directory. A transient null executable property on the newly started Node process was corrected using its verified creation time and live executable; the helper now records the exact launched executable and compares it with the live process on status/stop. Neither service needed a restart.
+
+These preflights establish Windows HTTP readiness only. They do not establish Edge reachability or native acceptance. The manager remains the sole desktop coordinator; no desktop grant was acquired during this preparation. The services are intentionally left running for that review.
+
+### Earlier runtime readiness record — superseded by the running identities above
 
 The takeover confirmed these coordinates on **2026-10-19**. The runtime is prepared and **stopped**, not currently serving the dashboard. There is no outstanding implementation work before the native review.
 

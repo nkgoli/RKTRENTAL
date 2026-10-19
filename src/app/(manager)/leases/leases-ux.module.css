@@ -3,6 +3,12 @@
   color: var(--design-muted);
   font-size: 13px;
 }
+.portfolioHeader {
+  padding: 12px var(--rr-card-pad) 0;
+}
+.portfolioHeader :global(.tabs a) {
+  margin-bottom: 0;
+}
 .toolbar {
   display: flex;
   align-items: center;

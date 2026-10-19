@@ -102,7 +102,7 @@ export default async function LeasesPage({
         <KpiCard label="Awaiting e-signature" value={counts.awaiting} note="Pending signatures" />
       </section>
       <Card flush>
-        <div style={{ padding: '12px var(--rr-card-pad) 0' }}>
+        <div className={styles.portfolioHeader}>
           <div className={styles.toolbar}>
             <div>
               <h2>Lease portfolio</h2>

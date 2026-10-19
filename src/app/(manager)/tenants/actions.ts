@@ -39,9 +39,14 @@ function failure(error: unknown, formData: FormData): FormState {
  * The result route returns a non-Flight response so the action router falls back to a
  * normal document navigation instead of applying a redirected Flight tree.
  */
-function resultHref(tenantId: string, returnTo: string, error?: string) {
+function resultHref(
+  tenantId: string,
+  returnTo: string,
+  options: { error?: string; note?: boolean } = {},
+) {
   const query = new URLSearchParams({ tenantId, returnTo });
-  if (error) query.set('error', error);
+  if (options.error) query.set('error', options.error);
+  if (options.note) query.set('note', '1');
   return `/tenants/result?${query}`;
 }
 
@@ -92,7 +97,7 @@ export async function addNoteAction(
     return failure(error, formData);
   }
   revalidatePath(`/tenants/${tenantId}`);
-  return { errors: {}, message: 'Note added.' };
+  redirect(resultHref(tenantId, tenantReturnHref(formData.get('returnTo')), { note: true }));
 }
 
 async function leaseAction(
@@ -111,7 +116,7 @@ async function leaseAction(
   }
   revalidatePath('/tenants');
   revalidatePath(`/tenants/${tenantId}`);
-  redirect(resultHref(tenantId, tenantReturnHref(formData.get('returnTo')), message));
+  redirect(resultHref(tenantId, tenantReturnHref(formData.get('returnTo')), { error: message }));
 }
 
 export async function moveInAction(tenantId: string, formData: FormData): Promise<void> {

@@ -177,8 +177,10 @@ export function AddTenantForm({
 
 export function AddNoteForm({
   action,
+  returnTo,
 }: {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
+  returnTo?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, empty);
   const formRef = useErrorFocus(state);
@@ -190,6 +192,7 @@ export function AddNoteForm({
       key={state.message ?? 'note'}
       noValidate
     >
+      {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
       {state.message && !Object.keys(state.errors).length && (
         <div className="alert success" role="status">
           {state.message}

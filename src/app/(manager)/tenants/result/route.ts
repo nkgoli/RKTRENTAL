@@ -19,8 +19,10 @@ export async function GET(request: NextRequest) {
   const tenantId = request.nextUrl.searchParams.get('tenantId') ?? '';
   const returnTo = tenantReturnHref(request.nextUrl.searchParams.get('returnTo'));
   const error = request.nextUrl.searchParams.get('error');
+  const note = request.nextUrl.searchParams.get('note') === '1';
   const query = new URLSearchParams({ returnTo });
   if (error) query.set('error', error);
+  if (note) query.set('note', '1');
   const location = tenantId
     ? `/tenants/${encodeURIComponent(tenantId)}?${query}`
     : `/tenants?view=directory`;

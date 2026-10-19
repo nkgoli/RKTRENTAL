@@ -149,6 +149,7 @@ export default async function TenantDetailPage({
   const returnTo = tenantReturnHref(raw.returnTo);
   const profileHref = `/tenants/${tenant.id}?${new URLSearchParams({ returnTo })}`;
   const error = typeof raw.error === 'string' ? raw.error : undefined;
+  const noteAdded = raw.note === '1';
   const allPayments = leases
     .flatMap((lease) => lease.payments.map((payment) => ({ payment, lease })))
     .sort((a, b) => b.payment.createdAt.getTime() - a.payment.createdAt.getTime());
@@ -569,7 +570,8 @@ export default async function TenantDetailPage({
             <div className={styles.sectionHead}>
               <h2>Notes and history</h2>
             </div>
-            <AddNoteForm action={addNoteAction.bind(null, tenant.id)} />
+            {noteAdded && <Alert tone="success">Note added.</Alert>}
+            <AddNoteForm action={addNoteAction.bind(null, tenant.id)} returnTo={returnTo} />
             <ol className={styles.timeline}>
               {events.map((event, i) => (
                 <li key={i}>

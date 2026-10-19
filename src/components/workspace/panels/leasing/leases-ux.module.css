@@ -23,3 +23,36 @@
     justify-content: center;
   }
 }
+.panel :global(h3) {
+  font: 600 15px/1.4 var(--design-heading-font);
+  letter-spacing: -0.04em;
+  text-transform: none;
+  color: var(--design-text);
+}
+.panel li {
+  padding: 14px 16px;
+}
+.panel :global(h3) span {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: #edf1f8;
+  font: 500 11px var(--design-font);
+}
+.panel :global(p[class*='sectionEmpty']) {
+  padding: 14px 16px;
+  border: 1px dashed #bccbdd;
+  border-radius: 8px;
+}
+@media (max-width: 700px) {
+  .panel li > :global(div[class*='leaseMain']) {
+    flex-basis: calc(100% - 52px);
+  }
+  .panel li > :global(div[class*='leaseActions']) {
+    margin-left: auto;
+    flex-wrap: wrap;
+  }
+  .panel li {
+    flex-wrap: wrap;
+  }
+}

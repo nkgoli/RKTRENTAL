@@ -5,7 +5,7 @@ import { Pagination, pageFrom, paginate } from '@/components/ui/Pagination';
 import { leaseName, signLabel, statusLabel, term } from '@/lib/leases/format';
 import { leasesDb, type LeaseListItem } from '@/lib/leases/queries';
 import { formatMoney, initials } from '@/lib/properties/format';
-import type { ScopeFilter } from '@/lib/workspace/scope';
+import { scopeQuery, type ScopeFilter } from '@/lib/workspace/scope';
 import { withUnit } from './scope';
 import styles from './leasing.module.css';
 import ux from './leases-ux.module.css';
@@ -31,6 +31,9 @@ function LeaseCard({
   const context = new URLSearchParams({ propertyId: lease.unit.property.id });
   if (scope.unitId) context.set('unitId', scope.unitId);
   const href = `/leases/${lease.id}?${context}`;
+  const setupContext = new URLSearchParams(context);
+  setupContext.set('property', lease.unit.property.id);
+  if (scope.unitId) setupContext.set('unit', scope.unitId);
   return (
     <li className={styles.leaseCard} data-lease={lease.id}>
       <Avatar initials={initials(name)} size="sm" />
@@ -53,7 +56,11 @@ function LeaseCard({
       </div>
       <div className={styles.leaseActions}>
         {lease.status === 'DRAFT' ? (
-          <Button href={`/leases/new?draft=${lease.id}`} size="sm" variant="primary">
+          <Button
+            href={`/leases/new?${setupContext}&draft=${encodeURIComponent(lease.id)}`}
+            size="sm"
+            variant="primary"
+          >
             Continue setup
           </Button>
         ) : (
@@ -62,7 +69,11 @@ function LeaseCard({
           </Button>
         )}
         {lease.status === 'ACTIVE' && (
-          <Button href={`/leases/new?renew=${lease.id}`} size="sm" variant="ghost">
+          <Button
+            href={`/leases/new?${setupContext}&renew=${encodeURIComponent(lease.id)}`}
+            size="sm"
+            variant="ghost"
+          >
             Renew
           </Button>
         )}
@@ -82,9 +93,10 @@ export async function LeasesPanel({
   page?: string;
 }) {
   const { leases } = await leasesDb(organizationId).list(scope);
-  const newLease = scope.unitId
-    ? `/leases/new?unit=${encodeURIComponent(scope.unitId)}`
-    : `/leases/new?property=${encodeURIComponent(scope.propertyId ?? '')}`;
+  const setupContext = scopeQuery(scope);
+  if (scope.propertyId) setupContext.set('property', scope.propertyId);
+  if (scope.unitId) setupContext.set('unit', scope.unitId);
+  const newLease = `/leases/new?${setupContext}`;
   const byStart = (a: LeaseListItem, b: LeaseListItem) =>
     b.startDate.getTime() - a.startDate.getTime();
   const sections: Section[] = [

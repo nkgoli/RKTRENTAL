@@ -1,10 +1,67 @@
+.page {
+  min-width: 0;
+}
+.pulse {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 14px 0;
+  margin-bottom: 20px;
+  border-block: 1px solid var(--rr-border);
+}
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  border-left: 1px solid var(--rr-border);
+}
+.stat:first-child {
+  border: 0;
+  padding-left: 0;
+}
+.stat p {
+  margin: 0;
+  color: var(--design-muted);
+  font-size: 11px;
+}
+.stat strong {
+  font: 600 27px/1.2 var(--design-heading-font);
+  letter-spacing: -1px;
+}
+.stat small {
+  display: block;
+  color: var(--design-muted);
+  font-size: 11px;
+}
+.icon {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  border-radius: 9px;
+  color: var(--design-primary);
+  background: #edf2ff;
+  flex: none;
+}
+.icon svg {
+  width: 18px;
+  height: 18px;
+}
+.stat:nth-child(2) .icon {
+  background: #eef0fd;
+  color: #5c58ab;
+}
+.stat:nth-child(3) .icon {
+  background: #edf7fa;
+  color: var(--design-accent);
+}
 .intro {
   margin: 0;
   color: var(--design-muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 .portfolioHeader {
-  padding: 12px var(--rr-card-pad) 0;
+  padding: 18px 20px 0;
 }
 .portfolioHeader :global(.tabs a) {
   margin-bottom: 0;
@@ -14,12 +71,12 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 20px;
   margin-bottom: 12px;
 }
 .toolbar h2 {
   margin: 0 0 4px;
-  font-size: var(--rr-h3);
+  font-size: 18px;
 }
 .search {
   display: flex;
@@ -37,7 +94,7 @@
   min-width: 0;
 }
 .search a {
-  font-size: 13px;
+  font-size: 12px;
 }
 .scroll {
   overflow-x: auto;
@@ -45,12 +102,20 @@
 }
 .scroll table {
   min-width: 700px;
+  font-size: 12px;
 }
 .scroll th {
   white-space: nowrap;
+  font-size: 10px;
+  font-weight: 500;
+  background: var(--design-background);
 }
 .scroll td {
-  vertical-align: top;
+  vertical-align: middle;
+  padding-block: 12px;
+}
+.scroll td small {
+  overflow-wrap: anywhere;
 }
 .actions {
   display: flex;
@@ -58,13 +123,42 @@
   white-space: nowrap;
 }
 .caption {
-  padding: 12px 16px;
+  padding: 11px 20px;
   text-align: left;
   color: var(--design-muted);
-  font-size: 12px;
+  font-size: 11px;
   border-bottom: 1px solid var(--rr-border);
 }
-@media (max-width: 600px) {
+@media (max-width: 700px) {
+  .pulse {
+    padding: 12px 0;
+    margin-bottom: 17px;
+  }
+  .stat {
+    display: block;
+    padding: 0 10px;
+  }
+  .stat p {
+    font-size: 10px;
+    min-height: 30px;
+  }
+  .stat strong {
+    font-size: 25px;
+  }
+  .stat small,
+  .icon {
+    display: none;
+  }
+  .portfolioHeader {
+    padding: 16px 14px 0;
+  }
+  .toolbar {
+    display: grid;
+    gap: 13px;
+  }
+  .toolbar h2 {
+    font-size: 17px;
+  }
   .search {
     width: 100%;
   }
@@ -72,7 +166,85 @@
     flex: 1;
     width: auto;
   }
+  .scroll {
+    overflow: visible;
+  }
   .scroll table {
-    min-width: 660px;
+    min-width: 0;
+    display: block;
+    width: 100%;
+  }
+  .scroll thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .scroll tbody {
+    display: block;
+  }
+  .scroll tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 15px 14px;
+    border-bottom: 1px solid var(--rr-border);
+  }
+  .scroll tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .scroll td {
+    display: block;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+  }
+  .scroll td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    color: var(--design-muted);
+    margin-bottom: 3px;
+  }
+  .scroll td:first-child {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .scroll td:first-child::before,
+  .scroll td:nth-child(5)::before {
+    display: none;
+  }
+  .scroll td:nth-child(5) {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+  }
+  .scroll td:nth-child(2) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .scroll td:nth-child(4) {
+    grid-column: 2;
+    grid-row: 2;
+    text-align: right;
+  }
+  .scroll td:nth-child(3) {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+  .scroll td:last-child {
+    grid-column: 1 / -1;
+  }
+  .scroll td[colspan] {
+    grid-column: 1 / -1;
+  }
+  .actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .caption {
+    display: block;
+    padding: 10px 14px;
   }
 }

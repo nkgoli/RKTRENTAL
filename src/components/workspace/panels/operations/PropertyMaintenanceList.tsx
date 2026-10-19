@@ -1,5 +1,7 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { Fragment } from 'react';
+import { RequestDetails, type RequestActions } from '@/components/maintenance/RequestDetails';
 import {
   MaintenanceFilters,
   MaintenanceListFooter,
@@ -42,6 +44,8 @@ export function PropertyMaintenanceList({
   query,
   unitId,
   createRequestControl,
+  vendors = [],
+  actions,
 }: {
   propertyId: string;
   list: {
@@ -54,6 +58,8 @@ export function PropertyMaintenanceList({
   query: MaintenanceListQuery;
   unitId?: string;
   createRequestControl: ReactNode;
+  vendors?: { id: string; name: string }[];
+  actions?: RequestActions;
 }) {
   const { requests } = list;
   const action = workspaceTabHref(propertyId, 'maintenance');
@@ -61,9 +67,14 @@ export function PropertyMaintenanceList({
   if (list.isEmpty) {
     return (
       <section className={`card ${styles.emptyState}`} aria-labelledby="repair-requests-heading">
-        <span className={styles.emptyIcon} aria-hidden="true">+</span>
+        <span className={styles.emptyIcon} aria-hidden="true">
+          +
+        </span>
         <h2 id="repair-requests-heading">No repair requests yet</h2>
-        <p className="muted">When something needs fixing, log it here and track it from new to done. Start with your first request.</p>
+        <p className="muted">
+          When something needs fixing, log it here and track it from new to done. Start with your
+          first request.
+        </p>
         {createRequestControl}
       </section>
     );
@@ -82,16 +93,21 @@ export function PropertyMaintenanceList({
         <div className={styles.listHeader}>
           <MaintenanceFilters action={action} hidden={hidden} query={query} />
         </div>
-        <div className={styles.tableWrap}>
+        <div
+          className={styles.tableWrap}
+          role="region"
+          aria-label="Repair request list"
+          tabIndex={0}
+        >
           <table className="table" aria-label="Repair requests">
             <thead>
               <tr>
-                <th>Request</th>
-                <th>Unit</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Assigned to</th>
-                <th>Date</th>
+                <th scope="col">Request</th>
+                <th scope="col">Unit</th>
+                <th scope="col">Priority</th>
+                <th scope="col">Status</th>
+                <th scope="col">Assigned to</th>
+                <th scope="col">Date</th>
               </tr>
             </thead>
             <tbody>
@@ -103,36 +119,47 @@ export function PropertyMaintenanceList({
                 </tr>
               ) : (
                 requests.map((request) => (
-                  <tr key={request.id} id={`request-${request.id}`}>
-                    <td>
-                      <strong>{request.title}</strong>
-                      {request.description && (
-                        <span className={styles.requestDescription}>{request.description}</span>
-                      )}
-                      {request.photos.length > 0 && (
-                        <span className={styles.requestDescription}>Photo attached</span>
-                      )}
-                    </td>
-                    <td>
-                      <Link
-                        href={`/properties/${propertyId}?unit=${encodeURIComponent(request.unit.id)}`}
-                      >
-                        {request.unit.number}
-                      </Link>
-                    </td>
-                    <td>
-                      <span className={`badge ${priorityTone(request.priority)}`}>
-                        {priorityLabel(request.priority)}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge ${statusTone(request.status)}`}>
-                        {statusLabel(request.status)}
-                      </span>
-                    </td>
-                    <td>{request.vendor?.name ?? request.vendorName ?? 'Unassigned'}</td>
-                    <td>{formatDate(request.createdAt)}</td>
-                  </tr>
+                  <Fragment key={request.id}>
+                    <tr id={`request-${request.id}`}>
+                      <td data-label="Request">
+                        <strong>{request.title}</strong>
+                        {request.description && (
+                          <span className={styles.requestDescription}>{request.description}</span>
+                        )}
+                        {request.photos.length > 0 && (
+                          <span className={styles.requestDescription}>Photo attached</span>
+                        )}
+                      </td>
+                      <td data-label="Unit">
+                        <Link
+                          href={`/properties/${propertyId}?unit=${encodeURIComponent(request.unit.id)}`}
+                        >
+                          {request.unit.number}
+                        </Link>
+                      </td>
+                      <td data-label="Priority">
+                        <span className={`badge ${priorityTone(request.priority)}`}>
+                          {priorityLabel(request.priority)}
+                        </span>
+                      </td>
+                      <td data-label="Status">
+                        <span className={`badge ${statusTone(request.status)}`}>
+                          {statusLabel(request.status)}
+                        </span>
+                      </td>
+                      <td data-label="Assigned to">
+                        {request.vendor?.name ?? request.vendorName ?? 'Unassigned'}
+                      </td>
+                      <td data-label="Created">{formatDate(request.createdAt)}</td>
+                    </tr>
+                    {actions && (
+                      <tr>
+                        <td colSpan={6} className={styles.detailCell}>
+                          <RequestDetails request={request} vendors={vendors} actions={actions} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))
               )}
             </tbody>

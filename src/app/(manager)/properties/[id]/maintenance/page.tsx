@@ -2,10 +2,21 @@ import { notFound } from 'next/navigation';
 import { PropertyMaintenanceList } from '@/components/workspace/panels/operations/PropertyMaintenanceList';
 import { NewMaintenanceRequestDialog } from '@/components/workspace/panels/operations/NewMaintenanceRequestDialog';
 import { requireManagerRole } from '@/lib/auth/access';
-import { listMaintenancePage, parseMaintenanceQuery } from '@/lib/maintenance';
+import {
+  listMaintenancePage,
+  listMaintenanceOptions,
+  parseMaintenanceQuery,
+} from '@/lib/maintenance';
+import { withRequestPhotos } from '@/components/maintenance/request-photos';
 import { propertiesDb } from '@/lib/properties/data';
 import { first, type WorkspaceSearch } from '../routing';
-import { createPropertyMaintenanceAction } from './actions';
+import {
+  createPropertyMaintenanceAction,
+  assignPropertyMaintenanceAction,
+  statusPropertyMaintenanceAction,
+  commentPropertyMaintenanceAction,
+  photoPropertyMaintenanceAction,
+} from './actions';
 
 export default async function PropertyMaintenancePage({
   params,
@@ -32,15 +43,26 @@ export default async function PropertyMaintenancePage({
     query,
   );
   const selectableUnits = property.units
-    .filter((unit) => unit.status !== 'ARCHIVED')
+    .filter((unit) => unit.status !== 'ARCHIVED' && (!unitId || unit.id === unitId))
     .map(({ id, number }) => ({ id, number }));
   const createAction = createPropertyMaintenanceAction.bind(null, propertyId, unitId ?? '');
+  const [{ vendors }, requests] = await Promise.all([
+    listMaintenanceOptions(session.organizationId),
+    withRequestPhotos(session.organizationId, list.requests),
+  ]);
 
   return (
     <div className="stack">
       <PropertyMaintenanceList
         propertyId={propertyId}
-        list={list}
+        list={{ ...list, requests }}
+        vendors={vendors}
+        actions={{
+          assign: assignPropertyMaintenanceAction.bind(null, propertyId, unitId ?? ''),
+          status: statusPropertyMaintenanceAction.bind(null, propertyId, unitId ?? ''),
+          comment: commentPropertyMaintenanceAction.bind(null, propertyId, unitId ?? ''),
+          photo: photoPropertyMaintenanceAction.bind(null, propertyId, unitId ?? ''),
+        }}
         query={query}
         unitId={unitId}
         createRequestControl={

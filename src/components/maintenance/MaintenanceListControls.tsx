@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import styles from './maintenance.module.css';
 import {
   MAINTENANCE_PAGE_SIZE,
   MAINTENANCE_STATUSES,
@@ -29,7 +30,13 @@ export function MaintenanceFilters({
 }) {
   const filtered = Boolean(query.status || query.from || query.to);
   return (
-    <form action={action} method="get" className="row" role="search" aria-label="Filter requests">
+    <form
+      action={action}
+      method="get"
+      className={styles.filters}
+      role="search"
+      aria-label="Filter requests"
+    >
       {Object.entries(hidden).map(([name, value]) =>
         value ? <input key={name} type="hidden" name={name} value={value} /> : null,
       )}
@@ -37,7 +44,7 @@ export function MaintenanceFilters({
       <label className="field">
         Filter by status
         <select name="status" defaultValue={query.status ?? ''}>
-          <option value="">Open + recent</option>
+          <option value="">{query.allHistory ? 'All statuses' : 'Open + recent'}</option>
           {MAINTENANCE_STATUSES.map((status) => (
             <option key={status} value={status}>
               {statusLabel(status)}

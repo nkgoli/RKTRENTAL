@@ -1,0 +1,131 @@
+import type { MaintenanceBoardRequest } from '@/lib/maintenance';
+import { FileUploader } from '@/components/upload';
+import { RequestActionForm, type RequestAction } from './RequestActionForm';
+import { RequestPhoto } from './RequestPhoto';
+import styles from './maintenance.module.css';
+
+export type RequestActions = {
+  assign: RequestAction;
+  status: RequestAction;
+  comment: RequestAction;
+  photo: RequestAction;
+};
+
+export function RequestDetails({
+  request,
+  vendors,
+  actions,
+}: {
+  request: MaintenanceBoardRequest;
+  vendors: { id: string; name: string }[];
+  actions: RequestActions;
+}) {
+  return (
+    <details className={styles.details}>
+      <summary>
+        Manage request<span className={styles.screenReaderOnly}>: {request.title}</span>
+      </summary>
+      <div className={styles.detailBody}>
+        <p className={styles.description}>{request.description || 'No description provided.'}</p>
+        <div className={styles.controlGrid}>
+          <RequestActionForm action={actions.assign} label={`Assign vendor for ${request.title}`}>
+            <input type="hidden" name="requestId" value={request.id} />
+            <label className="field">
+              Assign vendor
+              <select
+                name="vendorId"
+                defaultValue={request.vendorId ?? ''}
+                required
+                disabled={!vendors.length}
+              >
+                <option value="" disabled>
+                  Select vendor
+                </option>
+                {vendors.map((vendor) => (
+                  <option key={vendor.id} value={vendor.id}>
+                    {vendor.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {!vendors.length && (
+              <p className="muted">No vendors are available for this portfolio.</p>
+            )}
+            <button className="btn btn-secondary btn-sm" type="submit" disabled={!vendors.length}>
+              Assign
+            </button>
+          </RequestActionForm>
+          <RequestActionForm action={actions.status} label={`Change status for ${request.title}`}>
+            <input type="hidden" name="requestId" value={request.id} />
+            <label className="field">
+              Change status
+              <select name="status" defaultValue={request.status}>
+                <option value="NEW">New</option>
+                <option value="ASSIGNED">Assigned</option>
+                <option value="IN_PROGRESS">In progress</option>
+                <option value="DONE">Done</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
+            </label>
+            <button className="btn btn-secondary btn-sm" type="submit">
+              Update
+            </button>
+          </RequestActionForm>
+        </div>
+        <section className={styles.section} aria-label="Request photos">
+          <h3>Photos</h3>
+          {request.photos.length ? (
+            <div className={styles.photos}>
+              {request.photos.map(
+                (photo) =>
+                  photo.documentId && (
+                    <RequestPhoto
+                      key={photo.documentId}
+                      documentId={photo.documentId}
+                      title={request.title}
+                    />
+                  ),
+              )}
+            </div>
+          ) : (
+            <p className="muted">No photos attached. Add one to help the vendor prepare.</p>
+          )}
+          <RequestActionForm action={actions.photo} label={`Add photo to ${request.title}`}>
+            <input type="hidden" name="requestId" value={request.id} />
+            <FileUploader kind="photo" formField="photo" multiple={false} label="Add photo" />
+            <button className="btn btn-secondary btn-sm" type="submit">
+              Upload photo
+            </button>
+          </RequestActionForm>
+        </section>
+        <section className={styles.section} aria-label="Request comments">
+          <h3>Recent comments</h3>
+          {request.events.length ? (
+            <ul className={styles.comments}>
+              {request.events.map((event) => (
+                <li key={event.id}>{event.body}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">No comments yet.</p>
+          )}
+          <RequestActionForm action={actions.comment} label={`Comment on ${request.title}`}>
+            <input type="hidden" name="requestId" value={request.id} />
+            <label className="field">
+              Comment
+              <textarea
+                name="comment"
+                maxLength={2000}
+                required
+                placeholder="Add an update for this request"
+              />
+            </label>
+            <button className="btn btn-secondary btn-sm" type="submit">
+              Add comment
+            </button>
+          </RequestActionForm>
+        </section>
+      </div>
+    </details>
+  );
+}

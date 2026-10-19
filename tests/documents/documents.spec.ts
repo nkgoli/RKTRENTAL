@@ -18,6 +18,7 @@ test('manager uploads a lease file, finds it, previews and downloads it', async 
   await page.screenshot({ path: 'test-results/documents-library.png', fullPage: true });
 
   const name = `Documents flow ${Date.now()}.pdf`;
+  await page.locator('#upload > summary').click();
   await page.getByLabel('Upload destination').selectOption('seed-lease-maple-11');
   await page.getByLabel('File type').selectOption('LEASE');
   await page.getByLabel('Choose files').setInputFiles({
@@ -40,13 +41,13 @@ test('manager uploads a lease file, finds it, previews and downloads it', async 
   await expect(fileRow).toBeVisible();
   await expect(page.getByText('1 matching files')).toBeVisible();
 
-  const previewUrl = await fileRow.getByRole('link', { name: 'Preview' }).getAttribute('href');
+  const previewUrl = await fileRow.getByRole('link', { name: /^Preview / }).getAttribute('href');
   expect(previewUrl).toMatch(/^\/api\/files\/[^/]+\/preview$/);
   const preview = await page.request.get(previewUrl!);
   expect(preview.ok()).toBe(true);
   expect(preview.headers()['content-disposition']).toContain('inline');
 
-  const downloadUrl = await fileRow.getByRole('link', { name: 'Download' }).getAttribute('href');
+  const downloadUrl = await fileRow.getByRole('link', { name: /^Download / }).getAttribute('href');
   expect(downloadUrl).toMatch(/^\/api\/files\/[^/]+\/download$/);
   const download = await page.request.get(downloadUrl!);
   expect(download.ok()).toBe(true);

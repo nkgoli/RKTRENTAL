@@ -105,8 +105,14 @@
   padding: 36px 20px;
   text-align: center;
 }
-.emptyState h2 { margin: 0; font-size: 18px; }
-.emptyState p { max-width: 380px; margin: 0 0 8px; }
+.emptyState h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.emptyState p {
+  max-width: 380px;
+  margin: 0 0 8px;
+}
 .emptyIcon {
   display: grid;
   width: 48px;
@@ -115,4 +121,84 @@
   border-radius: 50%;
   background: #fff2e9;
   font-size: var(--rr-h2);
+}
+.listHeader {
+  padding: 16px;
+}
+.listHeader h2,
+.dialogHeader h2 {
+  color: var(--design-text);
+  font-size: 18px;
+}
+.requestDescription {
+  color: var(--design-muted);
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.requestDialog {
+  padding: 20px;
+  text-align: left;
+  border-color: var(--rr-border);
+  border-radius: var(--design-radius);
+  color: var(--design-text);
+  box-shadow: 0 12px 32px rgb(15 23 42 / 0.15);
+}
+.dialogHeader {
+  margin-bottom: 16px;
+}
+.detailCell {
+  padding: 0 16px 12px !important;
+  white-space: normal !important;
+}
+@media (max-width: 700px) {
+  .tableWrap {
+    overflow: visible;
+  }
+  .tableWrap table {
+    min-width: 0;
+    width: 100%;
+  }
+  .tableWrap thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .tableWrap tbody,
+  .tableWrap tr {
+    display: block;
+  }
+  .tableWrap tr[id] {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 16px 16px 4px;
+  }
+  .tableWrap td {
+    display: block;
+    border: 0;
+    padding: 0 !important;
+    white-space: normal;
+    min-width: 0;
+  }
+  .tableWrap tr[id] td:first-child {
+    grid-column: 1/-1;
+  }
+  .tableWrap td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--design-muted);
+    font-size: 11px;
+    margin-bottom: 3px;
+  }
+  .tableWrap td.detailCell {
+    padding: 0 16px 12px !important;
+    border-bottom: 1px solid var(--rr-border);
+  }
+  .dialogActions {
+    flex-wrap: wrap;
+  }
 }

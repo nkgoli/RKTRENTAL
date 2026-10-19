@@ -134,3 +134,109 @@
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 12px;
 }
+.library {
+  min-width: 0;
+}
+.libraryIntro {
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+}
+.libraryIntro span {
+  white-space: nowrap;
+}
+.uploadPanel {
+  border: 1px solid var(--rr-border);
+  border-radius: var(--design-radius);
+  min-width: 0;
+}
+.uploadPanel > summary {
+  cursor: pointer;
+  padding: 16px;
+  color: var(--design-primary);
+  font-weight: 600;
+}
+.uploadPanel > summary span {
+  font-size: 12px;
+  font-weight: 400;
+  margin-left: 12px;
+}
+.uploadBody {
+  padding: 0 16px 16px;
+}
+.uploadFields {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 3fr) minmax(120px, 1fr);
+  gap: 12px;
+}
+.uploadFields > label,
+.uploadFields select {
+  min-width: 0;
+  width: 100%;
+}
+.uploadHint {
+  font-size: 13px;
+  color: var(--design-muted);
+  overflow-wrap: anywhere;
+}
+.documentFilters {
+  align-items: flex-end;
+  gap: 12px;
+}
+.documentFilters > label {
+  flex: 1 1 150px;
+  min-width: 0;
+}
+.documentFilters .fileSearch {
+  flex: 2 1 260px;
+}
+.documentFilters select,
+.documentFilters input {
+  width: 100%;
+  min-width: 0;
+}
+.documentToolbar {
+  padding: 16px;
+}
+.library :global(.file) {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.library :global(.file-meta) {
+  min-width: 0;
+  flex: 1 1 200px;
+}
+.library :global(.file-meta strong) {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.leaseDocumentHeading > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .uploadFields {
+    grid-template-columns: 1fr 1fr;
+  }
+  .uploadFields .destination {
+    grid-column: 1/-1;
+    grid-row: 2;
+  }
+  .uploadPanel > summary span {
+    display: block;
+    margin: 4px 0 0;
+  }
+  .documentFilters > label {
+    flex-basis: calc(50% - 12px);
+  }
+  .documentFilters .fileSearch {
+    flex-basis: 100%;
+  }
+  .documentActions {
+    width: 100%;
+    gap: 8px;
+  }
+  .documentPhotoActions a {
+    padding: 8px 0;
+  }
+}

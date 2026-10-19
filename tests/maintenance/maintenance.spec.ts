@@ -29,7 +29,11 @@ test('manager creates a photographed request, assigns a vendor, and changes stat
   ).toBeVisible();
 
   const title = `Test repair ${Date.now()}`;
-  const create = page.locator('#new-request');
+  await page
+    .locator('#new-request')
+    .getByRole('button', { name: '+ New request', exact: true })
+    .click();
+  const create = page.getByRole('dialog', { name: 'New repair request' });
   await create.getByLabel('Unit').selectOption({ label: 'Maple Court · 4B' });
   await create.getByLabel('Priority').selectOption('HIGH');
   await create.getByLabel('Request title').fill(title);
@@ -38,12 +42,13 @@ test('manager creates a photographed request, assigns a vendor, and changes stat
     .getByLabel('Choose a file')
     .setInputFiles({ name: 'repair.png', mimeType: 'image/png', buffer: PNG });
   await create.getByRole('button', { name: 'Create request' }).click();
+  await create.getByRole('link', { name: 'Request created' }).click();
 
   const ticket = page.locator('article').filter({ hasText: title });
   await expect(ticket).toBeVisible();
-  await expect(ticket.getByRole('img', { name: `${title} photo` })).toBeVisible();
   await expect(ticket.getByText('High')).toBeVisible();
   await ticket.getByText('Manage request').click();
+  await expect(ticket.getByRole('img', { name: `${title} photo` })).toBeVisible();
   await ticket.getByLabel('Assign vendor').selectOption({ label: 'Northstar Repairs' });
   await ticket.getByRole('button', { name: 'Assign', exact: true }).click();
 

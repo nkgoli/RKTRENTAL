@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { FileUploader } from '@/components/upload';
+import styles from './documents.module.css';
 
 type TargetKind = 'lease' | 'property' | 'unit';
 type TargetOption = { id: string; label: string };
@@ -20,31 +21,46 @@ export function UploadDocumentForm({
   leases,
   properties,
   units,
+  propertyId,
+  unitId,
 }: {
   leases: TargetOption[];
   properties: TargetOption[];
   units: TargetOption[];
+  propertyId?: string;
+  unitId?: string;
 }) {
   const router = useRouter();
   const options: Record<TargetKind, TargetOption[]> = useMemo(
     () => ({ lease: leases, property: properties, unit: units }),
     [leases, properties, units],
   );
-  const firstTarget: TargetKind = leases.length ? 'lease' : properties.length ? 'property' : 'unit';
+  const firstTarget: TargetKind = unitId
+    ? 'unit'
+    : propertyId
+      ? 'property'
+      : leases.length
+        ? 'lease'
+        : properties.length
+          ? 'property'
+          : 'unit';
   const [targetType, setTargetType] = useState<TargetKind>(firstTarget);
-  const [targetId, setTargetId] = useState(options[firstTarget][0]?.id ?? '');
+  const initialId = unitId ?? propertyId ?? '';
+  const [targetId, setTargetId] = useState(
+    options[firstTarget].some((target) => target.id === initialId) ? initialId : '',
+  );
   const [kind, setKind] = useState<(typeof kinds)[number][0]>('LEASE');
 
   const availableTargets = options[targetType];
 
   function changeTargetType(value: TargetKind) {
     setTargetType(value);
-    setTargetId(options[value][0]?.id ?? '');
+    setTargetId('');
   }
 
   return (
     <div className="stack" role="group" aria-label="Upload a document">
-      <div className="grid-3">
+      <div className={styles.uploadFields}>
         <label className="field">
           <span>Attach to</span>
           <select
@@ -57,7 +73,7 @@ export function UploadDocumentForm({
             <option value="unit">Unit</option>
           </select>
         </label>
-        <label className="field">
+        <label className={`field ${styles.destination}`}>
           <span>Destination</span>
           <select
             aria-label="Upload destination"
@@ -66,6 +82,7 @@ export function UploadDocumentForm({
             disabled={!availableTargets.length}
             required
           >
+            <option value="">Choose a destination</option>
             {availableTargets.length ? (
               availableTargets.map((target) => (
                 <option key={target.id} value={target.id}>
@@ -92,9 +109,9 @@ export function UploadDocumentForm({
           </select>
         </label>
       </div>
-      {availableTargets.length ? (
+      {availableTargets.length && targetId ? (
         <FileUploader
-          key={`${targetType}:${targetId}`}
+          key={`${targetType}:${targetId}:${kind}`}
           kind={kind === 'PHOTO' ? 'photo' : 'document'}
           target={{ kind: targetType, id: targetId }}
           documentKind={kind}
@@ -102,7 +119,18 @@ export function UploadDocumentForm({
           onUploaded={() => router.refresh()}
         />
       ) : (
-        <p className="muted">Add a lease, property or unit before uploading files.</p>
+        <p className="muted">
+          {availableTargets.length
+            ? 'Choose where these files belong. Files upload as soon as you select them.'
+            : 'No destinations of this type. Choose another type, or add a lease, property or unit first.'}
+        </p>
+      )}
+      {targetId && (
+        <p className={styles.uploadHint}>
+          Files upload immediately to{' '}
+          {availableTargets.find((target) => target.id === targetId)?.label}. To rename, share or
+          delete a file, open its lease or property.
+        </p>
       )}
     </div>
   );

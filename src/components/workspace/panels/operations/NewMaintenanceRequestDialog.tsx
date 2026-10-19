@@ -1,10 +1,9 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useId } from 'react';
 import { FileUploader } from '@/components/upload/FileUploader';
+import { RequestActionForm, type RequestAction } from '@/components/maintenance/RequestActionForm';
 import styles from './operations.module.css';
-
-type CreateAction = (formData: FormData) => void | Promise<void>;
 
 export function NewMaintenanceRequestDialog({
   action,
@@ -13,13 +12,15 @@ export function NewMaintenanceRequestDialog({
   selectedUnitId,
   triggerLabel = '+ New request',
 }: {
-  action: CreateAction;
+  action: RequestAction;
   propertyName: string;
   units: Array<{ id: string; number: string }>;
   selectedUnitId?: string;
   triggerLabel?: string;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [generation, setGeneration] = useState(0);
+  const headingId = useId();
   const defaultUnitId = selectedUnitId ?? (units.length === 1 ? units[0]?.id : undefined);
 
   return (
@@ -27,18 +28,28 @@ export function NewMaintenanceRequestDialog({
       <button
         className="btn btn-primary"
         type="button"
-        onClick={() => dialogRef.current?.showModal()}
+        onClick={() => {
+          setGeneration((value) => value + 1);
+          dialogRef.current?.showModal();
+        }}
         disabled={units.length === 0}
       >
         {triggerLabel}
       </button>
+      {units.length === 0 && (
+        <p className="muted">Add an active unit to this property before creating a request.</p>
+      )}
       <dialog
         ref={dialogRef}
         className={styles.requestDialog}
-        aria-labelledby="new-request-heading"
+        aria-labelledby={headingId}
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest('a[href^="#request-"]'))
+            dialogRef.current?.close();
+        }}
       >
         <div className={styles.dialogHeader}>
-          <h2 id="new-request-heading">New repair request</h2>
+          <h2 id={headingId}>New repair request</h2>
           <button
             type="button"
             className="btn btn-sm btn-ghost"
@@ -48,14 +59,19 @@ export function NewMaintenanceRequestDialog({
             Close
           </button>
         </div>
-        <form action={action} className="form">
+        <RequestActionForm
+          key={generation}
+          action={action}
+          className="form"
+          label="Create repair request"
+        >
           <label className="field">
             Property
             <span className={styles.readonlyField}>{propertyName}</span>
           </label>
           <label className="field">
             Unit
-            <select name="unitId" required defaultValue={defaultUnitId ?? ''}>
+            <select name="unitId" required defaultValue={defaultUnitId ?? ''} autoFocus>
               <option value="" disabled>
                 Select unit
               </option>
@@ -99,7 +115,7 @@ export function NewMaintenanceRequestDialog({
               Create request
             </button>
           </div>
-        </form>
+        </RequestActionForm>
       </dialog>
     </>
   );

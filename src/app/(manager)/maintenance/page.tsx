@@ -1,22 +1,20 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
+import { RequestDetails } from '@/components/maintenance/RequestDetails';
+import { NewMaintenanceRequestDialog } from '@/components/workspace/panels/operations/NewMaintenanceRequestDialog';
+import { withRequestPhotos } from '@/components/maintenance/request-photos';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
 import { scopeFilterFrom } from '@/lib/workspace/scope';
 import { EmptyState } from '@/components/RouteStates';
-import {
-  Avatar,
-  Badge,
-  KanbanBoard,
-  KanbanColumn,
-  Ticket,
-} from '@/components/ui';
+import { Avatar, Badge, KanbanBoard, KanbanColumn, Ticket } from '@/components/ui';
 import { KpiCard } from '@/components/dashboard/KpiCard';
-import { FileUploader } from '@/components/upload';
+
 import { requireManagerRole } from '@/lib/auth/access';
 import {
   listMaintenanceOptions,
   listMaintenancePage,
   parseMaintenanceQuery,
+  maintenanceQueryString,
   type MaintenanceBoardRequest,
   type MaintenanceListParams,
 } from '@/lib/maintenance';
@@ -57,30 +55,17 @@ function RequestTicket({
   request: MaintenanceBoardRequest;
   vendors: { id: string; name: string }[];
 }) {
-  const coverDocumentId = request.photos[0]?.documentId;
   const priorityTone =
     request.priority === 'URGENT' ? 'danger' : request.priority === 'HIGH' ? 'warning' : 'info';
   return (
     <Ticket>
       <article id={`request-${request.id}`} className={styles.ticketContent}>
-        {coverDocumentId && (
-          <div className={styles.photo}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- authenticated file route, loaded lazily */}
-            <img
-              src={`/api/files/${coverDocumentId}/preview`}
-              alt={`${request.title} photo`}
-              loading="lazy"
-              decoding="async"
-              width={240}
-              height={78}
-            />
-            <span className="caption">Photo attached</span>
-          </div>
-        )}
-        <strong>{request.title}</strong>
+        <h3 className={styles.ticketTitle}>{request.title}</h3>
         <span className="muted" style={{ fontSize: 12 }}>
           <Link href={`/properties/${request.property.id}`}>{request.property.name}</Link> ·{' '}
-          <Link href={`/properties/${request.property.id}/units/${request.unit.id}`}>
+          <Link
+            href={`/properties/${request.property.id}?unit=${encodeURIComponent(request.unit.id)}`}
+          >
             {request.unit.number}
           </Link>
         </span>
@@ -96,76 +81,25 @@ function RequestTicket({
           <Avatar initials={request.vendor ? initials(request.vendor.name) : '?'} size="sm" />
           <span>{request.vendor?.name ?? request.vendorName ?? 'Unassigned'}</span>
         </div>
-        {request.description && <p className={styles.description}>{request.description}</p>}
-        <details className={styles.controls}>
-          <summary>Manage request</summary>
-          <form action={assignMaintenanceAction} className={styles.compactForm}>
-            <input type="hidden" name="requestId" value={request.id} />
-            <label htmlFor={`vendor-${request.id}`}>Assign vendor</label>
-            <div className={styles.inlineControls}>
-              <select
-                id={`vendor-${request.id}`}
-                name="vendorId"
-                defaultValue={request.vendorId ?? ''}
-                required
-              >
-                <option value="" disabled>
-                  Select vendor
-                </option>
-                {vendors.map((vendor) => (
-                  <option key={vendor.id} value={vendor.id}>
-                    {vendor.name}
-                  </option>
-                ))}
-              </select>
-              <button className="btn btn-secondary btn-sm" type="submit">
-                Assign
-              </button>
-            </div>
-          </form>
-          <form action={setMaintenanceStatusAction} className={styles.compactForm}>
-            <input type="hidden" name="requestId" value={request.id} />
-            <label htmlFor={`status-${request.id}`}>Change status</label>
-            <div className={styles.inlineControls}>
-              <select id={`status-${request.id}`} name="status" defaultValue={request.status}>
-                <option value="NEW">New</option>
-                <option value="ASSIGNED">Assigned</option>
-                <option value="IN_PROGRESS">In progress</option>
-                <option value="DONE">Done</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
-              <button className="btn btn-secondary btn-sm" type="submit">
-                Update
-              </button>
-            </div>
-          </form>
-          <form action={uploadMaintenancePhotoAction} className={styles.compactForm}>
-            <input type="hidden" name="requestId" value={request.id} />
-            <span id={`photo-${request.id}`}>Add photo</span>
-            <FileUploader kind="photo" formField="photo" multiple={false} label="Add photo" />
-            <button className="btn btn-secondary btn-sm" type="submit">
-              Upload photo
-            </button>
-          </form>
-          <form action={commentMaintenanceAction} className={styles.compactForm}>
-            <input type="hidden" name="requestId" value={request.id} />
-            <label htmlFor={`comment-${request.id}`}>Comment</label>
-            <textarea id={`comment-${request.id}`} name="comment" maxLength={2000} required />
-            <button className="btn btn-secondary btn-sm" type="submit">
-              Add comment
-            </button>
-          </form>
-          {request.events.map((event) => (
-            <p key={event.id} className={styles.comment}>
-              {event.body}
-            </p>
-          ))}
-        </details>
+        {request.photos.length > 0 && (
+          <span className="muted" style={{ fontSize: 12 }}>
+            {request.photos.length} {request.photos.length === 1 ? 'photo' : 'photos'} attached
+          </span>
+        )}
+        <RequestDetails
+          request={request}
+          vendors={vendors}
+          actions={{
+            assign: assignMaintenanceAction,
+            status: setMaintenanceStatusAction,
+            comment: commentMaintenanceAction,
+            photo: uploadMaintenancePhotoAction,
+          }}
+        />
       </article>
     </Ticket>
   );
 }
-
 export default async function MaintenancePage({
   searchParams,
 }: {
@@ -178,7 +112,8 @@ export default async function MaintenancePage({
     listMaintenancePage(session.organizationId, scope, query),
     listMaintenanceOptions(session.organizationId),
   ]);
-  const { requests, summary, statusCounts } = list;
+  const { summary, statusCounts } = list;
+  const requests = await withRequestPhotos(session.organizationId, list.requests);
   const hidden = { propertyId: scope.propertyId, unitId: scope.unitId };
   return (
     <>
@@ -188,7 +123,8 @@ export default async function MaintenancePage({
         activeTab="maintenance"
       />
       <PageHeader
-        actions={[{ label: '+ New request', href: '#new-request', primary: true }]}
+        title="Maintenance"
+        actions={[{ label: 'New request', href: '#new-request', primary: true }]}
       />
       <div className="kpis">
         <KpiCard
@@ -205,7 +141,11 @@ export default async function MaintenancePage({
               : 'No urgent requests'
           }
         />
-        <KpiCard label="Completed this week" value={summary.completedThisWeek} note="Requests resolved" />
+        <KpiCard
+          label="Completed this week"
+          value={summary.completedThisWeek}
+          note="Requests resolved"
+        />
       </div>
       <MaintenanceFilters action="/maintenance" hidden={hidden} query={query} />
       {list.isEmpty && (
@@ -216,31 +156,41 @@ export default async function MaintenancePage({
           href="#new-request"
         />
       )}
-      <div id="requests" className={styles.board}>
-        <KanbanBoard>
-          {columns
-            .filter((column) => column.status !== 'CANCELLED' || statusCounts.CANCELLED)
-            .map((column) => {
-              const items = requests.filter((request) => request.status === column.status);
-              return (
-                <KanbanColumn
-                  key={column.status}
-                  title={column.title}
-                  count={statusCounts[column.status] ?? 0}
-                >
-                  {items.map((request) => (
-                    <RequestTicket key={request.id} request={request} vendors={vendors} />
-                  ))}
-                  {items.length === 0 && (
-                    <p className="muted" style={{ fontSize: 13 }}>
-                      No requests
-                    </p>
-                  )}
-                </KanbanColumn>
-              );
-            })}
-        </KanbanBoard>
-      </div>
+      {!list.isEmpty && list.total === 0 && (
+        <EmptyState
+          title="No repair requests match this view"
+          description="Clear the filters or show all history to find older requests."
+          action="Show all requests"
+          href={`/maintenance${maintenanceQueryString({ allHistory: true, page: 1 }, hidden)}`}
+        />
+      )}
+      {list.total > 0 && (
+        <div id="requests" className={styles.board}>
+          <KanbanBoard>
+            {columns
+              .filter((column) => column.status !== 'CANCELLED' || statusCounts.CANCELLED)
+              .map((column) => {
+                const items = requests.filter((request) => request.status === column.status);
+                return (
+                  <KanbanColumn
+                    key={column.status}
+                    title={column.title}
+                    count={statusCounts[column.status] ?? 0}
+                  >
+                    {items.map((request) => (
+                      <RequestTicket key={request.id} request={request} vendors={vendors} />
+                    ))}
+                    {items.length === 0 && (
+                      <p className="muted" style={{ fontSize: 13 }}>
+                        No requests
+                      </p>
+                    )}
+                  </KanbanColumn>
+                );
+              })}
+          </KanbanBoard>
+        </div>
+      )}
       <MaintenanceListFooter
         action="/maintenance"
         hidden={hidden}
@@ -250,54 +200,24 @@ export default async function MaintenancePage({
         total={list.total}
       />
       <section id="new-request" className={`card ${styles.newRequest}`}>
-        <div className="card-header">
-          <h3>New repair request</h3>
+        <div>
+          <h2>New repair request</h2>
+          <p className="muted">
+            Choose a unit, set a priority and add photos to help the vendor prepare.
+          </p>
         </div>
-        <form action={createMaintenanceAction} className="form">
-          <div className="form-row">
-            <label className="field">
-              Unit
-              <select name="unitId" required defaultValue="">
-                <option value="" disabled>
-                  Select unit
-                </option>
-                {properties.map((property) => (
-                  <optgroup key={property.id} label={property.name}>
-                    {property.units.map((unit) => (
-                      <option key={unit.id} value={unit.id}>
-                        {property.name} · {unit.number}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              Priority
-              <select name="priority" defaultValue="NORMAL">
-                <option value="LOW">Low</option>
-                <option value="NORMAL">Normal</option>
-                <option value="HIGH">High</option>
-                <option value="URGENT">Urgent</option>
-              </select>
-            </label>
-          </div>
-          <label className="field">
-            Request title
-            <input name="title" required maxLength={160} placeholder="e.g. Kitchen sink leak" />
-          </label>
-          <label className="field">
-            Description
-            <textarea name="description" maxLength={3000} placeholder="What needs attention?" />
-          </label>
-          <div className="field">
-            <span>Photo</span>
-            <FileUploader kind="photo" formField="photo" multiple={false} label="Request photo" />
-          </div>
-          <button className="btn btn-primary" type="submit">
-            Create request
-          </button>
-        </form>
+        <NewMaintenanceRequestDialog
+          action={createMaintenanceAction}
+          propertyName="Portfolio"
+          units={properties
+            .filter((property) => !scope.propertyId || property.id === scope.propertyId)
+            .flatMap((property) =>
+              property.units
+                .filter((unit) => !scope.unitId || unit.id === scope.unitId)
+                .map((unit) => ({ id: unit.id, number: `${property.name} · ${unit.number}` })),
+            )}
+          selectedUnitId={scope.unitId}
+        />
       </section>
     </>
   );

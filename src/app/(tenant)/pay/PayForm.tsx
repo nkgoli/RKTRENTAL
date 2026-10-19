@@ -6,13 +6,21 @@ import { Button } from '@/components/ui/Button';
 import { cx } from '@/components/ui/cx';
 import { cardFeeCents, formatUsd, MOCK_TOKENS } from '@/lib/tenant-pay/core';
 import type { SavedMethod } from '@/lib/tenant-pay/service';
-import { addPaymentMethodAction, payRentAction } from './actions';
-import styles from '../portal.module.css';
+import { addPaymentMethodAction } from './actions';
+import portal from '../portal.module.css';
+import styles from './pay.module.css';
+import { PayIcon } from './PayIcon';
 
-function ConfirmButton() {
-  const { pending } = useFormStatus();
+function ConfirmButton({ pending }: { pending: boolean }) {
   return (
-    <Button type="submit" name="confirmPayment" value="yes" variant="primary" disabled={pending}>
+    <Button
+      type="submit"
+      name="confirmPayment"
+      value="yes"
+      variant="primary"
+      disabled={pending}
+      aria-busy={pending}
+    >
       {pending ? 'Submitting payment…' : 'Confirm payment'}
     </Button>
   );
@@ -80,10 +88,23 @@ export function PayForm({
   const [selectedKey, setSelectedKey] = useState(options[0]?.key ?? 'mock:ach');
   const [amount, setAmount] = useState((totalDueCents / 100).toFixed(2));
   const [confirming, setConfirming] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const submitted = useRef(false);
   const confirmation = useRef<HTMLDivElement>(null);
+  const amountInput = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (confirming) confirmation.current?.focus();
   }, [confirming]);
+  useEffect(() => {
+    const restore = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      submitted.current = false;
+      setSubmitting(false);
+      setConfirming(false);
+    };
+    window.addEventListener('pageshow', restore);
+    return () => window.removeEventListener('pageshow', restore);
+  }, []);
   const selected = options.find((o) => o.key === selectedKey) ?? options[0];
   const amountCents = parseAmountCents(amount);
   const feeCents = selected?.type === 'card' ? cardFeeCents(amountCents, passFees) : 0;
@@ -91,27 +112,38 @@ export function PayForm({
   const amountValid = amountCents > 0 && amountCents <= totalDueCents;
 
   return (
-    <section aria-labelledby="payment-method-title">
+    <section className={styles.payment} aria-labelledby="payment-method-title" id="payment-method">
       <h2 id="payment-method-title" style={{ fontSize: 16, marginBottom: 12 }}>
         Payment method
       </h2>
       <form
-        action={payRentAction}
+        action="/pay/submit"
+        method="post"
+        aria-busy={submitting}
         className="stack"
         style={{ gap: 12 }}
         onSubmit={(event) => {
+          if (submitted.current) {
+            event.preventDefault();
+            return;
+          }
           const submitter = (event.nativeEvent as SubmitEvent).submitter;
           if (!confirming || !amountValid || submitter?.getAttribute('name') !== 'confirmPayment') {
             event.preventDefault();
             if (amountValid) setConfirming(true);
+            else amountInput.current?.focus();
+            return;
           }
+          submitted.current = true;
+          setSubmitting(true);
         }}
       >
         <input type="hidden" name="leaseId" value={leaseId} />
+        {confirming && <input type="hidden" name="confirmPayment" value="yes" />}
         <input type="hidden" name="method" value={selected?.type ?? 'ach'} />
         <input type="hidden" name="providerToken" value={selected?.token ?? ''} />
         <input type="hidden" name="paymentMethodId" value={selected?.methodId ?? ''} />
-        <fieldset className={styles.methodFields} aria-labelledby="payment-method-title">
+        <fieldset className={portal.methodFields} aria-labelledby="payment-method-title">
           {options.map((option) => {
             const fee =
               option.type === 'card' && passFees
@@ -120,7 +152,7 @@ export function PayForm({
             return (
               <label
                 key={option.key}
-                className={cx('option', selectedKey === option.key && 'selected')}
+                className={cx(styles.option, selectedKey === option.key && styles.selected)}
               >
                 <input
                   type="radio"
@@ -157,6 +189,7 @@ export function PayForm({
         <label className="field">
           Amount
           <input
+            ref={amountInput}
             name="amount"
             inputMode="decimal"
             aria-label="Amount"
@@ -167,6 +200,7 @@ export function PayForm({
               if (event.key === 'Enter') {
                 event.preventDefault();
                 if (amountValid) setConfirming(true);
+                else amountInput.current?.focus();
               }
             }}
             onChange={(event) => {
@@ -175,7 +209,7 @@ export function PayForm({
             }}
           />
           {!amountValid && (
-            <span id="amount-error" className={styles.error} role="alert">
+            <span id="amount-error" className={portal.error} role="alert">
               Enter an amount from $0.01 to {formatUsd(totalDueCents)}, with no more than two
               decimal places.
             </span>
@@ -200,13 +234,13 @@ export function PayForm({
             disabled={!amountValid || !selected}
             onClick={() => setConfirming(true)}
           >
-            Pay {formatUsd(chargedCents || totalDueCents)}
+            <PayIcon name="pay" /> Pay {formatUsd(chargedCents || totalDueCents)}
           </Button>
         ) : (
           <div
             ref={confirmation}
             tabIndex={-1}
-            className={styles.confirmation}
+            className={`${portal.confirmation} ${styles.confirmation}`}
             role="group"
             aria-labelledby="confirm-payment-title"
           >
@@ -216,9 +250,22 @@ export function PayForm({
               {feeCents > 0 ? ` plus a ${formatUsd(feeCents)} card fee` : ''} —{' '}
               {formatUsd(chargedCents)} in total?
             </p>
-            <div className={styles.confirmationActions}>
-              <ConfirmButton />
+            <dl className={styles.reviewTotals}>
+              <dt>Amount</dt>
+              <dd>{formatUsd(amountCents)}</dd>
+              {feeCents > 0 && (
+                <>
+                  <dt>Card fee (2.9%)</dt>
+                  <dd>{formatUsd(feeCents)}</dd>
+                </>
+              )}
+              <dt>Total charged</dt>
+              <dd>{formatUsd(chargedCents)}</dd>
+            </dl>
+            <div className={portal.confirmationActions}>
+              <ConfirmButton pending={submitting} />
               <Button
+                disabled={submitting}
                 onClick={() => {
                   setConfirming(false);
                   requestAnimationFrame(() => document.getElementById('review-payment')?.focus());

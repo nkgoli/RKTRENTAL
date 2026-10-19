@@ -1,19 +1,21 @@
 import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
-import { Alert } from '@/components/ui/Feedback';
+import { PaymentNotice } from './PaymentNotice';
 import { EmptyState } from '@/components/RouteStates';
 import { requireTenantRole } from '@/lib/auth/access';
 import { graceEnd } from '@/lib/ledger/core';
 import { formatUsd, loadTenantPayView, monthLabel } from '@/lib/tenant-pay';
 import { AutopayToggle } from './AutopayToggle';
 import { AddPaymentMethods, PayForm } from './PayForm';
-import styles from '../portal.module.css';
+import portal from '../portal.module.css';
+import styles from './pay.module.css';
+import { PayIcon } from './PayIcon';
 
 export const dynamic = 'force-dynamic';
 
 type SearchParams = Promise<{ notice?: string }>;
 
-const notices: Record<string, { tone: 'success' | 'warning'; text: string }> = {
+const notices: Record<string, { tone: 'success' | 'warning' | 'error'; text: string }> = {
   'review-required': {
     tone: 'warning',
     text: 'Review the amount and payment method, then confirm your payment.',
@@ -28,19 +30,23 @@ const notices: Record<string, { tone: 'success' | 'warning'; text: string }> = {
   },
   'payment-duplicate': { tone: 'success', text: 'That payment was already recorded.' },
   'payment-failed': {
-    tone: 'warning',
+    tone: 'error',
     text: 'The payment could not be completed. Nothing was charged.',
   },
+  'payment-unconfirmed': {
+    tone: 'error',
+    text: 'We could not confirm the payment result. Check your recent receipts before trying again.',
+  },
   'invalid-amount': {
-    tone: 'warning',
+    tone: 'error',
     text: 'Enter an amount greater than zero and no more than the amount due.',
   },
   'invalid-method': {
-    tone: 'warning',
+    tone: 'error',
     text: 'Choose bank transfer or card using the provider fields. Card and bank numbers are never entered here.',
   },
   'method-added': { tone: 'success', text: 'Payment method added. You can now turn on autopay.' },
-  'method-failed': { tone: 'warning', text: 'That payment method could not be added.' },
+  'method-failed': { tone: 'error', text: 'That payment method could not be added.' },
 };
 
 const shortDate = (date: Date) =>
@@ -64,12 +70,13 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
   if (!view) {
     return (
       <>
-        <div>
+        <header className={styles.heading}>
+          <p className="eyebrow">Tenant portal / Pay</p>
           <h1 style={{ fontSize: 'var(--rr-h1)' }}>Pay rent</h1>
           <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
             {session.name}
           </p>
-        </div>
+        </header>
         <EmptyState
           title="No active lease"
           description="There is no active lease on your account yet, so there is nothing to pay."
@@ -88,24 +95,26 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
 
   return (
     <>
-      <div>
-        <h1 style={{ fontSize: 'var(--rr-h1)' }}>Pay {headingMonth} rent</h1>
+      <header className={styles.heading}>
+        <p className="eyebrow">Tenant portal / Pay</p>
+        <h1 style={{ fontSize: 'var(--rr-h1)' }}>
+          Pay {headingMonth} rent
+          <span className={styles.spark} aria-hidden="true">
+            ✳
+          </span>
+        </h1>
         <p className="muted" style={{ fontSize: 13, marginTop: 2 }}>
           {view.propertyName}
           {view.unitLabel ? ` · Unit ${view.unitLabel}` : ''}
           {dueDate ? ` · Due ${fullDate(dueDate)}` : ' · Nothing due right now'}
         </p>
-      </div>
+      </header>
 
-      {notice && (
-        <Alert tone={notice.tone}>
-          <div>{notice.text}</div>
-        </Alert>
-      )}
+      {notice && <PaymentNotice tone={notice.tone} text={notice.text} code={params.notice} />}
 
-      <section className="card" aria-labelledby="amount-due-title">
+      <section className={`card ${styles.hero}`} aria-labelledby="amount-due-title">
         <div className="card-header">
-          <h2 id="amount-due-title" style={{ fontSize: 18 }}>
+          <h2 id="amount-due-title" style={{ fontSize: 16 }}>
             Amount due
           </h2>
           {dueDate ? (
@@ -116,7 +125,7 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
         </div>
         {amountDue.lines.length > 0 ? (
           <>
-            <dl className="kv" style={{ gridTemplateColumns: '1fr auto' }}>
+            <dl className={styles.breakdown}>
               {amountDue.lines.map((line, index) => (
                 <div key={line.chargeId ?? index} style={{ display: 'contents' }}>
                   <dt>
@@ -127,10 +136,12 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
                 </div>
               ))}
             </dl>
-            <div style={{ borderTop: '1px solid var(--rr-border)', margin: '14px 0' }} />
-            <div className="row between">
+
+            <div className={styles.totalRow}>
               <strong>Total due{dueDate ? ` ${shortDate(dueDate)}` : ''}</strong>
-              <strong className={styles.total}>{formatUsd(amountDue.totalDueCents)}</strong>
+              <strong className={`${portal.total} ${styles.total}`}>
+                {formatUsd(amountDue.totalDueCents)}
+              </strong>
             </div>
             {amountDue.pendingCents > 0 && (
               <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
@@ -177,43 +188,45 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
         rentDueDay={view.rentDueDay}
       />
 
-      <section className="card" aria-labelledby="receipts-title">
+      <section className={`card ${styles.receipts}`} aria-labelledby="receipts-title">
         <div className="card-header">
-          <h2 id="receipts-title" style={{ fontSize: 18 }}>
+          <h2 id="receipts-title" style={{ fontSize: 16 }}>
             Recent receipts
           </h2>
           <Link href="/lease" style={{ fontSize: 13, fontWeight: 600 }}>
-            Documents →
+            Documents <PayIcon name="arrow" />
           </Link>
         </div>
         {view.receipts.length > 0 ? (
-          view.receipts.map((receipt) => (
-            <div className="list-item" key={receipt.paymentId ?? receipt.label}>
-              <span className="file-icon" aria-hidden="true">
-                ✓
-              </span>
-              <span style={{ flex: 1 }}>
-                <strong style={{ display: 'block', fontSize: 14 }}>{receipt.label}</strong>
-                <small className="muted">{shortDate(receipt.date)}</small>
-              </span>
-              <span style={{ textAlign: 'right' }}>
-                <strong style={{ display: 'block', fontSize: 14 }}>
-                  {formatUsd(receipt.amountCents)}
-                </strong>
-                <Badge
-                  tone={
-                    receipt.status === 'SUCCEEDED'
-                      ? 'success'
-                      : receipt.status === 'PENDING'
-                        ? 'warning'
-                        : 'danger'
-                  }
-                >
-                  {receipt.statusLabel}
-                </Badge>
-              </span>
-            </div>
-          ))
+          <ul className={styles.receiptList}>
+            {view.receipts.map((receipt) => (
+              <li className={styles.receipt} key={receipt.paymentId ?? receipt.label}>
+                <span className={styles.receiptIcon} aria-hidden="true">
+                  ✓
+                </span>
+                <span style={{ flex: 1 }}>
+                  <strong style={{ display: 'block', fontSize: 14 }}>{receipt.label}</strong>
+                  <small className="muted">{shortDate(receipt.date)}</small>
+                </span>
+                <span style={{ textAlign: 'right' }}>
+                  <strong style={{ display: 'block', fontSize: 14 }}>
+                    {formatUsd(receipt.amountCents)}
+                  </strong>
+                  <Badge
+                    tone={
+                      receipt.status === 'SUCCEEDED'
+                        ? 'success'
+                        : receipt.status === 'PENDING'
+                          ? 'warning'
+                          : 'danger'
+                    }
+                  >
+                    {receipt.statusLabel}
+                  </Badge>
+                </span>
+              </li>
+            ))}
+          </ul>
         ) : (
           <p className="muted">Your receipts will appear here after your first payment.</p>
         )}

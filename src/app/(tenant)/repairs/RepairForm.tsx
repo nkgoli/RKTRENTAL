@@ -10,7 +10,7 @@ export function RepairForm() {
   const [pending, setPending] = useState(false);
   return (
     <form
-      className="form"
+      className={`form ${styles.form}`}
       method="post"
       action="/repairs/submit"
       encType="multipart/form-data"
@@ -40,9 +40,10 @@ export function RepairForm() {
           ))}
         </select>
       </label>
-      <label className="field">
-        What needs fixing?
+      <div className="field">
+        <label htmlFor="repair-description">What needs fixing?</label>
         <textarea
+          id="repair-description"
           name="description"
           aria-invalid={error}
           aria-describedby={error ? 'repair-error repair-hint' : 'repair-hint'}
@@ -54,17 +55,17 @@ export function RepairForm() {
         <span className="hint" id="repair-hint">
           Add where it is and when it started, so the vendor brings the right parts.
         </span>
-      </label>
+      </div>
       {error && (
         <p className={styles.error} id="repair-error" role="alert">
           Describe what needs fixing before sending your request.
         </p>
       )}
-      <div className="field">
-        <span>Photos</span>
+      <section className={styles.upload} aria-labelledby="repair-photos-title">
+        <h3 id="repair-photos-title">Photos</h3>
         <FileUploader kind="photo" formField="photos" max={MAX_PHOTOS} label="Photos" />
-      </div>
-      <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+      </section>
+      <fieldset className={styles.entry}>
         <legend style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Entry permission</legend>
         <div className="stack" style={{ gap: 8 }}>
           {Object.entries(ENTRY_OPTIONS).map(([value, label], index) => (
@@ -75,19 +76,24 @@ export function RepairForm() {
           ))}
         </div>
       </fieldset>
-      <label className="field">
-        Urgency
-        <select name="urgency" defaultValue="NORMAL">
+      <div className="field">
+        <label htmlFor="repair-urgency">Urgency</label>
+        <select
+          id="repair-urgency"
+          name="urgency"
+          defaultValue="NORMAL"
+          aria-describedby="urgency-help"
+        >
           {URGENCY_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
           ))}
         </select>
-        <span className="hint">
+        <span className={`hint ${styles.emergency}`} id="urgency-help">
           For emergencies (burst pipe, no heat) also call your property manager.
         </span>
-      </label>
+      </div>
       <button className="btn btn-primary btn-block" type="submit" disabled={pending}>
         {pending ? 'Sending request…' : 'Submit request'}
       </button>

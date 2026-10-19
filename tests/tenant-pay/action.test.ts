@@ -43,3 +43,13 @@ it('passes the confirmed amount and authenticated tenant to the mocked service',
     }),
   );
 });
+
+it.each([
+  [{ status: 'SUCCEEDED', duplicate: false }, 'paid'],
+  [{ status: 'PENDING', duplicate: true }, 'payment-duplicate'],
+])('retains explicit receipt outcome %j', async (result, notice) => {
+  payment.mockResolvedValue(result);
+  const form = data();
+  form.set('confirmPayment', 'yes');
+  await expect(payRentAction(form)).rejects.toThrow(`redirect:/pay?notice=${notice}`);
+});

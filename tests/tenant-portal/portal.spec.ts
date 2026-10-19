@@ -88,7 +88,9 @@ test('Alex Rivera sees home with amount due, quick actions and links', async ({ 
   await expect(page.getByRole('heading', { name: 'Welcome home', level: 1 })).toBeVisible();
   await expect(page.getByText(/Hi Alex Rivera · Maple Court · Unit 4B/)).toBeVisible();
   await expect(page.getByText(/^Rent due/)).toBeVisible();
-  await expect(page.locator('.phone-hero .amount')).toHaveText('$1,850');
+  await expect(page.getByRole('region', { name: /^Rent due/ }).locator('.amount')).toHaveText(
+    '$1,850',
+  );
   await expect(page.getByRole('heading', { name: 'Quick actions' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Open repair request' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Announcements' })).toBeVisible();

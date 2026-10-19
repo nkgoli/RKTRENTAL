@@ -23,7 +23,16 @@ export function TenantPhoto({
       ) : (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={src} alt={alt} onError={() => setFailed(true)} loading="lazy" />
+          <img
+            src={src}
+            alt={alt}
+            ref={(image) => {
+              // A failed response can finish before hydration attaches onError.
+              if (image?.complete && image.naturalWidth === 0) setFailed(true);
+            }}
+            onError={() => setFailed(true)}
+            loading="lazy"
+          />
           {caption && <span className="caption">{caption}</span>}
         </>
       )}

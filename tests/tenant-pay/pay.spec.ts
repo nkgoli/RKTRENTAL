@@ -82,3 +82,101 @@ test('autopay turns on with a saved method and back off', async ({ page }) => {
   await expect(toggle).toHaveAttribute('aria-checked', 'false');
   await expect(page.getByText('Currently off')).toBeVisible();
 });
+
+test('one native payment reaches its receipt and a retry cannot charge again', async ({ page }) => {
+  await signIn(page);
+  await page.goto('/pay');
+  await page.getByRole('radio', { name: /^Card/ }).check();
+  await page.getByRole('button', { name: /^Pay \$/ }).click();
+  let posts = 0;
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/pay/submit') posts++;
+  });
+  const prevented = await page
+    .locator('form[action="/pay/submit"]')
+    .evaluate((form: HTMLFormElement) => {
+      const events: SubmitEvent[] = [];
+      form.addEventListener('submit', (event) => events.push(event as SubmitEvent));
+      const button = form.querySelector<HTMLButtonElement>('button[name="confirmPayment"]')!;
+      form.requestSubmit(button);
+      form.requestSubmit(button);
+      return events.map((event) => event.defaultPrevented);
+    });
+  expect(prevented).toEqual([false, true]);
+  await expect(page).toHaveURL(/notice=paid#payment-result$/);
+  await expect(page.getByText('Payment received.')).toBeVisible();
+  const payments = { leaseId: alexLease, NOT: { id: { startsWith: 'seed-payment-alex-' } } };
+  expect(await prisma.payment.count({ where: payments })).toBe(1);
+  expect(posts).toBe(1);
+  // Same authenticated request against an updated ledger returns duplicate, never a second charge.
+  const retry = await page.request.post('/pay/submit', {
+    headers: { Origin: new URL(page.url()).origin },
+    form: {
+      leaseId: alexLease,
+      amount: '1850.00',
+      method: 'card',
+      providerToken: 'tok_mock_card_4242',
+      confirmPayment: 'yes',
+    },
+    maxRedirects: 0,
+  });
+  expect(retry.headers().location).toContain('notice=payment-duplicate');
+  expect(await prisma.payment.count({ where: payments })).toBe(1);
+  await page.screenshot({
+    path: 'tests/tenant-pay/evidence/payment-receipt-after.png',
+    fullPage: true,
+  });
+});
+
+test('native failure returns visible focused feedback without charging or auto retry', async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto('/pay');
+  await page.getByRole('button', { name: /^Pay \$/ }).click();
+  let posts = 0;
+  await page.route('**/pay/submit', async (route) => {
+    posts++;
+    const body = new URLSearchParams(route.request().postData()!);
+    body.set('leaseId', 'not-the-tenants-lease');
+    await route.continue({ postData: body.toString() });
+  });
+  await page.getByRole('button', { name: 'Confirm payment' }).click();
+  await expect(page).toHaveURL(/notice=payment-failed#payment-result$/);
+  await expect(page.locator('#payment-result').getByRole('alert')).toContainText(
+    'Nothing was charged.',
+  );
+  await expect(page.locator('#payment-result')).toBeFocused();
+  expect(posts).toBe(1);
+  expect(
+    await prisma.payment.count({
+      where: { leaseId: alexLease, NOT: { id: { startsWith: 'seed-payment-alex-' } } },
+    }),
+  ).toBe(0);
+  await expect(page.getByRole('button', { name: /^Pay \$/ })).toBeEnabled();
+  await page.screenshot({
+    path: 'tests/tenant-pay/evidence/payment-failure-after.png',
+    fullPage: true,
+  });
+});
+
+test('partial ACH payment navigates directly to pending receipt feedback', async ({ page }) => {
+  await signIn(page);
+  await page.goto('/pay');
+  await page.getByRole('textbox', { name: 'Amount' }).fill('500.00');
+  await page.getByRole('button', { name: 'Pay $500' }).click();
+  await page.getByRole('button', { name: 'Confirm payment' }).click();
+  await expect(page).toHaveURL(/notice=pending#payment-result$/);
+  await expect(page.getByText('Bank payment started.')).toBeVisible();
+  await expect(page.locator('.badge', { hasText: 'Pending' })).toBeVisible();
+  const payments = await prisma.payment.findMany({
+    where: { leaseId: alexLease, NOT: { id: { startsWith: 'seed-payment-alex-' } } },
+  });
+  expect(payments).toHaveLength(1);
+  expect(payments[0].status).toBe('PENDING');
+  expect(Number(payments[0].amount)).toBe(500);
+  await page.screenshot({
+    path: 'tests/tenant-pay/evidence/payment-pending-after.png',
+    fullPage: true,
+  });
+});

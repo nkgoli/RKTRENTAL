@@ -13,6 +13,7 @@ vi.mock('@/app/(tenant)/pay/actions', () => actions);
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: actions.refresh }) }));
 import { PayForm } from '@/app/(tenant)/pay/PayForm';
 import { AutopayToggle } from '@/app/(tenant)/pay/AutopayToggle';
+import { PaymentNotice } from '@/app/(tenant)/pay/PaymentNotice';
 
 afterEach(() => {
   cleanup();
@@ -22,6 +23,69 @@ const renderPay = () =>
   render(<PayForm leaseId="isolated-demo-lease" totalDueCents={185000} passFees methods={[]} />);
 
 describe('payment review and validation', () => {
+  it('directs server amount errors to Amount and other failures to their alert', () => {
+    const { rerender } = render(
+      <>
+        <input name="amount" aria-label="Amount" />
+        <PaymentNotice tone="error" code="invalid-amount" text="Invalid amount" />
+      </>,
+    );
+    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Amount' }));
+    rerender(<PaymentNotice tone="error" code="payment-failed" text="Nothing was charged." />);
+    expect(document.activeElement?.textContent).toBe('Nothing was charged.');
+    expect(screen.getByRole('alert').textContent).toBe('Nothing was charged.');
+  });
+
+  it('locks native submission synchronously and restores review after browser Back', async () => {
+    const user = userEvent.setup();
+    renderPay();
+    await user.click(screen.getByRole('button', { name: 'Pay $1,850' }));
+    const confirm = screen.getByRole('button', { name: 'Confirm payment' });
+    const form = confirm.closest('form')!;
+    const first = new SubmitEvent('submit', {
+      bubbles: true,
+      cancelable: true,
+      submitter: confirm,
+    });
+    fireEvent(form, first);
+    expect(first.defaultPrevented).toBe(false);
+    const submitting = screen.getByRole('button', { name: /^Submitting payment/ });
+    expect((submitting as HTMLButtonElement).disabled).toBe(true);
+    expect(submitting.getAttribute('aria-busy')).toBe('true');
+    const duplicate = new SubmitEvent('submit', {
+      bubbles: true,
+      cancelable: true,
+      submitter: submitting,
+    });
+    fireEvent(form, duplicate);
+    expect(duplicate.defaultPrevented).toBe(true);
+    fireEvent(window, new PageTransitionEvent('pageshow', { persisted: true }));
+    expect(screen.getByRole('button', { name: 'Pay $1,850' })).toBeTruthy();
+    expect(form.getAttribute('aria-busy')).toBe('false');
+  });
+
+  it('focuses invalid Amount on attempted submission and never submits', () => {
+    renderPay();
+    const amount = screen.getByRole('textbox', { name: 'Amount' });
+    fireEvent.change(amount, { target: { value: '0' } });
+    fireEvent.submit(amount.closest('form')!);
+    expect(document.activeElement).toBe(amount);
+    expect(actions.payRentAction).not.toHaveBeenCalled();
+  });
+
+  it('keeps partial rent and provider total distinct with fees disabled', async () => {
+    render(<PayForm leaseId="fixture" totalDueCents={97325} passFees={false} methods={[]} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('radio', { name: /^Card/ }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Amount' }), {
+      target: { value: '200.25' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Pay $200.25' }));
+    const review = screen.getByRole('group', { name: 'Confirm payment' });
+    expect(review.textContent).toContain('Total charged$200.25');
+    expect(review.textContent).not.toContain('Card fee');
+  });
+
   it('Enter in Amount opens review and never pays; Back restores focus', async () => {
     const user = userEvent.setup();
     renderPay();
@@ -59,17 +123,27 @@ describe('payment review and validation', () => {
     expect(actions.payRentAction).not.toHaveBeenCalled();
   });
 
-  it('only calls the mocked payment action after explicit confirmation', async () => {
-    const user = userEvent.setup();
+  it('allows a native POST only after explicit confirmation with the original payment fields', async () => {
     renderPay();
     const form = screen.getByRole('textbox', { name: 'Amount' }).closest('form')!;
-    fireEvent.submit(form);
-    expect(actions.payRentAction).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Confirm payment' }));
-    await waitFor(() => expect(actions.payRentAction).toHaveBeenCalledTimes(1));
-    const submitted = actions.payRentAction.mock.calls[0][0] as FormData;
+    const implicit = new SubmitEvent('submit', { bubbles: true, cancelable: true });
+    fireEvent(form, implicit);
+    expect(implicit.defaultPrevented).toBe(true);
+    const confirm = screen.getByRole('button', { name: 'Confirm payment' });
+    const explicit = new SubmitEvent('submit', {
+      bubbles: true,
+      cancelable: true,
+      submitter: confirm,
+    });
+    fireEvent(form, explicit);
+    expect(explicit.defaultPrevented).toBe(false);
+    expect(form.getAttribute('action')).toBe('/pay/submit');
+    expect(form.getAttribute('method')).toBe('post');
+    const submitted = new FormData(form);
     expect(submitted.get('leaseId')).toBe('isolated-demo-lease');
     expect(submitted.get('amount')).toBe('1850.00');
+    expect(submitted.get('confirmPayment')).toBe('yes');
+    expect(actions.payRentAction).not.toHaveBeenCalled();
   });
 });
 

@@ -8,10 +8,10 @@ Implemented **Implement light manager tenant directory and details** for the man
 - Branch: `orchestra/work-2gcjdifqik3o7helc0b-2alcsuv028zue3t2461`.
 - Checkout: `C:/Users/nkgol/RocketRental/.orchestra/workspaces/@1j89q07nsl16i9nh7w3/repository`.
 - Base: `b62f7666dbe4c644f825904201bf29b2b6bb8fdf`; integrated foundation `37314def68c96b2cf550b0f18a90ad9c42425d75` by fast-forward before page edits.
-- Final code commit: `a0c727c41b4d8261696f1247202579eba0aae709` (the handoff commit follows; the exact final SHA is in the completion report).
+- Final code commit: `a0c727c41b4d8261696f1247202579eba0aae709`; final handoff commit: the commit containing this update (exact SHA in the completion report).
 - Design references: `Designs/rocketrental-light-people` revision 47 (`tenants`, `tenants-phone`, `tenant-detail`, `tenant-detail-phone`) and `Designs/rocketrental-light-system` revision 7 (`shared-controls`, `responsive-navigation`).
-- Production build: `npm.cmd run build`, build ID `z2e8MahP4HeGNMKjWbkiz`, HEAD `a0c727c41b4d8261696f1247202579eba0aae709`.
-- Production review runtime: `next start -p 3286`, process/listener PID `29536`, command line `node node_modules/next/dist/bin/next start -p 3286`, checkout above, build ID `z2e8MahP4HeGNMKjWbkiz`, HEAD `a0c727c41b4d8261696f1247202579eba0aae709`. The listener was verified as the task-owned process before the checks and stopped afterwards.
+- Production build: `npm.cmd run build`, build ID `EFldtxQIpLQixETRp4QWP`, HEAD `0b43585d03d2145be21d4ed6cd3e577c013a8789`.
+- Production review runtime: `next start -p 3286`, process/listener PID `57352`, command line `node node_modules/next/dist/bin/next start -p 3286`, checkout above, build ID `EFldtxQIpLQixETRp4QWP`, HEAD `0b43585d03d2145be21d4ed6cd3e577c013a8789`. The listener was verified as the task-owned process before the checks and stopped afterwards.
 - Existing-regression runtime: `next dev -p 3288`, task-owned, stopped after the run. Isolated embedded PostgreSQL 16.14 on port 55415 (`prisma/.tenants-review-postgres`), seeded with the repository demo portfolio. Desktop 1280 x 900 and phone 390 x 900 CSS pixels.
 - No Preview publication, integration, push or deployment.
 
@@ -39,7 +39,7 @@ Implemented **Implement light manager tenant directory and details** for the man
 | Typecheck | `node node_modules/typescript/bin/tsc --noEmit`: exit 0. |
 | Scoped lint | `node node_modules/eslint/bin/eslint.js "src/app/(manager)/tenants" tests/tenants --max-warnings=0`: exit 0. |
 | Tenant unit/component checks | `node node_modules/vitest/vitest.mjs run --config vitest.config.ts tests/tenants`: 4 files, 11 tests passed. |
-| Production build | `npm.cmd run build`: exit 0; build ID `z2e8MahP4HeGNMKjWbkiz`; `/tenants` and `/tenants/[id]` dynamic. |
+| Production build | `npm.cmd run build`: exit 0; build ID `EFldtxQIpLQixETRp4QWP`; `/tenants` and `/tenants/[id]` dynamic. |
 | Production redirect reproduction | Foundation `37314de` production server on port 3287 (build `ODhA3pP1Dk5mZQL-JS2nF`): the add tenant test passed. Retained candidate `04b1762` production server on port 3286 (build `He-vD7vhPaw_S6QBWIyvE`): the add tenant test failed with the URL still `/tenants?view=directory`. The fix commit `7b96246`/`a0c727c` passes. |
 | Production interaction | `node node_modules/@playwright/test/cli.js test tests/tenants/production-redirect.spec.ts --workers=1 --project=tenants` with `PLAYWRIGHT_BASE_URL=http://localhost:3286`: 3 passed. Add tenant redirect at 1280/390 reaches `/tenants/<id>?returnTo=...` without manual reload, shows the detail page and validated return link, and creates one record per unique email; edit profile, note, move-in and move-out complete without reload. |
 | Browser evidence | `node node_modules/@playwright/test/cli.js test tests/tenants/light-evidence.spec.ts --workers=1 --project=tenants` with `PLAYWRIGHT_BASE_URL=http://localhost:3286`: 4 passed. Desktop/390 directory, status, detail and move-out dialog; no horizontal overflow; Cancel focused; Escape closes and restores the trigger. |
@@ -51,7 +51,7 @@ Screenshots are under `tests/tenants/evidence/` (ignored by Git): `before-*` fro
 
 Pending / not run. No desktop grant is active, so Edge was not acquired and no human window was requested. The automated Chromium observations above are not a substitute for native Edge verification. Concise checklist for the pending native pass:
 
-- [ ] Open the production build (`z2e8MahP4HeGNMKjWbkiz`) in existing Microsoft Edge.
+- [ ] Open the production build (`EFldtxQIpLQixETRp4QWP`) in existing Microsoft Edge.
 - [ ] Sign in as the manager and open `/tenants?view=directory` and `/tenants` at desktop and 390px.
 - [ ] Open `/tenants/seed-tenant-maple-11` and check the profile, lease, payments, documents, contact and notes sections.
 - [ ] Open the move-out dialog with the keyboard: confirm Cancel receives focus, Escape closes it, and the trigger is restored.

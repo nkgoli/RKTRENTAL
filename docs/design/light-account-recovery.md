@@ -127,8 +127,11 @@ recovery at both widths and open public recovery", "Capture public recovery and 
 UI states", "Capture shared states and begin the dashboard review", "Verify Show/Hide preserves
 a disposable test value"). No on-disk screenshot paths exist and none are fabricated here.
 
-The account checks are finished. The overall desktop lease remains manager-owned for the
-dashboard review; the account runtime is preserved pending the manager's final release.
+The account checks are finished. The account desktop release was confirmed at 22:09:34 UTC:
+the viewport was reset and independently measured 1699x935, the temporary review tab
+`712378459` was closed, the original user tabs were left intact, and `release_desktop` returned
+`released:true`. The account runtime was then stopped with the guarded procedure below; the
+shared seeded database on `localhost:5433` and all other services were preserved.
 
 ## Review-server lifecycle diagnosis
 
@@ -194,7 +197,8 @@ Current identity: the latest handoff HEAD (implementation `539debe`), build
 25404. Both `http://localhost:3216/sign-in` and `http://127.0.0.1:3216/sign-in` return HTTP 200.
 The same PID was still listening after the turn boundary, so turnover survival is observed for
 this task-owned hidden process; the manager also received HTTP 200 independently. The runtime
-is preserved pending the manager's final release.
+was stopped after the final release at 22:09:34 UTC; the procedure is retained for a future
+review.
 
 ## Pending native Edge checklist
 
@@ -260,8 +264,8 @@ the desktop release confirmation. Return those observations for this Task's reco
   used the approved design revision and the existing source anchors instead.
 - The account native existing-Edge review is complete: desktop default sign-in, manager
   sign-in/sign-out, logged-out feedback, manager/public 404 and `/ui` states passed; the 390px
-  captures and measurements passed. The overall desktop lease remains manager-owned for the
-  dashboard review, and the account runtime is preserved pending the manager's final release.
-  The earlier partial window's native required-message observation is retained; the fresh
-  window's DOM mirror did not recapture the popup.
+  captures and measurements passed. The desktop was released at 22:09:34 UTC and the account
+  runtime was stopped with the guarded procedure; the shared seeded database and other
+  services were preserved. The earlier partial window's native required-message observation is
+  retained; the fresh window's DOM mirror did not recapture the popup.
 - No upstream push, deployment or Preview publication was performed.

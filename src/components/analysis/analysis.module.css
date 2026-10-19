@@ -1,13 +1,24 @@
 .workspace {
   --design-primary: #1e3a8a;
+  --design-background: #ffffff;
+  --design-surface: #ffffff;
   --design-text: #17142b;
   --design-muted: #64748b;
+  --design-accent: #e0a283;
+  --design-danger: #dc2626;
+  --design-font: Inter;
+  --design-heading-font: 'Space Grotesk';
   --design-radius: 8px;
   color: var(--design-text);
+  min-width: 0;
+  width: 100%;
   max-width: 1440px;
   margin: auto;
   padding: 24px 32px;
   font-size: 14px;
+}
+.workspace [hidden] {
+  display: none !important;
 }
 .workspace h1 {
   font-size: 24px;

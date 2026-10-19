@@ -2,6 +2,7 @@
 
 import type { FormEvent } from 'react';
 import { DAYS_OPTIONS, RADIUS_OPTIONS, type CompFilters } from '@/lib/comps/core';
+import { filtersToQuery } from '@/lib/comps/navigation';
 import styles from './comps.module.css';
 
 const submitOnChange = (event: FormEvent<HTMLFormElement>) => {
@@ -13,13 +14,25 @@ export function UnitPicker({
   units,
   unitId,
   action,
+  propertyId,
+  filters,
 }: {
   units: { id: string; label: string }[];
   unitId: string;
   action?: string;
+  /** Selected property, preserved as a hidden field on property-scoped surfaces. */
+  propertyId?: string;
+  /** Current comparison filters, preserved across a unit change. */
+  filters?: CompFilters;
 }) {
   return (
     <form method="get" action={action} onChange={submitOnChange} style={{ flex: '1 1 200px', minWidth: 0 }}>
+      {propertyId ? <input type="hidden" name="property" value={propertyId} /> : null}
+      {filters
+        ? Object.entries(filtersToQuery(filters)).map(([name, value]) => (
+            <input key={name} type="hidden" name={name} value={value} />
+          ))
+        : null}
       <label className="field">
         Unit
         <select name="unit" defaultValue={unitId}>
@@ -43,13 +56,25 @@ const STATUS_CHIPS = [
   { value: 'leased', label: 'Leased' },
 ] as const;
 
-export function FilterBar({ unitId, filters, action }: { unitId: string; filters: CompFilters; action?: string }) {
+export function FilterBar({
+  unitId,
+  filters,
+  action,
+  propertyId,
+}: {
+  unitId: string;
+  filters: CompFilters;
+  action?: string;
+  /** Selected property, preserved as a hidden field on property-scoped surfaces. */
+  propertyId?: string;
+}) {
   const radii = RADIUS_OPTIONS.includes(filters.radiusMiles as 1)
     ? RADIUS_OPTIONS
     : [...RADIUS_OPTIONS, filters.radiusMiles].sort((a, b) => a - b);
   return (
     <form method="get" action={action} className="form" onChange={submitOnChange} aria-label="Comp filters">
       <input type="hidden" name="unit" value={unitId} />
+      {propertyId ? <input type="hidden" name="property" value={propertyId} /> : null}
       <div className={styles.filterFields}>
         <label className="field">
           Radius

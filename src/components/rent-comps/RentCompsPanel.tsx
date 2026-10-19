@@ -2,6 +2,15 @@ import Link from 'next/link';
 import { Alert, Badge, Card } from '@/components/ui';
 import { EmptyState } from '@/components/RouteStates';
 import { parseFilters } from '@/lib/comps/core';
+import {
+  buildCompsHref,
+  compsSurfacePath,
+  legacyContext,
+  resolveContextUnit,
+  isCompsSurface,
+  unitsForProperty,
+  type CompsNavContext,
+} from '@/lib/comps/navigation';
 import { compsSettings, fetchComps, listPricingUnits, subjectFacts } from '@/lib/comps/service';
 import { bedBath, formatAddress, formatDate, formatMoney, unitLabel } from '@/lib/properties/format';
 import { CompsWorkbench } from '@/app/(manager)/rent-comps/CompsWorkbench';
@@ -19,16 +28,40 @@ export async function RentCompsPanel({
   searchParams = {},
   subjectLabel,
   propertyLevel = false,
+  context,
 }: {
   organizationId: string;
   unitId: string;
   searchParams?: Search;
   subjectLabel?: string;
   propertyLevel?: boolean;
+  /**
+   * Navigation surface for the picker/filter forms. Defaults to the legacy
+   * `/rent-comps` behaviour; property-scoped surfaces preserve the selected
+   * property and offer only that property's units.
+   */
+  context?: CompsNavContext;
 }) {
   const units = await listPricingUnits(organizationId);
-  const unit = units.find((candidate) => candidate.id === unitId);
+  const requestedContext = context ?? legacyContext(unitId);
+  const unit = isCompsSurface(requestedContext.surface) &&
+    (!requestedContext.unitId || requestedContext.unitId === unitId)
+    ? resolveContextUnit(units, { ...requestedContext, unitId })
+    : null;
   if (!unit) return <EmptyState title="No rent comps available" description="This unit is archived or is not available for pricing." action="Go to property" href="/properties" />;
+
+  const nav: CompsNavContext =
+    context && context.surface !== 'legacy'
+      ? { ...context, unitId: unit.id }
+      : legacyContext(unit.id);
+  const scopedUnits =
+    nav.surface === 'legacy' ? units : unitsForProperty(units, nav.propertyId);
+  const pickerUnits = scopedUnits.map((candidate) => ({
+    id: candidate.id,
+    label: `${unitLabel(candidate.property, candidate)}${candidate.status === 'VACANT' ? ' (vacant)' : ''}`,
+  }));
+  const formAction = compsSurfacePath(nav);
+  const formPropertyId = nav.surface === 'rent-analysis' ? (nav.propertyId ?? unit.property.id) : undefined;
 
   const params = Object.fromEntries(Object.keys(searchParams).map((key) => [key, first(searchParams[key])]));
   const settings = await compsSettings(organizationId);
@@ -58,8 +91,8 @@ export async function RentCompsPanel({
             <p className="eyebrow">{propertyLevel ? 'Property listing' : 'Unit listing'}</p>
             <h2>Rent comps</h2>
             <p className="muted">
-              {label} · {bedBath({ bedrooms: unit.bedrooms, bathrooms: subject.bathrooms })}
-              {unit.squareFeet ? ` · ${unit.squareFeet.toLocaleString('en-US')} sqft` : ''}
+              {label} Â· {bedBath({ bedrooms: unit.bedrooms, bathrooms: subject.bathrooms })}
+              {unit.squareFeet ? ` Â· ${unit.squareFeet.toLocaleString('en-US')} sqft` : ''}
             </p>
             <p className="muted">{formatAddress(unit.property)}</p>
             <div className={styles.subjectFacts}>
@@ -71,8 +104,10 @@ export async function RentCompsPanel({
         <div className={styles.subjectActions}>
           <UnitPicker
             unitId={unit.id}
-            action="/rent-comps"
-            units={units.map((candidate) => ({ id: candidate.id, label: `${unitLabel(candidate.property, candidate)}${candidate.status === 'VACANT' ? ' (vacant)' : ''}` }))}
+            action={formAction}
+            propertyId={formPropertyId}
+            filters={nav.surface === 'legacy' ? undefined : filters}
+            units={pickerUnits}
           />
           {result && <form action={refreshCompsAction}>
             <input type="hidden" name="unitId" value={unit.id} />
@@ -81,7 +116,7 @@ export async function RentCompsPanel({
         </div>
       </div>
     </Card>
-    <Card><FilterBar unitId={unit.id} filters={filters} action="/rent-comps" /></Card>
+    <Card><FilterBar unitId={unit.id} filters={filters} action={formAction} propertyId={formPropertyId} /></Card>
     {failure || !result ? <Alert tone="warning"><div><strong>Comps unavailable</strong><br />{failure} Check the rent comps provider in <Link href="/integrations">Integrations</Link>.</div></Alert> : <>
       <CompsWorkbench
         key={`${unit.id}:${JSON.stringify(filters)}:${result.fetchedAt.getTime()}`}
@@ -96,6 +131,7 @@ export async function RentCompsPanel({
         syncedAt={result.fetchedAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }) + ' UTC'}
         cached={result.cached}
         appliedNote={appliedNote}
+        resetHref={buildCompsHref(nav)}
         propertyLevel={propertyLevel}
         occupied={unit.status === 'OCCUPIED'}
       />

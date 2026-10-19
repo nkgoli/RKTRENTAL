@@ -2,7 +2,19 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireManagerRole } from '@/lib/auth/access';
+import { COMPS_REVALIDATION_PATHS } from '@/lib/comps/navigation';
 import { applyMarketRent, clearUnitComps } from '@/lib/comps/service';
+
+/**
+ * Refreshes every surface that renders comps or saved market rent: the legacy
+ * route, the standalone Rent Analysis dashboard and the property Listing views.
+ * No return URL is read from the form, so a submitted value can never redirect
+ * or revalidate an arbitrary path.
+ */
+function revalidateCompsViews() {
+  for (const path of COMPS_REVALIDATION_PATHS) revalidatePath(path);
+  revalidatePath('/properties', 'layout');
+}
 
 export type ApplyState = { ok?: boolean; message?: string; rent?: number };
 
@@ -15,13 +27,12 @@ export async function applyRentAction(_prev: ApplyState, formData: FormData): Pr
     name: session.name,
   });
   if (!result.ok) return { ok: false, message: result.error };
-  revalidatePath('/rent-comps');
-  revalidatePath('/properties', 'layout');
+  revalidateCompsViews();
   return { ok: true, rent: result.rent, message: 'Market rent updated.' };
 }
 
 export async function refreshCompsAction(formData: FormData) {
   const session = await requireManagerRole();
   clearUnitComps(session.organizationId, String(formData.get('unitId') ?? ''));
-  revalidatePath('/rent-comps');
+  revalidateCompsViews();
 }

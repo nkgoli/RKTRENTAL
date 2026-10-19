@@ -58,14 +58,14 @@ The manager's later runtime instruction was applied on 18 October 2026. `http://
 | Identity | Observed value |
 | --- | --- |
 | URL / binding | `http://localhost:3102`, loopback `127.0.0.1:3102` |
-| Launcher PID | `34524` |
-| Listening Next server PID | `17756`, child of `34524` |
+| Launcher PID | `38376` |
+| Listening Next server PID | `41536`, child of `38376` |
 | Source checkout | `C:\Users\nkgol\RocketRental\.orchestra\workspaces\@6fmicph499j20nbevsv\repository` |
 | Generated project directory | `tests/workspace/operations/.dev-runtime` within that checkout |
 | Development output | `tests/workspace/operations/.dev-runtime/.next-ux-dev` within that checkout |
 | Next version / mode | `15.5.27`, development |
 
-The launcher uses ordinary Next CLI configuration in the generated project directory, importing the checkout's Next configuration and setting `distDir` there. It copies and watches `src` and `public`; changes, additions and removals propagate after a short debounce. Regular copies are necessary because this installed Windows Next watcher did not discover routes through a directory junction. Package/configuration changes require restarting this launcher. The generated files are ignored, and the source checkout remains authoritative.
+The launcher uses ordinary Next CLI configuration in the generated project directory, importing the checkout's Next configuration and setting `distDir` there. It copies and watches `src` and `public`; changes, additions and removals propagate after a short debounce. Regular copies are necessary because this installed Windows Next watcher did not discover routes through a directory junction. Copies use atomic file replacement and retry transient Windows locks. Package/configuration changes require restarting this launcher. The generated files are ignored, and the source checkout remains authoritative.
 
 The launch command, started as a hidden background process with logs in the evidence directory, is:
 
@@ -74,6 +74,8 @@ node --env-file=C:/Users/nkgol/RocketRental/.env --import file:///C:/Users/nkgol
 ```
 
 The process-local database, authentication and storage settings match the existing reviewed local demo runtime. No committed configuration, environment file, database or storage contents were changed. No production build ran during this follow-up. The checkout's Next config, TypeScript config and existing `.next` build/routes manifests retained their pre-launch SHA-256 hashes. A temporary file in the owned maintenance component directory verified create, update and removal propagation; it was removed from both source and runtime. Launcher syntax passed `node --check`. An unauthenticated `/maintenance` request followed the expected sign-in redirect and returned HTTP 200 with the configured Content-Security-Policy.
+
+The first watcher exited on an `EBUSY` file lock during a concurrent edit. The repaired launcher was tested by exclusively locking a temporary runtime file while updating its source: the HTTP server remained available, the copy retried successfully after release, and deletion propagated afterward. Both temporary files were removed. All 343 current source files subsequently matched the runtime copy by SHA-256; a repeated sign-in request returned HTTP 200. The PID values above identify this repaired process, superseding the earlier launcher `34524` and listener `17756`.
 
 The root `3100` server remained PID `33572` and returned HTTP 200. The reported foundation PID `5432` no longer existed, no process listened on `3101`, and the checkout had no `.next/BUILD_ID` before this launch. Thus the prior foundation build `jLhDn7QEs_m9wijKeQoL5` could not be restarted from the observed output. That output was left untouched; restoration of the foundation runtime remains unresolved. The isolated reviewed production runtime on `3112` was also preserved.
 

@@ -1,7 +1,7 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import { DAYS_OPTIONS, RADIUS_OPTIONS, type CompFilters } from '@/lib/comps/core';
+import { DAYS_OPTIONS, RADIUS_OPTIONS, filtersKey, type CompFilters } from '@/lib/comps/core';
 import { filtersToQuery } from '@/lib/comps/navigation';
 import styles from './comps.module.css';
 
@@ -26,7 +26,13 @@ export function UnitPicker({
   filters?: CompFilters;
 }) {
   return (
-    <form method="get" action={action} onChange={submitOnChange} style={{ flex: '1 1 200px', minWidth: 0 }}>
+    <form
+      key={JSON.stringify([action, propertyId, unitId, filters && filtersKey(filters)])}
+      method="get"
+      action={action}
+      onChange={submitOnChange}
+      style={{ flex: '1 1 200px', minWidth: 0 }}
+    >
       {propertyId ? <input type="hidden" name="property" value={propertyId} /> : null}
       {filters
         ? Object.entries(filtersToQuery(filters)).map(([name, value]) => (
@@ -72,7 +78,16 @@ export function FilterBar({
     ? RADIUS_OPTIONS
     : [...RADIUS_OPTIONS, filters.radiusMiles].sort((a, b) => a - b);
   return (
-    <form method="get" action={action} className="form" onChange={submitOnChange} aria-label="Comp filters">
+    // Keep native edits until accepted context changes; then replace all defaults together.
+    // Scalar keys also preserve unsent edits when the server supplies an equivalent filters object.
+    <form
+      key={JSON.stringify([action, propertyId, unitId, filtersKey(filters)])}
+      method="get"
+      action={action}
+      className="form"
+      onChange={submitOnChange}
+      aria-label="Comp filters"
+    >
       <input type="hidden" name="unit" value={unitId} />
       {propertyId ? <input type="hidden" name="property" value={propertyId} /> : null}
       <div className={styles.filterFields}>

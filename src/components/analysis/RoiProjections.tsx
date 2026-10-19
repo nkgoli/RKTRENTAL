@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AnalysisPayload } from '@/lib/analysis/contract';
 import {
   calculateExits,
@@ -128,31 +128,43 @@ const compact = (value: number) =>
 
 /** Shared zero baseline, including negative data; exact values live in the tables. */
 function LineChart({ label, years, series }: { label: string; years: number[]; series: Series[] }) {
+  const graphic = useRef<SVGSVGElement>(null);
+  const [width, setWidth] = useState(660);
+  useEffect(() => {
+    if (!graphic.current || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width > 0) setWidth(entry.contentRect.width);
+    });
+    observer.observe(graphic.current);
+    return () => observer.disconnect();
+  }, []);
   const values = series.flatMap((s) => s.values);
   const min = Math.min(0, ...values);
   const max = Math.max(0, ...values);
   const span = max - min || 1;
-  const x = (index: number) => 82 + (index / Math.max(1, years.length - 1)) * 550;
+  const x = (index: number) =>
+    74 + (index / Math.max(1, years.length - 1)) * Math.max(1, width - 104);
   const y = (value: number) => 220 - ((value - min) / span) * 192;
   const labels = [...new Set([0, Math.floor((years.length - 1) / 2), years.length - 1])];
   return (
     <>
       <svg
+        ref={graphic}
         className={chartStyles.graph}
-        viewBox="0 0 660 264"
+        viewBox={`0 0 ${width} 264`}
         role="img"
         aria-label={`${label}. USD; exact values in the table.`}
       >
         <title>{label}</title>
         {[min, min + span / 2, min + span].map((tick, index) => (
           <g key={index}>
-            <path d={`M82 ${y(tick)}H632`} stroke="#e1e6ee" />
-            <text x="72" y={y(tick) + 4} textAnchor="end">
+            <path d={`M74 ${y(tick)}H${width - 30}`} stroke="#e1e6ee" />
+            <text x="64" y={y(tick) + 4} textAnchor="end">
               {compact(tick)}
             </text>
           </g>
         ))}
-        <path d={`M82 ${y(0)}H632`} stroke="#64748b" strokeDasharray="2 3" />
+        <path d={`M74 ${y(0)}H${width - 30}`} stroke="#64748b" strokeDasharray="2 3" />
         {series.map((s) => (
           <g key={s.label}>
             <polyline

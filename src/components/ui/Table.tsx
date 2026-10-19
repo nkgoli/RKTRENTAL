@@ -42,3 +42,12 @@ export function CellMain({
     </div>
   );
 }
+
+/** Opt-in named keyboard-accessible overflow for dense financial tables. */
+export function TableRegion({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="table-region" role="region" aria-label={label} tabIndex={0}>
+      {children}
+    </div>
+  );
+}

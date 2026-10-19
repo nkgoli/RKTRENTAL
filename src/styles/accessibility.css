@@ -8,7 +8,7 @@
   outline-offset: 3px;
 }
 .sidebar :where(a, button):focus-visible {
-  outline-color: #fff;
+  outline-color: var(--design-primary);
 }
 .tabs {
   overflow-x: auto;
@@ -33,7 +33,7 @@
   background: var(--rr-hover);
 }
 .btn:disabled {
-  opacity: 0.65;
+  opacity: 1;
 }
 .field [aria-invalid='true'] {
   border-color: var(--rr-bad);

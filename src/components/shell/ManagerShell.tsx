@@ -108,7 +108,7 @@ export function ManagerShell({
           <div className="sidebar-head">
             <a className="brand" href="/dashboard">
               <span className="brand-mark" aria-hidden="true">
-                R
+                <Icon name="brand" />
               </span>
               RocketRental
             </a>

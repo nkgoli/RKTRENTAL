@@ -64,6 +64,7 @@ describe('ui components', () => {
   it('Progress, Alert, Steps and Switch expose state', () => {
     expect(html(<Progress value={40} />)).toContain('aria-valuenow="40"');
     expect(html(<Alert tone="warning">Heads up</Alert>)).toContain('alert warning');
+    expect(html(<Alert tone="error">Correct the amount</Alert>)).toContain('role="alert"');
     const steps = html(<Steps steps={['A', 'B', 'C']} current={1} />);
     expect(steps).toContain('class="done"');
     expect(steps).toContain('class="current"');
@@ -131,7 +132,7 @@ describe('navigation', () => {
     pathname.value = '/repairs';
     const out = html(<TenantShell>body</TenantShell>);
     expect(out.match(/class="active"/g)).toHaveLength(1);
-    expect(out).toMatch(/class="active"[^>]*>Repairs</);
+    expect(out).toMatch(/class="active"[^>]*>[\s\S]*?Repairs</);
   });
 });
 

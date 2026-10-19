@@ -5,17 +5,28 @@ export function Alert({
   tone = 'info',
   children,
 }: {
-  tone?: 'info' | 'warning' | 'success';
+  tone?: 'info' | 'warning' | 'success' | 'error';
   children: ReactNode;
 }) {
   return (
-    <div className={cx('alert', tone !== 'info' && tone)} role="status">
+    <div
+      className={cx('alert', tone !== 'info' && tone)}
+      role={tone === 'error' ? 'alert' : 'status'}
+    >
       {children}
     </div>
   );
 }
 
-export function Progress({ value, label = 'Progress', style }: { value: number; label?: string; style?: CSSProperties }) {
+export function Progress({
+  value,
+  label = 'Progress',
+  style,
+}: {
+  value: number;
+  label?: string;
+  style?: CSSProperties;
+}) {
   const pct = Math.max(0, Math.min(100, value));
   return (
     <div

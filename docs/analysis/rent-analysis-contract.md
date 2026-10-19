@@ -154,3 +154,105 @@ coverage are therefore **unavailable**, not passed. No business-data mutations
 were performed. The original browser URL was restored, desktop ownership released,
 and the temporary server stopped. Future standalone dashboard visual/interaction
 coverage remains the next slice's responsibility.
+
+## Validation completion (2026-10-19)
+
+The follow-up validation supersedes the dependency/database limitations above.
+Routing candidate `23b55f33a8b27196c66604968d5e1faf81a20384` is an ancestor of
+the tested checkout at `e65385b66c308e11e8f4bd9974f3891b88064946`. No routing,
+Listing, calculation or persistence implementation changes were needed.
+
+### Reproducible isolated setup
+
+Run from the assigned checkout in PowerShell. Use the committed lockfiles:
+
+```powershell
+npm.cmd ci --no-audit --no-fund
+npm.cmd ci --prefix prisma --ignore-scripts --no-audit --no-fund
+$env:ROCKETRENTAL_DB_PORT='55435'
+$env:ROCKETRENTAL_DB_DIR=Join-Path (Get-Location) '.orchestra/task-02a35c0b-db'
+node --import ./prisma/os-userinfo.mjs prisma/local-postgres.mjs
+```
+
+Keep that process running. In a second PowerShell session set the isolated URL
+explicitly; never substitute the shared/user database. Migrate and seed only a
+**new Task-owned cluster**; keep an existing verification cluster as-is.
+
+```powershell
+$env:DATABASE_URL='postgresql://rocketrental:rocketrental@localhost:55435/rocketrental?schema=public'
+npx.cmd prisma migrate deploy
+$env:NODE_ENV='development'
+node --import ./prisma/os-userinfo.mjs --import tsx prisma/seed.ts
+node tests/comps/verification-database.mjs baseline
+$env:ROCKETRENTAL_AUTH_SECRET='task-02a35c0b-isolated-verification-only-0123456789'
+$env:ROCKETRENTAL_SANDBOX='true'
+$env:ROCKETRENTAL_AUTH_COOKIE_SECURE='false'
+node --import ./prisma/os-userinfo.mjs --import tsx tests/comps/verification-runtime.mjs
+```
+
+Observed identity: PostgreSQL 16.14, database `rocketrental`, port `55435`,
+data directory `<assigned checkout>/.orchestra/task-02a35c0b-db`;
+19 current migrations applied; existing seed produced 4 properties, 45 units,
+41 occupied leases and 4 applications. Runtime listens only on
+`http://127.0.0.1:3145`, with generated output in
+`.next/verification-02a35c0b`. SQL `current_database()`, `inet_server_port()` and
+`current_setting('data_directory')` confirmed database identity; `/sign-in`
+returned HTTP 200 before desktop acquisition. No shared `.env` was modified.
+The initial sandbox install failed with registry `EACCES`; elevated retry
+succeeded. Embedded Postgres also required an elevated process because Windows
+restricted-token initialization failed. No dependency versions/lockfiles changed.
+`npm ci` generated Prisma Client 6.19.3, including the current ROI models.
+
+### Final self-checks
+
+All commands below passed in the prepared checkout:
+
+```powershell
+npm.cmd test -- tests/comps tests/rent-comps
+npm.cmd run typecheck
+npx.cmd eslint src/components/rent-comps 'src/app/(manager)/rent-comps' src/lib/comps/navigation.ts tests/comps --max-warnings=0
+node --import ./prisma/os-userinfo.mjs --import tsx tests/comps/verification-isolation.ts
+node tests/comps/verification-database.mjs verify
+```
+
+Focused Vitest: 7 files / 36 tests passed. Full project typecheck passed,
+including the additional verification helper. Scoped lint passed. The database
+helper asserts every lease field and every unit field against the pre-UI baseline:
+native apply changed `seed-unit-maple-7` from $1,675 to $1,725, with
+`marketRentSetById`, `marketRentSetByName`, `marketRentSetAt` and Prisma's
+automatic `updatedAt`. Its listed rent remained $1,600; all 41 complete lease
+rows and all other 44 complete unit rows were identical. The baseline remains
+local under `.orchestra/`, not in Git. The service isolation helper uses this
+database to reject a foreign organization lookup/write and checks cache-key and
+refresh isolation with an injected deterministic provider. This complements the
+focused action/session tests; it is not a second-organization browser login.
+
+### Native Edge observations
+
+Used Windows MCP with the existing human Edge session, under desktop ownership.
+Screenshots are full Windows desktop captures made through Windows MCP using
+`tests/comps/capture-native.ps1`; the phone viewport is Edge responsive device
+emulation at **390 x 844 CSS pixels**, not physical-phone evidence.
+
+| Flow | Observed result | Evidence under `tests/comps/evidence/` |
+| --- | --- | --- |
+| Demo manager login and legacy `/rent-comps?unit=seed-unit-maple-7` | Login succeeded; redirect through legacy unit entry to canonical property Listing with selected vacant Unit 3A | `native-listing-desktop.png` |
+| Keyboard radius filter | Home/Enter on Radius selected 1 mile; URL kept unit and explicit empty size bounds; 6 comps became 3 | `native-apply-exclusion.png` (resulting 1-mile state) |
+| Refresh and exclusion | Refresh updated synced time; unchecking first comp changed included count 3 to 2 and suggested rent $1,800 to $1,825 | `native-apply-exclusion.png` |
+| Native apply | Typed 1725 and applied; success message, actor/time and $1,725 market rent shown; list price stayed $1,600; Create lease retained | `native-apply-exclusion.png` plus database comparison |
+| Property Listing and keyboard unit change | All 12 Maple units shown; Down/Enter in Switch unit opened occupied Unit 1A Listing, with 6 comps | `native-property-listing.png`; phone summary/table show resulting occupied unit |
+| Empty and reset | Min sqft 9999 + Enter yielded zero comps, no suggestion, Reset filters; Reset returned to same Unit 1A Listing with 6 comps | `native-empty.png`, `native-filters-map-390.png`, `native-table-390.png` |
+| 390px Listing | Two-column filters, map, summary/apply and renewal controls fit the viewport and were reachable by vertical scrolling; comparison table retains horizontal scrolling | `native-filters-map-390.png`, `native-summary-390.png`, `native-table-390.png` |
+| 390px property and unit navigation | Property table and navigation tabs retain horizontal scrolling; selecting Unit 1A link opened its overview | `native-property-390.png`, `native-unit-overview-390.png` |
+
+An out-of-range min sqft 99999 was rejected by the existing parser before the
+valid empty-state check with 9999. No defect in the routing candidate was exposed.
+The existing provider fixture visibly includes pre-existing encoding artifacts
+in its unit description; this validation does not claim a typography repair.
+The temporary new tab was closed, the navigated tab returned to its prior Amazon
+page, DevTools/emulation closed, and the original GitHub tab selected again
+(seven tabs, matching the original window). Desktop ownership was released.
+Only Task-owned runtime/database processes were stopped; database files remain
+on disk for inspection. No user database reset, shared process stop, upstream
+push, production build, publication or new `/rent-analysis` dashboard coverage
+is claimed.

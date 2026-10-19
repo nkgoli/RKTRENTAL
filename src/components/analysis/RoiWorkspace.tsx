@@ -17,6 +17,7 @@ import {
   saveRoiAnalysisAction,
 } from '@/app/(manager)/roi-analysis/actions';
 import { PropertySelector } from './PropertySelector';
+import { AnalysisTabs, RoiProjections } from './RoiProjections';
 import {
   allFields,
   applyValues,
@@ -73,6 +74,9 @@ export function RoiWorkspace({
   const [message, setMessage] = useState('');
   const [errors, setErrors] = useState<ValidationIssue[]>([]);
   const [result, setResult] = useState<Result | null>(null);
+  const [calculatedPayload, setCalculatedPayload] = useState<AnalysisPayload | null>(null);
+  const [calculationVersion, setCalculationVersion] = useState(0);
+  const [view, setView] = useState('summary');
   const [stale, setStale] = useState(false);
   const [facts, setFacts] = useState<Facts | null>(null);
   const [pending, setPending] = useState<string | null>(null);
@@ -93,11 +97,15 @@ export function RoiWorkspace({
     setConflict(false);
     try {
       setResult(calculatePayload(p).base);
+      setCalculatedPayload(p);
+      setCalculationVersion((v) => v + 1);
       setErrors([]);
       setStale(false);
-    } catch {
+    } catch (error) {
       setResult(null);
-      setErrors(missingData(p));
+      setCalculatedPayload(null);
+      const missing = missingData(p);
+      setErrors(missing.length ? missing : issues(error));
       setStale(true);
     }
   }
@@ -106,6 +114,7 @@ export function RoiWorkspace({
     setLoading(true);
     setPayload(null);
     setResult(null);
+    setCalculatedPayload(null);
     setFacts(null);
     setErrors([]);
     setMessage('');
@@ -231,15 +240,17 @@ export function RoiWorkspace({
     queueMicrotask(() => returnFocus.current?.focus());
   }
   function focusField(path: string) {
-    queueMicrotask(() => {
-      const field = document.getElementById(path);
+    setView('summary');
+    setTimeout(() => {
+      const field =
+        document.getElementById(path) ?? document.getElementById('input.purchase.purchasePrice');
       let ancestor = field?.parentElement;
       while (ancestor) {
         if (ancestor instanceof HTMLDetailsElement) ancestor.open = true;
         ancestor = ancestor.parentElement;
       }
       field?.focus();
-    });
+    }, 0);
   }
   function switchProperty(id: string, writeHistory = true) {
     token.current++;
@@ -251,6 +262,8 @@ export function RoiWorkspace({
     setSelected(id);
     setPayload(null);
     setResult(null);
+    setCalculatedPayload(null);
+    setView('summary');
     if (writeHistory) window.history.pushState(null, '', propertyUrl(id));
     if (id) void load(id);
     else {
@@ -292,6 +305,8 @@ export function RoiWorkspace({
       if (calculate) {
         const calculated = calculatePayload(p).base;
         setResult(calculated);
+        setCalculatedPayload(p);
+        setCalculationVersion((v) => v + 1);
         setStale(false);
       }
       setErrors([]);
@@ -467,7 +482,13 @@ export function RoiWorkspace({
                     <ul>
                       {errors.map((e, i) => (
                         <li key={i}>
-                          <a href={`#${e.path}`}>
+                          <a
+                            href={`#${e.path}`}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              focusField(e.path);
+                            }}
+                          >
                             {e.path}: {e.message}
                           </a>
                         </li>
@@ -482,7 +503,39 @@ export function RoiWorkspace({
                       : 'Complete assumptions to calculate. No valid projection is available yet.'}
                   </p>
                 )}
-                <div className={styles.layout}>
+                <AnalysisTabs
+                  id="roi-section"
+                  label="ROI sections"
+                  choices={[
+                    { id: 'summary', label: 'Summary' },
+                    { id: 'charts', label: 'Charts' },
+                  ]}
+                  value={view}
+                  onChange={setView}
+                />
+                <div
+                  id="roi-section-panel-charts"
+                  role="tabpanel"
+                  aria-labelledby="roi-section-tab-charts"
+                  hidden={view !== 'charts'}
+                >
+                  <RoiProjections
+                    key={selected}
+                    result={result}
+                    calculatedPayload={calculatedPayload}
+                    calculationVersion={calculationVersion}
+                    stale={stale}
+                    saving={saving}
+                    onEdit={(path) => focusField(path ?? 'input.purchase.purchasePrice')}
+                  />
+                </div>
+                <div
+                  className={styles.layout}
+                  id="roi-section-panel-summary"
+                  role="tabpanel"
+                  aria-labelledby="roi-section-tab-summary"
+                  hidden={view !== 'summary'}
+                >
                   <div className={styles.stack}>
                     <section className={styles.card} aria-label="Year 1 at a glance">
                       <h2>Year 1 at a glance</h2>

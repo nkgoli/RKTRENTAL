@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RoiWorkspace } from '@/components/analysis/RoiWorkspace';
@@ -379,5 +379,174 @@ describe('ROI summary workspace', () => {
     expect(edited.input.financing?.loanAmount).toBe(0);
     v['input.expenses.maintenance'] = '';
     expect(applyValues(p, v, false).input.expenses?.maintenance).toBeUndefined();
+  });
+});
+
+describe('ROI projection interactions', () => {
+  const tab = (name: string) => fireEvent.click(screen.getByRole('tab', { name }));
+  const change = (label: string, value: string) =>
+    fireEvent.change(screen.getByLabelText(label, { exact: true }), { target: { value } });
+
+  it('supports arrow/Home/End navigation across six working views and exact tables', async () => {
+    await open();
+    tab('Charts');
+    const cash = screen.getByRole('tab', { name: 'Cash Flow' });
+    cash.focus();
+    const expected = ['Equity', 'Expenses', 'Amortization', 'Exit', 'Sensitivity'];
+    for (const name of expected) {
+      fireEvent.keyDown(document.activeElement!, { key: 'ArrowRight' });
+      expect(document.activeElement).toBe(screen.getByRole('tab', { name }));
+      expect(document.activeElement?.getAttribute('aria-selected')).toBe('true');
+    }
+    fireEvent.keyDown(document.activeElement!, { key: 'Home' });
+    expect(document.activeElement).toBe(cash);
+    const annual = screen.getByRole('table', { name: /Projection amounts/ });
+    expect(within(annual).getAllByRole('row')).toHaveLength(2);
+    expect(within(annual).getAllByText('$10,800.00')).toHaveLength(3);
+    fireEvent.keyDown(cash, { key: 'End' });
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Sensitivity' }));
+    tab('Amortization');
+    expect(screen.getByText(/All-cash purchase · debt service/)).toBeTruthy();
+    expect(screen.queryByRole('table', { name: /Annual loan payments/ })).toBeNull();
+  });
+
+  it('preserves typed invalid assumptions across tabs and focuses their recovery from Charts', async () => {
+    await open();
+    fireEvent.change(rent(), { target: { value: 'not-rent' } });
+    tab('Charts');
+    tab('Sensitivity');
+    expect(screen.getByRole('button', { name: 'Update sensitivity' }).matches(':disabled')).toBe(
+      true,
+    );
+    expect(screen.queryByRole('table', { name: /Year 1 cash-on-cash/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+    await waitFor(() => expect(document.activeElement).toBe(rent()));
+    expect(screen.getByRole('tab', { name: 'Summary' }).getAttribute('aria-selected')).toBe('true');
+    expect(rent().value).toBe('not-rent');
+    fireEvent.change(rent(), { target: { value: '2000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+    tab('Charts');
+    expect(screen.getByRole('tab', { name: 'Sensitivity' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('table', { name: /Year 1 cash-on-cash/ })).toBeTruthy();
+    tab('Cash Flow');
+    const table = screen.getByRole('table', { name: /Projection amounts/ });
+    expect(within(table).getAllByText('$22,800.00')).toHaveLength(3);
+  });
+
+  it('recovers invalid probe ranges, retains probe controls across tabs and saves only the base', async () => {
+    await open();
+    tab('Charts');
+    tab('Sensitivity');
+    change('Minimum rent ($ / month)', 'bad');
+    fireEvent.click(screen.getByRole('button', { name: 'Update sensitivity' }));
+    expect(screen.getByRole('alert').textContent).toMatch(/Minimum rent/);
+    expect(screen.queryByRole('table', { name: /Year 1 cash-on-cash/ })).toBeNull();
+    tab('Equity');
+    tab('Sensitivity');
+    expect(
+      (screen.getByLabelText('Minimum rent ($ / month)', { exact: true }) as HTMLInputElement)
+        .value,
+    ).toBe('bad');
+    change('Minimum rent ($ / month)', '900');
+    fireEvent.click(screen.getByRole('button', { name: 'Update sensitivity' }));
+    expect(screen.getByRole('table', { name: /Year 1 cash-on-cash/ })).toBeTruthy();
+    change('Sensitivity metric', 'irr');
+    expect(screen.getByRole('table', { name: /Hold-period leveraged IRR/ })).toBeTruthy();
+    change('Sensitivity display', 'values');
+    tab('Exit');
+    change('Probe exit year', '2.5');
+    fireEvent.click(screen.getByRole('button', { name: 'Update exit comparison' }));
+    expect(screen.getByRole('alert').textContent).toMatch(/whole number/);
+    change('Probe exit year', '5');
+    change('Probe selling costs (%)', '6');
+    change('Probe sale price override ($)', '80000');
+    fireEvent.click(screen.getByRole('button', { name: 'Update exit comparison' }));
+    const exit = screen.getByRole('table', { name: /Exit horizon comparison/ });
+    expect(within(exit).getByText('$75,200.00')).toBeTruthy();
+    expect(within(exit).getByText('$29,200.00')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    await screen.findByText('Saved draft - revision 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
+    await screen.findByText('Saved ready - revision 2');
+    for (const [call] of vi.mocked(saveRoiAnalysisAction).mock.calls) {
+      expect((call as { payload: ReturnType<typeof make> }).payload.input.appreciationExit).toEqual(
+        make().input.appreciationExit,
+      );
+      expect((call as { payload: ReturnType<typeof make> }).payload.input.income).toEqual(
+        make().input.income,
+      );
+    }
+    expect(screen.getByRole('tab', { name: 'Exit' }).getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Reload saved analysis' }));
+    await screen.findByText(/New analysis/);
+    expect(screen.getByRole('tab', { name: 'Charts' }).getAttribute('aria-selected')).toBe('true');
+    expect(
+      (screen.getByLabelText('Probe exit year', { exact: true }) as HTMLInputElement).value,
+    ).toBe('1');
+  });
+
+  it('recovers incomplete and overflow drafts without losing strings or exposing stale probes', async () => {
+    const incomplete = make();
+    delete incomplete.input.income!.monthlyRent;
+    vi.mocked(loadRoiDraftAction).mockResolvedValueOnce({
+      ok: true,
+      data: { payload: incomplete, missing: [], facts },
+    });
+    await open();
+    tab('Charts');
+    tab('Exit');
+    expect(
+      screen.getByRole('heading', { name: 'Complete your assumptions to see charts' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Review assumptions' }));
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: 'Summary' }).getAttribute('aria-selected')).toBe(
+        'true',
+      ),
+    );
+    fireEvent.change(rent(), { target: { value: '10000000000' } });
+    const growth = document.getElementById('input.income.annualRentGrowth')!;
+    const hold = document.getElementById('input.appreciationExit.holdingPeriodYears')!;
+    fireEvent.change(growth, { target: { value: '100' } });
+    fireEvent.change(hold, { target: { value: '50' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+    expect(screen.getByText(/safe monetary precision/)).toBeTruthy();
+    expect(rent().value).toBe('10000000000');
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    await screen.findByText('Saved draft - revision 1');
+    expect(screen.getByText(/safe monetary precision/)).toBeTruthy();
+    fireEvent.change(hold, { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+    tab('Charts');
+    tab('Exit');
+    expect(screen.getByRole('table', { name: /Exit horizon comparison/ })).toBeTruthy();
+  });
+
+  it('keeps chart edits guarded and clears all panels on accepted property history changes', async () => {
+    await open();
+    fireEvent.change(rent(), { target: { value: '2222' } });
+    tab('Charts');
+    tab('Equity');
+    act(() => {
+      window.history.replaceState(null, '', '/roi-analysis?property=b');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(screen.getByRole('alertdialog')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
+    expect(window.location.search).toBe('?property=a');
+    expect(screen.getByRole('tab', { name: 'Equity' }).getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Discard and continue' }));
+    expect(screen.queryByRole('tab', { name: 'Charts' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Property b/ }));
+    await screen.findByRole('button', { name: 'Save draft' });
+    tab('Charts');
+    expect(screen.getByRole('tab', { name: 'Cash Flow' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    const table = screen.getByRole('table', { name: /Projection amounts/ });
+    expect(within(table).getAllByText('$10,800.00')).toHaveLength(3);
   });
 });

@@ -28,7 +28,11 @@ async function noPageOverflow(page: Page) {
   ).toEqual({ width: page.viewportSize()!.width, scroll: page.viewportSize()!.width });
 }
 async function openDialog(page: Page) {
-  await page.getByRole('link', { name: '+ Add property', exact: true }).click();
+  const current = new URL(page.url());
+  current.searchParams.set('add', '1');
+  const trigger = page.getByRole('link', { name: '+ Add property', exact: true });
+  await expect(trigger).toHaveAttribute('href', current.pathname + current.search);
+  await trigger.click();
   const dialog = page.getByRole('dialog', { name: 'Add a property', exact: true });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByLabel('Property name', { exact: true })).toBeFocused();
@@ -69,18 +73,26 @@ test.afterAll(async () => {
 
 test('unchanged baseline at desktop and 390px', async ({ page }) => {
   await signIn(page, 'http://localhost:3231');
+  const organization = await db.user.findFirstOrThrow({
+    where: { email: 'jordan.mills@rocketrental.example' },
+    select: { organizationId: true },
+  });
+  const propertyCount = await db.property.count({
+    where: { organizationId: organization.organizationId, archivedAt: null },
+  });
+  const prefix = propertyCount === 4 ? 'before' : 'before-current';
   for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     await page.goto('http://localhost:3231/properties');
     await expect(
       page.getByRole('region', { name: 'Property directory', exact: true }).getByRole('link'),
-    ).toHaveCount(4);
+    ).toHaveCount(propertyCount);
     await noPageOverflow(page);
-    await capture(page, `before-${width}-grid`);
+    await capture(page, `${prefix}-${width}-grid`);
     await page.getByRole('link', { name: 'List', exact: true }).click();
     await expect(page.getByRole('table', { name: 'Properties', exact: true })).toBeVisible();
-    await capture(page, `before-${width}-list`);
-    observations.push({ flow: 'baseline', width, url: page.url(), properties: 4 });
+    await capture(page, `${prefix}-${width}-list`);
+    observations.push({ flow: 'baseline', width, url: page.url(), properties: propertyCount });
   }
 });
 

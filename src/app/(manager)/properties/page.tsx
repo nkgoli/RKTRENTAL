@@ -6,7 +6,6 @@ import { requireManagerRole } from '@/lib/auth/access';
 import { propertiesDb, propertyFilterFrom, type PropertyFilter } from '@/lib/properties/data';
 import { formatAddress, formatMoney } from '@/lib/properties/format';
 import { AddPropertyDialog } from './_components/AddPropertyDialog';
-import { EmptyState } from '@/components/RouteStates';
 import styles from './properties.module.css';
 
 const FILTERS: { key: PropertyFilter; label: string }[] = [
@@ -139,7 +138,7 @@ export default async function PropertiesPage({
                 ? counts[key]
                 : undefined;
             return (
-              <Link
+              <a
                 key={key}
                 href={href(key, q, view)}
                 aria-current={key === filter ? 'page' : undefined}
@@ -152,7 +151,7 @@ export default async function PropertiesPage({
                     <span className={styles.count}>{count}</span>
                   </>
                 )}
-              </Link>
+              </a>
             );
           })}
         </nav>
@@ -165,30 +164,34 @@ export default async function PropertiesPage({
         </span>
         <div className={styles.viewToggle} role="group" aria-label="View">
           {(['grid', 'list'] as const).map((v) => (
-            <Link
+            <a
               key={v}
               href={href(filter, q, v)}
               aria-current={v === view ? 'true' : undefined}
               className={v === view ? styles.viewActive : undefined}
-              scroll={false}
             >
               {v === 'grid' ? 'Grid' : 'List'}
-            </Link>
+            </a>
           ))}
         </div>
       </section>
 
       {properties.length === 0 && (
-        <EmptyState
-          title={q || filter !== 'all' ? 'No properties match this view' : 'No properties yet'}
-          description={
-            q || filter !== 'all'
+        <section className={styles.empty}>
+          <Icon name="properties" />
+          <h2>{q || filter !== 'all' ? 'No properties match this view' : 'No properties yet'}</h2>
+          <p>
+            {q || filter !== 'all'
               ? 'Clear the filters to see your full portfolio.'
-              : 'Add your first property to start tracking units and leases.'
-          }
-          action={q || filter !== 'all' ? 'Clear filters' : 'Add a property'}
-          href={q || filter !== 'all' ? '/properties' : '/properties?add=1'}
-        />
+              : 'Add your first property to start tracking units and leases.'}
+          </p>
+          <a
+            className="btn btn-secondary"
+            href={q || filter !== 'all' ? '/properties' : '/properties?add=1'}
+          >
+            {q || filter !== 'all' ? 'Clear filters' : 'Add a property'}
+          </a>
+        </section>
       )}
 
       {properties.length > 0 && view === 'grid' && (

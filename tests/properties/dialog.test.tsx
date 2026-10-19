@@ -19,6 +19,7 @@ beforeEach(() => {
   nav.params = new URLSearchParams('view=list&filter=multi&q=Oak&add=1');
   nav.replace.mockClear();
   vi.spyOn(window.history, 'replaceState').mockImplementation(nav.replace);
+  vi.stubGlobal('location', { search: '?view=list&filter=multi&q=Oak&add=1' });
   HTMLDialogElement.prototype.showModal = function () {
     this.setAttribute('open', '');
   };
@@ -30,6 +31,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   document.body.style.overflow = '';
 });
 it('focuses the first input, locks scrolling and removes only add on cancellation', async () => {

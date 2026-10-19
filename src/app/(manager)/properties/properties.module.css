@@ -427,3 +427,26 @@
     display: none;
   }
 }
+.empty {
+  padding: 28px 20px;
+  text-align: center;
+  background: #f1fafc;
+  border: 1px solid var(--rr-border);
+  border-radius: var(--design-radius);
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+.empty > svg {
+  width: 40px;
+  height: 40px;
+  color: var(--design-accent);
+}
+.empty h2 {
+  font-size: 20px;
+}
+.empty p {
+  font-size: 13px;
+  color: var(--design-muted);
+  max-width: 340px;
+}

@@ -30,8 +30,8 @@ export function AddPropertyDialog({ owners }: { owners: OwnerOption[] }) {
 
   function onClose() {
     document.querySelector<HTMLAnchorElement>('a[href*="add=1"]')?.focus();
-    if (!params.has('add')) return;
-    const next = new URLSearchParams(params.toString());
+    const next = new URLSearchParams(window.location.search);
+    if (!next.has('add')) return;
     next.delete('add');
     const qs = next.toString();
     // Closing changes only local dialog state; keep the loaded directory in place.

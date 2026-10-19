@@ -80,32 +80,55 @@ Before/after screenshots are in `.playwright-mcp/` in this checkout:
 - `after-shared-states-390.png` (element capture of the `/ui` page-states section, excluding the
   unrelated wide table specimen)
 
-## Native Edge observations (partial)
+## Native Edge observations
 
-The manager reviewed the existing Edge tab under the human grant and released the desktop at
-21:11:32 UTC. The account runtime was served from `http://localhost:3216` (candidate
-`539debee6a6c8f41287a574938c2147e82d8c336`, build `1j-Rdcc6JnMEAZt3np19U`) during the
-21:07:29–21:17:18 UTC hold.
+The account native review was completed under fresh human grant
+`eeb730ea81ec54ea51aeb06f9d35188eed9b85b3b12166b2107633853ea25ac5` (21:59:59–22:14:59 UTC
+maximum). The manager used the existing Edge extension session (`browser1`), opened review tab
+`712378459` in the same session (the original tab `712378442` was detached), and did not open a
+new window. The runtime served `http://localhost:3216` with build
+`1j-Rdcc6JnMEAZt3np19U` and implementation `539debe`; the handoff HEAD `db862db` is
+documentation-only.
 
-Observed:
+Desktop 1699x935:
 
-- Desktop 1699x887 default `/sign-in`: passed visually.
-- Empty submit: stayed on `/sign-in`, showed the native "Please fill out this field" message
-  and moved focus to the email field.
-- Show/Hide: the text/password type and the accessible "Show characters" / "Hide characters"
-  label changed. Exact value retention could not be observed because browser inspection
-  redacts password values.
-- Desktop `/sign-in?error=invalid`: readable feedback; both inputs had
-  `aria-describedby="sign-in-error"`.
-- 390px invalid state: measured `scrollWidth === innerWidth === 390`.
+- Default `/sign-in` visual passed.
+- Seeded manager login reached `/dashboard`.
+- `/sign-out` displayed "Jordan Mills", "Sign out of RocketRental" and "Stay signed in".
+- Sign-out reached `/sign-in?loggedOut=1` with the teal `role="status"` feedback.
+- Manager `/tenants/does-not-exist` rendered `h1` "Tenants" plus the embedded `h2` "Page not
+  found" inside the shell, with "Back to dashboard".
+- Public `/native-review-page-does-not-exist` rendered the brand, `h1` "Page not found" and
+  "Return to your account".
+- `/ui` empty and loading states rendered correctly; no `RouteError` browser claim is made.
 
-Not run or not claimed:
+Phone 390x844:
 
-- The phone capture sequence aborted when the server stopped; no phone screenshot is claimed.
-- Manager sign-in/sign-out, the logged-out state, manager/public 404 and `/ui` native checks
-  remain unrun.
-- No on-disk screenshot paths were generated; the default/error desktop captures are images in
-  the manager turn transcript.
+- Captured default sign-in, invalid-credential, signed-in sign-out, logged-out feedback,
+  manager 404, public 404 and `/ui` states.
+- `scrollWidth === innerWidth === 390` for sign-in, the invalid state, sign-out and both 404s.
+- Inputs use 16px text; the input and Show/Sign in controls are 44px high.
+- The invalid state kept `aria-describedby="sign-in-error"` on both email and password.
+- `/ui` overall `scrollWidth` is 472 because of the documented wide-table specimen; the loading
+  box is 310.67px and the changed states fit visually.
+- Show/Hide toggled the accessible labels and pressed state; a disposable synthetic value
+  `NativeReview2468!` remained visibly intact after Hide then Show (screenshot), then was
+  cleared.
+- Empty submit stayed on `/sign-in` and focused the email field. This turn's DOM mirror
+  returned an empty `validationMessage` and the screenshot omitted the browser popup, so the
+  earlier native "Please fill out this field" observation is retained without claiming it was
+  recaptured.
+
+The native screenshots are images in the manager tool transcript (titles: "Capture desktop
+sign-in and test manager authentication", "Capture the desktop sign-out confirmation", "Check
+phone sign-out layout and complete sign-out", "Capture signed-out feedback and inspect the
+credential error", "Capture phone credential error and default sign-in", "Capture manager
+recovery at both widths and open public recovery", "Capture public recovery and inspect shared
+UI states", "Capture shared states and begin the dashboard review", "Verify Show/Hide preserves
+a disposable test value"). No on-disk screenshot paths exist and none are fabricated here.
+
+The account checks are finished. The overall desktop lease remains manager-owned for the
+dashboard review; the account runtime is preserved pending the manager's final release.
 
 ## Review-server lifecycle diagnosis
 
@@ -166,12 +189,12 @@ Unregister-ScheduledTask -TaskName 'RocketRentalReview3216' -Confirm:$false
 Do not force-stop whichever process happens to own port 3216, and do not remove a task whose
 action no longer matches this review.
 
-Current identity: candidate `65d883afb785c048c207ada7f105676e6157ce46` (implementation
-`539debe`, partial-observation handoff `97b9484`), build `1j-Rdcc6JnMEAZt3np19U`, node PID
-31004 created 2026-10-19 14:51:16 local, parent `cmd.exe` PID 25404. Both
-`http://localhost:3216/sign-in` and `http://127.0.0.1:3216/sign-in` return HTTP 200. The same
-PID was still listening after the turn boundary, so turnover survival is observed for this
-task-owned hidden process; the manager also received HTTP 200 independently.
+Current identity: the latest handoff HEAD (implementation `539debe`), build
+`1j-Rdcc6JnMEAZt3np19U`, node PID 31004 created 2026-10-19 14:51:16 local, parent `cmd.exe` PID
+25404. Both `http://localhost:3216/sign-in` and `http://127.0.0.1:3216/sign-in` return HTTP 200.
+The same PID was still listening after the turn boundary, so turnover survival is observed for
+this task-owned hidden process; the manager also received HTTP 200 independently. The runtime
+is preserved pending the manager's final release.
 
 ## Pending native Edge checklist
 
@@ -235,9 +258,10 @@ the desktop release confirmation. Return those observations for this Task's reco
 - The source/state handoff at `output/account-recovery/source-state-handoff.md` from the closed
   design task was not present in this checkout or in the project artifacts. The implementation
   used the approved design revision and the existing source anchors instead.
-- The native existing-Edge review is partially observed: the desktop default sign-in, empty
-  submit, Show/Hide and invalid-credential states passed, and the 390px invalid state measured
-  no horizontal scroll. Manager sign-in/sign-out, the logged-out state, manager/public 404,
-  `/ui` and the phone captures remain unrun. Native acceptance stays pending; the review server
-  is stopped and the checklist above is the remaining scope.
+- The account native existing-Edge review is complete: desktop default sign-in, manager
+  sign-in/sign-out, logged-out feedback, manager/public 404 and `/ui` states passed; the 390px
+  captures and measurements passed. The overall desktop lease remains manager-owned for the
+  dashboard review, and the account runtime is preserved pending the manager's final release.
+  The earlier partial window's native required-message observation is retained; the fresh
+  window's DOM mirror did not recapture the popup.
 - No upstream push, deployment or Preview publication was performed.

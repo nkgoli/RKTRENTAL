@@ -74,6 +74,47 @@ Before/after screenshots are in `.playwright-mcp/` in this checkout:
 - `after-manager-not-found-1280.png`, `after-manager-not-found-390.png`
 - `after-shared-states-390.png`
 
+## Pending native Edge checklist
+
+The manager performs these checks in the existing Edge session after a fresh bounded human
+grant. Do not open a new Edge window, drive the desktop, restart the review server, rerun the
+passing checks or change the committed source. The review server is `http://localhost:3216`
+(production build `r5VfC9nuh0z1rxnQpYUQX`) against the seeded database on `localhost:5433`.
+
+Desktop (the existing window's desktop viewport):
+
+1. `/sign-in` default: gradient card header, brand mark, "Welcome back", email and password
+   fields, Show, Sign in and the help text; no design specimen catalog is rendered.
+2. `/sign-in?error=invalid`: the red credential alert sits above the form and both fields keep
+   their `aria-describedby` association.
+3. `/sign-in?loggedOut=1`: the teal "You have been signed out." status sits above the form.
+4. Password Show / Hide: the input type toggles, the typed value is preserved and the
+   accessible name changes between "Show characters" and "Hide characters".
+5. Empty submit: the browser's native required-field message appears and the URL stays
+   `/sign-in`.
+6. Manager sign-in reaches `/dashboard`; `/sign-out` shows "You are signed in as Jordan Mills.",
+   "Sign out of RocketRental" and "Stay signed in"; signing out reaches
+   `/sign-in?loggedOut=1`.
+7. `/tenants/does-not-exist`: the manager not-found renders inside the manager shell with
+   "Page unavailable", the folder mark, "Page not found" and "Back to dashboard".
+8. An unknown public URL: the public not-found renders the brand above the card and
+   "Return to your account" to `/`.
+9. `/ui`: the shared empty state (teal top rule) and loading state (spinner plus skeleton)
+   render without overflow.
+
+390px (the existing window's phone emulation):
+
+1. `/sign-in` default: the card fits, inputs use 16px text, controls are at least 44px and the
+   page has no horizontal scroll.
+2. `/sign-in?error=invalid`: the alert wraps and the form remains usable.
+3. `/sign-out` signed in: both actions are full width and the card does not overflow.
+4. `/tenants/does-not-exist`: the manager mobile menu and the not-found card fit without
+   horizontal scroll.
+5. An unknown public URL: the brand and card fit without horizontal scroll.
+
+Record the exact Edge window/session, viewport sizes, pass/fail per item, any screenshots and
+the desktop release confirmation. Return those observations for this Task's record.
+
 ## Limitations
 
 - The manager and tenant **error** boundaries are not directly routable without a runtime
@@ -87,7 +128,7 @@ Before/after screenshots are in `.playwright-mcp/` in this checkout:
 - The source/state handoff at `output/account-recovery/source-state-handoff.md` from the closed
   design task was not present in this checkout or in the project artifacts. The implementation
   used the approved design revision and the existing source anchors instead.
-- The native existing-Edge review is staged but not performed here: the review server is
-  running on port 3216 and the human's earlier five-minute window has expired. The bounded
-  native check remains for the manager/human turn.
+- The native existing-Edge review is pending the manager's bounded human grant. The review
+  server is running on port 3216 and the checklist above is the exact remaining scope; the
+  manager returns the observed results for this Task's record.
 - No upstream push, deployment or Preview publication was performed.

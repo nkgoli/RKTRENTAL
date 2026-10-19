@@ -94,3 +94,11 @@ The first temporary Next helper did not propagate its custom dist configuration 
 Desktop access must be restored for a short native Windows MCP session in the human's existing Edge app. Capture a known baseline and the candidate at desktop and phone widths; exercise search/empty recovery, draft resume and validation, term/rent summaries, conditional editing, template reordering and save failures, all five detail tabs, keyboard traversal/focus and phone overflow. Run signing, renewal, property-default or destructive submissions only against the isolated demo fixtures.
 
 Automatic approval review also failed intermittently because the selected review model was at capacity. Affected browser and coordination actions were not executed; this was a review-service failure, not a finding that they were unsafe. No approval check or desktop ownership fence was bypassed. Restore that review service if needed before continuing browser verification. Full task acceptance, integration, Preview publication and push are not claimed.
+
+### Runtime coordination follow-up
+
+The manager directed updated-app checks to the Operations-owned shared development runtime at `http://localhost:3102`, once readiness and identity are recorded in `docs/ux/operations.md`. Ports 3100 and 3101 remain reference runtimes. This Task will reuse that coordinated runtime and will not start another server or run another production build independently.
+
+On receipt, the operations report still identified its earlier isolated snapshot at port 3112 and had no readiness entry for 3102. A native TCP-listener check showed port 3100 listening and no listener on 3101, 3102 or 3114. The leasing dev sessions had already stopped, and the isolated build had completed. The Task has no active dev server or build to reconcile; its scoped output remains on disk. General process inspection was denied by the sandbox, so process-session completion and the listener check are the observed evidence.
+
+The runtime-readiness and desktop-turn question was recorded successfully. A fresh desktop request again returned `DESKTOP_CONTROL_WAIT_TIMEOUT`, now with two waiters. No native baseline or updated-app observation is claimed from this follow-up.

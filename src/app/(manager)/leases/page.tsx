@@ -70,6 +70,7 @@ export default async function LeasesPage({
     Math.max(1, Math.ceil(rows.length / PAGE_SIZE)),
   );
   const shown = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const leaseStatusLabel = tab === 'drafts' ? 'draft' : tab;
   const values = {
     active: counts.active,
     expiring: counts.expiring,
@@ -147,7 +148,7 @@ export default async function LeasesPage({
         >
           <table className="table">
             <caption className={styles.caption}>
-              {rows.length} {tab === 'expiring' ? 'expiring' : tab} lease
+              {rows.length} {leaseStatusLabel} lease
               {rows.length === 1 ? '' : 's'}
               {q && ` matching “${q}”`}. Open a lease to manage its agreement, files and payments.
             </caption>
@@ -285,7 +286,7 @@ export default async function LeasesPage({
           page={page}
           total={rows.length}
           size={PAGE_SIZE}
-          noun={`${tab === 'expiring' ? 'expiring' : tab} leases`}
+          noun={`${leaseStatusLabel} leases`}
           href={(n) => tabHref(tab, q, n, scope)}
         />
       </Card>

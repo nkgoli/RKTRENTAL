@@ -12,22 +12,13 @@ import {
   type TenantHomeView,
 } from '@/lib/tenant-portal';
 
+import styles from '../portal.module.css';
+import { PortalIcon } from './PortalIcon';
+
 export const dynamic = 'force-dynamic';
 
 const shortDate = (date: Date) =>
   date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-
-const icon = {
-  width: 18,
-  height: 18,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 1.8,
-  strokeLinecap: 'round' as const,
-  strokeLinejoin: 'round' as const,
-  'aria-hidden': true,
-};
 
 function RentHero({ view }: { view: TenantHomeView }) {
   const { pay } = view;
@@ -39,34 +30,39 @@ function RentHero({ view }: { view: TenantHomeView }) {
       ? `Autopay is off — pay by ${shortDate(due.dueDate)} to avoid a late fee.`
       : 'Autopay is off.';
   return (
-    <section className="phone-hero" aria-labelledby="rent-due">
-      <p id="rent-due" className="eyebrow">
-        {settled ? 'Rent' : `Rent due ${due.dueDate ? shortDate(due.dueDate) : ''}`}
-      </p>
-      <div className="amount">{settled ? 'All paid up' : formatUsd(due.totalDueCents)}</div>
+    <section className={styles.rentHero} aria-labelledby="rent-due">
+      <div className={styles.heroTop}>
+        <p id="rent-due" className="eyebrow">
+          {settled ? 'Rent' : `Rent due ${due.dueDate ? shortDate(due.dueDate) : ''}`}
+        </p>
+        <span>
+          <PortalIcon name="pay" />
+        </span>
+      </div>
+      <div className={styles.paymentRow}>
+        <div className={`amount ${settled ? styles.settled : ''}`}>
+          {settled ? 'All paid up' : formatUsd(due.totalDueCents)}
+        </div>
+        {!settled && (
+          <Link className="btn btn-primary btn-block" href="/pay">
+            Pay now <PortalIcon name="arrow" />
+          </Link>
+        )}
+        {settled && (
+          <Link href="/pay" className="btn btn-primary btn-block">
+            View payments &amp; receipts
+          </Link>
+        )}
+      </div>
       <p>
         {view.premises} · {autopay}
       </p>
-      {!settled && (
-        <Link
-          className="btn btn-primary btn-block"
-          href="/pay"
-          style={{ marginTop: 12, color: '#fff' }}
-        >
-          Pay now
-        </Link>
-      )}
       {due.pendingCents > 0 && (
-        <p style={{ fontSize: 13, marginTop: 8 }}>
+        <p className={styles.pending}>
           {formatUsd(due.pendingCents)} bank payment pending. Check Pay for its status.
         </p>
       )}
-      {settled && (
-        <Link href="/pay" className="btn btn-secondary btn-block" style={{ marginTop: 12 }}>
-          View payments &amp; receipts
-        </Link>
-      )}
-      <p style={{ fontSize: 12, marginTop: 10 }}>From {view.managerName}, your property manager</p>
+      <p className={styles.manager}>From {view.managerName}, your property manager</p>
     </section>
   );
 }
@@ -77,9 +73,14 @@ export default async function TenantHomePage() {
 
   if (!view) {
     return (
-      <>
+      <div className={styles.homeLease}>
         <div>
-          <h1 style={{ fontSize: 'var(--rr-h1)' }}>Welcome home</h1>
+          <h1 style={{ fontSize: 'var(--rr-h1)' }}>
+            Welcome home
+            <span className={styles.spark} aria-hidden="true">
+              ✳
+            </span>
+          </h1>
         </div>
         <EmptyState
           title="No active lease yet"
@@ -87,19 +88,24 @@ export default async function TenantHomePage() {
           action="Check again"
           href="/home"
         />
-      </>
+      </div>
     );
   }
 
   const repair = view.openRepair;
 
   return (
-    <>
+    <div className={styles.homeLease}>
       <div>
         <p className="muted" style={{ fontSize: 13 }}>
           Hi {view.tenantName} · {view.premises}
         </p>
-        <h1 style={{ fontSize: 'var(--rr-h1)', marginTop: 2 }}>Welcome home</h1>
+        <h1 style={{ fontSize: 'var(--rr-h1)', marginTop: 2 }}>
+          Welcome home
+          <span className={styles.spark} aria-hidden="true">
+            ✳
+          </span>
+        </h1>
       </div>
 
       <RentHero view={view} />
@@ -108,13 +114,10 @@ export default async function TenantHomePage() {
         <h2 id="quick-actions" style={{ fontSize: 'var(--rr-h3)', marginBottom: 8 }}>
           Quick actions
         </h2>
-        <div className="tile-grid">
+        <div className={styles.quickActions}>
           <Link className="tile" href="/pay">
             <span className="tile-icon">
-              <svg {...icon}>
-                <rect x="2.5" y="5" width="19" height="14" rx="2" />
-                <path d="M2.5 10h19M6 15h4" />
-              </svg>
+              <PortalIcon name="pay" />
             </span>
             Pay rent
             <small className="muted" style={{ fontWeight: 400 }}>
@@ -123,9 +126,7 @@ export default async function TenantHomePage() {
           </Link>
           <Link className="tile" href="/lease">
             <span className="tile-icon">
-              <svg {...icon}>
-                <path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8zM14 3v5h5M9 13h6M9 17h6" />
-              </svg>
+              <PortalIcon name="lease" />
             </span>
             My lease
             <small className="muted" style={{ fontWeight: 400 }}>
@@ -134,10 +135,7 @@ export default async function TenantHomePage() {
           </Link>
           <Link className="tile" href="/repairs">
             <span className="tile-icon">
-              <svg {...icon}>
-                <path d="M14.5 6.5a4 4 0 0 0 5 5L21 13l-8 8a2.1 2.1 0 0 1-3-3l8-8z" />
-                <path d="M14.5 6.5a4 4 0 0 1 5-3.5l-2.5 2.5 1.5 1.5L21 4.5" />
-              </svg>
+              <PortalIcon name="repair" />
             </span>
             Request repair
             <small className="muted" style={{ fontWeight: 400 }}>
@@ -146,9 +144,7 @@ export default async function TenantHomePage() {
           </Link>
           <Link className="tile" href="/lease#documents">
             <span className="tile-icon">
-              <svg {...icon}>
-                <path d="M3 6a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" />
-              </svg>
+              <PortalIcon name="folder" />
             </span>
             Documents
             <small className="muted" style={{ fontWeight: 400 }}>
@@ -169,7 +165,7 @@ export default async function TenantHomePage() {
       )}
 
       {repair && (
-        <section className="card" aria-labelledby="open-repair">
+        <section className={`card ${styles.repairCard}`} aria-labelledby="open-repair">
           <div className="card-header" style={{ marginBottom: 8 }}>
             <h2 id="open-repair" style={{ fontSize: 18 }}>
               Open repair request
@@ -204,12 +200,12 @@ export default async function TenantHomePage() {
           <p className="muted">Payments and notices will show up here.</p>
         ) : (
           // Announcements are a short list, not a stack of coloured banners.
-          <ul
-            className="card"
-            style={{ listStyle: 'none', margin: 0, padding: '4px var(--rr-card-pad)' }}
-          >
+          <ul className={styles.activity}>
             {view.activity.slice(0, 4).map((item) => (
               <li key={item.id} className="list-item" style={{ padding: '8px 0' }}>
+                <span className={styles.activityMark} aria-hidden="true">
+                  {item.tone === 'success' ? '\u2713' : item.tone === 'warning' ? '!' : '\u2026'}
+                </span>
                 <span className="file-meta">
                   <strong>{item.title}</strong>
                   <small>{item.detail}</small>
@@ -219,6 +215,6 @@ export default async function TenantHomePage() {
           </ul>
         )}
       </section>
-    </>
+    </div>
   );
 }

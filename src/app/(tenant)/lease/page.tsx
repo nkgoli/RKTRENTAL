@@ -7,6 +7,7 @@ import { formatBytes, formatDate } from '@/lib/properties/format';
 import { statusLabel } from '@/lib/leases/format';
 import { canPreview, fileBadge, loadTenantLease } from '@/lib/tenant-portal';
 import { TenantPhoto } from '../TenantPhoto';
+import { PortalIcon } from '../home/PortalIcon';
 import styles from '../portal.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -17,7 +18,7 @@ export default async function TenantLeasePage() {
 
   if (!view) {
     return (
-      <>
+      <div className={styles.homeLease}>
         <h1 style={{ fontSize: 'var(--rr-h1)' }}>My lease</h1>
         <EmptyState
           title="No active lease yet"
@@ -25,16 +26,21 @@ export default async function TenantLeasePage() {
           action="Check again"
           href="/lease"
         />
-      </>
+      </div>
     );
   }
 
   const others = [...view.coTenants, ...view.occupants.filter((n) => n !== view.tenantName)];
 
   return (
-    <>
+    <div className={styles.homeLease}>
       <div>
-        <h1 style={{ fontSize: 'var(--rr-h1)' }}>{view.tenantName}</h1>
+        <h1 style={{ fontSize: 'var(--rr-h1)' }}>
+          {view.tenantName}
+          <span className={styles.spark} aria-hidden="true">
+            ✳
+          </span>
+        </h1>
         <p className="muted" style={{ fontSize: 13, marginTop: 2 }}>
           Managed by {view.managerName}
         </p>
@@ -46,18 +52,31 @@ export default async function TenantLeasePage() {
         {view.photos.length > 0 && <a href="#photos">Unit photos</a>}
       </nav>
 
-      <section className="card" id="overview" aria-labelledby="current-lease">
-        <div className="card-header">
-          <h2 id="current-lease" style={{ fontSize: 18 }}>
-            Current lease
-          </h2>
-          <Badge tone={view.status === 'ACTIVE' ? 'success' : 'neutral'}>
-            {statusLabel(view.status)}
-          </Badge>
+      <section
+        className={`card ${styles.currentLease}`}
+        id="overview"
+        aria-labelledby="current-lease"
+      >
+        <div className={styles.currentHeader}>
+          <div className="card-header">
+            <h2 id="current-lease" style={{ fontSize: 18 }}>
+              Current lease
+            </h2>
+            <Badge tone={view.status === 'ACTIVE' ? 'success' : 'neutral'}>
+              {statusLabel(view.status)}
+            </Badge>
+          </div>
+          <div className={styles.property}>
+            <span className={styles.building}>
+              <PortalIcon name="building" />
+            </span>
+            <div>
+              <small>Property</small>
+              <strong>{view.premises.replace(' · ', ' — ')}</strong>
+            </div>
+          </div>
         </div>
         <dl className="kv" style={{ gridTemplateColumns: '88px minmax(0, 1fr)' }}>
-          <dt>Property</dt>
-          <dd>{view.premises.replace(' · ', ' — ')}</dd>
           {others.length > 0 && (
             <>
               <dt>Occupants</dt>
@@ -106,7 +125,11 @@ export default async function TenantLeasePage() {
         </section>
       )}
 
-      <section className="card" id="documents" aria-labelledby="lease-documents">
+      <section
+        className={`card ${styles.documents}`}
+        id="documents"
+        aria-labelledby="lease-documents"
+      >
         <div className="card-header">
           <h2 id="lease-documents" style={{ fontSize: 18 }}>
             Lease &amp; documents
@@ -124,7 +147,7 @@ export default async function TenantLeasePage() {
           const badge = fileBadge(doc.mimeType);
           return (
             <div className={styles.document} key={doc.id}>
-              <span className={badge === 'doc' ? 'file-icon' : `file-icon ${badge}`}>
+              <span className={styles.fileBadge}>
                 {badge === 'doc' ? 'DOC' : badge.toUpperCase()}
               </span>
               <span className="file-meta">
@@ -163,7 +186,7 @@ export default async function TenantLeasePage() {
           <h2 id="unit-photos" style={{ fontSize: 'var(--rr-h3)', marginBottom: 8 }}>
             Unit photos
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div className={styles.photos}>
             {view.photos.map((photo) => (
               <TenantPhoto
                 key={photo.id}
@@ -178,6 +201,6 @@ export default async function TenantLeasePage() {
           </p>
         </section>
       )}
-    </>
+    </div>
   );
 }

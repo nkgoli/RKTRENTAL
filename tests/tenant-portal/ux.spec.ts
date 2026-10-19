@@ -12,6 +12,58 @@ async function signIn(page: Page) {
 }
 
 for (const width of [390, 1280]) {
+  test(`Home and Lease visual evidence and keyboard clearance at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await signIn(page);
+    for (const route of ['home', 'lease']) {
+      await page.goto(`/${route}`);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const phase = process.env.TENANT_PORTAL_EVIDENCE_PHASE;
+      if (phase === 'before' || phase === 'after') {
+        for (const photo of await page.locator('main img').all()) {
+          await photo.scrollIntoViewIfNeeded();
+          await expect.poll(() => photo.evaluate((image) => (image as HTMLImageElement).complete)).toBe(true);
+        }
+        await page.evaluate(() => scrollTo(0, 0));
+        await page.screenshot({
+          path: `tests/tenant-portal/evidence/light-home-lease/${route}-${width}-${phase}.png`,
+          fullPage: true,
+        });
+      }
+      const lastLink = page.getByRole('main').getByRole('link').last();
+      await lastLink.focus();
+      await lastLink.scrollIntoViewIfNeeded();
+      const linkBox = await lastLink.boundingBox();
+      const navBox = await page
+        .getByRole('navigation', { name: 'Tenant', exact: true })
+        .boundingBox();
+      expect(linkBox!.y + linkBox!.height).toBeLessThanOrEqual(navBox!.y);
+      await expect(lastLink).toBeFocused();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
+        false,
+      );
+    }
+  });
+}
+
+test('Lease photo failure keeps its accessible fallback and document actions', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page);
+  await page.route('**/lease/photos/**', (route) => route.fulfill({ status: 404, body: '' }));
+  await page.goto('/lease');
+  await page.getByRole('heading', { name: 'Unit photos' }).scrollIntoViewIfNeeded();
+  await expect(page.getByRole('img', { name: /Living room — photo unavailable/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Download Signed lease/ })).toBeAttached();
+  if (process.env.TENANT_PORTAL_EVIDENCE_PHASE === 'after') {
+    await page.screenshot({
+      path: 'tests/tenant-portal/evidence/light-home-lease/lease-photo-fallback-390-after.png',
+      fullPage: true,
+    });
+  }
+});
+
+for (const width of [390, 1280]) {
   test(`tenant navigation, documents and form review at ${width}px without financial submissions`, async ({
     page,
   }) => {

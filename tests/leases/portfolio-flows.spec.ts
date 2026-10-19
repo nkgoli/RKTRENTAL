@@ -1,5 +1,37 @@
 ﻿import { expect, test, type Page } from '@playwright/test';
-const base = 'http://127.0.0.1:3229';
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+const base = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3294';
+const baseline = process.env.LEASE_BASELINE_URL ?? 'http://127.0.0.1:3295';
+test.beforeAll(() => {
+  const status = JSON.parse(
+    execFileSync(
+      'powershell.exe',
+      [
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        path.resolve('tests/leases/review-runtime.ps1'),
+        '-Action',
+        'status',
+      ],
+      { encoding: 'utf8' },
+    ),
+  );
+  for (const [origin, port] of [
+    [base, status.app.port],
+    [baseline, status.baseline.port],
+  ] as const) {
+    const target = new URL(origin);
+    if (
+      !['127.0.0.1', 'localhost'].includes(target.hostname) ||
+      target.port !== String(port) ||
+      target.pathname !== '/'
+    )
+      throw new Error('Browser origin does not match the verified lease runtime');
+  }
+});
 const property = 'seed-property-maple';
 const unit = 'seed-unit-maple-11';
 async function login(page: Page, origin = base) {
@@ -13,7 +45,10 @@ async function capture(page: Page, name: string) {
   await page.locator('tbody tr, [data-lease]').first().waitFor({ state: 'visible' });
   await page.evaluate(() => document.fonts.ready);
   await noOverflow(page);
-  await page.screenshot({ path: `.playwright-mcp/${name}.png`, fullPage: true });
+  await page.screenshot({
+    path: `.playwright-mcp/${process.env.LEASE_CAPTURE_PREFIX ?? ''}${name}.png`,
+    fullPage: true,
+  });
 }
 async function noOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -113,13 +148,13 @@ for (const width of [1440, 390]) {
   });
   test(`exact foundation baseline captures ${width}`, async ({ page }) => {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    await login(page, 'http://127.0.0.1:3230');
+    await login(page, baseline);
     for (const [path, name] of [
       ['/leases', 'leases'],
       [`/properties/${property}/leases`, 'property-leases'],
       [`/properties/${property}/leases?unit=${unit}`, 'unit-leases'],
     ]) {
-      await page.goto(`http://127.0.0.1:3230${path}`);
+      await page.goto(`${baseline}${path}`);
       await capture(page, `${name}-${width}-before`);
     }
   });

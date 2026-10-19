@@ -1,8 +1,23 @@
 ﻿import { PrismaClient } from '@prisma/client';
-if (!process.env.DATABASE_URL?.includes('localhost:55429/'))
-  throw new Error('Requires isolated lease review database');
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+import { assertLeaseDatabase, checkout } from './database-identity.mjs';
 const db = new PrismaClient();
 try {
+  await assertLeaseDatabase(db);
+  execFileSync(
+    'powershell.exe',
+    [
+      '-NoProfile',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-File',
+      path.join(checkout, 'tests/leases/review-runtime.ps1'),
+      '-Action',
+      'status',
+    ],
+    { stdio: 'pipe' },
+  );
   const source = await db.lease.findUniqueOrThrow({
     where: { id: 'seed-lease-maple-11' },
     include: { tenants: true },

@@ -2,17 +2,29 @@
 
 Implemented **Implement light global and scoped lease portfolios** from Designs/rocketrental-light-leasing revision 46 (leases and leases-phone), using Designs/rocketrental-light-system revision 7 and the existing shared shell.
 
-## Candidate and runtime
+## Main merge recovery
+
+Current merge candidate: `cbc314d460a7ae2b23e0ae2ea30e9559aa20e7af`, with parents `8261cb928a5ad26e40cd40de66470761a93f440b` (previous portfolio candidate) and `a7cfc0fd93e31caa7f6ede67179282d3a6ea5bbd` (observed project main). The final submission adds this recovery record only; its exact commit is in the typed receipt. Main was observed in the project root before merging into this same assigned work branch. Root's unrelated dirty `prisma/package-lock.json` and untracked `start-rocketrental.ps1` were left untouched.
+
+The actual merge had one **add/add conflict**, `tests/leases/review-runtime.ps1`: main supplied the lease-detail runtime, while this branch supplied the portfolio runtime. Resolution retains main's script at its original path, byte-for-byte (Git blob `82b4fcef6d3112b74f4df5c90840384faa49c438`), and moves the unchanged portfolio script to `tests/leases/portfolio-review-runtime.ps1` (blob `1390c65d46e331d04475ced885c98dafce9974ea`). Portfolio fixture/browser callers and this handoff now use the distinct portfolio filename. Main's lease-detail documentation keeps its original valid command. Isolated portfolio ports 3294/3295/55494, database-directory checks and all other runtime guards are preserved.
+
+Application files merged automatically. Integrated lease-detail, property, payment, repair and other main changes are preserved; this portfolio's UI files are unchanged by the resolution. Both recorded parents and the reviewed foundation are ancestors of the merge. There was no reset, rebase, force update, target-main modification or publication.
+
+Affected checks rerun: two portfolio/scope test files, **5 tests passed**; runtime guard checks, **2 passed**; scoped ESLint for the two changed browser/fixture callers, TypeScript, and PowerShell syntax parsing for both runtime scripts passed. The copied scripts' blob identities and main ancestry were checked. Merge-wide whitespace checking reported pre-existing whitespace in main's runtime/gitignore files; these integrated files were preserved exactly. The recovery's own changes pass `git diff --check`.
+
+Earlier successful build, visual/source tests, isolated runtime lifecycle and desktop/390px browser evidence below are reused as **historical evidence**. The merged application has not been rebuilt or served by this recovery, and those observations must not be labelled as checks of the merged candidate. The historical runtime state names corrective candidate `780059d525acab583ec30c66f8aff652802b64ec` and build `_TUIjhJh6UFUaLiG3asAz`; after main changed application source, the guard intentionally refuses to treat that state as current. No runtime, fixture, migration, seed or service shutdown was performed during merge recovery. A future merged-candidate runtime review requires its own verified build/start rather than bypassing that guard. Native Edge remains explicitly pending and manager-coordinated, with no current desktop grant.
+
+## Historical candidate and runtime (before main merge)
 
 - Assigned checkout: `C:/Users/nkgol/RocketRental/.orchestra/workspaces/@49gllk33jr96qti32eb/repository`.
 - Branch: `orchestra/work-2gcjdifqik3o7helc0b-5c5rykprj8c898gscx5`.
 - Original visual implementation: `2b12a2c4de83b9b741e71026b59c84cb077865aa`; reviewed foundation `37314def68c96b2cf550b0f18a90ad9c42425d75` remains an ancestor.
 - Runtime isolation corrective candidate: `780059d525acab583ec30c66f8aff652802b64ec`. The final submission adds this handoff update only; its containing commit is in the typed completion receipt.
 - Candidate production build: `_TUIjhJh6UFUaLiG3asAz`, reused unchanged. No application source changed in the corrective work; runtime status verifies `git diff --quiet <runtime-candidate> -- src public` and candidate ancestry before reuse.
-- Current hidden production review server: [local sign-in](http://127.0.0.1:3294/sign-in), reserved app port **3294**. Hidden baseline: port **3295**, exact foundation copy under `.playwright-mcp/baseline`, build `CKXocpRczfPg4v2Pj1PK2`.
-- Current isolated PostgreSQL: **55494**, database rocketrental, original preserved `.playwright-mcp/lease-postgres` data directory. All three reserved ports were verified free before startup. The old postmaster PID had no live owner; the existing cluster recovered normally on the new port. No initialization, reseed or migration occurred during corrective work.
+- Historical hidden production review server: [local sign-in](http://127.0.0.1:3294/sign-in), reserved app port **3294**. Hidden baseline: port **3295**, exact foundation copy under `.playwright-mcp/baseline`, build `CKXocpRczfPg4v2Pj1PK2`.
+- Preserved isolated PostgreSQL: **55494**, database rocketrental, original preserved `.playwright-mcp/lease-postgres` data directory. All three reserved ports were verified free before startup. The old postmaster PID had no live owner; the existing cluster recovered normally on the new port. No initialization, reseed or migration occurred during corrective work.
 - Prior runtime addresses are retired for this Task. Do not use historical port references in old reports to operate services. The payment Task's services were not stopped, reseeded, migrated or modified, and no unknown listener was killed.
-- Both hidden review servers and the database remain running. Current process IDs and identities come from the status command below rather than stale static PID instructions.
+- Runtime readiness below was observed before the main merge. It is not a current merged-candidate readiness claim; see Main merge recovery. Process IDs must always be verified rather than reused from history.
 - Review uses the standard seeded manager account defined in `prisma/seed.ts`. No credentials or auth cookies are included here. No target-main integration, push, Preview publication or deployment was performed.
 
 ### Hidden start/status/stop
@@ -31,7 +43,7 @@ Status checks this exact checkout, candidate ancestry, unchanged application sou
 
 The database fixture helper performs both database and full runtime verification before any upsert. Its strict target parser rejects the retired database port and lookalike ports before SQL; a reserved-port database reporting a different directory also fails. Browser checks run the same runtime status preflight, honor `PLAYWRIGHT_BASE_URL` and `LEASE_BASELINE_URL`, and reject origins that do not match the verified service ports.
 
-### Corrective verification
+### Historical runtime-isolation corrective verification
 
 - Scoped lint of the changed browser/fixture files and new identity/server/guard files passed with `--max-warnings=0`; repository TypeScript check passed. `node --test tests/leases/review-runtime.test.mjs`: **2 passed**, including retired/lookalike port rejection before queries and wrong-directory rejection.
 - Hidden `start`, `status`, verified `stop`, restarted `start`, and subsequent browser status preflight all passed. One initial startup-controller wait on PostgreSQL descendants was repaired to wait only for the launcher process; only that identified task-owned controller was ended. Its verified PostgreSQL process/data were preserved.

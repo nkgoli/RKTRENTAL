@@ -1,4 +1,4 @@
-﻿export type IconName =
+export type IconName =
   | 'dashboard'
   | 'properties'
   | 'tenants'
@@ -6,6 +6,8 @@
   | 'applications'
   | 'payments'
   | 'returns'
+  | 'roi-analysis'
+  | 'rent-analysis'
   | 'rent-comps'
   | 'maintenance'
   | 'documents'
@@ -82,8 +84,8 @@ export const managerNav: ManagerNavGroup[] = [
     label: 'Money',
     items: [
       { label: 'Payments', href: '/payments', icon: 'payments' },
-      { label: 'ROI Analysis', href: '/roi-analysis', icon: 'returns' },
-      { label: 'Rent Analysis', href: '/rent-analysis', icon: 'rent-comps' },
+      { label: 'ROI Analysis', href: '/roi-analysis', icon: 'roi-analysis' },
+      { label: 'Rent Analysis', href: '/rent-analysis', icon: 'rent-analysis' },
       {
         label: 'Returns',
         href: '/returns',

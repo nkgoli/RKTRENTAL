@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { cx } from '../ui/cx';
+import { Icon } from './Icons';
 import { AccountMenu } from './AccountMenu';
 import { findTenantTab, isActive, tenantTabs } from './nav';
 import focus from './focus.module.css';
@@ -26,7 +27,7 @@ export function TenantShell({
       <div className={`phone ${focus.scope} ${styles.shell}`}>
         <header className={`phone-top ${styles.header}`}>
           <a className="brand-mark" href="/home" aria-label="RocketRental home">
-            R
+            <Icon name="brand" />
           </a>
           <span className="title">{current?.label ?? 'RocketRental'}</span>
           <AccountMenu initials={initials} />
@@ -44,6 +45,17 @@ export function TenantShell({
                 className={cx(active && 'active')}
                 aria-current={active ? 'page' : undefined}
               >
+                <Icon
+                  name={
+                    tab.href === '/home'
+                      ? 'property-house'
+                      : tab.href === '/pay'
+                        ? 'payments'
+                        : tab.href === '/lease'
+                          ? 'leases'
+                          : 'maintenance'
+                  }
+                />
                 {tab.label}
               </a>
             );

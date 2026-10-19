@@ -1,4 +1,4 @@
-﻿.scope :global(a:focus-visible),
+.scope :global(a:focus-visible),
 .scope :global(button:focus-visible),
 .scope :global(input:focus-visible),
 .scope :global(select:focus-visible),
@@ -8,11 +8,18 @@
   outline-offset: 3px;
   border-radius: 3px;
 }
-.scope { --design-muted: #526176; --design-danger: #b42318; }
-.scope :global(.nav-label) { color: #9fb3d1; }
+
+.scope :global(.nav-label) {
+  color: var(--design-muted);
+}
 .scope :global(.sidebar a:focus-visible),
-.scope :global(.sidebar button:focus-visible) { outline-color: #fff; }
-.scope :global(.alert a) { text-decoration: underline; text-underline-offset: 2px; }
+.scope :global(.sidebar button:focus-visible) {
+  outline-color: var(--design-primary);
+}
+.scope :global(.alert a) {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .skip {
   position: fixed;
   top: 8px;
@@ -25,6 +32,15 @@
   border-radius: 6px;
   padding: 8px 12px;
 }
-.skip:focus-visible { transform: none; }
-:global(.topbar).workspaceTopbar { min-height: 0; padding: 12px 20px 0; }
-@media (min-width: 1024px) { :global(.topbar).workspaceTopbar { display: none; } }
+.skip:focus-visible {
+  transform: none;
+}
+:global(.topbar).workspaceTopbar {
+  min-height: 0;
+  padding: 12px 20px 0;
+}
+@media (min-width: 1024px) {
+  :global(.topbar).workspaceTopbar {
+    display: none;
+  }
+}

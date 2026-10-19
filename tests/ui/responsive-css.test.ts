@@ -47,7 +47,7 @@ describe('responsive shell CSS (1024px breakpoint)', () => {
   it('docks the sidebar and hides hamburger, close X and scrim at 1024px and up', () => {
     expect(docked).toMatch(/\.sidebar,\s*\.app\.drawer-open \.sidebar\s*\{[^}]*display:\s*flex/);
     expect(docked).toMatch(/position:\s*sticky/);
-    expect(docked).toMatch(/grid-template-columns:\s*240px/);
+    expect(docked).toMatch(/grid-template-columns:\s*208px/);
     const hide = rule(
       docked,
       '.menu-btn,\n  .drawer-close,\n  .app.drawer-open .drawer-close,\n  .app.drawer-open .scrim',
@@ -57,7 +57,12 @@ describe('responsive shell CSS (1024px breakpoint)', () => {
 
   it('places the docked overrides after the drawer rules so they win', () => {
     const media = css.indexOf('@media (min-width: 1024px)');
-    for (const sel of ['.menu-btn {', '.scrim {', '.app.drawer-open .sidebar {', '.app.drawer-open .scrim {']) {
+    for (const sel of [
+      '.menu-btn {',
+      '.scrim {',
+      '.app.drawer-open .sidebar {',
+      '.app.drawer-open .scrim {',
+    ]) {
       expect(css.indexOf(sel)).toBeGreaterThan(-1);
       expect(css.indexOf(sel)).toBeLessThan(media);
     }

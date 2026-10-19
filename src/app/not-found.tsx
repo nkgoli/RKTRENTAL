@@ -1,22 +1,30 @@
-import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/RouteStates';
+import { Icon } from '@/components/shell/Icons';
 import styles from './(auth)/auth.module.css';
 
 export default function NotFound() {
   return (
     <main className={styles.page}>
-      <section className={styles.card}>
-        <div className={styles.brand}>
-          <span className={styles.brandMark}>R</span>RocketRental
+      <div className={styles.publicState}>
+        <div className={styles.brand} aria-label="RocketRental">
+          <span className={styles.brandMark} aria-hidden="true">
+            <Icon name="brand" />
+          </span>
+          <span>
+            RocketRental<span className={styles.period}>.</span>
+          </span>
         </div>
-        <p className={styles.eyebrow}>Page unavailable</p>
-        <h1>Page not found</h1>
-        <p className={styles.description}>
-          This link may have changed or the page is no longer available.
-        </p>
-        <Button href="/" variant="primary" block>
-          Return to your account
-        </Button>
-      </section>
+        <EmptyState
+          eyebrow="Page unavailable"
+          icon="folder"
+          headingLevel={1}
+          title="Page not found"
+          description="This link may have changed or the page is no longer available."
+          action="Return to your account"
+          href="/"
+          variant="primary"
+        />
+      </div>
     </main>
   );
 }

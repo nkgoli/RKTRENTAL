@@ -100,9 +100,9 @@
   padding: 6px 8px max(8px, env(safe-area-inset-bottom));
 }
 .navigation a {
-  min-height: 48px;
+  min-height: 52px;
   justify-content: center;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 .navigation a:global(.active) {
@@ -125,4 +125,10 @@
   .shell {
     border: 0;
   }
+}
+
+.navigation svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
 }

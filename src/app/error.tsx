@@ -1,7 +1,7 @@
 'use client';
 
 import { RouteError } from '@/components/RouteError';
-import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/shell/Icons';
 import styles from './(auth)/auth.module.css';
 
 export default function ErrorBoundary(props: {
@@ -10,11 +10,16 @@ export default function ErrorBoundary(props: {
 }) {
   return (
     <main className={styles.page}>
-      <div className={styles.card}>
-        <RouteError {...props} tenant />
-        <Button href="/" block>
-          Return to your account
-        </Button>
+      <div className={styles.publicState}>
+        <div className={styles.brand} aria-label="RocketRental">
+          <span className={styles.brandMark} aria-hidden="true">
+            <Icon name="brand" />
+          </span>
+          <span>
+            RocketRental<span className={styles.period}>.</span>
+          </span>
+        </div>
+        <RouteError {...props} headingLevel={1} homeHref="/" homeLabel="Return to your account" />
       </div>
     </main>
   );

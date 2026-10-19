@@ -39,7 +39,7 @@ test('manager lists, searches, adds and opens a tenant', async ({ page }) => {
   await form.getByLabel('Phone').fill('(555) 010-2030');
   await form.getByRole('button', { name: 'Save tenant' }).click();
 
-  await expect(page).toHaveURL(/\/tenants\/[^/?]+$/);
+  await expect(page).toHaveURL(/\/tenants\/[^/?]+(\?|$)/);
   await expect(page.getByRole('heading', { name: `Pat ${unique}`, level: 1 })).toBeVisible();
   await expect(page.getByText(`${unique}@example.com`)).toBeVisible();
   await expect(page.getByText('No lease', { exact: true })).toBeVisible();

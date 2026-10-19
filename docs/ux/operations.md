@@ -53,7 +53,7 @@ The whole project suite was not run. Existing data-changing Playwright maintenan
 
 ### Shared development runtime follow-up
 
-The manager's later runtime instruction was applied on 18 October 2026. `http://localhost:3102` was unoccupied and now serves the current request checkout through `tests/workspace/operations/shared-dev.cjs`. It is left running for the other area checks.
+The manager's earlier runtime instruction was applied on 18 October 2026. `http://localhost:3102` was unoccupied and was started from the current request checkout through `tests/workspace/operations/shared-dev.cjs`. The later coordination decision removed it as a dependency for other areas. Its existing process is preserved; Operations review uses the retained `3112` production snapshot.
 
 | Identity | Observed value |
 | --- | --- |
@@ -82,6 +82,23 @@ The root `3100` server remained PID `33572` and returned HTTP 200. The reported 
 At 23:05 PDT, a fresh availability check confirmed `3102` listening under PID `41536` (parent `38376`), returning HTTP 200 through `/sign-in?next=%2Fmaintenance` with CSP present. This is a development runtime from the shared working tree, whose HEAD at that check was `ef042f5dfb5e929c264417eb1b3e0c4a20d95c59`; it has no fixed production build identity. At the same check `3112` had no listener and its HTTP connection failed. Its saved build `CHmup-hsmZ6-gaY2NsWO8` remains on disk, and the saved RequestDetails source matches the checkout. No process was restarted or stopped and no build or shared configuration change was made for this availability check. Later short desktop acquisition attempts again returned `DESKTOP_CONTROL_WAIT_TIMEOUT`; the queue entry was released without driving the desktop.
 
 The follow-up obtained desktop ownership and switched to the existing Personal Edge session with Windows MCP. The desktop then returned to the human's ChatGPT settings while navigation was attempted. Desktop ownership was released immediately. No new `3102` screenshot is claimed, and its authenticated app render has not yet been rechecked. The completed desktop/phone interaction evidence below remains evidence of the unchanged application implementation on `3112`; the [shared runtime verification record](../../tests/workspace/operations/evidence/shared-dev-verification.txt) records the narrower launch and source-sync checks.
+
+### Retained production runtime restored
+
+After confirming that `3112` had no listener or existing Operations runtime process, the already-built snapshot was started again as a hidden background process. At 23:16 PDT on 18 October 2026, `http://localhost:3112/maintenance` followed the expected sign-in redirect and returned HTTP 200 with Content-Security-Policy present.
+
+| Identity | Observed value |
+| --- | --- |
+| Review URL | `http://localhost:3112` |
+| Listener PID | `3908`, running the owned `tests/workspace/operations/runtime.cjs` launcher |
+| Source checkout | `C:\Users\nkgol\RocketRental\.orchestra\workspaces\@6fmicph499j20nbevsv\repository` |
+| Retained source / output | `tests/workspace/operations/.runtime/src` / `tests/workspace/operations/.runtime/.next` |
+| Production build ID | `CHmup-hsmZ6-gaY2NsWO8` |
+| Operations implementation | Commit `8bce7a544887a70f427116752685cdc062559610`; owned application source has no later changes |
+
+The retained RequestDetails source and current owned component have identical SHA-256 hashes. The build is the same snapshot used for the completed native desktop/phone review, not a fresh build of concurrent changes. No rebuild, database mutation, shared configuration change or action on the other areas' ports was performed. The existing `3102` listener remained PID `41536` with parent `38376`.
+
+A short supplemental desktop acquisition returned `DESKTOP_CONTROL_WAIT_TIMEOUT` with `waiters: 2`. Releasing this task's entry returned `released: false`; no owner or queue identifier was supplied. No desktop interaction or new screenshot is claimed for this restoration. The existing native evidence below remains valid for the unchanged reviewed build. The [runtime verification record](../../tests/workspace/operations/evidence/shared-dev-verification.txt) includes these dated health and ownership observations.
 
 ## Native Edge results
 

@@ -1,7 +1,7 @@
 # Light lease template library and editor
 
-Implementation candidate: `be621e8107d5558b385422e552b2751c3e909ec0`.
-Production build: `F7wLeA8AElTmNEdTAVQlC`, built successfully from that exact source candidate on 2026-10-19. The later handoff-only commit changes this document, not the built application.
+Built application candidate: `75e9f062ed870232999198acf790b7dc6dfad26c`.
+Production build: `d9bh-mzkkMTwp0p-xZ2xE`, built successfully from that exact candidate on 2026-10-19. Later handoff changes affect this document and runtime readiness/shutdown support, not the built application.
 
 ## Source and design mapping
 
@@ -22,7 +22,7 @@ Read Designs/rocketrental-light-leasing revision 42, screens `lease-templates`, 
 | Expanded term | Editor state | Full wording remains in the editable textarea; title, condition, required flag, within-section order and removal preserved |
 | Pending/success/error | Editor state references | Disabled fields/actions while pending; focused status message; errors linked to invalid inputs; distinct success/error colors |
 
-Save retains the editor route (a new template acquires its returned ID); Duplicate navigates to the returned ID. Delete calls the existing unused-only action without confirmation, returns to the library on success, and displays service denial on failure. There is no Cancel/discard flow. Domain actions, schemas, lists, details and wizard remain unchanged. All 14 conditions, six fee inputs, item order, version handling, property defaults and long original wording remain available.
+Save retains the editor route (a new template acquires its returned ID); Duplicate navigates to the returned ID. Delete calls the existing unused-only action without confirmation, returns to the library on success, and displays service denial on failure. Browser verification exposed an intermittent push/refresh navigation race: existing-template Save now refreshes in place, while creation, duplication and deletion navigate without immediately refreshing and cancelling that navigation. There is no Cancel/discard flow. Domain actions, schemas, lists, details and wizard remain unchanged. All 14 conditions, six fee inputs, item order, version handling, property defaults and long original wording remain available.
 
 ## Observed verification
 
@@ -32,17 +32,39 @@ Save retains the editor route (a new template acquires its returned ID); Duplica
 | `node node_modules/eslint/bin/eslint.js 'src/app/(manager)/leases/templates/**/*.tsx' tests/lease-templates/editor.test.tsx --max-warnings=0` | Passed |
 | `node node_modules/typescript/bin/tsc --noEmit` | Passed; project check also covers owned routes |
 | `RUN_DB_INTEGRATION=1` with isolated DATABASE_URL, then `node node_modules/vitest/vitest.mjs run tests/db/lease-template.test.ts` | Passed, 1 persistence test: upgrade/version, usage denial, snapshot and property-default behavior |
-| `npm.cmd run build` | Passed on exact implementation candidate; both template routes built |
+| `npm.cmd run build` | Passed on exact built application candidate above; both template routes built |
 | `git diff --check` and foundation ancestry | Passed |
-| Browser create/edit/save, duplicate, property default, unused deletion/denial, failure/validation, keyboard flows | Unavailable: configured Playwright navigation returned `MCP_SESSION_NOT_FOUND` twice; another retry timed out after 120 seconds |
-| Desktop/390px before-and-after captures | Not produced because configured browser session was unavailable |
+| Repository Playwright runner, dedicated configuration `tests/lease-templates/playwright.config.ts` | Passed, 3 tests in isolated headless Chromium: desktop/390px layouts and keyboard/sticky checks, plus actual mutation/validation/failure flow |
+| Desktop/390px baseline captures | Passed, 2 baseline tests; candidate mutation test intentionally skipped in baseline mode |
+| Configured Playwright MCP | Unavailable: navigation returned `MCP_SESSION_NOT_FOUND` twice; another retry timed out after 120 seconds. Manager expressly authorized the repository runner fallback |
 | Existing-Edge review and release confirmation | Pending manager coordination; no acceptance evidence observed |
 
-Unit/UI tests exercise every condition option, all six fee fields, validation description and focus, retained edits on rejected save, within-section reorder, version save, duplicate identity, property assignment and deletion denial/success. These are not browser observations. The initial SVG button change broke two legacy accessible-name assertions; the existing add-button accessible names were preserved and the affected suite then passed. Windows sandbox initially prevented database initialization and Prisma engine download; authorized elevated retries succeeded. A first build encountered the running dev server's Prisma DLL lock; stopping the owned server resolved it. Final build warnings concern Prisma's deprecated package configuration and Next's multiple-lockfile root inference.
+Unit/UI tests exercise every condition option, all six fee fields, validation description and focus, retained edits on rejected save, within-section reorder, version save, duplicate identity, property assignment and deletion denial/success. The final regression assertions also guard against refreshing after duplicate/delete navigation. These are separate from browser observations. Initial accessible-name assertions were repaired by preserving the existing add-button names. Initial browser checks exposed mouse-versus-keyboard focus assumptions, route status remount behavior, and the actual push/refresh race described above. The final runner passed after correcting the race and synchronizing fixture reference removal. Windows sandbox initialization/download failures were resolved through authorized elevated retries. A first build's Prisma DLL lock was resolved by stopping the owned server. Final build warnings concern Prisma's deprecated package configuration and Next's multiple-lockfile root inference.
+
+All browser observations below come from the repository's Playwright 1.64.0 runner with a dedicated headless Chromium context, direct local production runtime, fresh browser context per test, and isolated fixture database. No personal profile, configured MCP browser, native Edge, desktop control, or managed Preview supplied these observations. The baseline temporarily served only the owned library/editor files from foundation `37314def68c96b2cf550b0f18a90ad9c42425d75` in Next development mode; candidate copies were restored before building. Both use the same stable three-term comparison fixture. Library record counts can differ because actual mutation tests create fixture records.
+
+The phone mutation flow created a template, entered clause/rule/disclosure wording, selected a condition from all 14 options, reordered two clauses, filled all six fees, saved and reloaded the exact wording/order/fees/condition, then saved version 2 without leaving the editor. It injected an aborted POST and verified focused failure feedback and retained edits; a delayed POST verified disabled pending controls. Duplicate opened its new identity. A property default displayed refreshed status and prevented deletion; a fixture lease reference independently prevented deletion. After clearing references, deletion returned to the library and removed the duplicate. Desktop and 390px tests asserted no document overflow, visible keyboard outlines after Tab/Shift+Tab, and sticky Save within the viewport after scrolling long content. Enter activated Add clause. Screenshot inspection corrected the Save label contrast, compact preview clamping, phone Expand wrapping and version-note placement.
+
+Evidence under `.playwright-mcp/`:
+
+- `baseline-foundation-library-1440.png`, `baseline-foundation-library-390.png`, `baseline-foundation-editor-1440.png`, `baseline-foundation-editor-390.png`, `baseline-foundation-editor-expanded-1440.png`, `baseline-foundation-editor-expanded-390.png`.
+- `candidate-library-1440.png`, `candidate-library-390.png`, `candidate-editor-1440.png`, `candidate-editor-390.png`, `candidate-editor-expanded-1440.png`, `candidate-editor-expanded-390.png`.
+- `candidate-sticky-focus-1440.png`, `candidate-sticky-focus-390.png`, `candidate-validation-phone.png`, `candidate-failure-retention-phone.png`, `candidate-pending-save-phone.png`, `candidate-property-default-denial-phone.png`, `candidate-used-deletion-denial-phone.png`, `candidate-unused-deleted-phone.png`.
 
 ## Runtime and native review handoff
 
-Isolated production runtime: `http://127.0.0.1:3147`; isolated PostgreSQL on port 5547, data under ignored `.data/lease-template-review`. Migrations and the ordinary seed ran only against this fixture. The runtime uses the seed's manager account. No shared database mutations were made. The manager has been asked to restore configured Playwright and coordinate the required existing-Edge review. Do not claim native acceptance until observed evidence and desktop release confirmation are returned.
+Hidden durable production runtime: `http://127.0.0.1:3147`; isolated PostgreSQL on port 5547, data under ignored `.data/lease-template-review`. Migrations and the ordinary seed ran only against this fixture. The runtime uses the seed's manager account. No shared database mutations were made. Runtime identity/PIDs, build ID and startup time are recorded in `.data/lease-template-review-runtime/runtime.json`; stdout/stderr remain beside that receipt. Both processes use `Start-Process -WindowStyle Hidden`, independent of the terminal session. HTTP `/sign-in` returned 200 and the runner signed in successfully.
+
+Restart from the assigned checkout in PowerShell:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/lease-templates/review-runtime.ps1 -Action stop
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/lease-templates/review-runtime.ps1
+```
+
+The script checks dedicated ports, verifies process creation time before stopping recorded PIDs, shuts the fixture database down gracefully, and waits for database readiness plus HTTP 200. It generates an ephemeral auth secret in the child environment; restarting requires signing in again. It reuses the built `.next` artifact and existing fixture without reseeding. If the artifact is absent, run `npm.cmd run build` against the isolated fixture URL while the application is stopped. Runner command: set `DATABASE_URL` to the fixture URL and `PWTEST_CACHE_DIR` to `.data/template-playwright-cache`, then run `node node_modules/@playwright/test/cli.js test --config tests/lease-templates/playwright.config.ts`.
+
+Manager reported that the previous coordinated Edge window ended and the desktop was released at 21:11:32 UTC. That is manager-supplied historical context, not native acceptance of this candidate. No Edge profile or desktop was acquired for fallback work. Required existing-Edge review remains pending manager coordination; do not claim native acceptance until observed evidence and the applicable release confirmation are returned.
 
 Manager checklist:
 
@@ -53,4 +75,4 @@ Manager checklist:
 - Trigger empty title/wording, invalid fees/grace days and a failed request. Verify labelled errors, focused feedback and retained edits. Observe disabled pending actions.
 - Use Tab/Shift+Tab/Enter through links, expansion, ordering, fields and Save; scroll long wording and verify sticky actions remain reachable. Capture desktop/390px evidence and report existing-Edge results plus desktop release confirmation through the manager.
 
-Browser comparisons, actual runtime mutation flows, visual fidelity, overflow and native acceptance remain unverified. No completion claim is made for those requirements.
+Repository-runner comparisons, mutation flows, overflow and keyboard checks are observed as above. Native existing-Edge acceptance remains unverified and pending; no native completion claim is made.

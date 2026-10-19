@@ -11,6 +11,9 @@ if ($Action -eq 'stop') {
       $ownedProcess = Get-Process -Id $ownedPid -ErrorAction SilentlyContinue
       if ($ownedProcess) {
         if ([Math]::Abs(($ownedProcess.StartTime.ToUniversalTime() - [DateTime]::Parse($runtime.startedUtc).ToUniversalTime()).TotalSeconds) -gt 15) { throw 'Runtime process identity changed; inspect receipt before stopping.' }
+        if ($ownedPid -eq $runtime.dbPid) {
+          & (Join-Path $reviewRoot 'prisma/node_modules/@embedded-postgres/windows-x64/native/bin/pg_ctl.exe') stop -D (Join-Path $reviewRoot '.data/lease-template-review') -m fast | Out-Null
+        }
         & taskkill.exe /PID $ownedPid /T /F | Out-Null
       }
     }
@@ -36,4 +39,14 @@ $appProcess = Start-Process -FilePath $nodeBinary -ArgumentList @('node_modules/
 $candidate = (& git -C $reviewRoot rev-parse HEAD).Trim()
 $build = if (!$Development) { (Get-Content (Join-Path $reviewRoot '.next/BUILD_ID') -Raw).Trim() } else { 'development-baseline' }
 @{ appPid = $appProcess.Id; dbPid = $databaseProcess.Id; candidate = $candidate; buildId = $build; mode = $serverMode; url = 'http://127.0.0.1:3147'; databasePort = 5547; startedUtc = [DateTime]::UtcNow.ToString('o') } | ConvertTo-Json | Set-Content $receipt
+$ready = $false
+for ($readinessAttempt = 0; $readinessAttempt -lt 45; $readinessAttempt++) {
+  if ($appProcess.HasExited -or $databaseProcess.HasExited) { throw 'Review process exited; inspect runtime logs.' }
+  if ((Get-Content (Join-Path $runtimeDir 'db.stdout.log') -Raw) -match 'Local PostgreSQL ready') {
+    try { $ready = (Invoke-WebRequest -Uri 'http://127.0.0.1:3147/sign-in' -UseBasicParsing).StatusCode -eq 200 } catch { }
+    if ($ready) { break }
+  }
+  Start-Sleep -Seconds 1
+}
+if (!$ready) { throw 'Review runtime readiness timed out; inspect runtime logs.' }
 Write-Output "Started hidden $serverMode fixture runtime; receipt: .data/lease-template-review-runtime/runtime.json"

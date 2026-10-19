@@ -2,7 +2,7 @@ import { Fragment } from 'react';
 import Link from 'next/link';
 import {
   Avatar,
-  AvatarStack,
+  Button,
   Card,
   cx,
   Pagination,
@@ -82,42 +82,53 @@ export function StatusView({
           <p className="muted">Who has finished setup — and who still needs a nudge.</p>
         </div>
         <div className={styles.headingPeople}>
-          <AvatarStack initials={shown.slice(0, 4).map((row) => initials(row.tenant.name))} />
           <TrendChip warm>{attention} need attention</TrendChip>
         </div>
       </div>
       <div className={styles.statusControls}>
         <div className="chips" aria-label="Lease period">
-          <Link className={cx('chip', period === 'current' && 'active')} href={href(q, property)}>
+          <Link
+            className={cx('chip', period === 'current' && 'active')}
+            aria-current={period === 'current' ? 'true' : undefined}
+            href={href(q, property)}
+          >
             Current tenants
           </Link>
           <Link
             className={cx('chip', period === 'upcoming' && 'active')}
+            aria-current={period === 'upcoming' ? 'true' : undefined}
             href={href(q, property, 'upcoming')}
           >
             Upcoming tenants
           </Link>
         </div>
-        <form action="/tenants" method="get" role="search" className={styles.statusSearch}>
-          {period === 'upcoming' && <input type="hidden" name="period" value="upcoming" />}
-          {property && <input type="hidden" name="property" value={property} />}
-          <SearchInput name="q" defaultValue={q} placeholder="Search property or tenant" />
-        </form>
       </div>
-      <div className={styles.propertyFilters} aria-label="Filter by property">
-        <Link className={cx('chip', !property && 'active')} href={href(q, undefined, period)}>
-          All properties
-        </Link>
-        {properties.map((item) => (
-          <Link
-            key={item.id}
-            className={cx('chip', property === item.id && 'active')}
-            href={href(q, item.id, period)}
-          >
-            {item.name}
+      <form action="/tenants" method="get" role="search" className={styles.filterForm}>
+        {period === 'upcoming' && <input type="hidden" name="period" value="upcoming" />}
+        <label className={styles.searchField}>
+          <span>Search tenants</span>
+          <SearchInput name="q" defaultValue={q} placeholder="Property, tenant or email" />
+        </label>
+        <label className={styles.filterField}>
+          <span>Property</span>
+          <select name="property" defaultValue={property ?? ''}>
+            <option value="">All properties</option>
+            {properties.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button type="submit" variant="secondary">
+          Apply filters
+        </Button>
+        {(q || property) && (
+          <Link className="btn btn-ghost btn-sm" href={href(undefined, undefined, period)}>
+            Clear filters
           </Link>
-        ))}
-      </div>
+        )}
+      </form>
       <div className={styles.legend} aria-label="Checklist legend">
         <span>
           <b className={styles.complete}>✓</b> Complete
@@ -130,16 +141,23 @@ export function StatusView({
         </span>
       </div>
       <Card flush>
-        <div className={styles.tableScroll}>
+        <div
+          className={styles.tableScroll}
+          role="region"
+          aria-label="Tenant setup checklist"
+          tabIndex={0}
+        >
           <table className={styles.statusTable}>
             <thead>
               <tr>
-                <th>Lease</th>
-                <th>Tenant info</th>
+                <th scope="col">Lease</th>
+                <th scope="col">Tenant info</th>
                 {checklistLabels.map((label) => (
-                  <th key={label}>{label}</th>
+                  <th scope="col" key={label}>
+                    {label}
+                  </th>
                 ))}
-                <th>Actions</th>
+                <th scope="col">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -163,8 +181,15 @@ export function StatusView({
                         <span className="cell-main">
                           <span>
                             <strong>
-                              <Link href={`/properties/${row.property.id}`}>{row.property.name}</Link>{' '}
-                              · {row.unit.isImplicit ? 'Single-unit' : `Unit ${row.unit.number}`}
+                              <Link href={`/properties/${row.property.id}`}>
+                                {row.property.name}
+                              </Link>{' '}
+                              ·{' '}
+                              <Link
+                                href={`/properties/${row.property.id}?unit=${encodeURIComponent(row.unit.id)}`}
+                              >
+                                {row.unit.isImplicit ? 'Single-unit' : `Unit ${row.unit.number}`}
+                              </Link>
                             </strong>
                             <small>
                               <Link href={`/leases/${row.leaseId}`}>
@@ -175,7 +200,10 @@ export function StatusView({
                         </span>
                       </td>
                       <td>
-                        <Link className="cell-main" href={`/tenants/${row.tenant.id}`}>
+                        <Link
+                          className="cell-main"
+                          href={`/tenants/${row.tenant.id}?${new URLSearchParams({ returnTo: href(q, property, period, current) })}`}
+                        >
                           <Avatar initials={initials(row.tenant.name)} />
                           <span>
                             <strong>{row.tenant.name}</strong>
@@ -188,7 +216,11 @@ export function StatusView({
                       {checklistFields.map((field) => {
                         const state = row.checklist[field];
                         return (
-                          <td key={field} className={styles.checkCell}>
+                          <td
+                            key={field}
+                            className={styles.checkCell}
+                            data-label={checklistLabels[checklistFields.indexOf(field)]}
+                          >
                             <span
                               className={styles[state === 'not-applicable' ? 'na' : state]}
                               title={state === 'not-applicable' ? 'Not applicable' : state}
@@ -233,7 +265,8 @@ export function StatusView({
       </Card>
       <p className="muted">
         Invitation, acceptance and bank verification are not tracked yet. Card on file is not
-        applicable when a tenant uses ACH autopay without a card.
+        applicable when a tenant uses ACH autopay without a card. Messaging and invitations are not
+        available.
       </p>
     </section>
   );

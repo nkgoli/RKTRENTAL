@@ -11,6 +11,7 @@ import { db } from '@/lib/db/client';
 import { requireManagerRole } from '@/lib/auth/access';
 import { hasCurrentConsent, type ApplicationStatus } from '@/lib/screening/policy';
 import { recordDecision, requestScreening } from './actions';
+import { ReviewDecisionForm, ScreeningSubmit } from './ReviewForms';
 import styles from './applications.module.css';
 
 type SearchParams = {
@@ -113,20 +114,19 @@ export default async function ApplicationsPage({
       orderBy: { updatedAt: 'desc' },
     }),
   ]);
-  const selectedId = params.applicant ?? 'seed-application-olivia';
-  const selected =
-    applications.find((item) => item.id === selectedId) ??
-    (params.applicant
-      ? await db.application.findFirst({
-          where: { ...where, id: selectedId },
-          include,
-        })
-      : null) ??
-    applications[0] ??
-    null;
-  const ordered = selected
-    ? [selected, ...applications.filter((item) => item.id !== selected.id)]
-    : applications;
+  const selected = params.applicant
+    ? (applications.find((item) => item.id === params.applicant) ??
+      (await db.application.findFirst({ where: { ...where, id: params.applicant }, include })))
+    : (applications[0] ?? null);
+  const ordered = applications;
+  const scopeParams = new URLSearchParams({
+    ...(scope.propertyId ? { propertyId: scope.propertyId } : {}),
+    ...(scope.unitId ? { unitId: scope.unitId } : {}),
+  });
+  const clearHref = `/applications${scopeParams.size ? `?${scopeParams}` : ''}`;
+  const scopedReturn = scope.propertyId
+    ? `/properties/${scope.propertyId}/applications${scope.unitId ? `?unit=${encodeURIComponent(scope.unitId)}` : ''}`
+    : undefined;
   const countByStatus = new Map(
     groups.map(({ status: itemStatus, _count }) => [itemStatus, _count._all]),
   );
@@ -187,30 +187,51 @@ export default async function ApplicationsPage({
         eyebrow="Leasing"
         actions={[{ label: 'Screening provider', href: '/integrations' }]}
       />
+      {scopedReturn && (
+        <Link className={styles.backLink} href={scopedReturn}>
+          ← Back to property applications
+        </Link>
+      )}
       <div className={styles.intro}>
-        <form className={styles.filters} action="/applications" method="get">
-          <label className={styles.search}>
-            <span aria-hidden="true">⌕</span>
-            <input
-              aria-label="Search applicants or units"
-              name="q"
-              placeholder="Search applicants or units"
-              defaultValue={q}
-            />
+        <form
+          className={styles.filters}
+          action="/applications"
+          method="get"
+          role="search"
+          aria-label="Filter applications"
+        >
+          <label className={styles.filterField}>
+            <span>Search applicants</span>
+            <span className={styles.search}>
+              <input
+                aria-label="Search applicants or units"
+                name="q"
+                placeholder="Search applicants or units"
+                defaultValue={q}
+              />
+            </span>
           </label>
-          <select aria-label="Filter by status" name="status" defaultValue={status ?? ''}>
-            <option value="">All statuses</option>
-            {statuses.map((item) => (
-              <option key={item} value={item}>
-                {labels[item]}
-              </option>
-            ))}
-          </select>
+          <label className={styles.filterField}>
+            <span>Application status</span>
+            <select aria-label="Filter by status" name="status" defaultValue={status ?? ''}>
+              <option value="">All statuses</option>
+              {statuses.map((item) => (
+                <option key={item} value={item}>
+                  {labels[item]}
+                </option>
+              ))}
+            </select>
+          </label>
           {scope.propertyId && <input type="hidden" name="propertyId" value={scope.propertyId} />}
           {scope.unitId && <input type="hidden" name="unitId" value={scope.unitId} />}
           <Button type="submit" variant="secondary">
-            Search
+            Apply filters
           </Button>
+          {(q || status) && (
+            <Link href={clearHref} className="btn btn-ghost btn-sm">
+              Clear filters
+            </Link>
+          )}
         </form>
       </div>
       {params.notice === 'screening' && (
@@ -229,7 +250,7 @@ export default async function ApplicationsPage({
         </p>
       )}
 
-      <div className="kpis">
+      <div className={`kpis ${styles.summaryStrip}`}>
         <KpiCard
           label="New applications"
           value={countByStatus.get('SUBMITTED') ?? 0}
@@ -254,12 +275,19 @@ export default async function ApplicationsPage({
       </div>
 
       <div className={styles.reviewGrid}>
-        <section className={styles.listCard} aria-labelledby="applicants-title">
+        <section
+          className={styles.listCard}
+          id="applicants"
+          tabIndex={-1}
+          aria-labelledby="applicants-title"
+        >
           <div className={styles.listHeader}>
             <div>
-              <h3 id="applicants-title">Applicants</h3>
+              <h2 id="applicants-title">Applicants</h2>
               <p>
-                {filteredCount === totalCount ? `${totalCount} applications` : `${filteredCount} of ${totalCount} applications`}
+                {filteredCount === totalCount
+                  ? `${totalCount} applications`
+                  : `${filteredCount} of ${totalCount} applications`}
               </p>
             </div>
           </div>
@@ -276,36 +304,45 @@ export default async function ApplicationsPage({
                 if (scope.propertyId) paramsForApplicant.set('propertyId', scope.propertyId);
                 if (scope.unitId) paramsForApplicant.set('unitId', scope.unitId);
                 paramsForApplicant.set('applicant', application.id);
+                if (page > 1) paramsForApplicant.set('page', String(page));
                 // A decision stands on its own; consent only matters while screening is still open.
-                const decided = application.status === 'APPROVED' || application.status === 'DECLINED';
+                const decided =
+                  application.status === 'APPROVED' || application.status === 'DECLINED';
                 return (
                   <li key={application.id}>
                     <Link
                       className={
                         application.id === selected?.id ? styles.applicantActive : styles.applicant
                       }
-                      href={'/applications?' + paramsForApplicant.toString()}
+                      href={
+                        '/applications?' + paramsForApplicant.toString() + '#selected-applicant'
+                      }
                       aria-current={application.id === selected?.id ? 'true' : undefined}
                     >
                       <Avatar initials={initials(application.applicantName)} />
                       <span className={styles.applicantBody}>
                         <strong>{application.applicantName}</strong>
                         <small>
-                          {application.unit.property.name} · Unit {application.unit.number}
+                          {application.unit.property.name} ·{' '}
+                          {application.unit.isImplicit
+                            ? 'Whole property'
+                            : `Unit ${application.unit.number}`}
                         </small>
                         <span className={styles.metaLine}>
-                          <Badge tone={!hasConsent && !decided ? 'neutral' : tones[application.status]}>
+                          <Badge
+                            tone={!hasConsent && !decided ? 'neutral' : tones[application.status]}
+                          >
                             {decided
                               ? labels[application.status]
                               : !hasConsent
-                              ? 'Awaiting consent'
-                              : application.status === 'SUBMITTED'
-                                ? 'Ready to screen'
-                                : application.status === 'REVIEW'
-                                  ? needsReview
-                                    ? 'Needs review'
-                                    : 'Ready'
-                                  : labels[application.status]}
+                                ? 'Awaiting consent'
+                                : application.status === 'SUBMITTED'
+                                  ? 'Ready to screen'
+                                  : application.status === 'REVIEW'
+                                    ? needsReview
+                                      ? 'Needs review'
+                                      : 'Ready'
+                                    : labels[application.status]}
                           </Badge>
                           <span>
                             {application.reports[0]?.status === 'complete'
@@ -322,9 +359,13 @@ export default async function ApplicationsPage({
           ) : (
             <EmptyState
               title="No applications in this view"
-              description="Check the other filters or choose a property to review applicants."
-              action="View properties"
-              href="/properties"
+              description={
+                q || status
+                  ? 'Clear search and status filters to see applications in this scope.'
+                  : 'New applications for this scope will appear here.'
+              }
+              action={q || status ? 'Clear filters' : 'View properties'}
+              href={q || status ? clearHref : '/properties'}
             />
           )}
           <Pagination
@@ -347,8 +388,12 @@ export default async function ApplicationsPage({
           <section
             className={styles.detail}
             id="selected-applicant"
+            tabIndex={-1}
             aria-labelledby="selected-title"
           >
+            <a href="#applicants" className={styles.backToList}>
+              ↑ Back to applicants
+            </a>
             <div className={styles.detailHeader}>
               <div className={styles.identity}>
                 <Avatar initials={initials(selected.applicantName)} size="lg" />
@@ -361,21 +406,33 @@ export default async function ApplicationsPage({
                     </Link>
                     {' · '}
                     <Link
-                      href={'/properties/' + selected.unit.propertyId + '#unit-' + selected.unit.id}
+                      href={
+                        '/properties/' +
+                        selected.unit.propertyId +
+                        '?unit=' +
+                        encodeURIComponent(selected.unit.id)
+                      }
                     >
-                      Unit {selected.unit.number}
+                      {selected.unit.isImplicit ? 'Whole property' : `Unit ${selected.unit.number}`}
                     </Link>
                     {' · Applied '}
                     {formatDate(selected.appliedAt)}
                   </p>
                 </div>
               </div>
-              <Badge tone={report?.status === 'complete' ? 'success' : tones[selected.status]}>
-                {report?.status === 'complete' ? 'Report complete' : labels[selected.status]}
+              <Badge tone={tones[selected.status]}>
+                {selected.status === 'SUBMITTED' && consent
+                  ? 'Ready to screen'
+                  : labels[selected.status]}
               </Badge>
             </div>
+            <p className={styles.applicantContact}>
+              <a href={`mailto:${selected.applicantEmail}`}>{selected.applicantEmail}</a>
+            </p>
             <div className={styles.provider}>
-              <span className={styles.providerLogo}>TU</span>
+              <span className={styles.providerLogo} aria-hidden="true">
+                {connection?.provider === 'transunion' ? 'TU' : 'S'}
+              </span>
               <div className={styles.providerText}>
                 <strong>
                   {connection?.provider === 'transunion'
@@ -460,16 +517,22 @@ export default async function ApplicationsPage({
             <div className={styles.screeningAction}>
               <div>
                 <strong>
-                  {report?.status === 'complete'
-                    ? 'Screening report received'
-                    : 'Run applicant screening'}
+                  {report?.status === 'failed'
+                    ? 'Screening report failed'
+                    : report?.status === 'complete'
+                      ? 'Screening report received'
+                      : 'Run applicant screening'}
                 </strong>
                 <p>
-                  {!consent
-                    ? 'A current FCRA consent is required before the provider can be contacted.'
-                    : process.env.NODE_ENV !== 'production'
-                      ? 'Use the development mock to request or refresh this report.'
-                      : 'Use the connected screening provider to request or refresh this report.'}
+                  {selected.status === 'APPROVED' || selected.status === 'DECLINED'
+                    ? 'This application has a recorded decision.'
+                    : !providerReady
+                      ? 'Connect the screening provider in Integrations before requesting a report.'
+                      : !consent
+                        ? 'A current FCRA consent is required before the provider can be contacted.'
+                        : process.env.NODE_ENV !== 'production'
+                          ? 'Use the development mock to request or refresh this report.'
+                          : 'Use the connected screening provider to request or refresh this report.'}
                 </p>
               </div>
               <form action={requestScreening}>
@@ -478,49 +541,23 @@ export default async function ApplicationsPage({
                   <input type="hidden" name="propertyId" value={scope.propertyId} />
                 )}
                 {scope.unitId && <input type="hidden" name="unitId" value={scope.unitId} />}
-                <Button type="submit" variant="secondary" disabled={!canScreen}>
-                  {report ? 'Run screening again' : 'Run screening'}
-                </Button>
+                <ScreeningSubmit disabled={!canScreen} again={Boolean(report)} />
               </form>
             </div>
             <div className={styles.decisionSection}>
+              <h3>Decision</h3>
               <p>
                 Review the complete provider report and apply the same written criteria before
                 deciding.
               </p>
               {canDecide ? (
-                <form action={recordDecision} className={styles.decisionForm}>
-                  <input type="hidden" name="applicationId" value={selected.id} />
-                {scope.propertyId && (
-                  <input type="hidden" name="propertyId" value={scope.propertyId} />
-                )}
-                {scope.unitId && <input type="hidden" name="unitId" value={scope.unitId} />}
-                  <label>
-                    <span>Decision reason</span>
-                    <select name="reason" defaultValue="" required>
-                      <option value="" disabled>
-                        Select a written screening reason
-                      </option>
-                      <option value="criteria-met">Meets written screening criteria</option>
-                      <option value="credit-below-criteria">
-                        Credit score below written criteria
-                      </option>
-                      <option value="background-review">Background report requires review</option>
-                      <option value="eviction-review">Eviction report requires review</option>
-                      <option value="application-incomplete">
-                        Application information incomplete
-                      </option>
-                    </select>
-                  </label>
-                  <div className={styles.decisionButtons}>
-                    <Button type="submit" name="decision" value="DECLINED" variant="danger">
-                      Decline
-                    </Button>
-                    <Button type="submit" name="decision" value="APPROVED" variant="secondary">
-                      Approve
-                    </Button>
-                  </div>
-                </form>
+                <ReviewDecisionForm
+                  key={selected.id}
+                  action={recordDecision}
+                  applicationId={selected.id}
+                  propertyId={scope.propertyId}
+                  unitId={scope.unitId}
+                />
               ) : selected.status === 'APPROVED' ? (
                 <div className={styles.decisionButtons}>
                   <Button
@@ -536,21 +573,41 @@ export default async function ApplicationsPage({
                   </Button>
                 </div>
               ) : (
-                <div className={styles.decisionButtons}>
-                  <Button variant="secondary" disabled>
-                    Decline
-                  </Button>
-                  <Button variant="secondary" disabled>
-                    Approve
-                  </Button>
-                </div>
+                <>
+                  <p className={styles.decisionHelp}>
+                    {selected.status === 'DECLINED'
+                      ? 'This application was declined. The recorded decision is retained in its history.'
+                      : 'A completed report and current consent are required before a decision.'}
+                  </p>
+                  <div className={styles.decisionButtons}>
+                    <Button variant="secondary" disabled>
+                      Decline
+                    </Button>
+                    <Button variant="secondary" disabled>
+                      Approve
+                    </Button>
+                  </div>
+                </>
               )}
             </div>
           </section>
         ) : (
           <section className={styles.detail}>
-            <h2>Select an applicant to review</h2>
-            <p>Choose an application to see consent and screening report details.</p>
+            <h2>
+              {params.applicant
+                ? 'Applicant unavailable in this view'
+                : 'Select an applicant to review'}
+            </h2>
+            <p>
+              {params.applicant
+                ? 'Choose an applicant from the list or clear filters to return to this scope.'
+                : 'Choose an application to see consent and screening report details.'}
+            </p>
+            {(q || status || params.applicant) && (
+              <Link href={clearHref} className="btn btn-secondary btn-sm">
+                Reset review
+              </Link>
+            )}
           </section>
         )}
       </div>

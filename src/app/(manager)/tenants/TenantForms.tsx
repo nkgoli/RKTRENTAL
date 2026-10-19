@@ -1,14 +1,24 @@
 'use client';
 
-import { useActionState, useState } from 'react';
-import { Badge, Button, Card, CardHeader, Field, FormRow, Input, Select } from '@/components/ui';
+import { useActionState, useEffect, useRef, useState } from 'react';
+import { Badge, Button, Card, Field, FormRow, Input, Select } from '@/components/ui';
 import type { FormState } from './actions';
+import styles from './tenants.module.css';
 
 const empty: FormState = { errors: {} };
 
-function FieldError({ message }: { message?: string }) {
+function useErrorFocus(state: FormState) {
+  const ref = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (Object.keys(state.errors).length)
+      ref.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  }, [state]);
+  return ref;
+}
+
+function FieldError({ message, id }: { message?: string; id?: string }) {
   return message ? (
-    <span className="hint" role="alert" style={{ color: 'var(--design-danger)' }}>
+    <span id={id} className="hint" role="alert" style={{ color: 'var(--design-danger)' }}>
       {message}
     </span>
   ) : null;
@@ -19,20 +29,29 @@ export type PropertyOption = { id: string; name: string; units: { id: string; nu
 export function AddTenantForm({
   properties,
   action,
+  initialPropertyId,
 }: {
   properties: PropertyOption[];
+  initialPropertyId?: string;
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
 }) {
   const [state, formAction, pending] = useActionState(action, empty);
+  const formRef = useErrorFocus(state);
   const v = state.values ?? {};
-  const [propertyId, setPropertyId] = useState(v.propertyId ?? '');
+  const [propertyId, setPropertyId] = useState(v.propertyId ?? initialPropertyId ?? '');
   const [unitId, setUnitId] = useState(v.unitId ?? '');
   const units = properties.find((p) => p.id === propertyId)?.units ?? [];
 
   return (
-    <Card id="add-tenant">
-      <CardHeader title="Add tenant" action={<Badge tone="info">Quick form</Badge>} />
-      <form className="form" action={formAction} noValidate>
+    <Card id="add-tenant" className={styles.tenantForm}>
+      <div className="card-header">
+        <h2>Add tenant</h2>
+        <Badge tone="info">New contact</Badge>
+      </div>
+      <p className={styles.formHint}>
+        Full name is required. Add a contact now, or select a vacant unit to draft a lease.
+      </p>
+      <form ref={formRef} className="form" action={formAction} noValidate aria-busy={pending}>
         {state.message && !Object.keys(state.errors).length && (
           <div className="alert warning" role="alert">
             {state.message}
@@ -40,16 +59,37 @@ export function AddTenantForm({
         )}
         <FormRow columns={3}>
           <Field label="Full name">
-            <Input name="name" placeholder="Jamie Doe" defaultValue={v.name} required />
-            <FieldError message={state.errors.name} />
+            <Input
+              name="name"
+              aria-invalid={Boolean(state.errors.name)}
+              aria-describedby={state.errors.name ? 'add-name-error' : undefined}
+              placeholder="Jamie Doe"
+              defaultValue={v.name}
+              required
+            />
+            <FieldError id="add-name-error" message={state.errors.name} />
           </Field>
           <Field label="Email">
-            <Input name="email" type="email" placeholder="jamie@email.com" defaultValue={v.email} />
-            <FieldError message={state.errors.email} />
+            <Input
+              name="email"
+              aria-invalid={Boolean(state.errors.email)}
+              aria-describedby={state.errors.email ? 'add-email-error' : undefined}
+              type="email"
+              placeholder="jamie@email.com"
+              defaultValue={v.email}
+            />
+            <FieldError id="add-email-error" message={state.errors.email} />
           </Field>
           <Field label="Phone">
-            <Input name="phone" type="tel" placeholder="(555) 010-2030" defaultValue={v.phone} />
-            <FieldError message={state.errors.phone} />
+            <Input
+              name="phone"
+              aria-invalid={Boolean(state.errors.phone)}
+              aria-describedby={state.errors.phone ? 'add-phone-error' : undefined}
+              type="tel"
+              placeholder="(555) 010-2030"
+              defaultValue={v.phone}
+            />
+            <FieldError id="add-phone-error" message={state.errors.phone} />
           </Field>
         </FormRow>
         <FormRow columns={3}>
@@ -73,12 +113,19 @@ export function AddTenantForm({
           <Field label="Unit">
             <Select
               name="unitId"
+              aria-invalid={Boolean(state.errors.unitId)}
+              aria-describedby={state.errors.unitId ? 'add-unitId-error' : undefined}
               value={unitId}
               onChange={(e) => setUnitId(e.target.value)}
               key={propertyId}
+              disabled={!propertyId || units.length === 0}
             >
               <option value="">
-                {propertyId ? 'Select a vacant unit' : 'Choose a property first'}
+                {propertyId
+                  ? units.length
+                    ? 'Select a vacant unit'
+                    : 'No vacant units available'
+                  : 'Choose a property first'}
               </option>
               {units.map((u) => (
                 <option key={u.id} value={u.id}>
@@ -86,11 +133,17 @@ export function AddTenantForm({
                 </option>
               ))}
             </Select>
-            <FieldError message={state.errors.unitId} />
+            <FieldError id="add-unitId-error" message={state.errors.unitId} />
           </Field>
           <Field label="Move-in date">
-            <Input name="moveInDate" type="date" defaultValue={v.moveInDate} />
-            <FieldError message={state.errors.moveInDate} />
+            <Input
+              name="moveInDate"
+              aria-invalid={Boolean(state.errors.moveInDate)}
+              aria-describedby={state.errors.moveInDate ? 'add-moveInDate-error' : undefined}
+              type="date"
+              defaultValue={v.moveInDate}
+            />
+            <FieldError id="add-moveInDate-error" message={state.errors.moveInDate} />
           </Field>
         </FormRow>
         <div className="row">
@@ -110,7 +163,7 @@ export function AddTenantForm({
               setUnitId('');
             }}
           >
-            Cancel
+            Clear form
           </Button>
           <Button type="submit" variant="primary" disabled={pending}>
             {pending ? 'Saving…' : 'Save tenant'}
@@ -127,8 +180,10 @@ export function AddNoteForm({
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
 }) {
   const [state, formAction, pending] = useActionState(action, empty);
+  const formRef = useErrorFocus(state);
   return (
     <form
+      ref={formRef}
       className="form"
       action={formAction}
       key={state.message ?? 'note'}
@@ -143,13 +198,15 @@ export function AddNoteForm({
       <Field label="Add a note">
         <textarea
           name="body"
+          aria-invalid={Boolean(state.errors.body)}
+          aria-describedby={state.errors.body ? 'note-body-error' : undefined}
           aria-label="Note"
           rows={3}
           maxLength={2000}
           placeholder="Called about the parking permit…"
           defaultValue={state.values?.body}
         />
-        <FieldError message={state.errors.body} />
+        <FieldError id="note-body-error" message={state.errors.body} />
       </Field>
       <div className="row" style={{ justifyContent: 'flex-end' }}>
         <Button type="submit" variant="secondary" size="sm" disabled={pending}>
@@ -164,6 +221,7 @@ export function EditTenantForm({
   tenant,
   action,
   cancelHref,
+  returnTo,
 }: {
   tenant: {
     name: string;
@@ -175,13 +233,18 @@ export function EditTenantForm({
   };
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   cancelHref: string;
+  returnTo?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, empty);
+  const formRef = useErrorFocus(state);
   const v = state.values ?? {};
   return (
-    <Card>
-      <CardHeader title="Edit profile" />
-      <form className="form" action={formAction} noValidate>
+    <Card id="edit-profile" className={styles.tenantForm}>
+      <div className="card-header">
+        <h2>Edit profile</h2>
+      </div>
+      <form ref={formRef} className="form" action={formAction} noValidate aria-busy={pending}>
+        <input type="hidden" name="returnTo" value={returnTo ?? ''} />
         {state.message && !Object.keys(state.errors).length && (
           <div className="alert warning" role="alert">
             {state.message}
@@ -189,42 +252,83 @@ export function EditTenantForm({
         )}
         <FormRow columns={3}>
           <Field label="Full name">
-            <Input name="name" defaultValue={v.name ?? tenant.name} required />
-            <FieldError message={state.errors.name} />
+            <Input
+              name="name"
+              aria-invalid={Boolean(state.errors.name)}
+              aria-describedby={state.errors.name ? 'edit-name-error' : undefined}
+              defaultValue={v.name ?? tenant.name}
+              required
+            />
+            <FieldError id="edit-name-error" message={state.errors.name} />
           </Field>
           <Field label="Email">
-            <Input name="email" type="email" defaultValue={v.email ?? tenant.email ?? ''} />
-            <FieldError message={state.errors.email} />
+            <Input
+              name="email"
+              aria-invalid={Boolean(state.errors.email)}
+              aria-describedby={state.errors.email ? 'edit-email-error' : undefined}
+              type="email"
+              defaultValue={v.email ?? tenant.email ?? ''}
+            />
+            <FieldError id="edit-email-error" message={state.errors.email} />
           </Field>
           <Field label="Phone">
-            <Input name="phone" type="tel" defaultValue={v.phone ?? tenant.phone ?? ''} />
-            <FieldError message={state.errors.phone} />
+            <Input
+              name="phone"
+              aria-invalid={Boolean(state.errors.phone)}
+              aria-describedby={state.errors.phone ? 'edit-phone-error' : undefined}
+              type="tel"
+              defaultValue={v.phone ?? tenant.phone ?? ''}
+            />
+            <FieldError id="edit-phone-error" message={state.errors.phone} />
           </Field>
         </FormRow>
         <FormRow columns={3}>
           <Field label="Emergency contact">
             <Input
               name="emergencyContactName"
+              aria-invalid={Boolean(state.errors.emergencyContactName)}
+              aria-describedby={
+                state.errors.emergencyContactName ? 'edit-emergencyContactName-error' : undefined
+              }
               defaultValue={v.emergencyContactName ?? tenant.emergencyContactName ?? ''}
             />
-            <FieldError message={state.errors.emergencyContactName} />
+            <FieldError
+              id="edit-emergencyContactName-error"
+              message={state.errors.emergencyContactName}
+            />
           </Field>
           <Field label="Emergency contact phone">
             <Input
               name="emergencyContactPhone"
+              aria-invalid={Boolean(state.errors.emergencyContactPhone)}
+              aria-describedby={
+                state.errors.emergencyContactPhone ? 'edit-emergencyContactPhone-error' : undefined
+              }
               type="tel"
               defaultValue={v.emergencyContactPhone ?? tenant.emergencyContactPhone ?? ''}
             />
-            <FieldError message={state.errors.emergencyContactPhone} />
+            <FieldError
+              id="edit-emergencyContactPhone-error"
+              message={state.errors.emergencyContactPhone}
+            />
           </Field>
           <Field label="Relationship">
             <Input
               name="emergencyContactRelationship"
+              aria-invalid={Boolean(state.errors.emergencyContactRelationship)}
+              aria-describedby={
+                state.errors.emergencyContactRelationship
+                  ? 'edit-emergencyContactRelationship-error'
+                  : undefined
+              }
               defaultValue={
                 v.emergencyContactRelationship ?? tenant.emergencyContactRelationship ?? ''
               }
             />
-            <FieldError message={state.errors.emergencyContactRelationship} />
+            <FieldError
+              id="edit-emergencyContactRelationship-error"
+              message={state.errors.emergencyContactRelationship}
+            />
           </Field>
         </FormRow>
         <div className="row" style={{ justifyContent: 'flex-end' }}>

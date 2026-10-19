@@ -1,0 +1,48 @@
+.settings {
+  border: 1px solid var(--rr-border);
+  border-radius: 8px;
+  min-width: 0;
+}
+.settings summary {
+  cursor: pointer;
+  padding: 12px 16px;
+  color: var(--design-text);
+  font-size: 13px;
+}
+.settings summary span {
+  color: var(--design-muted);
+  margin-left: 12px;
+  font-size: 12px;
+}
+.settings form {
+  border: 0;
+  border-top: 1px solid var(--rr-border);
+  border-radius: 0 0 8px 8px;
+  box-shadow: none;
+}
+.groupRow {
+  gap: 16px;
+  align-items: start;
+}
+.email {
+  display: block;
+  color: var(--design-muted);
+  font-weight: 400;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .settings summary span {
+    display: block;
+    margin: 4px 0 0 18px;
+  }
+  .settings select {
+    max-width: 100%;
+  }
+  .groupRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .groupRow a {
+    max-width: 100%;
+  }
+}

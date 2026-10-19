@@ -1,6 +1,17 @@
 import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
-import { Avatar, Badge, Card, cx, Pagination, SearchInput, Stat, Table, TableHead } from '@/components/ui';
+import {
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  cx,
+  Pagination,
+  SearchInput,
+  Stat,
+  Table,
+  TableHead,
+} from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import { formatDate, formatMoney, initials } from '@/lib/tenants/format';
 import { organizationTenants, PAGE_SIZE } from '@/lib/tenants/queries';
@@ -50,30 +61,44 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
   const period = first(raw.period) === 'upcoming' ? 'upcoming' : 'current';
 
   const tenants = organizationTenants(session.organizationId);
-  const [{ rows, total }, stats, properties, setupRows] = await Promise.all([
+  const [listing, stats, properties, setupRows] = await Promise.all([
     tenants.list({ q, propertyId: property, status, page }),
     tenants.stats(),
     tenants.formOptions(),
     view === 'status' ? tenants.setupRows() : Promise.resolve([]),
   ]);
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pages = Math.max(1, Math.ceil(listing.total / PAGE_SIZE));
+  const { rows, total } =
+    page > pages ? await tenants.list({ q, propertyId: property, status, page: pages }) : listing;
+  const returnTo =
+    view === 'directory'
+      ? href({ q, property, status, page: Math.min(page, pages) })
+      : `/tenants?${new URLSearchParams({ ...(q ? { q } : {}), ...(property ? { property } : {}), period })}`;
+  const detailHref = (id: string) => `/tenants/${id}?${new URLSearchParams({ returnTo })}`;
 
   return (
     <>
       <PageHeader
         eyebrow="People"
         title="Tenants"
-        actions={[{ label: '+ Add tenant', href: '/tenants?view=directory#add-tenant', primary: true }]}
+        actions={[
+          { label: '+ Add tenant', href: `${href({ property })}#add-tenant`, primary: true },
+        ]}
       />
 
       <nav className={styles.viewTabs} aria-label="Tenant views">
         <Link
-          href="/tenants?view=directory"
+          href={href({ q, property })}
+          aria-current={view === 'directory' ? 'page' : undefined}
           className={view === 'directory' ? styles.selectedTab : ''}
         >
           Directory
         </Link>
-        <Link href="/tenants" className={view === 'status' ? styles.selectedTab : ''}>
+        <Link
+          href={`/tenants?${new URLSearchParams({ ...(q ? { q } : {}), ...(property ? { property } : {}) })}`}
+          aria-current={view === 'status' ? 'page' : undefined}
+          className={view === 'status' ? styles.selectedTab : ''}
+        >
           Status
         </Link>
       </nav>
@@ -110,46 +135,57 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
             />
           </div>
 
-          <div className="toolbar">
-            <div className="row">
-              <form method="get" action="/tenants" role="search">
-                {property && <input type="hidden" name="property" value={property} />}
-                {status !== 'all' && <input type="hidden" name="status" value={status} />}
-                <SearchInput
-                  name="q"
-                  defaultValue={q}
-                  placeholder="Search by name, email, phone or unit"
-                />
-              </form>
-              <div className="chips" aria-label="Filter by property">
-                <Link className={cx('chip', !property && 'active')} href={href({ q, status })}>
-                  All properties
-                </Link>
-                {properties.map((p) => (
-                  <Link
-                    key={p.id}
-                    className={cx('chip', property === p.id && 'active')}
-                    href={href({ q, status, property: p.id })}
-                  >
-                    {p.name}
-                  </Link>
-                ))}
+          <section className={styles.directoryControls} aria-label="Directory filters">
+            <div className={styles.statusHeading}>
+              <div>
+                <h2>Directory</h2>
+                <p className="muted">
+                  {total} {total === 1 ? 'tenant' : 'tenants'} in this view · Portfolio totals above
+                </p>
               </div>
+              {(q || property || status !== 'all') && (
+                <Link href={href({})} className="btn btn-ghost btn-sm">
+                  Clear filters
+                </Link>
+              )}
             </div>
-            <div className="chips" aria-label="Filter by status">
+            <form method="get" action="/tenants" role="search" className={styles.filterForm}>
+              <input type="hidden" name="view" value="directory" />
+              {status !== 'all' && <input type="hidden" name="status" value={status} />}
+              <label className={styles.searchField}>
+                <span>Search tenants</span>
+                <SearchInput name="q" defaultValue={q} placeholder="Name, email, phone or unit" />
+              </label>
+              <label className={styles.filterField}>
+                <span>Property</span>
+                <select name="property" defaultValue={property ?? ''}>
+                  <option value="">All properties</option>
+                  {properties.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Button type="submit" variant="secondary">
+                Apply filters
+              </Button>
+            </form>
+            <nav className="chips" aria-label="Filter by status">
               {STATUS_FILTERS.map((s) => (
                 <Link
                   key={s}
                   className={cx('chip', status === s && 'active')}
+                  aria-current={status === s ? 'true' : undefined}
                   href={href({ q, property, status: s })}
                 >
                   {STATUS_CHIP[s]}
                 </Link>
               ))}
-            </div>
-          </div>
+            </nav>
+          </section>
 
-          <Card flush>
+          <Card flush className={styles.directoryCard}>
             <Table>
               <TableHead
                 columns={[
@@ -181,7 +217,7 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
                         action={
                           q || property || status !== 'all' ? 'Clear filters' : 'Add a tenant'
                         }
-                        href={q || property || status !== 'all' ? '/tenants' : '#add-tenant'}
+                        href={q || property || status !== 'all' ? href({}) : '#add-tenant'}
                       />
                     </td>
                   </tr>
@@ -189,7 +225,7 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
                 {rows.map((row) => (
                   <tr key={row.id}>
                     <td>
-                      <Link className="cell-main" href={`/tenants/${row.id}`}>
+                      <Link className="cell-main" href={detailHref(row.id)}>
                         <Avatar initials={initials(row.name)} />
                         <span>
                           <strong>{row.name}</strong>
@@ -197,21 +233,31 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
                         </span>
                       </Link>
                     </td>
-                    <td>
-                      {row.property && row.unit ? (
-                        <>
-                          <Link href={`/properties/${row.property.id}`}>{row.property.name}</Link>
-                          {row.property.isImplicit ? (
-                            <small className="muted"> · Single-unit</small>
-                          ) : (
-                            <> · Unit {row.unit.number}</>
-                          )}
-                        </>
-                      ) : (
-                        <span className="muted">—</span>
-                      )}
+                    <td data-label="Property / unit">
+                      <span>
+                        {row.property && row.unit ? (
+                          <>
+                            <Link href={`/properties/${row.property.id}`}>{row.property.name}</Link>
+                            {row.property.isImplicit ? (
+                              <small className="muted"> · Single-unit</small>
+                            ) : (
+                              <>
+                                {' '}
+                                ·{' '}
+                                <Link
+                                  href={`/properties/${row.property.id}?unit=${encodeURIComponent(row.unit.id)}`}
+                                >
+                                  Unit {row.unit.number}
+                                </Link>
+                              </>
+                            )}
+                          </>
+                        ) : (
+                          <span className="muted">—</span>
+                        )}
+                      </span>
                     </td>
-                    <td>
+                    <td data-label="Lease end">
                       {row.lease ? (
                         <Link href={`/leases/${row.lease.id}`}>
                           {formatDate(row.lease.endDate)}
@@ -221,16 +267,17 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
                       )}
                     </td>
                     <td
+                      data-label="Balance"
                       className="num"
                       style={row.balanceCents > 0 ? { color: 'var(--design-danger)' } : undefined}
                     >
                       {formatMoney(row.balanceCents / 100)}
                     </td>
-                    <td>
+                    <td data-label="Status">
                       <Badge tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</Badge>
                     </td>
                     <td>
-                      <Link className="btn btn-ghost btn-sm" href={`/tenants/${row.id}`}>
+                      <Link className="btn btn-ghost btn-sm" href={detailHref(row.id)}>
                         View
                       </Link>{' '}
                       {row.lease && (
@@ -252,7 +299,11 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
             />
           </Card>
 
-          <AddTenantForm properties={properties} action={addTenantAction} />
+          <AddTenantForm
+            properties={properties}
+            initialPropertyId={property}
+            action={addTenantAction}
+          />
         </>
       )}
     </>

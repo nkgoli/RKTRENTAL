@@ -4,6 +4,7 @@
   border-bottom: 1px solid var(--rr-border);
   margin-bottom: 8px;
 }
+
 .viewTabs a {
   display: inline-block;
   padding: 10px 2px;
@@ -152,4 +153,268 @@
     float: none;
     margin-left: 12px;
   }
+}
+
+.directoryControls {
+  display: grid;
+  gap: 14px;
+}
+.filterForm {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.searchField,
+.filterField {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--design-muted);
+}
+.searchField {
+  flex: 1 1 280px;
+}
+.filterField {
+  flex: 0 1 240px;
+}
+.filterForm :global(.search) {
+  width: 100%;
+  min-width: 0;
+}
+.filterField select {
+  min-width: 0;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--rr-border-strong);
+  border-radius: 6px;
+  background: var(--design-surface);
+  color: var(--design-text);
+  font: inherit;
+  font-size: 13px;
+}
+.directoryCard {
+  min-width: 0;
+  overflow: auto;
+}
+.directoryCard :global(.cell-main) {
+  min-width: 0;
+}
+.directoryCard :global(.cell-main small) {
+  overflow-wrap: anywhere;
+}
+.tenantForm {
+  scroll-margin-top: 24px;
+}
+.formHint {
+  color: var(--design-muted);
+  font-size: 13px;
+  margin: -2px 0 16px;
+}
+.tenantForm [aria-invalid='true'] {
+  border-color: var(--design-danger);
+}
+.profile {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.backLink {
+  width: fit-content;
+  color: var(--design-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+.sectionLinks {
+  display: flex;
+  gap: 6px 20px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rr-border);
+  font-size: 13px;
+}
+.sectionLinks a {
+  padding: 6px 0;
+  color: var(--design-muted);
+}
+.sectionLinks a:hover {
+  color: var(--design-primary);
+}
+.profileLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+.profileMain,
+.profileSide {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.profile :global(.card) {
+  min-width: 0;
+  box-shadow: none;
+  scroll-margin-top: 20px;
+}
+.profile :global(.kv) {
+  grid-template-columns: 126px minmax(0, 1fr);
+  gap: 10px 14px;
+}
+.profile :global(.kv dd) {
+  overflow-wrap: anywhere;
+}
+.contactCard a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.paymentCard {
+  overflow: auto;
+}
+
+@media (max-width: 900px) {
+  .profileLayout {
+    grid-template-columns: 1fr;
+  }
+  .profileMain,
+  .profileSide {
+    display: contents;
+  }
+  .contactCard {
+    order: -1;
+  }
+}
+
+@media (max-width: 700px) {
+  .filterForm {
+    gap: 10px;
+  }
+  .searchField {
+    flex-basis: 100%;
+  }
+  .filterField {
+    flex: 1 1 180px;
+  }
+  .filterForm :global(.btn) {
+    min-height: 42px;
+  }
+  .legend {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .directoryCard :global(.table),
+  .paymentCard :global(.table) {
+    min-width: 0;
+    width: 100%;
+  }
+  .directoryCard thead,
+  .paymentCard thead,
+  .statusTable thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .directoryCard tbody,
+  .paymentCard tbody,
+  .statusTable tbody {
+    display: block;
+  }
+  .directoryCard tbody tr,
+  .paymentCard tbody tr {
+    display: grid;
+    padding: 12px 14px;
+    gap: 8px;
+    border-bottom: 1px solid var(--rr-border);
+  }
+  .directoryCard tbody td,
+  .paymentCard tbody td {
+    border: 0;
+    padding: 0;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .directoryCard td[data-label],
+  .paymentCard td[data-label] {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    text-align: right;
+  }
+  .directoryCard td[data-label]::before,
+  .paymentCard td[data-label]::before {
+    content: attr(data-label);
+    color: var(--design-muted);
+    font-size: 12px;
+    font-weight: 400;
+    flex-shrink: 0;
+    text-align: left;
+  }
+  .directoryCard td:last-child {
+    display: flex;
+    gap: 8px;
+  }
+  .statusTable {
+    min-width: 0;
+  }
+  .statusTable tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 12px;
+    padding: 14px;
+    border-bottom: 1px solid var(--rr-border);
+  }
+  .statusTable tbody td {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+  .statusTable td:first-child,
+  .statusTable td:nth-child(2),
+  .statusTable td:last-child {
+    grid-column: 1 / -1;
+  }
+  .statusTable td:nth-child(2) {
+    padding: 8px 0;
+  }
+  .statusTable .checkCell {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 0;
+    gap: 8px;
+  }
+  .statusTable .checkCell::before {
+    content: attr(data-label);
+    font-size: 12px;
+    color: var(--design-muted);
+  }
+  .statusTable .actions {
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .profile :global(.kv) {
+    grid-template-columns: 100px minmax(0, 1fr);
+  }
+  .sectionLinks {
+    gap: 4px 16px;
+  }
+}
+
+.profile :global(.card-header h2),
+.tenantForm :global(.card-header h2) {
+  font-size: var(--rr-h3);
+}
+
+.profileContext a,
+.profile :global(.kv) a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }

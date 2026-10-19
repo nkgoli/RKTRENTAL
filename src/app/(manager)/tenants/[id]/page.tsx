@@ -1,11 +1,11 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/shell/PageHeader';
 import {
   Badge,
   Button,
   Card,
-  CardHeader,
   FileRow,
   Pagination,
   pageFrom,
@@ -21,6 +21,17 @@ import { organizationTenants, type TenantDetail } from '@/lib/tenants/queries';
 import { STATUS_LABEL, STATUS_TONE } from '@/lib/tenants/status';
 import { addNoteAction, moveInAction, moveOutAction, updateTenantAction } from '../actions';
 import { AddNoteForm, EditTenantForm } from '../TenantForms';
+import { tenantReturnHref } from '../navigation';
+import styles from '../tenants.module.css';
+
+function ProfileHeader({ title, action }: { title: string; action?: ReactNode }) {
+  return (
+    <div className="card-header">
+      <h2>{title}</h2>
+      {action}
+    </div>
+  );
+}
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -103,11 +114,16 @@ export default async function TenantDetailPage({
 
   const { tenant, leases, currentLease } = detail;
   const editing = raw.edit === '1';
+  const returnTo = tenantReturnHref(raw.returnTo);
+  const profileHref = `/tenants/${tenant.id}?${new URLSearchParams({ returnTo })}`;
   const error = typeof raw.error === 'string' ? raw.error : undefined;
   const allPayments = leases
     .flatMap((lease) => lease.payments.map((payment) => ({ payment, lease })))
     .sort((a, b) => b.payment.createdAt.getTime() - a.payment.createdAt.getTime());
-  const payPage = pageFrom(typeof raw.payPage === 'string' ? raw.payPage : undefined, allPayments.length);
+  const payPage = pageFrom(
+    typeof raw.payPage === 'string' ? raw.payPage : undefined,
+    allPayments.length,
+  );
   const payments = paginate(allPayments, payPage);
   const draftLease = leases.find((l) => l.status === 'DRAFT');
   const activeLease = leases.find((l) => l.status === 'ACTIVE');
@@ -128,12 +144,15 @@ export default async function TenantDetailPage({
     : false;
 
   return (
-    <>
+    <div className={styles.profile}>
+      <Link className={styles.backLink} href={returnTo}>
+        ← Back to tenants
+      </Link>
       <PageHeader
         eyebrow="Tenants"
         title={tenant.name}
         actions={[
-          { label: 'Edit profile', href: `/tenants/${tenant.id}?edit=1` },
+          { label: 'Edit profile', href: `${profileHref}&edit=1#edit-profile` },
           ...(currentLease ? [{ label: 'View lease', href: `/leases/${currentLease.id}` }] : []),
           activeLease
             ? { label: 'Renew lease', href: `/leases/new?renew=${activeLease.id}`, primary: true }
@@ -151,9 +170,17 @@ export default async function TenantDetailPage({
 
       {editing && (
         <EditTenantForm
-          tenant={tenant}
+          tenant={{
+            name: tenant.name,
+            email: tenant.email,
+            phone: tenant.phone,
+            emergencyContactName: tenant.emergencyContactName,
+            emergencyContactPhone: tenant.emergencyContactPhone,
+            emergencyContactRelationship: tenant.emergencyContactRelationship,
+          }}
           action={updateTenantAction.bind(null, tenant.id)}
-          cancelHref={`/tenants/${tenant.id}`}
+          cancelHref={profileHref}
+          returnTo={returnTo}
         />
       )}
 
@@ -164,13 +191,23 @@ export default async function TenantDetailPage({
         {detail.balanceCents > 0 && (
           <Badge tone="danger">{formatMoney(detail.balanceCents / 100)} due</Badge>
         )}
-        <span className="muted">
+        <span className={`muted ${styles.profileContext}`}>
           {currentLease ? (
             <>
               <Link href={`/properties/${currentLease.unit.property.id}`}>
                 {currentLease.unit.property.name}
               </Link>
-              {!currentLease.unit.isImplicit && <> · Unit {currentLease.unit.number}</>}
+              {!currentLease.unit.isImplicit && (
+                <>
+                  {' '}
+                  ·{' '}
+                  <Link
+                    href={`/properties/${currentLease.unit.property.id}?unit=${encodeURIComponent(currentLease.unitId)}`}
+                  >
+                    Unit {currentLease.unit.number}
+                  </Link>
+                </>
+              )}
               {firstMoveIn && <> · Tenant since {formatDate(firstMoveIn)}</>}
             </>
           ) : (
@@ -179,10 +216,18 @@ export default async function TenantDetailPage({
         </span>
       </div>
 
-      <div className="split">
-        <div className="stack">
-          <Card>
-            <CardHeader
+      <nav className={styles.sectionLinks} aria-label="Tenant profile sections">
+        <a href="#contact">Contact</a>
+        <a href="#lease-summary">Lease summary</a>
+        <a href="#payment-history">Payments</a>
+        <a href="#tenant-documents">Documents</a>
+        <a href="#move-dates">Move-in / move-out</a>
+        <a href="#tenant-history">Notes and history</a>
+      </nav>
+      <div className={styles.profileLayout}>
+        <div className={styles.profileMain}>
+          <Card id="lease-summary">
+            <ProfileHeader
               title="Lease summary"
               action={
                 currentLease && (
@@ -219,7 +264,13 @@ export default async function TenantDetailPage({
                 {!currentLease.unit.isImplicit && (
                   <>
                     <dt>Unit</dt>
-                    <dd>Unit {currentLease.unit.number}</dd>
+                    <dd>
+                      <Link
+                        href={`/properties/${currentLease.unit.property.id}?unit=${encodeURIComponent(currentLease.unitId)}`}
+                      >
+                        Unit {currentLease.unit.number}
+                      </Link>
+                    </dd>
                   </>
                 )}
                 <dt>Monthly rent</dt>
@@ -250,21 +301,39 @@ export default async function TenantDetailPage({
                   {currentLease.tenants.filter((t) => t.tenantId !== tenant.id).length
                     ? currentLease.tenants
                         .filter((t) => t.tenantId !== tenant.id)
-                        .map((t) => t.tenant.name)
-                        .join(', ')
+                        .map((t, index) => (
+                          <span key={t.tenantId}>
+                            {index > 0 && ', '}
+                            <Link
+                              href={`/tenants/${t.tenantId}?${new URLSearchParams({ returnTo })}`}
+                            >
+                              {t.tenant.name}
+                            </Link>
+                          </span>
+                        ))
                     : 'None'}
                 </dd>
               </dl>
             ) : (
-              <p className="muted">No lease yet. Create one from the Leases page.</p>
+              <p className="muted">
+                No lease yet. Create a lease to assign a unit and record the rental terms.
+              </p>
             )}
           </Card>
 
-          <Card flush>
-            <CardHeader
+          <Card flush id="payment-history" className={styles.paymentCard}>
+            <ProfileHeader
               title="Payment history"
               action={
-                <Button href="/payments" variant="ghost" size="sm">
+                <Button
+                  href={
+                    currentLease
+                      ? `/properties/${currentLease.unit.property.id}/payments?unit=${encodeURIComponent(currentLease.unitId)}`
+                      : '/payments'
+                  }
+                  variant="ghost"
+                  size="sm"
+                >
                   Open ledger
                 </Button>
               }
@@ -291,13 +360,17 @@ export default async function TenantDetailPage({
                 )}
                 {payments.map(({ payment, lease }) => (
                   <tr key={payment.id}>
-                    <td>{formatDate(payment.paidAt ?? payment.createdAt)}</td>
-                    <td>
+                    <td data-label="Date">{formatDate(payment.paidAt ?? payment.createdAt)}</td>
+                    <td data-label="Lease">
                       <Link href={`/leases/${lease.id}`}>{unitLabel(lease)}</Link>
                     </td>
-                    <td className="muted">{describePaymentReference(payment.providerReference)}</td>
-                    <td className="num">{formatMoney(payment.amount)}</td>
-                    <td>
+                    <td data-label="Reference" className="muted">
+                      {describePaymentReference(payment.providerReference)}
+                    </td>
+                    <td data-label="Amount" className="num">
+                      {formatMoney(payment.amount)}
+                    </td>
+                    <td data-label="Status">
                       <Badge tone={PAYMENT_TONE[payment.status]}>
                         {PAYMENT_LABEL[payment.status]}
                       </Badge>
@@ -310,12 +383,12 @@ export default async function TenantDetailPage({
               page={payPage}
               total={allPayments.length}
               noun="payments"
-              href={(p) => `/tenants/${tenant.id}?payPage=${p}`}
+              href={(p) => `${profileHref}&payPage=${p}#payment-history`}
             />
           </Card>
 
-          <Card>
-            <CardHeader title="Documents" />
+          <Card id="tenant-documents">
+            <ProfileHeader title="Documents" />
             {docLeases.length === 0 && (
               <p className="muted">No documents on this tenant’s leases.</p>
             )}
@@ -363,14 +436,26 @@ export default async function TenantDetailPage({
           </Card>
         </div>
 
-        <div className="stack">
-          <Card>
-            <CardHeader title="Contact" />
+        <div className={styles.profileSide}>
+          <Card id="contact" className={styles.contactCard}>
+            <ProfileHeader title="Contact" />
             <dl className="kv" style={{ gridTemplateColumns: '90px 1fr' }}>
               <dt>Email</dt>
-              <dd>{tenant.email ?? '—'}</dd>
+              <dd>
+                {tenant.email ? (
+                  <a href={`mailto:${tenant.email}`}>{tenant.email}</a>
+                ) : (
+                  <span className="muted">No email on file</span>
+                )}
+              </dd>
               <dt>Phone</dt>
-              <dd>{tenant.phone ?? '—'}</dd>
+              <dd>
+                {tenant.phone ? (
+                  <a href={`tel:${tenant.phone}`}>{tenant.phone}</a>
+                ) : (
+                  <span className="muted">No phone on file</span>
+                )}
+              </dd>
               <dt>Emergency</dt>
               <dd>
                 {tenant.emergencyContactName ? (
@@ -382,7 +467,9 @@ export default async function TenantDetailPage({
                     {tenant.emergencyContactPhone && (
                       <>
                         <br />
-                        {tenant.emergencyContactPhone}
+                        <a href={`tel:${tenant.emergencyContactPhone}`}>
+                          {tenant.emergencyContactPhone}
+                        </a>
                       </>
                     )}
                   </>
@@ -393,8 +480,8 @@ export default async function TenantDetailPage({
             </dl>
           </Card>
 
-          <Card>
-            <CardHeader title="Move-in / move-out" />
+          <Card id="move-dates">
+            <ProfileHeader title="Move-in / move-out" />
             <div className="stack">
               {draftLease && (
                 <>
@@ -404,6 +491,7 @@ export default async function TenantDetailPage({
                   </div>
                   <form action={moveInAction.bind(null, tenant.id)}>
                     <input type="hidden" name="leaseId" value={draftLease.id} />
+                    <input type="hidden" name="returnTo" value={returnTo} />
                     <Button type="submit" variant="primary" block>
                       Move in
                     </Button>
@@ -417,6 +505,7 @@ export default async function TenantDetailPage({
                   </div>
                   <form action={moveOutAction.bind(null, tenant.id)}>
                     <input type="hidden" name="leaseId" value={activeLease.id} />
+                    <input type="hidden" name="returnTo" value={returnTo} />
                     <Button type="submit" variant="danger" block>
                       Move out
                     </Button>
@@ -433,8 +522,8 @@ export default async function TenantDetailPage({
             </div>
           </Card>
 
-          <Card>
-            <CardHeader title="Notes and history" />
+          <Card id="tenant-history">
+            <ProfileHeader title="Notes and history" />
             <AddNoteForm action={addNoteAction.bind(null, tenant.id)} />
             {history(detail).map((event, i) => (
               <div className="list-item" key={i}>
@@ -450,6 +539,6 @@ export default async function TenantDetailPage({
           </Card>
         </div>
       </div>
-    </>
+    </div>
   );
 }

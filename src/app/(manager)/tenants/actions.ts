@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireRole } from '@/lib/auth/access';
+import { tenantReturnHref } from './navigation';
 import {
   createTenant,
   moveInTenant,
@@ -63,7 +64,9 @@ export async function updateTenantAction(
     return failure(error, formData);
   }
   revalidatePath('/tenants');
-  redirect(`/tenants/${tenantId}`);
+  redirect(
+    `/tenants/${tenantId}?${new URLSearchParams({ returnTo: tenantReturnHref(formData.get('returnTo')) })}`,
+  );
 }
 
 export async function addNoteAction(
@@ -100,7 +103,7 @@ async function leaseAction(
   revalidatePath('/tenants');
   revalidatePath(`/tenants/${tenantId}`);
   redirect(
-    message ? `/tenants/${tenantId}?error=${encodeURIComponent(message)}` : `/tenants/${tenantId}`,
+    `/tenants/${tenantId}?${new URLSearchParams({ returnTo: tenantReturnHref(formData.get('returnTo')), ...(message ? { error: message } : {}) })}`,
   );
 }
 

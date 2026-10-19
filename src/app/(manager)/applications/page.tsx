@@ -11,7 +11,7 @@ import { requireManagerRole } from '@/lib/auth/access';
 import { hasCurrentConsent, type ApplicationStatus } from '@/lib/screening/policy';
 import { recordDecision, requestScreening } from './actions';
 import { ReviewDecisionForm, ScreeningSubmit } from './ReviewForms';
-import { ApplicantList } from './ApplicantList';
+import { ApplicantList, BackToApplicants } from './ApplicantList';
 import { ApplicationArrow } from './ApplicationArrow';
 import styles from './applications.module.css';
 
@@ -391,9 +391,7 @@ export default async function ApplicationsPage({
             tabIndex={-1}
             aria-labelledby="selected-title"
           >
-            <a href="#applicants" className={styles.backToList}>
-              ↑ Back to applicants
-            </a>
+            <BackToApplicants />
             <div className={styles.detailHeader}>
               <div className={styles.identity}>
                 <Avatar initials={initials(selected.applicantName)} size="lg" />

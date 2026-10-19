@@ -1,4 +1,4 @@
-﻿param([ValidateSet('start','status','stop')][string]$Action = 'status')
+param([ValidateSet('start','status','stop')][string]$Action = 'status')
 $ErrorActionPreference = 'Stop'
 $checkout = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $binding = Join-Path $checkout '.playwright-mcp'
@@ -43,9 +43,9 @@ if ($Action -eq 'start') {
     $old = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
     if (@(Listeners 3294).Count -or @(Listeners 3295).Count -or @(Listeners 55494).Count) { Verify $old | ConvertTo-Json -Depth 5; exit 0 }
   }
-  foreach ($port in @(3294,3295,55494)) { if (@(Listeners $port).Count) { throw "Reserved port $port occupied; no substitution or shutdown attempted" } }
+  foreach ($port in @(3294,3295)) { if (@(Listeners $port).Count) { throw "Reserved port $port occupied; no substitution or shutdown attempted" } }
   if (!(Test-Path -LiteralPath (Join-Path $data 'PG_VERSION'))) { throw 'Preserved fixture missing; initialization/reseed not permitted' }
-  if (Test-Path -LiteralPath (Join-Path $data 'postmaster.pid')) {
+  if (!( @(Listeners 55494).Count ) -and (Test-Path -LiteralPath (Join-Path $data 'postmaster.pid'))) {
     $lines = Get-Content -LiteralPath (Join-Path $data 'postmaster.pid')
     if (Get-Process -Id ([int]$lines[0]) -ErrorAction SilentlyContinue) { throw 'Preserved data directory has a running or ambiguous owner; refusing startup' }
   }
@@ -56,8 +56,11 @@ if ($Action -eq 'start') {
   $baselineDir = (Resolve-Path (Join-Path $binding 'baseline')).Path
   $appBuild = Build $appDir
   $baselineBuild = Build $baselineDir
-  $pg = Start-Process -FilePath $pgctl -ArgumentList @('-D', ('"'+$data+'"'), '-l', ('"'+(Join-Path $binding 'lease-database.log')+'"'), '-o', '"-p 55494 -h 127.0.0.1"', '-w', 'start') -WindowStyle Hidden -Wait -PassThru
+  if (!( @(Listeners 55494).Count )) {
+  $pg = Start-Process -FilePath $pgctl -ArgumentList @('-D', ('"'+$data+'"'), '-l', ('"'+(Join-Path $binding 'lease-database.log')+'"'), '-o', '"-p 55494 -h 127.0.0.1"', '-w', 'start') -WindowStyle Hidden -PassThru
+  if (!$pg.WaitForExit(15000)) { throw 'Database launcher did not exit' }
   if ($pg.ExitCode -ne 0) { throw 'Database startup failed; no other service touched' }
+  }
   $null = DatabaseIdentity
   $env:ROCKETRENTAL_AUTH_SECRET = 'lease-review-isolated-runtime-2026-only-secret'
   $env:ROCKETRENTAL_AUTH_COOKIE_SECURE = 'false'
@@ -85,4 +88,3 @@ if ($Action -eq 'start') {
     [ordered]@{ status='stopped'; checkout=$checkout; candidate=$state.candidate; dataDirectory=$data } | ConvertTo-Json
   } else { $result | ConvertTo-Json -Depth 5 }
 }
-

@@ -77,3 +77,26 @@ The helper now guards against occupied ports, a missing fixture database and a c
 No watchdog or indefinite hold is installed. Readiness is an observation at handoff, not a guarantee that the host will retain background processes after this turn. If it does not, the guarded restart is ready; do not repeatedly relaunch. Coordinate any later Prisma replacement before restarting or holding the app open.
 
 **Native acceptance remains pending.** The previous human Edge window closed, no Repairs native review occurred, and no new desktop acquisition is authorized. The manager will coordinate the remaining review. No native pass, waiver or task acceptance is claimed by this readiness handoff.
+
+## Manager native Edge review and final limitation
+
+Manager observations were delivered under response `0d36d8d889e0e533312a030973e4836c6806f686922d9552e4e936aaf4bee523` after a fresh human grant at **22:40:10 UTC**. The desktop lease was released at **22:44:09 UTC**. Review used existing Edge temporary tab `712378481`, `http://localhost:3227`, isolated build `SZJQyT5M5qQ6bfe8gG18w`, source `e376eaa3a6cba01d601aa531e48d079b74c89e97`. These are manager-native observations, distinct from the automated Chromium evidence above.
+
+| Native check | Observed result |
+| --- | --- |
+| Sign-in/navigation/loading | Seeded Alex sign-in and Home to Repairs passed. Native loading state briefly appeared. Active Repairs navigation and received/in-progress cards were correct. |
+| Desktop and phone | 1699x888 and 390x844; scrollWidth 1684 and 375 respectively, no horizontal overflow. Light composition and labels passed. |
+| Validation and keyboard | Whitespace request showed the description correction and focused `repair-description`. Tab reached Browse files with cobalt `rgb(49,89,217)` outline; Shift+Tab restored textarea focus. Enter on Browse files opened a multiple-file chooser. |
+| Native request | A Plumbing/Normal, call-first request without a photo submitted using Enter: `Native Edge review: kitchen tap drips after closing. Demo request only.` Redirect reached `/repairs?notice=submitted`, showed Repair request sent and three requests. Request ID `cmvfubozj0001b958062uge0s`. Enter on Your requests navigated the section. |
+| Native comment | Tab/Enter Send submitted `Native review comment: call before the demo visit.` Comment added and the exact persisted comment appeared without manual reload, at `/repairs?notice=commented#request-cmvfubozj0001b958062uge0s`. |
+| Existing authenticated images | Both loaded: fan.png naturalWidth 1 and seed kitchen photo naturalWidth 480. |
+| Phone navigation clearance | Final Send bottom 727.04px versus navigation top 771.33px. |
+| Native selected-photo/upload feedback | **Not verified.** Browser upload approval was dismissed/cancelled when the manager attempted to select the seeded PNG. No file was selected or uploaded; the count stayed zero of five. No bypass was attempted. File chooser opening is verified; native photo selection/upload/feedback is not a pass and is not waived. Automated photo regressions remain separate evidence. |
+
+One transient CDP read timeout after request submission recovered by reading the URL/screenshot without repeating submission; the manager did not identify an app failure. The temporary viewports were restored, the temporary tab closed and desktop lease released. Manager screenshots exist only in that tool transcript (desktop, phone validation/focus, cancelled-upload form, request sent, comment result, existing photos/clearance, final desktop requests); no filesystem paths were produced and none are invented.
+
+The manager instructed candidate submission with this explicit native upload gap for assessment. This is a submitted candidate with a residual limitation, not full native acceptance, a waiver, or a claim that every native check passed. No further human window was requested and no desktop access was acquired by this Task.
+
+## Released review runtime
+
+After release, listener identities were verified against command lines: app PID 49436 ran `next start tests/tenant-repairs/.review-app -p 3227`; PostgreSQL PID 38472 used this Task's `tests/tenant-repairs/node_modules/runtime/postgres` directory on 55427. Process inspection required read elevation because the sandbox denied CIM access. The verified app was stopped and the database was shut down gracefully with its `pg_ctl stop -m fast -w`; both listener entries disappeared. The verified database helper child 22736 and its PowerShell wrapper 54976 were then stopped. No unrelated listener, shared dependency or sibling process was stopped. Fixture, storage, source snapshot and build output remain on disk; review data created by the manager is preserved. No push, integration, Preview publication or deployment was performed. Application source and all unchanged passing regression evidence are reused.

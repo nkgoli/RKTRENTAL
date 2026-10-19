@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react';
 import { formatUsd } from '@/lib/tenant-pay/core';
 import { setAutopayAction } from './actions';
 import styles from '../portal.module.css';
+import pay from './pay.module.css';
 
 export function AutopayToggle({
   leaseId,
@@ -50,12 +51,12 @@ export function AutopayToggle({
   };
 
   return (
-    <section className="card" aria-labelledby="autopay-title">
+    <section className={`card ${pay.autopay}`} aria-labelledby="autopay-title">
       <div className={styles.autopayRow}>
         <span>
-          <strong id="autopay-title" style={{ display: 'block', fontSize: 14 }}>
+          <h2 id="autopay-title" style={{ display: 'block', fontSize: 14 }}>
             Autopay
-          </strong>
+          </h2>
           <small className="muted">
             Currently {on ? 'on' : 'off'} · Pay {formatUsd(monthlyRentCents)} on the {rentDueDay}
             {[1, 21].includes(rentDueDay)
@@ -74,7 +75,7 @@ export function AutopayToggle({
           aria-checked={on}
           aria-label="Autopay"
           aria-describedby="autopay-status"
-          className={`switch${on ? ' on' : ''}`}
+          className={pay.switch}
           disabled={pending}
           onClick={() => toggle(!on)}
         />

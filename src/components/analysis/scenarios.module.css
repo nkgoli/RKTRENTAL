@@ -1,0 +1,17 @@
+﻿.scenarios {
+  min-width: 0;
+  display: grid;
+  gap: 20px;
+}
+.scenarios > *,
+.scenarios section {
+  min-width: 0;
+}
+.scenarios fieldset {
+  display: grid;
+  gap: 12px;
+}
+.scenarios summary {
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}

@@ -1,7 +1,17 @@
 # Light lease template library and editor
 
-Built application candidate: `75e9f062ed870232999198acf790b7dc6dfad26c`.
-Production build: `d9bh-mzkkMTwp0p-xZ2xE`, built successfully from that exact candidate on 2026-10-19. Later handoff changes affect this document and runtime readiness/shutdown support, not the built application.
+Built application candidate: `80fcd26976020f828ca2d6f424d05831fed60db2`.
+Production build: `1MBXb7xWZbEv8AKonRns8`, built successfully from that exact candidate on 2026-10-19. Later handoff and browser-harness changes do not change the built application.
+
+## Agent review corrections
+
+- **Two-line preview:** removed padding/border from the clamped paragraph and placed spacing on a separate wrapper. The paragraph has zero padding and a measured height no greater than two line heights at 1440px and 390px. Expanded items remove that preview from the DOM and retain the complete editable wording.
+- **Expanded editor:** separated the reorder row from full-width, visibly labelled title and wording fields. Include when occupies its own labelled row; Required and the destructive Remove control share a separate options row. Existing accessible names, ordering and mutations are retained. Browser assertions verify labels, destructive text color, keyboard outline and no page overflow with expanded long content.
+- **Property illustrations:** restored the shared building SVG in Apply to properties and the existing illustrated house SVG in each live property row. The service supplies id/name/default-template id, without property type, so every row deliberately uses the same generic house fallback. No shared shell files or domain queries were changed. Default assignment, pending controls and property/lease deletion-denial flows passed again.
+
+Preserved the reviewed candidate's before captures as `.playwright-mcp/review-before-candidate-editor-1440.png`, `review-before-candidate-editor-390.png`, `review-before-candidate-editor-expanded-1440.png`, and `review-before-candidate-editor-expanded-390.png`. Refreshed the corresponding `candidate-editor-*.png` captures from the new production build; screenshot inspection confirms the clean two-line ending, separate labelled fields, styled Remove and restored property icons. The final dedicated runner passed all 3 tests after explicit synchronization with the delete action response. Baseline captures from the original foundation remain unchanged.
+
+Review-fix checks: 16 affected unit/UI tests passed; scoped lint, TypeScript, production build, foundation ancestry and whitespace checks passed. Browser tests passed at desktop and 390px, including all previously covered actual mutation/failure flows. The hidden runtime is ready on port 3147 using the exact build above; its receipt records application PID 42672 and fixture launcher PID 60352 at 21:45:59 UTC. Treat the on-disk runtime receipt as current when restarting, rather than these historical PIDs. Native existing-Edge review remains pending; no native observation or release confirmation was added.
 
 ## Source and design mapping
 

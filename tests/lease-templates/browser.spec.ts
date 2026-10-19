@@ -112,6 +112,7 @@ for (const width of [1440, 390]) {
     }
     await capture(page, `editor-${width}`);
     await page.getByRole('button', { name: 'Expand all' }).click();
+    await capture(page, `editor-expanded-${width}`);
     if (!baseline) {
       await expect(page.locator('article p[class*="lt-item-preview"]')).toHaveCount(0);
       const title = page.getByLabel('Residential use and complete agreement wording title');
@@ -135,7 +136,6 @@ for (const width of [1440, 390]) {
       await expect(title).toBeFocused();
       expect(await title.evaluate((el) => getComputedStyle(el).outlineStyle)).not.toBe('none');
     }
-    await capture(page, `editor-expanded-${width}`);
     if (!baseline) {
       await noOverflow(page);
       await page.getByLabel('Key replacement fee').scrollIntoViewIfNeeded();
@@ -291,7 +291,13 @@ test('candidate: actual mutations, validation, failure retention and keyboard', 
   await page.reload();
   await page.getByRole('button', { name: 'Expand all' }).click();
   await expect(page.getByRole('button', { name: 'Collapse all' })).toBeVisible();
+  const deletionResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      response.url().includes(`/leases/templates/${copyId}`),
+  );
   await page.getByRole('button', { name: 'Delete when unused' }).click();
+  expect((await deletionResponse).status()).toBe(200);
   await expect(page).toHaveURL(/\/leases\/templates$/);
   await expect(page.getByText(`${name} edited copy`, { exact: true })).toHaveCount(0);
   await capture(page, 'unused-deleted-phone');

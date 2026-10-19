@@ -263,8 +263,11 @@ export function RoiWorkspace({
           : 'summary',
     );
     setTimeout(() => {
+      const scenario = path.match(/^scenarios\.\d+/)?.[0];
       const field =
-        document.getElementById(path) ?? document.getElementById('input.purchase.purchasePrice');
+        document.getElementById(path) ??
+        document.getElementById(scenario ?? 'input.purchase.purchasePrice') ??
+        document.getElementById('roi-section-tab-scenarios');
       let ancestor = field?.parentElement;
       while (ancestor) {
         if (ancestor instanceof HTMLDetailsElement) ancestor.open = true;
@@ -377,6 +380,10 @@ export function RoiWorkspace({
         setErrors(saved.issues ?? []);
         setConflict(saved.code === 'CONFLICT');
         setMessage(failure(saved.code));
+        if (saved.issues?.length) {
+          setStale(true);
+          if (pending === null) focusField(saved.issues[0].path);
+        }
         return;
       }
       install(saved.data.payload, saved.data.revision);

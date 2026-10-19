@@ -204,8 +204,10 @@ export function RoiBenchmarks({
           </p>
           <button disabled>Match cash flows - unavailable</button>
           <p>
-            Saved custom assumptions are preserved with their supplied source. Edit or replace them
-            through a supported payload workflow; no custom risk score is inferred.
+            Saved custom assumptions keep their supplied source. Open Compare and use Add custom
+            reference, or edit the existing custom name, return, yield, volatility and source.
+            Recalculate to review the results, then Save draft or Save ready to keep them for this
+            property. Property volatility and risk-adjusted return remain unavailable.
           </p>
         </details>
       </section>

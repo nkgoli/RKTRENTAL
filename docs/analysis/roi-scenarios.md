@@ -1,5 +1,11 @@
 ﻿# Named ROI scenarios and comparison extension
 
+## Combined correction
+
+The later [combined analysis handoff](combined-analysis.md) supersedes the historical panel limitations below. Scenarios now offers deliberate Optimistic, Conservative, Best and Worst examples from design revision 36. Selecting an example previews its exact overrides, the current base values and every inherited assumption; only **Add [name] scenario** creates it. Its new identity, name and overrides remain editable and save with the selected property's existing lifecycle. Choosing or adding an example never changes the base. Explicit fixed-dollar values, including zero, retain precedence over percentage examples.
+
+Merged calculation failures now carry the scenario identity and `scenarios.<index>` path. Loan/purchase conflicts focus the overridden loan or purchase field. Errors without a single offending field, including growth/hold overflow, focus an accessible summary within that scenario. Draft/ready save errors use the same recovery targets. A pending navigation dialog retains focus until **Correct highlighted assumption** is chosen, preserves its destination and every typed override, and can continue after correction. Existing CAS, authorization and property isolation remain covered. Explicit calculation options are displayed as labeled dates, percentages and tax assumptions instead of raw JSON. Financial formulas are unchanged.
+
 ## State and public API
 
 The declared projection predecessor `9124111b201277d5039b2bdd485019c08ec900e4` and corrected navigation candidate `6025e4fb3b699017b54d032d31cd2b4d06b2a6e6` were verified as ancestors of the assigned checkout. Its initial tree was clean; no retained scenario implementation was present. Work stayed in the assigned paths.

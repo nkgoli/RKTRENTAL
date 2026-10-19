@@ -5,6 +5,47 @@ export type ScenarioDraft = {
   values: Record<string, string>;
   options?: AnalysisPayload['scenarios'][number]['options'];
 };
+
+/** Explicit examples from Designs/rocketrental-analysis, revision 36. */
+export const scenarioExamples: Pick<ScenarioDraft, 'name' | 'values'>[] = [
+  {
+    name: 'Optimistic',
+    values: {
+      'income.vacancyRate': '3',
+      'income.annualRentGrowth': '4',
+      'appreciationExit.annualAppreciation': '4',
+      'expenses.annualExpenseGrowth': '2',
+    },
+  },
+  {
+    name: 'Conservative',
+    values: {
+      'income.vacancyRate': '8',
+      'income.annualRentGrowth': '2',
+      'appreciationExit.annualAppreciation': '2',
+      'expenses.annualExpenseGrowth': '2',
+    },
+  },
+  {
+    name: 'Best Case',
+    values: {
+      'income.vacancyRate': '2',
+      'income.annualRentGrowth': '5',
+      'appreciationExit.annualAppreciation': '5',
+      'expenses.maintenancePercent': '3',
+    },
+  },
+  {
+    name: 'Worst Case',
+    values: {
+      'income.vacancyRate': '15',
+      'income.annualRentGrowth': '0',
+      'appreciationExit.annualAppreciation': '0',
+      'expenses.maintenancePercent': '10',
+    },
+  },
+];
+
 export function scenarioDrafts(payload: AnalysisPayload): ScenarioDraft[] {
   return payload.scenarios.map((s) => ({
     id: s.id,

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RoiWorkspace } from '@/components/analysis/RoiWorkspace';
 import { applyValues, valuesFrom } from '@/components/analysis/fields';
-import { PayloadSchema } from '@/lib/analysis';
+import { PayloadSchema, calculatePayload, issues } from '@/lib/analysis';
 import { payload } from './fixture';
 import {
   loadRoiDraftAction,
@@ -548,6 +548,188 @@ describe('ROI projection interactions', () => {
     );
     const table = screen.getByRole('table', { name: /Projection amounts/ });
     expect(within(table).getAllByText('$10,800.00')).toHaveLength(3);
+  });
+});
+
+describe('scenario examples and merged failure recovery', () => {
+  const field = (path: string) =>
+    document.getElementById(`scenarios.0.${path}`) as HTMLInputElement;
+  async function create() {
+    await open();
+    fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create scenario' }));
+    fireEvent.change(field('name'), { target: { value: 'Stress case' } });
+    fireEvent.change(field('overrides.expenses.maintenance'), { target: { value: '0' } });
+  }
+  it('previews examples without edits, warns about inherited fixed zero and saves/reloads an edited example', async () => {
+    const p = make('a');
+    p.input.expenses!.maintenance = 0;
+    vi.mocked(loadRoiDraftAction).mockResolvedValueOnce({
+      ok: true,
+      data: { payload: p, missing: [], facts },
+    });
+    await open();
+    fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
+    expect(screen.getByText('0 of 20 scenarios')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Example scenario'), { target: { value: 'Best Case' } });
+    expect(screen.getByText(/Inherited fixed maintenance of/).textContent).toContain('$0.00');
+    expect(screen.getByText(/3% \(base: 0%\)/)).toBeTruthy();
+    expect(screen.getByText('0 of 20 scenarios')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Add Best Case scenario' }));
+    expect(field('overrides.expenses.maintenancePercent').value).toBe('3');
+    expect(field('overrides.expenses.maintenance').value).toBe('');
+    fireEvent.change(field('name'), { target: { value: 'My best case' } });
+    fireEvent.change(field('overrides.income.vacancyRate'), { target: { value: '4' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
+    await screen.findByText('Saved ready - revision 1');
+    const saved = vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as {
+      payload: ReturnType<typeof make>;
+    };
+    expect(saved.payload.input).toEqual(p.input);
+    expect(saved.payload.scenarios[0]).toMatchObject({
+      name: 'My best case',
+      overrides: {
+        income: { vacancyRate: 4, annualRentGrowth: 5 },
+        expenses: { maintenancePercent: 3 },
+      },
+    });
+    vi.mocked(loadSavedRoiAnalysisAction).mockResolvedValueOnce({
+      ok: true,
+      data: {
+        propertyId: 'a',
+        payload: saved.payload,
+        status: 'READY',
+        revision: 1,
+        missing: [],
+        createdAt: '',
+        updatedAt: '',
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Reload saved analysis' }));
+    await screen.findByText('Loaded ready - revision 1');
+    expect(field('name').value).toBe('My best case');
+    expect(field('overrides.income.vacancyRate').value).toBe('4');
+  });
+  it.each(['loan', 'overflow'])(
+    'recalculation focuses the visible %s recovery target and preserves every override',
+    async (kind) => {
+      await create();
+      if (kind === 'loan')
+        fireEvent.change(field('overrides.financing.loanAmount'), { target: { value: '100001' } });
+      else {
+        fireEvent.change(field('overrides.income.annualRentGrowth'), { target: { value: '100' } });
+        fireEvent.change(field('overrides.appreciationExit.holdingPeriodYears'), {
+          target: { value: '50' },
+        });
+      }
+      fireEvent.click(screen.getByRole('tab', { name: 'Charts' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+      const target =
+        kind === 'loan'
+          ? field('overrides.financing.loanAmount')
+          : document.getElementById('scenarios.0');
+      await waitFor(() => expect(document.activeElement).toBe(target));
+      expect(screen.getByRole('tab', { name: 'Scenarios' }).getAttribute('aria-selected')).toBe(
+        'true',
+      );
+      expect(target?.closest('[hidden]')).toBeNull();
+      if (kind === 'loan') {
+        expect(field('overrides.financing.loanAmount').value).toBe('100001');
+        expect(field('overrides.financing.loanAmount').getAttribute('aria-invalid')).toBe('true');
+        expect(field('overrides.financing.loanAmount').closest('details')?.open).toBe(true);
+        fireEvent.change(field('overrides.financing.loanAmount'), { target: { value: '50000' } });
+      } else {
+        expect(field('overrides.income.annualRentGrowth').value).toBe('100');
+        expect(field('overrides.appreciationExit.holdingPeriodYears').value).toBe('50');
+        fireEvent.change(field('overrides.appreciationExit.holdingPeriodYears'), {
+          target: { value: '1' },
+        });
+      }
+      expect(field('overrides.expenses.maintenance').value).toBe('0');
+      expect(field('name').value).toBe('Stress case');
+      fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+      expect(screen.getByRole('region', { name: 'Scenario metrics' })).toBeTruthy();
+    },
+  );
+  it.each([false, true])(
+    'server calculation errors recover without losing drafts (guarded: %s)',
+    async (guarded) => {
+      await create();
+      fireEvent.change(field('overrides.income.annualRentGrowth'), { target: { value: '100' } });
+      fireEvent.change(field('overrides.appreciationExit.holdingPeriodYears'), {
+        target: { value: '50' },
+      });
+      vi.mocked(saveRoiAnalysisAction).mockImplementationOnce(async (request) => {
+        try {
+          calculatePayload((request as { payload: ReturnType<typeof make> }).payload);
+        } catch (error) {
+          return { ok: false, code: 'INVALID', issues: issues(error) };
+        }
+        throw Error('Expected invalid merged scenario');
+      });
+      fireEvent.click(screen.getByRole('tab', { name: 'Summary' }));
+      if (guarded) fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
+      fireEvent.click(
+        screen.getByRole('button', { name: guarded ? 'Save draft and continue' : 'Save draft' }),
+      );
+      if (guarded) {
+        const correct = await screen.findByRole('button', {
+          name: 'Correct highlighted assumption',
+        });
+        expect(screen.getByRole('alertdialog').contains(document.activeElement)).toBe(true);
+        fireEvent.click(correct);
+      }
+      await waitFor(() =>
+        expect(document.activeElement).toBe(document.getElementById('scenarios.0')),
+      );
+      expect(field('overrides.expenses.maintenance').value).toBe('0');
+      expect(field('overrides.income.annualRentGrowth').value).toBe('100');
+      expect(field('overrides.appreciationExit.holdingPeriodYears').value).toBe('50');
+      fireEvent.change(field('overrides.appreciationExit.holdingPeriodYears'), {
+        target: { value: '1' },
+      });
+      if (guarded) {
+        fireEvent.click(screen.getByRole('button', { name: 'Continue property change' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
+        await screen.findByRole('searchbox');
+      } else {
+        fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+        await screen.findByText('Saved draft - revision 1');
+      }
+      const saved = vi.mocked(saveRoiAnalysisAction).mock.calls[1][0] as {
+        payload: ReturnType<typeof make>;
+      };
+      expect(saved.payload.input).toEqual(make('a').input);
+      expect(saved.payload.scenarios[0]).toMatchObject({
+        name: 'Stress case',
+        overrides: {
+          income: { annualRentGrowth: 100 },
+          appreciationExit: { holdingPeriodYears: 1 },
+          expenses: { maintenance: 0 },
+        },
+      });
+    },
+  );
+  it('renders saved calculation options with labels and restores inheritance deliberately', async () => {
+    const p = payload('a');
+    vi.mocked(loadRoiDraftAction).mockResolvedValueOnce({
+      ok: true,
+      data: { payload: p, missing: [], facts },
+    });
+    await open();
+    fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
+    fireEvent.click(screen.getByText('Explicit scenario calculation options'));
+    expect(screen.getByText('Federal income tax (%)', { selector: 'dt' })).toBeTruthy();
+    expect(screen.getByText('Discount rate', { selector: 'dt' })).toBeTruthy();
+    expect(screen.getByRole('tabpanel', { name: 'Scenarios' }).querySelector('pre')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Use base calculation options' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
+    await screen.findByText('Saved ready - revision 1');
+    const saved = vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as {
+      payload: ReturnType<typeof make>;
+    };
+    expect(saved.payload.scenarios[0].options).toBeUndefined();
+    expect(saved.payload.options).toEqual(p.options);
   });
 });
 

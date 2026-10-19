@@ -1,12 +1,36 @@
 ﻿'use client';
 import { useMemo, useState } from 'react';
 import { calculatePayload, type AnalysisPayload, type ValidationIssue } from '@/lib/analysis';
-import type { ScenarioDraft } from '@/lib/analysis/scenarios';
+import { scenarioExamples, type ScenarioDraft } from '@/lib/analysis/scenarios';
 import { dollars, rate } from '@/lib/analysis/projections';
-import { groups, readPath } from './fields';
+import { groups, readPath, taxFields } from './fields';
 import { LineChart } from './RoiProjections';
 import styles from './analysis.module.css';
 import scenarioStyles from './scenarios.module.css';
+
+function CalculationAssumptions({ options }: { options: AnalysisPayload['options'] }) {
+  return (
+    <dl>
+      <dt>Projection start date</dt>
+      <dd>{options.startDate ?? 'Not set'}</dd>
+      <dt>Discount rate</dt>
+      <dd>{options.discountRate == null ? 'Not set' : rate(options.discountRate)}</dd>
+      <dt>Tax estimate</dt>
+      <dd>{options.tax ? 'Explicit tax assumptions' : 'Before tax'}</dd>
+      {options.tax &&
+        taxFields.map((f) => {
+          const value = readPath({ options }, f.path);
+          return (
+            <div key={f.path}>
+              <dt>{f.label}</dt>
+              <dd>{typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)}</dd>
+            </div>
+          );
+        })}
+    </dl>
+  );
+}
+
 export function RoiScenarios({
   drafts,
   onChange,
@@ -25,6 +49,8 @@ export function RoiScenarios({
   saving: boolean;
 }) {
   const [horizon, setHorizon] = useState(10);
+  const [exampleName, setExampleName] = useState('');
+  const example = scenarioExamples.find((candidate) => candidate.name === exampleName);
   const calculated = useMemo(() => {
     try {
       return snapshot ? calculatePayload({ ...snapshot, benchmarks: [] }) : null;
@@ -41,6 +67,11 @@ export function RoiScenarios({
   function update(index: number, change: Partial<ScenarioDraft>) {
     onChange(drafts.map((d, i) => (i === index ? { ...d, ...change } : d)));
   }
+  function add(name: string, values: Record<string, string>) {
+    const index = drafts.length;
+    onChange([...drafts, { id: crypto.randomUUID(), name, values: { ...values } }]);
+    setTimeout(() => document.getElementById(`scenarios.${index}.name`)?.focus(), 0);
+  }
   return (
     <section className={scenarioStyles.scenarios}>
       <h2>Scenario comparison</h2>
@@ -49,17 +80,80 @@ export function RoiScenarios({
         inheritance. Fixed dollar amounts take precedence over percentages. The saved base stays
         separate.
       </p>
+      <section className={styles.card} aria-label="Scenario examples">
+        <h3>Explore an example</h3>
+        <p>
+          Illustrative assumptions, not promised outcomes. Choose an example to review its exact
+          overrides before adding an editable scenario. Save draft or Save ready to keep it for this
+          property.
+        </p>
+        <label className={styles.field}>
+          Example scenario
+          <select
+            value={exampleName}
+            disabled={saving}
+            onChange={(event) => setExampleName(event.target.value)}
+          >
+            <option value="">Choose an example</option>
+            {scenarioExamples.map((candidate) => (
+              <option key={candidate.name}>{candidate.name}</option>
+            ))}
+          </select>
+        </label>
+        {example && (
+          <>
+            <h4>{example.name} overrides</h4>
+            <dl>
+              {Object.entries(example.values).map(([path, value]) => (
+                <div key={path}>
+                  <dt>{fields.find((f) => f.path === `input.${path}`)?.label}</dt>
+                  <dd>
+                    {value}% (base: {String(readPath(base.input, path) ?? 'Not set')}%)
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <p>
+              Every other assumption inherits the current base, including purchase, financing,
+              holding period, fixed dollar amounts and calculation options. The base stays
+              unchanged.
+            </p>
+            {base.input.expenses?.maintenance !== undefined &&
+              'expenses.maintenancePercent' in example.values && (
+                <p className={styles.notice}>
+                  Inherited fixed maintenance of {dollars(base.input.expenses.maintenance)} per year
+                  takes precedence. This example&apos;s maintenance percentage will not change that
+                  amount, including when the fixed amount is zero.
+                </p>
+              )}
+            <details>
+              <summary>Review inherited assumptions</summary>
+              <dl>
+                {fields
+                  .filter((f) => !(f.path.slice(6) in example.values))
+                  .map((f) => (
+                    <div key={f.path}>
+                      <dt>{f.label}</dt>
+                      <dd>{String(readPath(base, f.path) ?? 'Not set')}</dd>
+                    </div>
+                  ))}
+              </dl>
+              <CalculationAssumptions options={base.options} />
+            </details>
+            <button
+              type="button"
+              disabled={saving || drafts.length >= 20}
+              onClick={() => add(example.name, example.values)}
+            >
+              Add {example.name} scenario
+            </button>
+          </>
+        )}
+      </section>
       <button
         type="button"
         disabled={saving || drafts.length >= 20}
-        onClick={() => {
-          const index = drafts.length;
-          onChange([
-            ...drafts,
-            { id: crypto.randomUUID(), name: `Custom case ${index + 1}`, values: {} },
-          ]);
-          setTimeout(() => document.getElementById(`scenarios.${index}.name`)?.focus(), 0);
-        }}
+        onClick={() => add(`Custom case ${drafts.length + 1}`, {})}
       >
         Create scenario
       </button>
@@ -67,6 +161,29 @@ export function RoiScenarios({
       {drafts.map((d, index) => (
         <details open key={d.id} className={styles.card}>
           <summary>{d.name || 'Unnamed scenario'}</summary>
+          <div
+            id={`scenarios.${index}`}
+            tabIndex={-1}
+            role="region"
+            aria-label={`${d.name || 'Unnamed scenario'}: review scenario assumptions`}
+          >
+            {errors
+              .filter(
+                (e) => e.path === `scenarios.${index}` || e.path.startsWith(`scenarios.${index}.`),
+              )
+              .map((e, errorIndex) => (
+                <p role="alert" id={`${e.path}-error`} key={errorIndex}>
+                  {e.message}
+                </p>
+              ))}
+            {errors.some((e) => e.path === `scenarios.${index}`) && (
+              <p>
+                Review this scenario&apos;s growth rates, holding period and amounts below,
+                including inherited values. Correct the assumptions and recalculate. Your entries
+                are kept.
+              </p>
+            )}
+          </div>
           <fieldset disabled={saving}>
             <label className={styles.field}>
               Scenario name
@@ -74,16 +191,15 @@ export function RoiScenarios({
                 id={`scenarios.${index}.name`}
                 value={d.name}
                 maxLength={200}
+                aria-invalid={errors.some((e) => e.path === `scenarios.${index}.name`)}
+                aria-describedby={
+                  errors.some((e) => e.path === `scenarios.${index}.name`)
+                    ? `scenarios.${index}.name-error`
+                    : undefined
+                }
                 onChange={(e) => update(index, { name: e.target.value })}
               />
             </label>
-            {errors
-              .filter((e) => e.path.startsWith(`scenarios.${index}`))
-              .map((e) => (
-                <p role="alert" key={e.path}>
-                  {e.message}
-                </p>
-              ))}
             <button
               type="button"
               onClick={() => {
@@ -98,12 +214,15 @@ export function RoiScenarios({
               {fields.map((f) => {
                 const path = f.path.slice(6);
                 const id = `scenarios.${index}.overrides.${path}`;
+                const invalid = errors.some((e) => e.path === id);
                 return (
                   <label className={styles.field} key={path}>
                     {f.label} - Base: {String(readPath(base, f.path) ?? 'Not set')}
                     {f.kind === 'select' ? (
                       <select
                         id={id}
+                        aria-invalid={invalid}
+                        aria-describedby={invalid ? `${id}-error` : undefined}
                         value={d.values[path] ?? ''}
                         onChange={(e) =>
                           update(index, { values: { ...d.values, [path]: e.target.value } })
@@ -117,6 +236,8 @@ export function RoiScenarios({
                     ) : (
                       <input
                         id={id}
+                        aria-invalid={invalid}
+                        aria-describedby={invalid ? `${id}-error` : undefined}
                         value={d.values[path] ?? ''}
                         placeholder="Inherit base"
                         onChange={(e) =>
@@ -131,9 +252,11 @@ export function RoiScenarios({
             {d.options && (
               <details>
                 <summary>Explicit scenario calculation options</summary>
-                <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-                  {JSON.stringify(d.options, null, 2)}
-                </pre>
+                <CalculationAssumptions options={d.options} />
+                <p>
+                  These saved assumptions apply only to this scenario. Use base calculation options
+                  to inherit the dates, discount rate and tax assumptions from Summary.
+                </p>
                 <button type="button" onClick={() => update(index, { options: undefined })}>
                   Use base calculation options
                 </button>

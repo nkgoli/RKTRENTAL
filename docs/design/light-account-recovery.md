@@ -13,7 +13,7 @@ design's specimen catalogs are not rendered as product UI.
   assigned base `b62f7666dbe4c644f825904201bf29b2b6bb8fdf`; it was reconciled by a
   fast-forward merge before implementation. `docs/design/light-foundation.md` and the approved
   icon/token handoff are now present in this checkout.
-- Production build ID: `r5VfC9nuh0z1rxnQpYUQX` (`next build`, 22 static pages).
+- Production build ID: `1j-Rdcc6JnMEAZt3np19U` (`next build`, 22 static pages).
 - Review runtime: `next start` on `http://localhost:3216`, production build, existing seeded
   PostgreSQL on `localhost:5433` (`rocketrental`). The review server was left running for the
   bounded native Edge check.
@@ -48,6 +48,9 @@ now carries the approved teal top rule, state mark, heading, copy and action tre
 - Manager, tenant and public return destinations stay distinct: `/dashboard`, `/home` and `/`.
 - `reset()` remains the retry action in every error boundary; no new auth, password-reset,
   account-settings or recovery features were added.
+- Page-heading semantics: standalone public recovery pages and the tenant error boundary render
+  `h1`; embedded manager and tenant states keep `h2` under the shell's own `h1`. The shared
+  components expose an explicit `headingLevel` option and keep the same visual size.
 - The existing `AccountMenu`, `ManagerShell` and `TenantShell` are consumed without edits.
 
 ## Verification
@@ -55,12 +58,14 @@ now carries the approved teal top rule, state mark, heading, copy and action tre
 | Check | Command and result |
 | --- | --- |
 | Focused unit/component tests | `node node_modules/vitest/vitest.mjs run --config vitest.config.ts tests/auth tests/recovery tests/tenant-portal/states.test.tsx`: 4 files, 13 tests passed. |
-| Shared UI regressions | `node node_modules/vitest/vitest.mjs run --config vitest.config.ts tests/auth tests/recovery tests/tenant-portal/states.test.tsx tests/ui`: 8 files, 67 tests passed. |
+| Shared UI regressions | `node node_modules/vitest/vitest.mjs run --config vitest.config.ts tests/auth tests/recovery tests/tenant-portal/states.test.tsx tests/ui`: 8 files, 69 tests passed. |
 | Scoped lint | `node node_modules/eslint/bin/eslint.js "src/app/(auth)" src/components/RouteStates.tsx src/components/RouteError.tsx "src/app/(manager)/error.tsx" "src/app/(manager)/loading.tsx" "src/app/(manager)/not-found.tsx" "src/app/(tenant)/error.tsx" "src/app/(tenant)/loading.tsx" "src/app/(tenant)/not-found.tsx" src/app/error.tsx src/app/loading.tsx src/app/not-found.tsx tests/auth tests/recovery tests/tenant-portal/states.test.tsx --max-warnings=0`: exit 0. |
 | Typecheck | `node node_modules/typescript/bin/tsc --noEmit`: exit 0. |
 | Production build | `node node_modules/next/dist/bin/next build`: exit 0, 22 static pages generated. `npm.cmd run build` could not run `prisma generate` because the shared root Prisma engine DLL was locked by the already-running review server; the generated client was already current and the Next build itself passed. |
-| Browser flows | Playwright against `http://localhost:3216`: manager sign-in reached `/dashboard`; sign-out reached `/sign-in?loggedOut=1` with "You have been signed out."; tenant sign-in reached `/home` and `/dashboard` returned to `/home`; Show/Hide changed the password type while keeping the value; an empty submit stayed on `/sign-in` with the native "Please fill out this field." message; `/tenants/does-not-exist` rendered the manager not-found inside the manager shell; an unknown public URL rendered the public not-found. |
+| Browser flows | Playwright against `http://localhost:3216`: manager sign-in reached `/dashboard`; sign-out reached `/sign-in?loggedOut=1` with "You have been signed out."; tenant sign-in reached `/home` and `/dashboard` returned to `/home`; Show/Hide changed the password type while keeping the value; an empty submit stayed on `/sign-in` with the native "Please fill out this field." message; `/tenants/does-not-exist` rendered the manager not-found inside the manager shell; an unknown public URL rendered the public not-found. The `/ui` capture shows the shared empty and loading states, not `RouteError`; no browser observation of `RouteError` or its reset action is claimed. |
 | Accessibility regression | `PLAYWRIGHT_BASE_URL=http://localhost:3216 node node_modules/@playwright/test/cli.js test tests/a11y/foundation.spec.ts --project=a11y --workers=1`: 3 tests passed, including the shared loading/empty states and the manager 390/768 navigation and chart axe checks. |
+| Overflow measurement | At 390px, `/sign-in`, `/sign-out`, the public not-found and the manager not-found all report `document.documentElement.scrollWidth === innerWidth === 390`. The `/ui` page reports 472 because of its wide `.table` specimen; the changed empty and loading boxes are 310.67px wide within the 390px viewport. |
+| Heading semantics | Unit assertions cover public error `h1`, tenant error `h1`, manager error `h2`, public not-found `h1`, and manager/tenant not-found `h2`. Browser check: the public not-found renders `h1` "Page not found" with no `h2`; the manager not-found renders the shell `h1` "Tenants" plus the embedded `h2` "Page not found". |
 
 Before/after screenshots are in `.playwright-mcp/` in this checkout:
 
@@ -72,14 +77,15 @@ Before/after screenshots are in `.playwright-mcp/` in this checkout:
   `after-sign-out-signed-in-390.png`, `after-sign-out-feedback-390.png`
 - `after-not-found-1280.png`, `after-not-found-390.png`
 - `after-manager-not-found-1280.png`, `after-manager-not-found-390.png`
-- `after-shared-states-390.png`
+- `after-shared-states-390.png` (element capture of the `/ui` page-states section, excluding the
+  unrelated wide table specimen)
 
 ## Pending native Edge checklist
 
 The manager performs these checks in the existing Edge session after a fresh bounded human
 grant. Do not open a new Edge window, drive the desktop, restart the review server, rerun the
 passing checks or change the committed source. The review server is `http://localhost:3216`
-(production build `r5VfC9nuh0z1rxnQpYUQX`) against the seeded database on `localhost:5433`.
+(production build `1j-Rdcc6JnMEAZt3np19U`) against the seeded database on `localhost:5433`.
 
 Desktop (the existing window's desktop viewport):
 
@@ -100,7 +106,8 @@ Desktop (the existing window's desktop viewport):
 8. An unknown public URL: the public not-found renders the brand above the card and
    "Return to your account" to `/`.
 9. `/ui`: the shared empty state (teal top rule) and loading state (spinner plus skeleton)
-   render without overflow.
+   render. The page's wide table specimen is a pre-existing overflow outside the changed
+   states; the changed state boxes themselves stay within the viewport.
 
 390px (the existing window's phone emulation):
 
@@ -118,10 +125,17 @@ the desktop release confirmation. Return those observations for this Task's reco
 ## Limitations
 
 - The manager and tenant **error** boundaries are not directly routable without a runtime
-  failure; they are covered by `tests/recovery/states.test.tsx` and share the same
-  `RouteError` component verified in the browser through the public boundary. The tenant
-  **not-found** boundary is likewise covered by unit tests because no tenant route currently
-  calls `notFound()`.
+  failure; they are covered by `tests/recovery/states.test.tsx` only. The public not-found
+  flow uses `EmptyState`, and the `/ui` capture shows the shared loading and empty states, not
+  `RouteError`; no browser observation of `RouteError` or its reset action is claimed. The
+  tenant **not-found** boundary is likewise covered by unit tests because no tenant route
+  currently calls `notFound()`.
+- The `/ui` showcase's horizontal scrollbar is caused by its wide `.table` specimen (measured
+  645px before and 686px after at a 390px viewport), not by the changed `EmptyState` or
+  `LoadingState`; both changed state boxes measure 310.67px wide within the 390px viewport.
+  The actual changed pages (sign-in, sign-out, public not-found, manager not-found) have no
+  horizontal scroll. The refreshed shared-state evidence is an element capture of the
+  page-states section.
 - The tenant "No active lease yet" state keeps the shared component's default (no state mark)
   because the tenant content pages that compose it are owned by other tasks; adding the
   design's document mark there would require editing those pages.

@@ -17,6 +17,7 @@ export default function NotFound() {
         <EmptyState
           eyebrow="Page unavailable"
           icon="folder"
+          headingLevel={1}
           title="Page not found"
           description="This link may have changed or the page is no longer available."
           action="Return to your account"

@@ -6,5 +6,5 @@ export default function ErrorBoundary(props: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  return <RouteError {...props} homeHref="/home" homeLabel="Back to home" />;
+  return <RouteError {...props} headingLevel={1} homeHref="/home" homeLabel="Back to home" />;
 }

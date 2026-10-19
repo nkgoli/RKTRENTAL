@@ -10,6 +10,7 @@ export function EmptyState({
   eyebrow,
   icon,
   variant = 'secondary',
+  headingLevel = 2,
 }: {
   title: string;
   description: string;
@@ -18,7 +19,10 @@ export function EmptyState({
   eyebrow?: string;
   icon?: 'folder' | 'document';
   variant?: 'primary' | 'secondary';
+  headingLevel?: 1 | 2;
 }) {
+  const Heading = headingLevel === 1 ? 'h1' : 'h2';
+
   return (
     <section className={styles.empty}>
       {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}
@@ -27,7 +31,7 @@ export function EmptyState({
           <Icon name={icon === 'folder' ? 'documents' : 'leases'} />
         </span>
       )}
-      <h2>{title}</h2>
+      <Heading>{title}</Heading>
       <p>{description}</p>
       <div className={styles.actions}>
         <Link className={`btn btn-${variant}`} href={href}>

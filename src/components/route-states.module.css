@@ -34,7 +34,9 @@
   color: var(--design-danger);
 }
 
+.empty h1,
 .empty h2,
+.error h1,
 .error h2 {
   font-family: var(--design-heading-font);
   font-size: 22px;

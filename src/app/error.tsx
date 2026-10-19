@@ -19,7 +19,7 @@ export default function ErrorBoundary(props: {
             RocketRental<span className={styles.period}>.</span>
           </span>
         </div>
-        <RouteError {...props} homeHref="/" homeLabel="Return to your account" />
+        <RouteError {...props} headingLevel={1} homeHref="/" homeLabel="Return to your account" />
       </div>
     </main>
   );

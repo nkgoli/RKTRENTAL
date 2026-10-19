@@ -184,6 +184,52 @@ describe('ManagerShell drawer', () => {
 describe('ManagerShell navigation', () => {
   const visible = managerNav.flatMap((g) => g.items).filter((i) => !i.hidden);
 
+  it('exposes distinct analysis entries without choosing a property', () => {
+    render(ui());
+    for (const [label, href] of [
+      ['ROI Analysis', '/roi-analysis'],
+      ['Rent Analysis', '/rent-analysis'],
+      ['Returns', '/returns'],
+    ]) {
+      const links = within(sidebar()).getAllByRole('link', { name: label });
+      expect(links).toHaveLength(1);
+      expect(links[0].getAttribute('href')).toBe(href);
+    }
+  });
+
+  it.each(['ROI Analysis', 'Rent Analysis'])(
+    'closes the mobile menu on keyboard entry to %s',
+    async (label) => {
+      const user = userEvent.setup();
+      render(ui());
+      await user.click(hamburger());
+      const link = within(sidebar()).getByRole('link', { name: label });
+      link.addEventListener('click', (event) => event.preventDefault());
+      link.focus();
+      await user.keyboard('{Enter}');
+      expect(hamburger().getAttribute('aria-expanded')).toBe('false');
+      expect(scrim()).toBeNull();
+      expect(document.getElementById('main-content')!.hasAttribute('inert')).toBe(false);
+    },
+  );
+
+  it('updates the title and highlight on selection, return and legacy navigation', () => {
+    const { rerender } = render(ui());
+    for (const [path, title, activeCount] of [
+      ['/rent-analysis', 'Rent Analysis', 1],
+      ['/rent-analysis/property-123', 'Rent Analysis', 1],
+      ['/roi-analysis', 'ROI Analysis', 1],
+      ['/returns', 'Returns and metrics', 1],
+      ['/rent-comps', 'Rent comps', 0],
+      ['/rent-analysis', 'Rent Analysis', 1],
+    ] as const) {
+      pathname = path;
+      rerender(ui());
+      expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(title);
+      expect(sidebar().querySelectorAll('[aria-current="page"]')).toHaveLength(activeCount);
+    }
+  });
+
   it('hides Rent comps from the sidebar', () => {
     render(ui());
     expect(within(sidebar()).queryByRole('link', { name: 'Rent comps' })).toBeNull();

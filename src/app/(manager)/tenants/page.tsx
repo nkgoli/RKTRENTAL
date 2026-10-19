@@ -307,6 +307,7 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
           <AddTenantForm
             properties={properties}
             initialPropertyId={property}
+            returnTo={returnTo}
             action={addTenantAction}
           />
         </>

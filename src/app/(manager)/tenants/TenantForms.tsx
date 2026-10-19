@@ -30,9 +30,11 @@ export function AddTenantForm({
   properties,
   action,
   initialPropertyId,
+  returnTo,
 }: {
   properties: PropertyOption[];
   initialPropertyId?: string;
+  returnTo?: string;
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
 }) {
   const [state, formAction, pending] = useActionState(action, empty);
@@ -52,6 +54,7 @@ export function AddTenantForm({
         Full name is required. Add a contact now, or select a vacant unit to draft a lease.
       </p>
       <form ref={formRef} className="form" action={formAction} noValidate aria-busy={pending}>
+        {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
         {state.message && !Object.keys(state.errors).length && (
           <div className="alert warning" role="alert">
             {state.message}

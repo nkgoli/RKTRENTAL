@@ -75,10 +75,8 @@ export function WorkspaceMedia({ target, photos, files }: { target: Target; phot
               <button type="button" title="Move up" aria-label={`Move ${photo.name} up`} disabled={index === 0 || photos[index - 1]?.isCover} onClick={() => reorder(index, -1)}>↑</button>
               <button type="button" title="Move down" aria-label={`Move ${photo.name} down`} disabled={index === photos.length - 1} onClick={() => reorder(index, 1)}>↓</button>
             </>}
-            <button type="button" title="Set as cover" aria-label={`Set ${photo.name} as cover`} disabled={photo.isCover} onClick={() => void persist(() => send('/api/files/cover', 'POST', { targetType: target.kind, targetId: target.id, documentId: photo.id }))}>{photo.isCover ? '★' : '☆'}</button>
-            <button type="button" title="Remove photo" aria-label={`Remove ${photo.name}`} onClick={() => void persist(() => send(`/api/files/${photo.id}`, 'DELETE'))}>
-              <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m4 4v6m6-6v6" /></svg>
-            </button>
+            <button type="button" title="Set as cover" aria-label={`Set ${photo.name} as cover`} disabled={photo.isCover} onClick={() => void persist(() => send('/api/files/cover', 'POST', { targetType: target.kind, targetId: target.id, documentId: photo.id }))}>{photo.isCover ? 'Current cover' : 'Set cover'}</button>
+            <button type="button" title="Remove photo" aria-label={`Remove ${photo.name}`} className={styles.remove} onClick={() => void persist(() => send(`/api/files/${photo.id}`, 'DELETE'))}>Remove</button>
           </div>
         </div>
       </div>) : <p className={styles.empty}>No photos yet.</p>}

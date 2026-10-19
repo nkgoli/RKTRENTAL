@@ -1,6 +1,7 @@
 ﻿import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
-import { Card, Chip, Chips, Cover, Progress, Stat, Table, TableHead } from '@/components/ui';
+import { Icon } from '@/components/shell/Icons';
+import { Card, Cover, Progress, Stat, Table, TableHead } from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import { propertiesDb, propertyFilterFrom, type PropertyFilter } from '@/lib/properties/data';
 import { formatAddress, formatMoney } from '@/lib/properties/format';
@@ -34,7 +35,9 @@ function occupancyOf(p: Row): { label: string; pct?: number; warm: boolean } {
 }
 
 const typeLabel = (p: Row) =>
-  p.type === 'SINGLE_UNIT' ? 'Single-family' : `${p.unitCount} ${p.unitCount === 1 ? 'unit' : 'units'}`;
+  p.type === 'SINGLE_UNIT'
+    ? 'Single-family'
+    : `${p.unitCount} ${p.unitCount === 1 ? 'unit' : 'units'}`;
 
 function href(filter: PropertyFilter, q?: string, view?: View) {
   const params = new URLSearchParams();
@@ -66,62 +69,99 @@ export default async function PropertiesPage({
     <>
       <PageHeader
         title="Properties"
-        actions={[{ label: '+ Add property', href: `${href(filter, q, view)}${href(filter, q, view).includes('?') ? '&' : '?'}add=1`, primary: true }]}
+        eyebrow="Portfolio / Properties"
+        actions={[
+          {
+            label: '+ Add property',
+            href: `${href(filter, q, view)}${href(filter, q, view).includes('?') ? '&' : '?'}add=1`,
+            primary: true,
+          },
+        ]}
       />
-      <section className={`toolbar ${styles.toolbar}`}>
+      <section className={styles.metrics} aria-label="Properties in this view">
+        <div className={styles.metric}>
+          <span className={styles.metricIcon}>
+            <Icon name="properties" />
+          </span>
+          <Stat
+            label="Total units"
+            value={totals.units}
+            delta={`${properties.length} ${properties.length === 1 ? 'property' : 'properties'}`}
+            tone="up"
+          />
+        </div>
+        <div className={styles.metric}>
+          <span className={`${styles.metricIcon} ${styles.teal}`}>
+            <Icon name="tenants" />
+          </span>
+          <Stat
+            label="Occupied"
+            value={totals.occupied}
+            delta={`${occupancy}% occupancy`}
+            tone="up"
+          />
+        </div>
+        <div className={styles.metric}>
+          <span className={styles.metricIcon}>
+            <Icon name="properties" />
+          </span>
+          <Stat
+            label="Vacant"
+            value={totals.vacant}
+            delta={totals.vacant ? 'Ready to list or turn over' : 'Fully occupied'}
+            tone={totals.vacant ? 'down' : 'up'}
+          />
+        </div>
+      </section>
+
+      <section className={styles.toolbar}>
         <form role="search" action="/properties" method="get" className={styles.searchForm}>
           {filter !== 'all' && <input type="hidden" name="filter" value={filter} />}
           {view === 'list' && <input type="hidden" name="view" value="list" />}
-          <label className="search">
-            <span aria-hidden="true">⌕</span>
+          <label className={styles.searchLabel}>
+            Search properties
             <input
+              type="search"
               name="q"
               defaultValue={q}
               placeholder="Search by name or address"
               aria-label="Search by name or address"
             />
           </label>
-          <button className="btn btn-secondary btn-sm" type="submit">Search</button>
+          <button className="btn btn-secondary btn-sm" type="submit">
+            Search
+          </button>
         </form>
-        <Chips>
+        <nav className={styles.filters} aria-label="Property filters">
           {FILTERS.map(({ key, label }) => {
             const count =
               key === 'all' || key === 'multi' || key === 'single' || key === 'archived'
                 ? counts[key]
                 : undefined;
             return (
-              <Link key={key} href={href(key, q, view)} aria-current={key === filter ? 'page' : undefined} className={styles.filterLink}>
-                <Chip active={key === filter}>{count == null ? label : `${label} ${count}`}</Chip>
+              <Link
+                key={key}
+                href={href(key, q, view)}
+                aria-current={key === filter ? 'page' : undefined}
+                className={styles.filterLink}
+              >
+                {label}
+                {count != null && (
+                  <>
+                    {' '}
+                    <span className={styles.count}>{count}</span>
+                  </>
+                )}
               </Link>
             );
           })}
-        </Chips>
-      </section>
-
-      <section className="kpis" aria-label="Properties in this view">
-        <Stat
-          label="Total units"
-          value={totals.units}
-          delta={`${properties.length} ${properties.length === 1 ? 'property' : 'properties'}`}
-          tone="up"
-        />
-        <Stat
-          label="Occupied"
-          value={totals.occupied}
-          delta={`${occupancy}% occupancy`}
-          tone="up"
-        />
-        <Stat
-          label="Vacant"
-          value={totals.vacant}
-          delta={totals.vacant ? 'Ready to list or turn over' : 'Fully occupied'}
-          tone={totals.vacant ? 'down' : 'up'}
-        />
+        </nav>
       </section>
 
       <section className={styles.viewBar}>
         <span className="muted">
-          {properties.length} {properties.length === 1 ? 'property' : 'properties'}{q || filter !== 'all' ? ' in this view' : ''}
+          {properties.length} {properties.length === 1 ? 'property' : 'properties'}
+          {q || filter !== 'all' ? ' in this view' : ''}
         </span>
         <div className={styles.viewToggle} role="group" aria-label="View">
           {(['grid', 'list'] as const).map((v) => (
@@ -141,7 +181,11 @@ export default async function PropertiesPage({
       {properties.length === 0 && (
         <EmptyState
           title={q || filter !== 'all' ? 'No properties match this view' : 'No properties yet'}
-          description={q || filter !== 'all' ? 'Clear the filters to see your full portfolio.' : 'Add your first property to start tracking units and leases.'}
+          description={
+            q || filter !== 'all'
+              ? 'Clear the filters to see your full portfolio.'
+              : 'Add your first property to start tracking units and leases.'
+          }
           action={q || filter !== 'all' ? 'Clear filters' : 'Add a property'}
           href={q || filter !== 'all' ? '/properties' : '/properties?add=1'}
         />
@@ -165,7 +209,9 @@ export default async function PropertiesPage({
                   />
                 </div>
                 <div className={styles.details}>
-                  <h3 className={styles.name} title={p.name}>{p.name}</h3>
+                  <h3 className={styles.name} title={p.name}>
+                    {p.name}
+                  </h3>
                   <span className={styles.address}>{formatAddress(p)}</span>
                   <div className={styles.propertyMeta}>
                     <span>{typeLabel(p)}</span>
@@ -187,27 +233,37 @@ export default async function PropertiesPage({
 
       {properties.length > 0 && view === 'list' && (
         <Card flush>
-          <div className={styles.tableWrap} role="region" aria-label="Property directory table" tabIndex={0}>
-          <Table aria-label="Properties">
-            <TableHead columns={['Property', 'Address', 'Type', 'Units', 'Occupancy', 'Monthly rent']} />
-            <tbody>
-              {properties.map((p) => {
-                const occ = occupancyOf(p);
-                return (
-                  <tr key={p.id}>
-                    <td>
-                      <Link className={styles.rowLink} href={`/properties/${p.id}`}>{p.name}</Link>
-                    </td>
-                    <td>{formatAddress(p)}</td>
-                    <td>{p.type === 'SINGLE_UNIT' ? 'Single-family' : 'Multi-unit'}</td>
-                    <td>{p.unitCount}</td>
-                    <td className={occ.warm ? styles.warm : undefined}>{occ.label}</td>
-                    <td>{formatMoney(p.monthlyRent)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </Table>
+          <div
+            className={styles.tableWrap}
+            role="region"
+            aria-label="Property directory table; scroll horizontally on phone"
+            tabIndex={0}
+          >
+            <Table aria-label="Properties">
+              <caption>Properties · {properties.length} properties · monthly rent in USD</caption>
+              <TableHead
+                columns={['Property', 'Address', 'Type', 'Units', 'Occupancy', 'Monthly rent']}
+              />
+              <tbody>
+                {properties.map((p) => {
+                  const occ = occupancyOf(p);
+                  return (
+                    <tr key={p.id}>
+                      <td>
+                        <Link className={styles.rowLink} href={`/properties/${p.id}`}>
+                          {p.name}
+                        </Link>
+                      </td>
+                      <td>{formatAddress(p)}</td>
+                      <td>{p.type === 'SINGLE_UNIT' ? 'Single-family' : 'Multi-unit'}</td>
+                      <td>{p.unitCount}</td>
+                      <td className={occ.warm ? styles.warm : undefined}>{occ.label}</td>
+                      <td>{formatMoney(p.monthlyRent)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </Table>
           </div>
         </Card>
       )}

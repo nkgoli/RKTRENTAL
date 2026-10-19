@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useRef } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -16,7 +16,17 @@ export function AddPropertyDialog({ owners }: { owners: OwnerOption[] }) {
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    if (wantsOpen && !dialog.open) dialog.showModal();
+    if (wantsOpen && !dialog.open) {
+      dialog.showModal();
+      dialog.querySelector<HTMLInputElement>('input[name="name"]')?.focus();
+    }
+    if (!wantsOpen && dialog.open) dialog.close();
+    if (!wantsOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
   }, [wantsOpen]);
 
   function onClose() {
@@ -35,7 +45,16 @@ export function AddPropertyDialog({ owners }: { owners: OwnerOption[] }) {
       aria-labelledby="add-property-heading"
       onClose={onClose}
       onClick={(ev) => {
-        if (ev.target === ref.current) ref.current?.close();
+        const dialog = ref.current;
+        if (!dialog || ev.target !== dialog) return;
+        const box = dialog.getBoundingClientRect();
+        if (
+          ev.clientX < box.left ||
+          ev.clientX > box.right ||
+          ev.clientY < box.top ||
+          ev.clientY > box.bottom
+        )
+          dialog.close();
       }}
     >
       <div className={styles.dialogHeader}>
@@ -46,10 +65,10 @@ export function AddPropertyDialog({ owners }: { owners: OwnerOption[] }) {
           aria-label="Close"
           onClick={() => ref.current?.close()}
         >
-          ✕
+          ×
         </button>
       </div>
-      <AddPropertyForm owners={owners} onCancel={() => ref.current?.close()} />
+      {wantsOpen && <AddPropertyForm owners={owners} onCancel={() => ref.current?.close()} />}
     </dialog>
   );
 }

@@ -115,6 +115,16 @@ Only after that successful health check, a fresh `take_desktop` returned this ex
 
 The receipt supplied no holder, queue, request or diagnostic ID. The attempt-scoped operational trace for 2026-10-19 05:25–05:27 UTC returned no records, so no additional desktop diagnostic identifier is available. Missing trace records do not establish why the queue timed out. `release_desktop` returned `{"released":false}`. No Windows action was issued, no desktop ownership was bypassed, and no unchanged acquisition loop was repeated. The current manager view was not altered. Native before/after, phone and keyboard evidence remain blocked on a granted desktop turn.
 
+### Retained queue window after corrected guidance
+
+The manager then clarified that normal wait responses should be retried while retaining the queue place. From **2026-10-19 05:30:18 UTC through 05:40:34 UTC**, this task remained ready to review and made **12 sequential acquisition requests**, retaining its place between every response. Each returned `granted: false` with `DESKTOP_CONTROL_WAIT_TIMEOUT`. The reported waiter count was two for the first six receipts, one for the next two, two for the next three, and three on the final receipt. No queue position or holder identity was exposed, so those counts are not represented as proof of position advancement.
+
+The exact timestamped receipts are preserved in [desktop-queue.json](../../tests/portfolio/evidence/desktop-queue.json). No authority or service error occurred during this window. No request returned ownership, so no Edge action, screenshot, phone emulation or keyboard test was attempted. Commentary updates were provided during the wait. After the bounded window, `release_desktop` again returned `{"released":false}`. The attempt-scoped operational trace covering 05:30–05:41 UTC returned an empty records list; there is no additional holder, queue, request or diagnostic ID available from these tools. The original manager view was untouched.
+
+After the queue window, the same runtime health check passed again at **2026-10-19 05:41:22.513 UTC**: HTTP 200, database reachable, and the same matching served build identity. No rebuild or restart was performed.
+
+The runtime, implementation commit and design evidence remain intact. Desktop access is the sole remaining execution blocker; it requires a granted turn rather than another build or a different browser session.
+
 ## Remaining acceptance work
 
 1. Obtain a desktop turn. Capture the reference/before application views in the existing Edge session, if that runtime remains available.

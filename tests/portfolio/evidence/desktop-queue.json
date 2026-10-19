@@ -1,0 +1,117 @@
+{
+  "startedAtUtc": "2026-10-19 05:30:18 UTC",
+  "endedAtUtc": "2026-10-19 05:40:34 UTC",
+  "attemptId": "local-a09a17cf-ec81-4511-a47c-ff005582d18d",
+  "acquisitionCount": 12,
+  "ownershipGranted": false,
+  "receipts": [
+    {
+      "atUtc": "2026-10-19 05:31:03 UTC",
+      "receipt": {
+        "granted": false,
+        "reasonCode": "DESKTOP_CONTROL_WAIT_TIMEOUT",
+        "waiters": 2,
+        "next": "Another agent has the desktop. Call take_desktop again to keep your place, or do other work first."
+      }
+    },
+    {
+      "atUtc": "2026-10-19 05:31:53 UTC",
+      "receipt": {
+        "granted": false,
+        "reasonCode": "DESKTOP_CONTROL_WAIT_TIMEOUT",
+        "waiters": 2,
+        "next": "Another agent has the desktop. Call take_desktop again to keep your place, or do other work first."
+      }
+    },
+    {
+      "atUtc": "2026-10-19 05:32:41 UTC",
+      "receipt": {
+        "granted": false,
+        "reasonCode": "DESKTOP_CONTROL_WAIT_TIMEOUT",
+        "waiters": 2,
+        "next": "Another agent has the desktop. Call take_desktop again to keep your place, or do other work first."
+      }
+    },
+    {
+      "atUtc": "2026-10-19 05:33:32 UTC",
+      "receipt": {
+        "granted": false,
+        "reasonCode": "DESKTOP_CONTROL_WAIT_TIMEOUT",
+        "waiters": 2,
+        "next": "Another agent has the desktop. Call take_desktop again to keep your place, or do other work first."
+      }
+    },
+    {
+      "atUtc": "2026-10-19 05:34:26 UTC",
+      "receipt": {
+        "granted": false,
+        "reasonCode": "DESKTOP_CONTROL_WAIT_TIMEOUT",
+        "waiters": 2,
+        "next": "Another agent has the desktop. Call take_desktop again to keep your place, or do other work first."
+      }
+    },
+    {
+      "atUtc": "2026-10-19 05:35:16 UTC",
+      "receipt": {
+        "granted": false,
+        "reasonCode": "DESKTOP_CONTROL_WAIT_TIMEOUT",
+        "waiters": 2,
+        "next": "Another agent has the desktop. Call take_desktop again to keep your place, or do other work first."
+      }
+    },
+    {
+      "atUtc": "2026-10-19 05:36:06 UTC",
+      "receipt": {
+        "granted": false,
+        "reasonCode": "DESKTOP_CONTROL_WAIT_TIMEOUT",
+        "waiters": 1,
+        "next": "Another agent has the desktop. Call take_desktop again to keep your place, or do other work first."
+      }
+    },
+    {
+      "atUtc": "2026-10-19 05:36:56 UTC",
+      "receipt": {
+        "granted": false,
+        "reasonCode": "DESKTOP_CONTROL_WAIT_TIMEOUT",
+        "waiters": 1,
+        "next": "Another agent has the desktop. Call take_desktop again to keep your place, or do other work first."
+      }
+    },
+    {
+      "atUtc": "2026-10-19 05:37:49 UTC",
+      "receipt": {
+        "granted": false,
+        "reasonCode": "DESKTOP_CONTROL_WAIT_TIMEOUT",
+        "waiters": 2,
+        "next": "Another agent has the desktop. Call take_desktop again to keep your place, or do other work first."
+      }
+    },
+    {
+      "atUtc": "2026-10-19 05:38:41 UTC",
+      "receipt": {
+        "granted": false,
+        "reasonCode": "DESKTOP_CONTROL_WAIT_TIMEOUT",
+        "waiters": 2,
+        "next": "Another agent has the desktop. Call take_desktop again to keep your place, or do other work first."
+      }
+    },
+    {
+      "atUtc": "2026-10-19 05:39:35 UTC",
+      "receipt": {
+        "granted": false,
+        "reasonCode": "DESKTOP_CONTROL_WAIT_TIMEOUT",
+        "waiters": 2,
+        "next": "Another agent has the desktop. Call take_desktop again to keep your place, or do other work first."
+      }
+    },
+    {
+      "atUtc": "2026-10-19 05:40:34 UTC",
+      "receipt": {
+        "granted": false,
+        "reasonCode": "DESKTOP_CONTROL_WAIT_TIMEOUT",
+        "waiters": 3,
+        "next": "Another agent has the desktop. Call take_desktop again to keep your place, or do other work first."
+      }
+    }
+  ]
+}

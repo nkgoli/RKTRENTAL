@@ -1,8 +1,8 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import { Chips } from '@/components/ui';
 import { DAYS_OPTIONS, RADIUS_OPTIONS, type CompFilters } from '@/lib/comps/core';
+import styles from './comps.module.css';
 
 const submitOnChange = (event: FormEvent<HTMLFormElement>) => {
   const target = event.target;
@@ -50,7 +50,7 @@ export function FilterBar({ unitId, filters, action }: { unitId: string; filters
   return (
     <form method="get" action={action} className="form" onChange={submitOnChange} aria-label="Comp filters">
       <input type="hidden" name="unit" value={unitId} />
-      <div className="form-row six">
+      <div className={styles.filterFields}>
         <label className="field">
           Radius
           <select name="radius" defaultValue={String(filters.radiusMiles)}>
@@ -104,13 +104,12 @@ export function FilterBar({ unitId, filters, action }: { unitId: string; filters
           </select>
         </label>
       </div>
-      <div className="row between">
-        <Chips>
+      <div className={styles.filterFooter}>
+        <div className={styles.statusChips} role="group" aria-label="Rental status">
           {STATUS_CHIPS.map((chip) => (
             <label
               key={chip.value}
-              className={`chip${filters.status === chip.value ? ' active' : ''}`}
-              style={{ cursor: 'pointer', position: 'relative' }}
+              className={`chip ${styles.statusChip}${filters.status === chip.value ? ' active' : ''}`}
             >
               <input
                 type="radio"
@@ -118,12 +117,11 @@ export function FilterBar({ unitId, filters, action }: { unitId: string; filters
                 value={chip.value}
                 defaultChecked={filters.status === chip.value}
                 onChange={(event) => event.currentTarget.form?.requestSubmit()}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
               />
               {chip.label}
             </label>
           ))}
-        </Chips>
+        </div>
         <button type="submit" className="btn btn-secondary btn-sm">
           Update comps
         </button>

@@ -20,6 +20,6 @@ export default async function PropertyListingPage({ params, searchParams }: {
     unitId ? propertiesDb(session.organizationId).getUnit(id, unitId) : Promise.resolve(null),
   ]);
   if (!property || !workspaceReturns || (unitId && !unit)) notFound();
-  if (unit) return <RentCompsPanel organizationId={session.organizationId} unitId={unit.id} searchParams={query} />;
+  if (unit) return <RentCompsPanel organizationId={session.organizationId} unitId={unit.id} searchParams={query} propertyLevel={unit.isImplicit} subjectLabel={unit.isImplicit ? property.name : undefined} />;
   return <PropertyListing property={property} returns={workspaceReturns} organizationId={session.organizationId} searchParams={query} />;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useRef } from 'react';
+import { useActionState, useId, useEffect, useRef } from 'react';
 import { Alert, Button, Card, CardHeader, Field, FormRow, Input } from '@/components/ui';
 import { createUnitAction, type FormState } from '../actions';
 import { FieldError } from './FieldError';
@@ -11,6 +11,7 @@ export function AddUnitForm({ propertyId }: { propertyId: string }) {
   const [state, action, pending] = useActionState(createUnitAction, empty);
   const ref = useRef<HTMLFormElement>(null);
   const e = state.errors ?? {};
+  const formId = useId();
 
   useEffect(() => {
     if (state.ok) ref.current?.reset();
@@ -30,9 +31,9 @@ export function AddUnitForm({ propertyId }: { propertyId: string }) {
               placeholder="6A"
               required
               style={{ minWidth: 0 }}
-              aria-invalid={!!e.number}
+              aria-invalid={!!e.number} aria-describedby={e.number ? `${formId}-number-error` : undefined}
             />
-            <FieldError message={e.number} />
+            <FieldError id={`${formId}-number-error`} message={e.number} />
           </Field>
           <Field label="Monthly rent">
             <Input
@@ -40,9 +41,9 @@ export function AddUnitForm({ propertyId }: { propertyId: string }) {
               placeholder="$1,750"
               inputMode="decimal"
               style={{ minWidth: 0, width: '100%' }}
-              aria-invalid={!!e.listedRent}
+              aria-invalid={!!e.listedRent} aria-describedby={e.listedRent ? `${formId}-listedRent-error` : undefined}
             />
-            <FieldError message={e.listedRent} />
+            <FieldError id={`${formId}-listedRent-error`} message={e.listedRent} />
           </Field>
         </FormRow>
         <FormRow>
@@ -53,9 +54,9 @@ export function AddUnitForm({ propertyId }: { propertyId: string }) {
               min={0}
               defaultValue={2}
               style={{ minWidth: 0, width: '100%' }}
-              aria-invalid={!!e.bedrooms}
+              aria-invalid={!!e.bedrooms} aria-describedby={e.bedrooms ? `${formId}-bedrooms-error` : undefined}
             />
-            <FieldError message={e.bedrooms} />
+            <FieldError id={`${formId}-bedrooms-error`} message={e.bedrooms} />
           </Field>
           <Field label="Bathrooms">
             <Input
@@ -65,9 +66,9 @@ export function AddUnitForm({ propertyId }: { propertyId: string }) {
               step={0.5}
               defaultValue={1}
               style={{ minWidth: 0, width: '100%' }}
-              aria-invalid={!!e.bathrooms}
+              aria-invalid={!!e.bathrooms} aria-describedby={e.bathrooms ? `${formId}-bathrooms-error` : undefined}
             />
-            <FieldError message={e.bathrooms} />
+            <FieldError id={`${formId}-bathrooms-error`} message={e.bathrooms} />
           </Field>
         </FormRow>
         <Button type="submit" variant="primary" block disabled={pending}>

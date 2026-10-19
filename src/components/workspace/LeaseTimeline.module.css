@@ -17,6 +17,7 @@
 .segment[data-kind="draft"] { border: 1px dashed #94a3b8; color: #475569; background: #eef2f7; }
 .segment[data-kind="vacant"] { border: 1px dashed #e0a283; }
 .segmentText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.segment:focus-visible { outline: 3px solid var(--design-text); outline-offset: -3px; z-index: 3; }
 .today { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--design-accent); z-index: 2; }
 .axis { position: relative; display: flex; justify-content: space-between; margin-left: 108px; color: var(--design-muted); font-size: 11px; }
 .todayLabel { position: absolute; transform: translateX(-50%); color: #b4694a; font-weight: 700; }

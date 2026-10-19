@@ -7,6 +7,7 @@ import { bedBath, formatAddress, formatDate, formatMoney, unitLabel } from '@/li
 import { CompsWorkbench } from '@/app/(manager)/rent-comps/CompsWorkbench';
 import { FilterBar, UnitPicker } from '@/app/(manager)/rent-comps/FilterBar';
 import { refreshCompsAction } from '@/app/(manager)/rent-comps/actions';
+import styles from '@/app/(manager)/rent-comps/comps.module.css';
 
 type Search = Record<string, string | string[] | undefined>;
 const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value;
@@ -50,22 +51,24 @@ export async function RentCompsPanel({
     ? `Market rent set by ${unit.marketRentSetByName} on ${formatDate(unit.marketRentSetAt)}.`
     : null;
 
-  return <div className="stack">
+  return <div className={styles.panel}>
     <Card>
-      <div className="row between">
-        <div className="row">
+      <div className={styles.subject}>
           <div>
-            <p className="eyebrow">{propertyLevel ? 'Subject property' : 'Subject unit'}</p>
-            <h3 style={{ fontSize: 'var(--rr-h2)' }}>{label}</h3>
+            <p className="eyebrow">{propertyLevel ? 'Property listing' : 'Unit listing'}</p>
+            <h2>Rent comps</h2>
             <p className="muted">
-              {formatAddress(unit.property)} · {bedBath({ bedrooms: unit.bedrooms, bathrooms: subject.bathrooms })}
+              {label} · {bedBath({ bedrooms: unit.bedrooms, bathrooms: subject.bathrooms })}
               {unit.squareFeet ? ` · ${unit.squareFeet.toLocaleString('en-US')} sqft` : ''}
             </p>
+            <p className="muted">{formatAddress(unit.property)}</p>
+            <div className={styles.subjectFacts}>
+              <Badge tone={unit.status === 'VACANT' ? 'warning' : 'info'}>{status ?? 'Archived'}</Badge>
+              <span>Listed at <strong>{formatMoney(listedRent)}</strong> / month</span>
+              {listedRent !== null && unit.squareFeet ? <span className="muted">${(listedRent / unit.squareFeet).toFixed(2)} / sqft</span> : null}
+            </div>
           </div>
-        </div>
-        <div className="row" style={{ gap: 16, flexWrap: 'wrap', minWidth: 0, maxWidth: '100%' }}>
-          <div><p className="muted">Status</p><Badge tone={unit.status === 'VACANT' ? 'warning' : 'info'}>{status ?? 'Archived'}</Badge></div>
-          <div><p className="muted">Listed at</p><strong style={{ fontSize: 'var(--rr-h2)' }}>{formatMoney(listedRent)}</strong>{listedRent !== null && unit.squareFeet ? <p className="muted">${(listedRent / unit.squareFeet).toFixed(2)} / sqft</p> : null}</div>
+        <div className={styles.subjectActions}>
           <UnitPicker
             unitId={unit.id}
             action="/rent-comps"
@@ -93,6 +96,8 @@ export async function RentCompsPanel({
         syncedAt={result.fetchedAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }) + ' UTC'}
         cached={result.cached}
         appliedNote={appliedNote}
+        propertyLevel={propertyLevel}
+        occupied={unit.status === 'OCCUPIED'}
       />
     </>}
   </div>;

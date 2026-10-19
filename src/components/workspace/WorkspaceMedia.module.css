@@ -1,13 +1,13 @@
 .media { display: grid; gap: 18px; }
-.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 12px; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); gap: 12px; }
 .photo { min-width: 0; overflow: hidden; border: 1px solid var(--rr-border, #e5e7eb); border-radius: 12px; background: var(--design-surface, #fff); }
 .thumbnail { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #edf1f6; }
 .thumbnail img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .placeholder { display: grid; place-items: center; width: 100%; height: 100%; padding: 12px; text-align: center; color: var(--design-muted, #64748b); font-size: 12px; }
 .cover { position: absolute; top: 8px; left: 8px; padding: 3px 9px; border-radius: 999px; background: #fff; color: var(--design-text, #17142b); box-shadow: 0 1px 5px #0002; font-size: 11px; font-weight: 700; }
 .photoFooter { display: grid; gap: 8px; padding: 9px; }
-.photoName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; }
-.actions { display: flex; gap: 4px; }
+.photoName { overflow-wrap: anywhere; font-size: 13px; font-weight: 600; }
+.actions { display: flex; flex-wrap: wrap; gap: 4px; }
 .actions button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--rr-border, #e5e7eb); border-radius: 6px; background: #fff; color: var(--design-primary, #1e3a8a); font-size: 17px; cursor: pointer; }
 .actions button:last-child { color: var(--design-danger, #dc2626); }
 .actions button:disabled { opacity: .4; cursor: default; }
@@ -22,3 +22,7 @@
 .count, .note { color: var(--design-muted, #64748b); font-size: 12px; }
 .note { margin: 0; }
 .error { color: var(--design-danger, #dc2626); font-size: 13px; }
+@media (pointer: coarse) {
+  .actions button { width: 44px; height: 44px; }
+  .switch button { min-height: 44px; }
+}

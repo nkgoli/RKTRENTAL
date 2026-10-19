@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState, useMemo, useState } from 'react';
+import { useActionState, useId, useMemo, useState } from 'react';
 import { Alert, Badge, Card, CardHeader } from '@/components/ui';
 import { EmptyState } from '@/components/RouteStates';
 import { MAP, dollars, mapPins, suggestRent, summarize, type CompRow } from '@/lib/comps/core';
 import { applyRentAction, type ApplyState } from './actions';
+import styles from './comps.module.css';
 
 const usd = (value: number) => `$${value.toLocaleString('en-US')}`;
 const shortDate = (iso?: string) =>
@@ -32,12 +33,15 @@ export type WorkbenchProps = {
   syncedAt: string;
   cached: boolean;
   appliedNote: string | null;
+  propertyLevel?: boolean;
+  occupied?: boolean;
 };
 
 const initialApply: ApplyState = {};
 
 export function CompsWorkbench(props: WorkbenchProps) {
   const { rows, radiusMiles, subjectSqft, listedRent } = props;
+  const subjectKind = props.propertyLevel ? 'home' : 'unit';
   const [excluded, setExcluded] = useState<Set<string>>(
     () => new Set(rows.filter((row) => row.caveat).map((row) => row.id)),
   );
@@ -50,6 +54,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
   const pins = useMemo(() => mapPins(rows, excluded, radiusMiles), [rows, excluded, radiusMiles]);
   const nearest = [...included].sort((a, b) => a.distanceMiles - b.distanceMiles).slice(0, 4);
   const [state, apply, pending] = useActionState(applyRentAction, initialApply);
+  const rentMessageId = useId();
 
   const toggle = (id: string) =>
     setExcluded((current) => {
@@ -65,7 +70,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
 
   return (
     <>
-      <div className="split">
+      <div className={styles.comparison}>
         <Card flush>
           <CardHeader
             title="Comparable rentals map"
@@ -136,12 +141,12 @@ export function CompsWorkbench(props: WorkbenchProps) {
               fontWeight="700"
               fill="var(--design-text)"
             >
-              Subject unit
+              Subject {subjectKind}
             </text>
           </svg>
-          <div className="row" style={{ padding: '12px 20px', gap: 20, fontSize: 13 }}>
+          <div className={styles.legend}>
             <span>
-              <span style={{ color: 'var(--design-text)' }}>●</span> Subject unit
+              <span style={{ color: 'var(--design-text)' }}>●</span> Subject {subjectKind}
             </span>
             <span>
               <span style={{ color: 'var(--design-primary)' }}>●</span> Included comp
@@ -149,9 +154,9 @@ export function CompsWorkbench(props: WorkbenchProps) {
             <span>
               <span style={{ color: 'var(--design-muted)' }}>●</span> Excluded comp
             </span>
-            <span className="muted">Schematic map: distance and direction from the unit</span>
+            <p>Schematic map: distance and direction from the {subjectKind}.</p>
           </div>
-          <div style={{ borderTop: '1px solid var(--rr-border)', padding: '14px 20px 18px' }}>
+          <div className={styles.nearest}>
             <div className="row between" style={{ marginBottom: 6 }}>
               <strong style={{ fontSize: 14 }}>Nearest comps</strong>
               <span className="muted" style={{ fontSize: 12 }}>
@@ -162,12 +167,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
             {nearest.map((row) => (
               <div
                 key={row.id}
-                className="row between"
-                style={{
-                  padding: '7px 0',
-                  borderBottom: '1px solid var(--rr-border)',
-                  fontSize: 13,
-                }}
+                className={styles.nearestRow}
               >
                 <span>{row.address}</span>
                 <span className="muted">{row.distanceMiles} mi</span>
@@ -245,19 +245,11 @@ export function CompsWorkbench(props: WorkbenchProps) {
                   {props.marketRent !== null ? usd(props.marketRent) : 'Not set'}
                 </dd>
               </dl>
-              <div
-                style={{
-                  background: 'var(--rr-subtle)',
-                  borderRadius: 'var(--design-radius)',
-                  padding: 16,
-                }}
-              >
+              <div className={styles.suggestion}>
                 <p className="eyebrow">Suggested rent</p>
-                <div className="stat">
-                  <div className="value" style={{ margin: 0 }} data-testid="suggested-rent">
+                  <div className={styles.suggestionValue} data-testid="suggested-rent">
                     {usd(suggestion.rent)}
                   </div>
-                </div>
                 {listedRent !== null && suggestion.rent !== listedRent && (
                   <span className={`delta ${suggestion.rent > listedRent ? 'up' : 'down'}`}>
                     {suggestion.rent > listedRent ? '↑' : '↓'}{' '}
@@ -280,14 +272,17 @@ export function CompsWorkbench(props: WorkbenchProps) {
                     name="rent"
                     inputMode="decimal"
                     defaultValue={suggestion.rent}
+                    aria-invalid={state.ok === false}
+                    aria-describedby={state.message ? rentMessageId : undefined}
                     required
                   />
                 </label>
                 <button className="btn btn-primary btn-block" disabled={pending}>
                   {pending ? 'Applying…' : `Apply to ${props.unitLabel}`}
                 </button>
+                <p className={styles.scopeNote}>Updates the saved market rent for this {subjectKind}. Existing lease and listed rent stay unchanged.</p>
                 {state.message && (
-                  <p role="status" className={state.ok ? 'delta up' : 'delta down'}>
+                  <p id={rentMessageId} role="status" className={state.ok ? 'delta up' : 'delta down'}>
                     {state.ok
                       ? `${state.message} Now ${usd(state.rent ?? 0)} / month.`
                       : state.message}
@@ -303,7 +298,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
                 className="btn btn-secondary btn-block"
                 href={`/leases/new?unit=${props.unitId}`}
               >
-                Use for renewal
+                {props.occupied ? 'Use for renewal' : 'Create lease'}
               </Link>
             </div>
           )}
@@ -320,19 +315,20 @@ export function CompsWorkbench(props: WorkbenchProps) {
             </span>
           }
         />
+        <div className={styles.tableWrap} role="region" aria-label="Comparable rentals table" tabIndex={0}>
         <table className="table" aria-label="Comparable rentals">
           <thead>
             <tr>
-              <th aria-label="Include" />
-              <th>Address</th>
-              <th className="num">Dist.</th>
-              <th>Bd/Ba</th>
-              <th className="num">Sqft</th>
-              <th className="num">Rent</th>
-              <th className="num">$/sqft</th>
-              <th>Status</th>
-              <th>Date</th>
-              <th>Source</th>
+              <th scope="col" aria-label="Include" />
+              <th scope="col">Address</th>
+              <th scope="col" className="num">Dist.</th>
+              <th scope="col">Bd/Ba</th>
+              <th scope="col" className="num">Sqft</th>
+              <th scope="col" className="num">Rent</th>
+              <th scope="col" className="num">$/sqft</th>
+              <th scope="col">Status</th>
+              <th scope="col">Date</th>
+              <th scope="col">Source</th>
             </tr>
           </thead>
           <tbody>
@@ -346,7 +342,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
             {rows.map((row) => {
               const off = excluded.has(row.id);
               return (
-                <tr key={row.id} style={off ? { opacity: 0.6 } : undefined}>
+                <tr key={row.id} className={off ? styles.excluded : undefined}>
                   <td>
                     <input
                       type="checkbox"
@@ -360,7 +356,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
                     {row.caveat && (
                       <>
                         <br />
-                        <small className="muted">Excluded: {row.caveat}</small>
+                        <small className="muted">{off ? 'Excluded' : 'Note'}: {row.caveat}</small>
                       </>
                     )}
                   </td>
@@ -387,9 +383,10 @@ export function CompsWorkbench(props: WorkbenchProps) {
             })}
           </tbody>
         </table>
+        </div>
       </Card>
 
-      <div className="grid-2">
+      <div className={styles.sources}>
         <Alert>
           <div>
             <strong>Data source: {sourceLabel(props.providerName)}</strong>

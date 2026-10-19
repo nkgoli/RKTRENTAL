@@ -1,8 +1,8 @@
 .singleFamily { display: grid; gap: 16px; }
-.heading { display: grid; gap: 5px; }
-.heading .eyebrow, .heading p, .heading h2 { margin: 0; }
-.heading h2 { font-size: var(--rr-h2); font-family: var(--design-heading-font); }
-.heading .muted { font-size: 13px; }
 .tableWrap { overflow-x: auto; }
 .tableWrap table { min-width: 780px; }
+.tableWrap th { white-space: nowrap; }
+.count { color: var(--design-muted); font-size: 13px; }
+.intro { margin: 0; padding: 0 16px 12px; color: var(--design-muted); font-size: 13px; }
+.rentKind { display: block; margin-top: 3px; color: var(--design-muted); font-size: 11px; }
 .note { margin: 0; padding: 12px 20px 17px; color: var(--design-muted); font-size: 12px; }

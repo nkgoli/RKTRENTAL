@@ -1,12 +1,20 @@
 .viewBar { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
+.toolbar { flex-wrap: wrap; gap: 12px; }
+.searchForm { display: flex; flex: 1 1 320px; gap: 8px; min-width: 0; }
+.searchForm :global(.search) { flex: 1; min-width: 0; }
+.searchForm input { min-width: 0; width: 100%; }
+.filterLink { display: inline-flex; border-radius: 999px; text-decoration: none; }
+.tableWrap { overflow-x: auto; min-width: 0; }
+.tableWrap table { min-width: 780px; }
 /* Phones: stack the search above the chips and let the chips wrap instead of clipping. */
 @media (max-width: 640px) {
   .toolbar { flex-direction: column; align-items: stretch; }
   .toolbar :global(.search) { min-width: 0; width: 100%; }
   .toolbar :global(.chips) { flex-wrap: wrap; }
+  .searchForm { flex-basis: auto; }
 }
 .viewToggle { display: inline-flex; padding: 3px; gap: 2px; border: 1px solid var(--rr-border-strong); border-radius: 10px; background: var(--design-surface); }
-.viewToggle a { padding: 4px 12px; border-radius: 7px; color: var(--design-muted); font-size: 13px; font-weight: 650; text-decoration: none; }
+.viewToggle a { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 12px; border-radius: 7px; color: var(--design-muted); font-size: 13px; font-weight: 650; text-decoration: none; }
 .viewToggle a.viewActive { background: var(--design-primary); color: #fff; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 16px; align-items: start; }
@@ -16,8 +24,8 @@
 .cover > :global(.cover) { height: 112px; aspect-ratio: auto; border-radius: 0; }
 .cover > :global(.cover)::after { display: none; }
 .details { display: grid; gap: 4px; padding: 14px 16px 16px; }
-.name { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; line-height: 1.3; }
-.address { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--design-muted); font-size: 12px; }
+.name { margin: 0; overflow-wrap: anywhere; font-size: 16px; line-height: 1.3; }
+.address { overflow-wrap: anywhere; color: var(--design-muted); font-size: 13px; }
 .propertyMeta { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-top: 8px; color: var(--design-muted); font-size: 12px; font-weight: 650; }
 .rent { display: inline-flex; align-items: baseline; gap: 3px; white-space: nowrap; }
 .rent strong { color: var(--design-text); font-size: 16px; letter-spacing: -.02em; }
@@ -34,3 +42,4 @@
 .dialog::backdrop { background: rgb(15 23 42 / 42%); }
 .dialogHeader { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
 .dialogHeader h2 { margin: 0; font-size: 1.1rem; }
+@media (pointer: coarse) { .viewToggle a, .filterLink { min-height: 44px; } }

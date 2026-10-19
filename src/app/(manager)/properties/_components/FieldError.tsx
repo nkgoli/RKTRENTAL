@@ -1,7 +1,7 @@
-export function FieldError({ message }: { message?: string }) {
+export function FieldError({ message, id }: { message?: string; id?: string }) {
   if (!message) return null;
   return (
-    <span className="hint" role="alert" style={{ color: 'var(--design-danger)' }}>
+    <span id={id} className="hint" role="alert" style={{ color: 'var(--design-danger)' }}>
       {message}
     </span>
   );

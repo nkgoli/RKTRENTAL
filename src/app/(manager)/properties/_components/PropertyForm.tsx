@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useId, useState } from 'react';
 import {
   Alert,
   Button,
@@ -23,6 +23,7 @@ export function AddPropertyForm({ owners, onCancel }: { owners: OwnerOption[]; o
   const [state, action, pending] = useActionState(createPropertyAction, empty);
   const [type, setType] = useState('MULTI_UNIT');
   const e = state.errors ?? {};
+  const formId = useId();
 
   return (
     <>
@@ -30,33 +31,33 @@ export function AddPropertyForm({ owners, onCancel }: { owners: OwnerOption[]; o
         {state.message && !state.ok && <Alert tone="warning">{state.message}</Alert>}
         <FormRow>
           <Field label="Property name">
-            <Input name="name" placeholder="e.g. Oak Terrace" required aria-invalid={!!e.name} />
-            <FieldError message={e.name} />
+            <Input name="name" placeholder="e.g. Oak Terrace" required aria-invalid={!!e.name} aria-describedby={e.name ? `${formId}-name-error` : undefined} />
+            <FieldError id={`${formId}-name-error`} message={e.name} />
           </Field>
           <Field label="Type">
-            <Select name="type" value={type} onChange={(ev) => setType(ev.target.value)}>
+            <Select name="type" aria-invalid={!!e.type} aria-describedby={e.type ? `${formId}-type-error` : undefined} value={type} onChange={(ev) => setType(ev.target.value)}>
               <option value="MULTI_UNIT">Multi-unit building</option>
               <option value="SINGLE_UNIT">Single-unit home</option>
             </Select>
-            <FieldError message={e.type} />
+            <FieldError id={`${formId}-type-error`} message={e.type} />
           </Field>
         </FormRow>
         <Field label="Street address">
-          <Input name="street" placeholder="214 Maple Ave" required aria-invalid={!!e.street} />
-          <FieldError message={e.street} />
+          <Input name="street" placeholder="214 Maple Ave" required aria-invalid={!!e.street} aria-describedby={e.street ? `${formId}-street-error` : undefined} />
+          <FieldError id={`${formId}-street-error`} message={e.street} />
         </Field>
         <FormRow columns={3}>
           <Field label="City">
-            <Input name="city" placeholder="Austin" required aria-invalid={!!e.city} />
-            <FieldError message={e.city} />
+            <Input name="city" placeholder="Austin" required aria-invalid={!!e.city} aria-describedby={e.city ? `${formId}-city-error` : undefined} />
+            <FieldError id={`${formId}-city-error`} message={e.city} />
           </Field>
           <Field label="State">
-            <Input name="state" placeholder="TX" maxLength={2} required aria-invalid={!!e.state} />
-            <FieldError message={e.state} />
+            <Input name="state" placeholder="TX" maxLength={2} required aria-invalid={!!e.state} aria-describedby={e.state ? `${formId}-state-error` : undefined} />
+            <FieldError id={`${formId}-state-error`} message={e.state} />
           </Field>
           <Field label="ZIP">
-            <Input name="postalCode" placeholder="78704" required aria-invalid={!!e.postalCode} />
-            <FieldError message={e.postalCode} />
+            <Input name="postalCode" placeholder="78704" required aria-invalid={!!e.postalCode} aria-describedby={e.postalCode ? `${formId}-postalCode-error` : undefined} />
+            <FieldError id={`${formId}-postalCode-error`} message={e.postalCode} />
           </Field>
         </FormRow>
         <FormRow columns={3}>
@@ -67,9 +68,9 @@ export function AddPropertyForm({ owners, onCancel }: { owners: OwnerOption[]; o
                 type="number"
                 min={0}
                 defaultValue={0}
-                aria-invalid={!!e.unitCount}
+                aria-invalid={!!e.unitCount} aria-describedby={e.unitCount ? `${formId}-unitCount-error` : undefined}
               />
-              <FieldError message={e.unitCount} />
+              <FieldError id={`${formId}-unitCount-error`} message={e.unitCount} />
             </Field>
           ) : (
             <Field label="Units" hint="A single-unit home has one unit.">
@@ -81,12 +82,12 @@ export function AddPropertyForm({ owners, onCancel }: { owners: OwnerOption[]; o
               name="yearBuilt"
               placeholder="2004"
               inputMode="numeric"
-              aria-invalid={!!e.yearBuilt}
+              aria-invalid={!!e.yearBuilt} aria-describedby={e.yearBuilt ? `${formId}-yearBuilt-error` : undefined}
             />
-            <FieldError message={e.yearBuilt} />
+            <FieldError id={`${formId}-yearBuilt-error`} message={e.yearBuilt} />
           </Field>
           <Field label="Owner">
-            <Select name="ownerId" defaultValue="" style={{ width: '100%' }}>
+            <Select name="ownerId" aria-invalid={!!e.ownerId} aria-describedby={e.ownerId ? `${formId}-ownerId-error` : undefined} defaultValue="" style={{ width: '100%' }}>
               <option value="">No owner</option>
               {owners.map((o) => (
                 <option key={o.id} value={o.id}>
@@ -94,7 +95,7 @@ export function AddPropertyForm({ owners, onCancel }: { owners: OwnerOption[]; o
                 </option>
               ))}
             </Select>
-            <FieldError message={e.ownerId} />
+            <FieldError id={`${formId}-ownerId-error`} message={e.ownerId} />
           </Field>
         </FormRow>
         <p className="muted" style={{ fontSize: 13 }}>

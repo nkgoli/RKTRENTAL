@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Badge, Card, CardHeader, Pagination, pageFrom, paginate } from '@/components/ui';
-import { formatAddress, formatDate, formatMoney } from '@/lib/properties/format';
+import { bedBath, formatAddress, formatDate, formatMoney } from '@/lib/properties/format';
 import type { PropertyDetail, UnitDetail } from '@/lib/properties/data';
 import { ArchiveButton } from '@/app/(manager)/properties/_components/PropertyForm';
 import { DeleteUnitControl } from '@/components/units/DeleteUnitControl';
@@ -59,19 +59,19 @@ function PropertyUnits({ property, page: pageParam }: { property: PropertyDetail
   const units = paginate(all, page);
   return (
     <Card flush id="units">
-      <CardHeader title="Units" action={<span className="muted">{property.stats.unitCount} total</span>} />
-      <div className={styles.tableWrap}>
+      <CardHeader title="Units" action={<div className={styles.unitActions}><span className="muted">{all.length} total · {property.stats.occupied} occupied</span>{!property.archived && <a className="btn btn-secondary btn-sm" href="#add-unit">+ Add unit</a>}</div>} />
+      <div className={styles.tableWrap} role="region" aria-label="Property units table" tabIndex={0}>
         <table className="table" aria-label="Property units">
-          <thead><tr><th>Unit</th><th>Tenant</th><th className="num">Rent</th><th>Status</th><th /></tr></thead>
+          <thead><tr><th scope="col">Unit</th><th scope="col">Tenant</th><th scope="col" className="num">Rent / month</th><th scope="col">Status</th><th scope="col" aria-label="Open unit" /></tr></thead>
           <tbody>
             {units.length === 0 && <tr><td colSpan={5} className="muted">No active units yet.</td></tr>}
             {units.map((unit) => (
               <tr key={unit.id}>
-                <td><Link href={`/properties/${property.id}?unit=${unit.id}`}><strong>{unit.isImplicit ? 'Whole property' : unit.number}</strong></Link></td>
-                <td>{unit.tenant?.name ?? <span className="muted">None</span>}</td>
+                <td><Link href={`/properties/${property.id}?unit=${unit.id}`}><strong>{unit.isImplicit ? 'Whole property' : unit.number}</strong></Link><small className={styles.unitConfiguration}>{bedBath(unit)}{unit.squareFeet ? ` · ${unit.squareFeet.toLocaleString('en-US')} sqft` : ''}</small></td>
+                <td>{unit.tenant ? <Link href={`/tenants/${unit.tenant.id}`}>{unit.tenant.name}</Link> : <span className="muted">No tenant</span>}</td>
                 <td className="num">{formatMoney(unit.rent ?? unit.listedRent)}</td>
                 <td><Badge tone={statusTone(unit.status)}>{unit.status === 'OCCUPIED' ? 'Occupied' : unit.status === 'VACANT' ? 'Vacant' : 'Turnover'}</Badge></td>
-                <td><Link className="btn btn-ghost btn-sm" href={`/properties/${property.id}?unit=${unit.id}`}>Open</Link></td>
+                <td><Link className="btn btn-ghost btn-sm" aria-label={`Open unit ${unit.number}`} href={`/properties/${property.id}?unit=${unit.id}`}>Open</Link></td>
               </tr>
             ))}
           </tbody>
@@ -119,7 +119,7 @@ export function PropertyOverview({ property, owners = [], timeline, payments, un
           propertyId={property.id}
           owners={owners}
           address={formatAddress(property)}
-          typeLabel={activeUnits.length === 1 ? 'Single-family' : 'Multi-unit'}
+          typeLabel={property.type === 'SINGLE_UNIT' ? 'Single-family' : 'Multi-unit'}
           unitSummary={`${activeUnits.length} · ${property.stats.occupied} occupied`}
           ownerName={property.owner?.name ?? 'Not assigned'}
           initial={{

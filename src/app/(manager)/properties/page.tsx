@@ -66,10 +66,10 @@ export default async function PropertiesPage({
     <>
       <PageHeader
         title="Properties"
-        actions={[{ label: '+ Add property', href: '/properties?add=1', primary: true }]}
+        actions={[{ label: '+ Add property', href: `${href(filter, q, view)}${href(filter, q, view).includes('?') ? '&' : '?'}add=1`, primary: true }]}
       />
       <section className={`toolbar ${styles.toolbar}`}>
-        <form role="search" action="/properties" method="get" style={{ display: 'contents' }}>
+        <form role="search" action="/properties" method="get" className={styles.searchForm}>
           {filter !== 'all' && <input type="hidden" name="filter" value={filter} />}
           {view === 'list' && <input type="hidden" name="view" value="list" />}
           <label className="search">
@@ -81,6 +81,7 @@ export default async function PropertiesPage({
               aria-label="Search by name or address"
             />
           </label>
+          <button className="btn btn-secondary btn-sm" type="submit">Search</button>
         </form>
         <Chips>
           {FILTERS.map(({ key, label }) => {
@@ -89,7 +90,7 @@ export default async function PropertiesPage({
                 ? counts[key]
                 : undefined;
             return (
-              <Link key={key} href={href(key, q, view)} style={{ display: 'contents' }}>
+              <Link key={key} href={href(key, q, view)} aria-current={key === filter ? 'page' : undefined} className={styles.filterLink}>
                 <Chip active={key === filter}>{count == null ? label : `${label} ${count}`}</Chip>
               </Link>
             );
@@ -97,7 +98,7 @@ export default async function PropertiesPage({
         </Chips>
       </section>
 
-      <section className="kpis">
+      <section className="kpis" aria-label="Properties in this view">
         <Stat
           label="Total units"
           value={totals.units}
@@ -120,7 +121,7 @@ export default async function PropertiesPage({
 
       <section className={styles.viewBar}>
         <span className="muted">
-          {properties.length} {properties.length === 1 ? 'property' : 'properties'}
+          {properties.length} {properties.length === 1 ? 'property' : 'properties'}{q || filter !== 'all' ? ' in this view' : ''}
         </span>
         <div className={styles.viewToggle} role="group" aria-label="View">
           {(['grid', 'list'] as const).map((v) => (
@@ -147,7 +148,7 @@ export default async function PropertiesPage({
       )}
 
       {properties.length > 0 && view === 'grid' && (
-        <section className={styles.grid}>
+        <section className={styles.grid} aria-label="Property directory">
           {properties.map((p) => {
             const single = p.type === 'SINGLE_UNIT';
             const occ = occupancyOf(p);
@@ -186,7 +187,8 @@ export default async function PropertiesPage({
 
       {properties.length > 0 && view === 'list' && (
         <Card flush>
-          <Table>
+          <div className={styles.tableWrap} role="region" aria-label="Property directory table" tabIndex={0}>
+          <Table aria-label="Properties">
             <TableHead columns={['Property', 'Address', 'Type', 'Units', 'Occupancy', 'Monthly rent']} />
             <tbody>
               {properties.map((p) => {
@@ -206,6 +208,7 @@ export default async function PropertiesPage({
               })}
             </tbody>
           </Table>
+          </div>
         </Card>
       )}
 

@@ -1,6 +1,6 @@
 # Property, unit and listing workspace review
 
-Reviewed 18 October 2026; resumed 19 October 2026. **Implementation and design updates are prepared; native Edge acceptance is pending desktop and runtime access.** This report distinguishes source/test evidence, design renders, and the desktop checks that remain outstanding.
+Reviewed 18 October 2026; resumed 19 October 2026. **Implementation and design updates are committed; the isolated review app is ready, and native Edge acceptance is blocked by desktop access.** This report distinguishes source/test evidence, design renders, and the desktop checks that remain outstanding.
 
 ## Basis and scope
 
@@ -88,10 +88,37 @@ On resumption, the declared foundation commit remained an ancestor and the owned
 
 **No task-specific native before/after screenshots were captured.** There is no desktop or phone visual acceptance claim. The design captures above do not replace that requirement.
 
+## Isolated candidate runtime: ready
+
+The manager superseded the proposed port-3102 dependency and authorized an isolated review runtime. The scoped implementation commit is `6259ab8212cb0ce040260d222fdc64f04595758b`. The review app at **http://localhost:3115** uses an archive of that exact commit, not another checkout or the concurrent unstaged files. The archive SHA-256 is `1e46a8ef418ade3017d218f2e73c0f4618173388f15a94c8668fab9a69e86f90`.
+
+The snapshot and all Next output are beneath `tests/portfolio/.runtime/app`. Its worker-visible `next.config.ts` sets `distDir: '.next-portfolio'` and the build ID **`portfolio-6259ab8212cb-20261019052420`**. The only snapshot configuration adjustments are that isolated output directory and build identifier; application source comes unchanged from the commit. The reusable launcher is [review-runtime.cjs](../../tests/portfolio/review-runtime.cjs); its metadata and caches stay ignored in `.runtime/`.
+
+The isolated production build **passed** source compilation, lint/type validation, page data collection, all 22 static pages and build tracing. The first attempt failed because the worker resolved a relative preload path from the snapshot; rerunning with the absolute preload below fixed that environment issue. This successful candidate build supersedes the earlier shared-tree type failure for this snapshot. Next emitted a multiple-lockfile workspace-root warning; the configured build output remained inside the owned runtime directory.
+
+```powershell
+node tests/portfolio/review-runtime.cjs prepare
+Expand-Archive -LiteralPath 'tests/portfolio/.runtime/source.zip' -DestinationPath 'tests/portfolio/.runtime/app'
+node tests/portfolio/review-runtime.cjs configure
+node --env-file=C:/Users/nkgol/RocketRental/.env --import file:///C:/Users/nkgol/RocketRental/.orchestra/workspaces/@6fmicph499j20nbevsv/repository/prisma/os-userinfo.mjs tests/portfolio/review-runtime.cjs build
+node --env-file=C:/Users/nkgol/RocketRental/.env --import file:///C:/Users/nkgol/RocketRental/.orchestra/workspaces/@6fmicph499j20nbevsv/repository/prisma/os-userinfo.mjs tests/portfolio/review-runtime.cjs start
+node --env-file=C:/Users/nkgol/RocketRental/.env --import file:///C:/Users/nkgol/RocketRental/.orchestra/workspaces/@6fmicph499j20nbevsv/repository/prisma/os-userinfo.mjs tests/portfolio/review-runtime.cjs health
+```
+
+Preparation ran once; reuse the existing snapshot on resumption. The server bound successfully to `127.0.0.1:3115`. At **2026-10-19 05:25:37.782 UTC**, the health check observed **HTTP 200** at `http://localhost:3115/sign-in`, a successful read-only database query, and a matching build ID in both the served HTML and the isolated `BUILD_ID` file. This verifies runtime availability and identity, not a native app flow. The runtime uses the existing local database on port 5433 and existing file storage; no migration, seed, reset or data submission occurred. Ports 3100/3101, shared `.next`, unrelated processes and other tasks' staged changes were preserved.
+
+Only after that successful health check, a fresh `take_desktop` returned this exact receipt:
+
+```json
+{"granted":false,"reasonCode":"DESKTOP_CONTROL_WAIT_TIMEOUT","waiters":3,"next":"Another agent has the desktop. Call take_desktop again to keep your place, or do other work first."}
+```
+
+The receipt supplied no holder, queue, request or diagnostic ID. The attempt-scoped operational trace for 2026-10-19 05:25–05:27 UTC returned no records, so no additional desktop diagnostic identifier is available. Missing trace records do not establish why the queue timed out. `release_desktop` returned `{"released":false}`. No Windows action was issued, no desktop ownership was bypassed, and no unchanged acquisition loop was repeated. The current manager view was not altered. Native before/after, phone and keyboard evidence remain blocked on a granted desktop turn.
+
 ## Remaining acceptance work
 
 1. Obtain a desktop turn. Capture the reference/before application views in the existing Edge session, if that runtime remains available.
-2. Confirm readiness and identity of the coordinated shared runtime at port 3102; preserve the reference runtimes and database/storage. Reuse the other area's resolved build checks rather than starting another competing build.
+2. Reuse the verified isolated candidate at port 3115. Its recorded source/build identity and successful build are above; do not rebuild or reprepare an unchanged snapshot. Preserve the reference runtimes and database/storage.
 3. At desktop and 390px, inspect all six screens plus directory list/no matches, property and unit edit/cancel, add-property dialog/focus/Escape, add-unit rejected input, media missing/empty states, comparison no matches/all excluded/provider error and invalid-unit recovery. Capture native before/after images and important focus states.
 4. Verify all-units/unit/property switching, filter retention, compatibility redirects and entry into linked workspace tabs. Verify scroll regions with the keyboard and touch-size controls in phone emulation.
 5. Exercise successful or destructive/financial submissions only against an isolated fixture. Reuse the successful scoped tests, and rerun affected checks if native review requires a source fix.

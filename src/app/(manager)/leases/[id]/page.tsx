@@ -1,14 +1,15 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/shell/PageHeader';
 import type { ReactNode } from 'react';
 import { workspaceTabHref } from '@/components/workspace/routes';
-import { Avatar, Badge } from '@/components/ui';
+import { Alert, Avatar, Badge } from '@/components/ui';
 import { Icon } from '@/components/shell/Icons';
 import { requireManagerRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
 import { LeaseDocumentGrid } from './LeaseDocumentGrid';
 import { LeaseSectionNavigation } from './LeaseSectionNavigation';
+import { leaseResult, leaseResultMessages } from './feedback';
 import styles from './lease-detail.module.css';
 import { dateInput } from '@/lib/leases/core';
 import { EVENT_LABEL } from '@/lib/leases/events';
@@ -58,7 +59,7 @@ export default async function LeaseDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ propertyId?: string; unitId?: string; tab?: string }>;
+  searchParams: Promise<{ propertyId?: string; unitId?: string; tab?: string; saved?: string }>;
 }) {
   const session = await requireManagerRole();
   const [{ id }, query] = await Promise.all([params, searchParams]);
@@ -125,6 +126,8 @@ export default async function LeaseDetailPage({
   const activeTab = LEASE_TABS.find((tab) => tab.key === query.tab)?.key ?? 'overview';
   // Derive scope from the authorized lease, never from caller-supplied IDs.
   const scoped = Boolean(query.propertyId || query.unitId);
+  const returnScope = query.unitId ? 'unit' : scoped ? 'property' : undefined;
+  const saved = leaseResult(query.saved);
   const backHref = scoped
     ? workspaceTabHref(property.id, 'leases', query.unitId ? lease.unitId : undefined)
     : '/leases';
@@ -159,9 +162,9 @@ export default async function LeaseDetailPage({
       />
 
       <div className={styles.workspace}>
-        <Link className={styles.backLink} href={backHref}>
+        <a className={styles.backLink} href={backHref}>
           ← {scoped ? `${property.name} leases` : 'All leases'}
-        </Link>
+        </a>
         <section className={styles.summaryLine} aria-label="Lease summary">
           <Badge
             tone={
@@ -183,7 +186,7 @@ export default async function LeaseDetailPage({
               ? lease.tenants.map(({ tenant }, index) => (
                   <span key={tenant.id}>
                     {index > 0 && ', '}
-                    <Link href={`/tenants/${tenant.id}`}>{tenant.name}</Link>
+                    <a href={`/tenants/${tenant.id}`}>{tenant.name}</a>
                   </span>
                 ))
               : 'No tenants yet'}
@@ -194,16 +197,16 @@ export default async function LeaseDetailPage({
           </span>
         </section>
 
+        {/* Document links avoid the reproduced stalled client section transition. */}
         <LeaseSectionNavigation activeTab={activeTab} className={styles.tabs}>
           {LEASE_TABS.map((tab) => (
-            <Link
+            <a
               key={tab.key}
               href={tabHref(tab.key)}
               aria-current={activeTab === tab.key ? 'page' : undefined}
-              scroll={false}
             >
               {tab.label}
-            </Link>
+            </a>
           ))}
         </LeaseSectionNavigation>
         <div className={styles.panel} id={`lease-${activeTab}`}>
@@ -242,14 +245,14 @@ export default async function LeaseDetailPage({
                     </span>
                     <div>
                       <h3>
-                        <Link href={`/properties/${property.id}`}>{property.name}</Link>
+                        <a href={`/properties/${property.id}`}>{property.name}</a>
                         {!lease.unit.isImplicit && (
                           <>
                             {' '}
                             ·{' '}
-                            <Link href={`/properties/${property.id}/units/${lease.unitId}`}>
+                            <a href={`/properties/${property.id}/units/${lease.unitId}`}>
                               Unit {lease.unit.number}
-                            </Link>
+                            </a>
                           </>
                         )}
                       </h3>
@@ -265,9 +268,9 @@ export default async function LeaseDetailPage({
                       : `Unit ${lease.unit.number} only`}{' '}
                     at {property.name}.
                   </p>
-                  <Link className={styles.secondaryLink} href={`/properties/${property.id}`}>
+                  <a className={styles.secondaryLink} href={`/properties/${property.id}`}>
                     View property <span aria-hidden="true">→</span>
-                  </Link>
+                  </a>
                 </section>
                 <section className={styles.section}>
                   <SectionHeader
@@ -280,7 +283,7 @@ export default async function LeaseDetailPage({
                   />
                   {!lease.tenants.length && <p className="muted">No tenants yet.</p>}
                   {lease.tenants.map(({ tenant, isPrimary }) => (
-                    <Link key={tenant.id} className="list-item" href={`/tenants/${tenant.id}`}>
+                    <a key={tenant.id} className="list-item" href={`/tenants/${tenant.id}`}>
                       <Avatar initials={initials(tenant.name)} />
                       <span className="file-meta">
                         <strong>{tenant.name}</strong>
@@ -289,13 +292,13 @@ export default async function LeaseDetailPage({
                         </small>
                       </span>
                       <span aria-hidden="true">→</span>
-                    </Link>
+                    </a>
                   ))}
                 </section>
                 <section className={styles.section}>
                   <SectionHeader
                     title="Agreement & move-out"
-                    action={<Link href={tabHref('agreement')}>Manage agreement →</Link>}
+                    action={<a href={tabHref('agreement')}>Manage agreement →</a>}
                   />
                   <dl className={styles.compactFacts}>
                     <dt>Signature</dt>
@@ -312,7 +315,7 @@ export default async function LeaseDetailPage({
                 <section className={styles.section}>
                   <SectionHeader
                     title="Rent summary"
-                    action={<Link href={tabHref('payments')}>View rent ledger →</Link>}
+                    action={<a href={tabHref('payments')}>View rent ledger →</a>}
                   />
                   <dl className={styles.compactFacts}>
                     <dt>Balance due</dt>
@@ -324,15 +327,18 @@ export default async function LeaseDetailPage({
                         : 'None yet'}
                     </dd>
                   </dl>
-                  <Link className={styles.secondaryLink} href={tabHref('documents')}>
+                  <a className={styles.secondaryLink} href={tabHref('documents')}>
                     Lease documents ({lease.documents.length}) →
-                  </Link>
+                  </a>
                 </section>
               </div>
             </>
           )}
           {activeTab === 'agreement' && (
             <>
+              {(saved === 'activated' || saved === 'terminated') && (
+                <Alert tone="success">{leaseResultMessages[saved]}</Alert>
+              )}
               <section className={styles.section}>
                 <SectionHeader title="Lease terms" />
                 <dl className="kv">
@@ -353,9 +359,14 @@ export default async function LeaseDetailPage({
                 </dl>
                 {(lease.status === 'ACTIVE' || lease.status === 'DRAFT') && (
                   // The form repeats every value above, so it stays folded until asked for.
-                  <details className={styles.editTerms}>
+                  <details className={styles.editTerms} open={saved === 'terms'}>
                     <summary>Edit terms</summary>
-                    <EditTermsForm leaseId={lease.id} values={terms} />
+                    <EditTermsForm
+                      leaseId={lease.id}
+                      values={terms}
+                      returnScope={returnScope}
+                      saved={saved === 'terms'}
+                    />
                   </details>
                 )}
               </section>
@@ -404,7 +415,7 @@ export default async function LeaseDetailPage({
                     No agreement snapshot is recorded for this lease. Check Documents for an
                     uploaded signed agreement.
                   </p>
-                  <Link href={tabHref('documents')}>View lease documents →</Link>
+                  <a href={tabHref('documents')}>View lease documents →</a>
                 </section>
               )}
 
@@ -429,7 +440,7 @@ export default async function LeaseDetailPage({
                   <dd>{lease.moveOutDate ? formatDate(lease.moveOutDate) : 'Not scheduled'}</dd>
                 </dl>
                 {lease.status === 'ACTIVE' && (
-                  <details className={styles.editTerms}>
+                  <details className={styles.editTerms} open={saved === 'notice'}>
                     <summary>
                       {noticeGiven ? 'Update notice or move-out' : 'Record notice or move-out'}
                     </summary>
@@ -437,6 +448,8 @@ export default async function LeaseDetailPage({
                       leaseId={lease.id}
                       noticeGivenAt={lease.noticeGivenAt ? dateInput(lease.noticeGivenAt) : ''}
                       moveOutDate={lease.moveOutDate ? dateInput(lease.moveOutDate) : ''}
+                      returnScope={returnScope}
+                      saved={saved === 'notice'}
                     />
                   </details>
                 )}
@@ -444,7 +457,11 @@ export default async function LeaseDetailPage({
               {(lease.status === 'ACTIVE' || lease.status === 'DRAFT') && (
                 <section className={styles.section}>
                   <SectionHeader title="Lease actions" />
-                  <LeaseStatusActions leaseId={lease.id} status={lease.status} />
+                  <LeaseStatusActions
+                    leaseId={lease.id}
+                    status={lease.status}
+                    returnScope={returnScope}
+                  />
                 </section>
               )}
             </>
@@ -477,9 +494,9 @@ export default async function LeaseDetailPage({
               <SectionHeader
                 title="Rent ledger"
                 action={
-                  <Link className="btn btn-ghost btn-sm" href={paymentsHref}>
+                  <a className="btn btn-ghost btn-sm" href={paymentsHref}>
                     View payments →
-                  </Link>
+                  </a>
                 }
               />
               <div className={styles.ledgerFacts}>

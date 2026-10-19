@@ -1,4 +1,4 @@
-﻿import { expect as baseExpect, test, type Page } from '@playwright/test';
+import { expect as baseExpect, test, type Page, type Locator } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { db, fixtureId, prepareLightFixtures, propertyId } from './light-fixtures';
 
@@ -22,6 +22,25 @@ async function noOverflow(page: Page) {
 async function capture(page: Page, name: string) {
   await noOverflow(page);
   await page.screenshot({ path: `${evidence}/${name}.png`, fullPage: true });
+}
+
+async function submitResult(page: Page, button: Locator, saved: string) {
+  const actionResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' && Boolean(response.headers()['x-action-redirect']),
+  );
+  const resultResponse = page.waitForResponse(
+    (response) =>
+      response.request().resourceType() === 'document' && response.url().includes('/result?'),
+  );
+  await button.click();
+  expect((await actionResponse).status()).toBe(303);
+  const result = await resultResponse;
+  expect(result.status()).toBe(303);
+  expect(result.headers()['location']).toContain('propertyId=seed-property-maple&unitId=');
+  await expect(page).toHaveURL(
+    (url) => url.searchParams.get('saved') === saved && url.searchParams.get('tab') === 'agreement',
+  );
 }
 
 test.beforeAll(async () => {
@@ -137,7 +156,7 @@ for (const width of [1280, 390]) {
       await capture(page, `terms-error-${width}`);
       await form.getByLabel('End date').fill('2027-11-30');
       await form.getByLabel('Monthly rent').fill(width === 390 ? '1925' : '1900');
-      await form.getByRole('button', { name: 'Save terms' }).click();
+      await submitResult(page, form.getByRole('button', { name: 'Save terms' }), 'terms');
       await expect(form.getByRole('status')).toHaveText('Lease terms saved.');
       const saved = await db.lease.findUniqueOrThrow({ where: { id: fixtureId('active') } });
       expect(Number(saved.monthlyRent)).toBe(width === 390 ? 1925 : 1900);
@@ -159,7 +178,7 @@ for (const width of [1280, 390]) {
       await expect(notice.getByLabel('Planned move-out')).toHaveAttribute('aria-invalid', 'true');
       await capture(page, `notice-error-${width}`);
       await notice.getByLabel('Planned move-out').fill('2027-11-30');
-      await notice.getByRole('button', { name: 'Record notice' }).click();
+      await submitResult(page, notice.getByRole('button', { name: 'Record notice' }), 'notice');
       await expect(notice.getByRole('status')).toHaveText('Notice recorded.');
       await capture(page, `agreement-saved-${width}`);
       expect(
@@ -308,8 +327,9 @@ test('draft activation restrictions, ended restrictions and fixture termination 
   ).toHaveText('This unit already has an active lease during those dates.');
   await capture(page, 'draft-ineligible-390');
   await page.goto(route('draft'));
-  await page.getByRole('button', { name: 'Activate lease' }).click();
+  await submitResult(page, page.getByRole('button', { name: 'Activate lease' }), 'activated');
   await expect(page.getByLabel('Lease summary').getByText('Active', { exact: true })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Lease activated.' })).toBeVisible();
   await page.goto(route('ended'));
   for (const name of ['Edit terms', 'Record notice or move-out', 'Activate lease', 'Terminate'])
     await expect(page.getByText(name, { exact: true })).toHaveCount(0);
@@ -325,7 +345,11 @@ test('draft activation restrictions, ended restrictions and fixture termination 
     'ACTIVE',
   );
   await page.getByRole('button', { name: 'Terminate', exact: true }).click();
-  await page.getByRole('button', { name: 'Confirm terminate', exact: true }).click();
+  await submitResult(
+    page,
+    page.getByRole('button', { name: 'Confirm terminate', exact: true }),
+    'terminated',
+  );
   await expect(
     page.getByLabel('Lease summary').getByText('Terminated', { exact: true }),
   ).toBeVisible();
@@ -333,4 +357,12 @@ test('draft activation restrictions, ended restrictions and fixture termination 
     'TERMINATED',
   );
   await capture(page, 'terminated-390');
+});
+
+test('result routes require a manager and do not expose unavailable leases', async ({ page }) => {
+  await page.goto('/leases/light-detail-active/result?saved=terms&scope=unit');
+  await expect(page).toHaveURL(/\/sign-in\?/);
+  await signIn(page);
+  const missing = await page.goto('/leases/not-a-review-lease/result?saved=terms&scope=unit');
+  expect(missing?.status()).toBe(404);
 });

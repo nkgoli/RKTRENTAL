@@ -4,14 +4,14 @@ import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useId, useRef, useState } from 'react';
 import { Alert, Button } from '@/components/ui';
 import { FileUploader } from '@/components/upload';
+import { saveLeaseAction, type LeaseFormState } from './actions';
 import {
-  activateLeaseAction,
-  editTermsAction,
-  recordNoticeAction,
-  saveLeaseAction,
-  terminateLeaseAction,
-  type LeaseFormState,
-} from './actions';
+  activateDetailLeaseAction,
+  editDetailTermsAction,
+  recordDetailNoticeAction,
+  terminateDetailLeaseAction,
+} from './[id]/actions';
+import { leaseResultMessages, type LeaseReturnScope } from './[id]/feedback';
 
 const initial: LeaseFormState = {};
 
@@ -224,11 +224,25 @@ export function NewLeaseForm({
   );
 }
 
-export function EditTermsForm({ leaseId, values }: { leaseId: string; values: TermValues }) {
-  const [state, action, pending] = useActionState(editTermsAction, initial);
+export function EditTermsForm({
+  leaseId,
+  values,
+  returnScope,
+  saved = false,
+}: {
+  leaseId: string;
+  values: TermValues;
+  returnScope?: LeaseReturnScope;
+  saved?: boolean;
+}) {
+  const [state, action, pending] = useActionState(
+    editDetailTermsAction,
+    saved ? { ok: true, message: leaseResultMessages.terms } : initial,
+  );
   return (
     <form className="form" action={action} noValidate id="edit-terms" aria-label="Edit lease terms">
       <input type="hidden" name="leaseId" value={leaseId} />
+      <input type="hidden" name="returnScope" value={returnScope ?? ''} />
       <FormFeedback state={state} />
       <TermFields values={values} errors={state.errors} />
       <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
@@ -238,9 +252,17 @@ export function EditTermsForm({ leaseId, values }: { leaseId: string; values: Te
   );
 }
 
-export function LeaseStatusActions({ leaseId, status }: { leaseId: string; status: string }) {
-  const [activeState, activate, activating] = useActionState(activateLeaseAction, initial);
-  const [endState, terminate, terminating] = useActionState(terminateLeaseAction, initial);
+export function LeaseStatusActions({
+  leaseId,
+  status,
+  returnScope,
+}: {
+  leaseId: string;
+  status: string;
+  returnScope?: LeaseReturnScope;
+}) {
+  const [activeState, activate, activating] = useActionState(activateDetailLeaseAction, initial);
+  const [endState, terminate, terminating] = useActionState(terminateDetailLeaseAction, initial);
   const [confirming, setConfirming] = useState(false);
   const confirmation = useRef<HTMLFormElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -255,6 +277,7 @@ export function LeaseStatusActions({ leaseId, status }: { leaseId: string; statu
       {status === 'DRAFT' && (
         <form action={activate}>
           <input type="hidden" name="leaseId" value={leaseId} />
+          <input type="hidden" name="returnScope" value={returnScope ?? ''} />
           <Button type="submit" variant="primary" disabled={activating} aria-busy={activating}>
             {activating ? 'Activating…' : 'Activate lease'}
           </Button>
@@ -270,6 +293,7 @@ export function LeaseStatusActions({ leaseId, status }: { leaseId: string; statu
             aria-label="Confirm lease termination"
           >
             <input type="hidden" name="leaseId" value={leaseId} />
+            <input type="hidden" name="returnScope" value={returnScope ?? ''} />
             <span>Terminate this lease?</span>
             <Button type="submit" variant="danger" disabled={terminating} aria-busy={terminating}>
               {terminating ? 'Terminating…' : 'Confirm terminate'}
@@ -302,18 +326,32 @@ export function NoticeForm({
   leaseId,
   noticeGivenAt,
   moveOutDate,
+  returnScope,
+  saved = false,
 }: {
   leaseId: string;
   noticeGivenAt: string;
   moveOutDate: string;
+  returnScope?: LeaseReturnScope;
+  saved?: boolean;
 }) {
-  const [state, action, pending] = useActionState(recordNoticeAction, initial);
+  const [state, action, pending] = useActionState(
+    recordDetailNoticeAction,
+    saved ? { ok: true, message: leaseResultMessages.notice } : initial,
+  );
   const fieldId = useId();
   const [dates, setDates] = useState({ noticeGivenAt, moveOutDate });
   useEffect(() => setDates({ noticeGivenAt, moveOutDate }), [noticeGivenAt, moveOutDate]);
   return (
-    <form className="form" action={action} noValidate aria-label="Notice and move-out">
+    <form
+      className="form"
+      action={action}
+      noValidate
+      id="lease-notice"
+      aria-label="Notice and move-out"
+    >
       <input type="hidden" name="leaseId" value={leaseId} />
+      <input type="hidden" name="returnScope" value={returnScope ?? ''} />
       <FormFeedback state={state} />
       <div className="form-row">
         <label className="field">

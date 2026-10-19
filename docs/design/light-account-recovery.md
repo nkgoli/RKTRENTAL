@@ -120,6 +120,36 @@ Not run or not claimed:
   60–120 seconds beyond the window end, do not start duplicates, and keep the turn active until
   the manager confirms release.
 
+## Review runtime procedure
+
+The review runtime is a task-owned hidden process, not a child of the agent command session.
+
+Start exactly one instance:
+
+```powershell
+Start-ScheduledTask -TaskName 'RocketRentalReview3216'
+```
+
+The task runs `wscript.exe` with
+`C:\Users\nkgol\AppData\Local\Temp\opencode\rocketrental-review-3216-hidden.vbs`, which runs
+`rocketrental-review-3216.cmd` hidden. The wrapper sets the database/auth environment and runs
+`next start -p 3216` from this checkout.
+
+Stop:
+
+```powershell
+$c = Get-NetTCPConnection -State Listen -LocalPort 3216 -ErrorAction SilentlyContinue
+if ($c) { Stop-Process -Id $c.OwningProcess -Force }
+Unregister-ScheduledTask -TaskName 'RocketRentalReview3216' -Confirm:$false
+```
+
+Current identity at the time of writing: candidate
+`97b94840fe6e16135c346e7fd0d29951643beb1b`, build `1j-Rdcc6JnMEAZt3np19U`, node PID 31004
+created 2026-10-19 14:51:16 local, parent `cmd.exe` PID 25404. Both
+`http://localhost:3216/sign-in` and `http://127.0.0.1:3216/sign-in` return HTTP 200. The process
+is task-launched and orphaned from the agent command session; turnover survival has not yet
+been observed, so durable readiness is not claimed from startup alone.
+
 ## Pending native Edge checklist
 
 The manager performs these checks in the existing Edge session after a fresh bounded human

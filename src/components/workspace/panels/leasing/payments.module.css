@@ -96,7 +96,22 @@
   border-radius: var(--rr-card-radius);
   box-shadow: var(--rr-card-shadow);
   background: var(--design-surface, #fff);
-  overflow: hidden;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.ledgerHeading {
+  display: grid;
+  gap: 4px;
+}
+.ledgerHeading h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.nextDate {
+  display: block;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 .groupMeta {
   margin-left: auto;
@@ -160,6 +175,7 @@
 }
 .ledger {
   width: 100%;
+  min-width: 680px;
   border-collapse: collapse;
 }
 .ledger th {
@@ -196,6 +212,7 @@
   color: var(--design-muted, #64748b);
 }
 .num {
+  font-variant-numeric: tabular-nums;
   text-align: right !important;
   white-space: nowrap;
 }
@@ -290,4 +307,29 @@
 }
 .applied small {
   color: var(--design-muted, #64748b);
+}
+@media (max-width: 560px) {
+  .summaryActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .summaryActions .connection {
+    justify-self: start;
+  }
+  .dialog {
+    padding: 16px;
+  }
+}
+@media (pointer: coarse) {
+  .view,
+  .groupToggle,
+  .chevronLink {
+    min-height: 44px;
+  }
+  .chevronLink {
+    display: inline-grid;
+    place-items: center;
+    min-width: 44px;
+  }
 }

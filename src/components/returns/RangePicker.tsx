@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import styles from './returns.module.css';
 import { Button } from '@/components/ui/Button';
 import { Field, Input } from '@/components/ui/Forms';
 import {
@@ -35,20 +35,26 @@ export function RangePicker({
   const current = periodParams(period);
   const lastMonth = monthBucket(new Date(period.end.getTime() - 1));
   return (
-    <div className="row" style={{ flexWrap: 'wrap', gap: 12 }}>
-      <div className="chips" style={{ flexWrap: 'wrap' }} role="group" aria-label="Date range">
+    <div className={styles.range}>
+      <div className={styles.presets} role="group" aria-label="Date range">
         {PERIOD_KEYS.map((key) => (
-          <Link
+          <a
             key={key}
             className={`chip${period.key === key ? ' active' : ''}`}
             href={href({ period: key })}
             aria-current={period.key === key ? 'true' : undefined}
           >
             {key === 'ALL' ? 'All' : key}
-          </Link>
+          </a>
         ))}
       </div>
-      <form method="get" action={basePath} className="row" aria-label="Custom range">
+      <form
+        key={new URLSearchParams(current).toString()}
+        method="get"
+        action={basePath}
+        className={styles.custom}
+        aria-label="Custom range"
+      >
         {Object.entries(extra).map(([name, value]) => (
           <input key={name} type="hidden" name={name} value={value} />
         ))}
@@ -75,7 +81,7 @@ export function RangePicker({
           Apply
         </Button>
       </form>
-      <span className="muted" style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
+      <span className={styles.period}>
         {period.label} · by {period.granularity}
       </span>
     </div>
@@ -86,37 +92,54 @@ export function RangePicker({
 export function YearOverYear({ rows }: { rows: YearlyPoint[] }) {
   if (rows.length < 2) return null;
   return (
-    <table className="table" aria-label="Year-over-year totals">
-      <thead>
-        <tr>
-          <th>Year</th>
-          <th className="num">Income</th>
-          <th className="num">Expenses</th>
-          <th className="num">NOI</th>
-          <th className="num">YoY</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row, index) => {
-          const change = yearOverYearChange(row, rows[index - 1]);
-          return (
-            <tr key={row.year}>
-              <td>
-                {row.year}
-                {row.months < 12 && <small className="muted"> · {row.months} mo</small>}
-              </td>
-              <td className="num">{formatUsd(row.incomeCents)}</td>
-              <td className="num">{formatUsd(row.expensesCents)}</td>
-              <td className="num">
-                <strong>{formatUsd(row.noiCents)}</strong>
-              </td>
-              <td className="num muted">
-                {change === null ? '—' : `${change >= 0 ? '+' : '−'}${Math.abs(change * 100).toFixed(1)}%`}
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+    <div
+      className={styles.tableScroll}
+      role="region"
+      aria-label="Year-over-year totals"
+      tabIndex={0}
+    >
+      <table className="table" aria-label="Year-over-year totals">
+        <thead>
+          <tr>
+            <th scope="col">Year</th>
+            <th scope="col" className="num">
+              Income
+            </th>
+            <th scope="col" className="num">
+              Expenses
+            </th>
+            <th scope="col" className="num">
+              NOI
+            </th>
+            <th scope="col" className="num">
+              YoY
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => {
+            const change = yearOverYearChange(row, rows[index - 1]);
+            return (
+              <tr key={row.year}>
+                <td>
+                  {row.year}
+                  {row.months < 12 && <small className="muted"> · {row.months} mo</small>}
+                </td>
+                <td className="num">{formatUsd(row.incomeCents)}</td>
+                <td className="num">{formatUsd(row.expensesCents)}</td>
+                <td className="num">
+                  <strong>{formatUsd(row.noiCents)}</strong>
+                </td>
+                <td className="num muted">
+                  {change === null
+                    ? '—'
+                    : `${change >= 0 ? '+' : '−'}${Math.abs(change * 100).toFixed(1)}%`}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

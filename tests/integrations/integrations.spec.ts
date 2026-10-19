@@ -29,9 +29,9 @@ test('manager connects a provider and changes settings', async ({ page }) => {
   await page.getByRole('button', { name: 'Connect Checkr' }).click();
   await expect(page.getByText('Checkr connected')).toBeVisible();
   const connected = page.locator('article[data-provider="checkr"]');
-  await expect(connected.getByText('Connected', { exact: true })).toBeVisible();
-  await expect(connected.getByText('Healthy')).toBeVisible();
-  await expect(connected.getByText('Last synced')).toBeVisible();
+  await expect(connected.getByText('Sandbox connected', { exact: true })).toBeVisible();
+  await expect(connected.getByText('Sandbox · no live sync')).toBeVisible();
+  await expect(connected.getByText('Last sandbox activity')).toBeVisible();
   await connected.getByText('Configure').click();
   await expect(connected.getByText('value never shown')).toBeVisible();
 

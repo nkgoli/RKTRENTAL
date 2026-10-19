@@ -29,11 +29,17 @@ test('manager reviews returns, adds an expense and exports CSV', async ({ page }
   await expect(page.getByRole('heading', { name: 'Returns by property' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Expense breakdown' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Export report' })).toBeVisible();
-  for (const name of ['Maple Court', 'Harbor View Lofts', 'Cedar Row Townhomes', '18 Elm Street', 'Portfolio'])
+  for (const name of [
+    'Maple Court',
+    'Harbor View Lofts',
+    'Cedar Row Townhomes',
+    '18 Elm Street',
+    'Portfolio',
+  ])
     await expect(page.locator('tbody tr', { hasText: name }).first()).toBeVisible();
   await expect(
     page.locator('tbody tr', { hasText: 'Maple Court' }).getByRole('link', { name: /Maple Court/ }),
-  ).toHaveAttribute('href', /\/properties\/seed-property-maple\?tab=returns$/);
+  ).toHaveAttribute('href', /\/properties\/seed-property-maple\/returns\?period=12M$/);
   await page.screenshot({ path: 'test-results/returns-overview.png', fullPage: true });
 
   const noiBefore = await page
@@ -70,7 +76,6 @@ test('manager reviews returns, adds an expense and exports CSV', async ({ page }
   const path = await download.path();
   expect(path).toBeTruthy();
 });
-
 
 test('returns and dashboard switch to multi-year ranges kept in the URL', async ({ page }) => {
   await signIn(page);

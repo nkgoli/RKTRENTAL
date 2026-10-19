@@ -30,6 +30,9 @@ import {
   runPayoutsAction,
 } from './actions';
 
+import { parseMonthInput } from '@/lib/returns/period';
+import styles from './payments.module.css';
+
 export const dynamic = 'force-dynamic';
 
 type SearchParams = Promise<{
@@ -87,30 +90,39 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
   const session = await requireManagerRole();
   const params = await searchParams;
   const now = new Date();
-  const month = /^\d{4}-\d{2}$/.test(params.month ?? '') ? (params.month as string) : monthKey(now);
+  const month = parseMonthInput(params.month) ? (params.month as string) : monthKey(now);
   const scope = scopeFilterFrom(params);
   const scopeParams = scopeQuery(scope).toString();
   const scopeSuffix = scopeParams ? `&${scopeParams}` : '';
-  const filter = ['paid', 'open', 'late'].includes(params.filter ?? '') ? (params.filter as string) : 'all';
+  const filter = ['paid', 'open', 'late'].includes(params.filter ?? '')
+    ? (params.filter as string)
+    : 'all';
 
   // Idempotent: only creates rent charges that do not exist yet.
   await ensureRentCharges(session.organizationId, now);
   const overview = await loadPaymentsOverview(session.organizationId, month, now, undefined, scope);
-  const dueCents = overview.collectedCents + overview.outstandingCents;
-  const collectedPercent = dueCents ? Math.round((overview.collectedCents / dueCents) * 100) : 0;
   const filtered = filterRows(overview.rows, filter);
   const page = pageFrom(params.page, filtered.length);
   const rows = paginate(filtered, page);
   const filterQuery = filter === 'all' ? '' : `&filter=${filter}`;
   const notice = params.notice ? notices[params.notice] : undefined;
   const recording = params.record !== undefined;
+  const returnFields = (
+    <>
+      <input type="hidden" name="month" value={month} />
+      <input type="hidden" name="filter" value={filter} />
+      {scope.propertyId && <input type="hidden" name="propertyId" value={scope.propertyId} />}
+      {scope.unitId && <input type="hidden" name="unitId" value={scope.unitId} />}
+    </>
+  );
   const chip = (value: string, label: string) => (
     <Link
       key={value}
+      aria-current={filter === value ? 'true' : undefined}
       className={`chip${filter === value ? ' active' : ''}`}
       href={`/payments?month=${month}${value === 'all' ? '' : `&filter=${value}`}${scopeSuffix}`}
     >
-      {label}
+      {label} ({filterRows(overview.rows, value).length})
     </Link>
   );
   const paidOut = overview.payouts.reduce((s, p) => s + p.paidOutCents, 0);
@@ -120,13 +132,21 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
 
   return (
     <>
-      <ScopedWorkspace organizationId={session.organizationId} filter={scope} activeTab="payments" />
+      <ScopedWorkspace
+        organizationId={session.organizationId}
+        filter={scope}
+        activeTab="payments"
+      />
       <PageHeader
         eyebrow="Money"
         title="Payments"
         actions={[
           { label: 'Payment settings', href: '/integrations' },
-          { label: '+ Record payment', href: `/payments?month=${month}&record=1${scopeSuffix}`, primary: true },
+          {
+            label: '+ Record payment',
+            href: `/payments?month=${month}&record=1${scopeSuffix}`,
+            primary: true,
+          },
         ]}
       />
       {notice && (
@@ -135,23 +155,23 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         </Alert>
       )}
 
-      <div className="kpis">
+      <div className="kpis" aria-label={`Payment totals for ${monthLabel(month)}`}>
         <KpiCard
-          label="Collected this month"
+          label={
+            month === monthKey(now) ? 'Collected this month' : `Collected · ${monthLabel(month)}`
+          }
           value={formatUsd(overview.collectedCents)}
-          note={`of ${formatUsd(dueCents)} due`}
-          ring={collectedPercent}
-          ringLabel={`${collectedPercent}% of rent collected`}
+          note={`Payments received in ${monthLabel(month)}`}
         />
         <KpiCard
           label="Outstanding"
           value={formatUsd(overview.outstandingCents)}
-          note={`${overview.openCount} open ${overview.openCount === 1 ? 'balance' : 'balances'}`}
+          note={`${overview.openCount} open balances · all charges due to date`}
         />
         <KpiCard
           label="Late"
           value={formatUsd(overview.lateCents)}
-          note={`${overview.lateCount} past-due ${overview.lateCount === 1 ? 'payment' : 'payments'}`}
+          note={`${overview.lateCount} past grace · includes posted late fees`}
         />
       </div>
 
@@ -160,15 +180,34 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
           <CardHeader
             title="Record payment"
             action={
-              <Button href={`/payments?month=${month}${scopeSuffix}`} size="sm" variant="ghost">
+              <Button
+                href={`/payments?month=${month}${filterQuery}${scopeSuffix}`}
+                size="sm"
+                variant="ghost"
+              >
                 Cancel
               </Button>
             }
           />
+          {overview.rows.length === 0 && (
+            <p className="muted">
+              No leases in this month and scope. Choose another month or view leases.
+            </p>
+          )}
           <form action={recordPaymentAction} className="form">
+            {returnFields}
             <FormRow>
               <Field label="Lease">
-                <Select name="leaseId" defaultValue={params.record || undefined} required>
+                <Select
+                  name="leaseId"
+                  defaultValue={
+                    overview.rows.some((row) => row.leaseId === params.record) ? params.record : ''
+                  }
+                  required
+                >
+                  <option value="" disabled>
+                    Choose a lease
+                  </option>
                   {overview.rows.map((row) => (
                     <option key={row.leaseId} value={row.leaseId}>
                       {row.tenantName} · {row.propertyName}
@@ -182,7 +221,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
               </Field>
             </FormRow>
             <div className="row">
-              <Button type="submit" variant="primary">
+              <Button type="submit" variant="primary" disabled={overview.rows.length === 0}>
                 Save payment
               </Button>
             </div>
@@ -196,118 +235,153 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
             <p className="eyebrow">{monthLabel(month)}</p>
             <h3>Rent roll</h3>
           </div>
-          <div className="row">
-            <Link className="chip" href={`/payments?month=${addMonths(month, -1)}${scopeSuffix}`}>
+          <nav className={styles.period} aria-label="Rent month">
+            <a
+              className="chip"
+              aria-label="Previous month"
+              href={`/payments?month=${addMonths(month, -1)}${filterQuery}${scopeSuffix}`}
+            >
               ‹ Prev
-            </Link>
-            <div className="chips">
-              {chip('all', 'All')}
-              {chip('paid', 'Paid')}
-              {chip('open', 'Open')}
-              {chip('late', 'Late')}
-            </div>
-          </div>
+            </a>
+            <a
+              className="chip"
+              href={`/payments?month=${monthKey(now)}${filterQuery}${scopeSuffix}`}
+            >
+              This month
+            </a>
+            <a
+              className="chip"
+              aria-label="Next month"
+              href={`/payments?month=${addMonths(month, 1)}${filterQuery}${scopeSuffix}`}
+            >
+              Next ›
+            </a>
+          </nav>
         </div>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Tenant</th>
-              <th>Property</th>
-              <th>Due</th>
-              <th className="num">Rent</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
+        <div className={styles.filters}>
+          <nav className="chips" aria-label="Rent status">
+            {chip('all', 'All')}
+            {chip('paid', 'Paid')}
+            {chip('open', 'Open')}
+            {chip('late', 'Late')}
+          </nav>
+          <p>
+            Late covers this month’s rent past grace, excluding autopay and covered pending
+            payments. Outstanding includes all charges due to date for these leases.
+          </p>
+        </div>
+        <div className={styles.tableScroll} role="region" aria-label="Rent roll" tabIndex={0}>
+          <table className={`table ${styles.table}`} aria-label="Rent roll">
+            <thead>
               <tr>
-                <td colSpan={6}>
-                  <EmptyState title="No rent charges in this view" description="Choose another status or create a lease to start collecting rent." action="View leases" href="/leases" />
-                </td>
+                <th scope="col">Tenant</th>
+                <th scope="col">Property</th>
+                <th scope="col">Due</th>
+                <th scope="col" className="num">
+                  Rent
+                </th>
+                <th scope="col">Status</th>
+                <th scope="col">Action</th>
               </tr>
-            )}
-            {rows.map((row) => {
-              const b = badge[row.status];
-              return (
-                <tr key={row.leaseId} data-lease={row.leaseId}>
-                  <td>
-                    <div className="cell-main">
-                      <Avatar initials={row.initials} size="sm" />
-                      <div>
-                        <strong>
-                          {row.tenantId ? (
-                            <Link href={`/tenants/${row.tenantId}`} style={{ color: 'inherit' }}>
-                              {row.tenantName}
-                            </Link>
-                          ) : (
-                            row.tenantName
-                          )}
-                        </strong>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="cell-main">
-                      <div>
-                        <strong>
-                          <Link href={`/properties/${row.propertyId}`} style={{ color: 'inherit' }}>
-                            {row.propertyName}
-                          </Link>
-                        </strong>
-                        <small>{row.singleUnit ? 'Single-unit' : row.unitLabel}</small>
-                      </div>
-                    </div>
-                  </td>
-                  <td>{shortDate(row.dueDate)}</td>
-                  <td className="num">
-                    <Link href={`/leases/${row.leaseId}`}>{formatUsd(row.rentCents)}</Link>
-                    {row.outstandingCents > 0 && row.outstandingCents !== row.rentCents && (
-                      <small className="muted" style={{ display: 'block' }}>
-                        {formatUsd(row.outstandingCents)} owed
-                      </small>
-                    )}
-                  </td>
-                  <td>
-                    <Badge tone={b.tone}>{b.label}</Badge>
-                  </td>
-                  <td>
-                    <div className="row" style={{ gap: 8 }}>
-                      {row.status === 'LATE' && row.lateFeeEligible && (
-                        <form action={applyLateFeeAction}>
-                          <input type="hidden" name="leaseId" value={row.leaseId} />
-                          <input type="hidden" name="month" value={month} />
-                          <Button type="submit" size="sm">
-                            Add late fee
-                          </Button>
-                        </form>
-                      )}
-                      {row.lateFeeApplied && <small className="muted">Late fee applied</small>}
-                      {row.status !== 'PAID' && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          href={`/payments?month=${month}&record=${row.leaseId}${scopeSuffix}#record-payment`}
-                        >
-                          Record payment
-                        </Button>
-                      )}
-                      {row.status === 'PAID' && row.lastPaymentId && (
-                        <form action={refundPaymentAction}>
-                          <input type="hidden" name="paymentId" value={row.lastPaymentId} />
-                          <input type="hidden" name="month" value={month} />
-                          <Button type="submit" size="sm" variant="ghost">
-                            Refund
-                          </Button>
-                        </form>
-                      )}
-                    </div>
+            </thead>
+            <tbody>
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={6}>
+                    <EmptyState
+                      title="No rent charges in this view"
+                      description="Choose another status or create a lease to start collecting rent."
+                      action="View leases"
+                      href="/leases"
+                    />
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              )}
+              {rows.map((row) => {
+                const b = badge[row.status];
+                return (
+                  <tr key={row.leaseId} data-lease={row.leaseId}>
+                    <td>
+                      <div className="cell-main">
+                        <Avatar initials={row.initials} size="sm" />
+                        <div>
+                          <strong>
+                            {row.tenantId ? (
+                              <Link href={`/tenants/${row.tenantId}`} style={{ color: 'inherit' }}>
+                                {row.tenantName}
+                              </Link>
+                            ) : (
+                              row.tenantName
+                            )}
+                          </strong>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="cell-main">
+                        <div>
+                          <strong>
+                            <Link
+                              href={`/properties/${row.propertyId}`}
+                              style={{ color: 'inherit' }}
+                            >
+                              {row.propertyName}
+                            </Link>
+                          </strong>
+                          <small>{row.singleUnit ? 'Single-unit' : row.unitLabel}</small>
+                        </div>
+                      </div>
+                    </td>
+                    <td className={styles.date}>{shortDate(row.dueDate)}</td>
+                    <td className="num">
+                      <Link href={`/leases/${row.leaseId}`}>{formatUsd(row.rentCents)}</Link>
+                      {row.outstandingCents > 0 && row.outstandingCents !== row.rentCents && (
+                        <small className="muted" style={{ display: 'block' }}>
+                          {formatUsd(row.outstandingCents)} owed
+                        </small>
+                      )}
+                    </td>
+                    <td>
+                      <Badge tone={b.tone}>{b.label}</Badge>
+                    </td>
+                    <td>
+                      <div className="row" style={{ gap: 8 }}>
+                        {row.status === 'LATE' && row.lateFeeEligible && (
+                          <form action={applyLateFeeAction}>
+                            <input type="hidden" name="leaseId" value={row.leaseId} />
+                            {returnFields}
+                            <Button type="submit" size="sm">
+                              Add late fee
+                            </Button>
+                          </form>
+                        )}
+                        {row.lateFeeApplied && <small className="muted">Late fee applied</small>}
+                        {row.status !== 'PAID' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            href={`/payments?month=${month}&record=${row.leaseId}${scopeSuffix}#record-payment`}
+                          >
+                            Record payment
+                          </Button>
+                        )}
+                        {row.status === 'PAID' && row.lastPaymentId && (
+                          <form action={refundPaymentAction}>
+                            <input type="hidden" name="paymentId" value={row.lastPaymentId} />
+                            {returnFields}
+                            <Button type="submit" size="sm" variant="ghost">
+                              Refund
+                            </Button>
+                          </form>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
         <Pagination
           page={page}
           total={filtered.length}
@@ -330,15 +404,15 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
               <div className="row between" key={payout.propertyId}>
                 <div className="cell-main">
                   <div>
-                  <strong>
-                    <Link href={`/properties/${payout.propertyId}`} style={{ color: 'inherit' }}>
-                      {payout.propertyName}
-                    </Link>
-                  </strong>
-                  <p className="muted">
-                    {payout.ownerName ?? 'No owner assigned'} · {formatUsd(payout.collectedCents)}{' '}
-                    collected
-                  </p>
+                    <strong>
+                      <Link href={`/properties/${payout.propertyId}`} style={{ color: 'inherit' }}>
+                        {payout.propertyName}
+                      </Link>
+                    </strong>
+                    <p className="muted">
+                      {payout.ownerName ?? 'No owner assigned'} · {formatUsd(payout.collectedCents)}{' '}
+                      collected
+                    </p>
                   </div>
                 </div>
                 <strong>{formatUsd(payout.readyCents)}</strong>
@@ -351,7 +425,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                 already sent
               </p>
               <form action={runPayoutsAction}>
-                <input type="hidden" name="month" value={month} />
+                {returnFields}
                 <Button
                   type="submit"
                   size="sm"
@@ -382,7 +456,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                 <strong>Late fees</strong>
                 <p className="muted">Review overdue rent before applying a fee.</p>
               </div>
-              <Button size="sm" href={`/payments?month=${month}&filter=open${scopeSuffix}`}>
+              <Button size="sm" href={`/payments?month=${month}&filter=late${scopeSuffix}`}>
                 Review
               </Button>
             </div>
@@ -391,7 +465,10 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                 <strong>Record offline payment</strong>
                 <p className="muted">Keep the ledger current for checks or cash.</p>
               </div>
-              <Button size="sm" href={`/payments?month=${month}&record=1${scopeSuffix}#record-payment`}>
+              <Button
+                size="sm"
+                href={`/payments?month=${month}&record=1${scopeSuffix}#record-payment`}
+              >
                 Record
               </Button>
             </div>
@@ -402,4 +479,3 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
     </>
   );
 }
-

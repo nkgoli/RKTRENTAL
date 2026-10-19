@@ -14,9 +14,18 @@ import {
 
 const text = (data: FormData, name: string) => String(data.get(name) ?? '').trim();
 
-function back(notice: string, month?: string): never {
+function back(notice: string, data: FormData): never {
+  const month = text(data, 'month');
   const params = new URLSearchParams({ notice });
   if (month && /^\d{4}-\d{2}$/.test(month)) params.set('month', month);
+  for (const key of ['propertyId', 'unitId']) {
+    const value = text(data, key);
+    if (value) params.set(key, value);
+  }
+  const filter = text(data, 'filter');
+  if (['paid', 'open', 'late'].includes(filter)) params.set('filter', filter);
+  if (['invalid-amount', 'payment-failed'].includes(notice))
+    params.set('record', text(data, 'leaseId') || '1');
   redirect(`/payments?${params}`);
 }
 
@@ -31,7 +40,7 @@ function parseDollars(value: string): number | null {
 export async function recordPaymentAction(data: FormData) {
   const session = await requireManagerRole();
   const cents = parseDollars(text(data, 'amount'));
-  if (!cents) back('invalid-amount');
+  if (!cents) back('invalid-amount', data);
   try {
     const result = await recordPayment({
       organizationId: session.organizationId,
@@ -39,10 +48,10 @@ export async function recordPaymentAction(data: FormData) {
       amountCents: cents,
       idempotencyKey: randomUUID(),
     });
-    back(result.duplicate ? 'payment-duplicate' : 'payment-recorded');
+    back(result.duplicate ? 'payment-duplicate' : 'payment-recorded', data);
   } catch (error) {
     if (error instanceof Error && /^(Lease not found|Idempotency)/.test(error.message))
-      back('payment-failed');
+      back('payment-failed', data);
     throw error;
   }
 }
@@ -59,8 +68,8 @@ export async function applyLateFeeAction(data: FormData) {
     if (error instanceof Error && error.message === 'Lease not found') return null;
     throw error;
   });
-  if (!decision) back('payment-failed', month);
-  back(decision.eligible ? 'fee-applied' : `fee-${decision.reason}`, month);
+  if (!decision) back('payment-failed', data);
+  back(decision.eligible ? 'fee-applied' : `fee-${decision.reason}`, data);
 }
 
 export async function refundPaymentAction(data: FormData) {
@@ -71,10 +80,10 @@ export async function refundPaymentAction(data: FormData) {
       paymentId: text(data, 'paymentId'),
       idempotencyKey: randomUUID(),
     });
-    back(result.duplicate ? 'refund-duplicate' : 'refunded', text(data, 'month'));
+    back(result.duplicate ? 'refund-duplicate' : 'refunded', data);
   } catch (error) {
     if (error instanceof Error && /^(Payment|Only a settled)/.test(error.message))
-      back('refund-failed', text(data, 'month'));
+      back('refund-failed', data);
     throw error;
   }
 }
@@ -83,5 +92,5 @@ export async function runPayoutsAction(data: FormData) {
   const session = await requireManagerRole();
   const month = text(data, 'month') || monthKey(new Date());
   const result = await runOwnerPayouts(session.organizationId, month);
-  back(result.sent ? 'payouts-sent' : 'payouts-none', month);
+  back(result.sent ? 'payouts-sent' : 'payouts-none', data);
 }

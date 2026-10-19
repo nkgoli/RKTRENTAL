@@ -1,0 +1,37 @@
+.period {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.filters {
+  display: grid;
+  gap: 10px;
+  padding: 0 var(--rr-card-pad) 14px;
+}
+.filters p {
+  margin: 0;
+  color: var(--design-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 78ch;
+}
+.tableScroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.table {
+  min-width: 740px;
+}
+.table th,
+.table td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.table th {
+  white-space: nowrap;
+}
+.date {
+  white-space: nowrap;
+}

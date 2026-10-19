@@ -1,0 +1,109 @@
+.page {
+  display: grid;
+  gap: var(--rr-gap);
+  min-width: 0;
+}
+.jumpLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--rr-border);
+}
+.section {
+  display: grid;
+  gap: 16px;
+  scroll-margin-top: 20px;
+}
+.section + .section {
+  padding-top: 12px;
+}
+.section h2 {
+  font-size: 18px;
+}
+.provider {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  min-width: 0;
+}
+.providerHeader {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.identity {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+.identity h3 {
+  font-size: 16px;
+}
+.identity p {
+  margin-top: 3px;
+  font-size: 13px;
+}
+.sync {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--rr-border);
+  font-size: 13px;
+}
+.sync dt {
+  color: var(--design-muted);
+}
+.sync dd {
+  margin: 0;
+  text-align: right;
+}
+.configure summary {
+  width: fit-content;
+  cursor: pointer;
+}
+.configure dl {
+  grid-template-columns: 90px minmax(0, 1fr);
+}
+.configure dd {
+  overflow-wrap: anywhere;
+}
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 14px;
+  margin-top: 16px;
+  border-top: 1px solid var(--rr-border);
+}
+.settings {
+  min-width: 0;
+  scroll-margin-top: 20px;
+}
+.settings select {
+  min-width: 0;
+  width: 100%;
+}
+.settings label {
+  min-width: 0;
+}
+.hint {
+  margin: 0;
+  color: var(--design-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+@media (max-width: 560px) {
+  .sync {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .sync dd {
+    text-align: left;
+    margin-bottom: 8px;
+  }
+}

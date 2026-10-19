@@ -8,18 +8,18 @@ import { Card, CardHeader } from '@/components/ui/Card';
 import { Alert, Progress } from '@/components/ui/Feedback';
 import { Field, FormRow, Input, Select } from '@/components/ui/Forms';
 import { requireManagerRole } from '@/lib/auth/access';
-import {
-  EXPENSE_CATEGORIES,
-  EXPENSE_CATEGORY_LABELS,
-} from '@/lib/expenses';
+import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS } from '@/lib/expenses';
 import { formatMoney } from '@/lib/properties/format';
 import { AutoSubmitSelect } from '@/components/ui/AutoSubmitSelect';
+import { propertyReportActivity } from '@/components/returns/report-activity';
+import { loadPropertyWorkspaceReturns } from '@/lib/metrics';
+import { IncomeExpenseChart } from '@/components/returns/IncomeExpenseChart';
+import styles from '@/components/returns/returns.module.css';
 import {
   formatPercent,
   loadReturnsOverview,
   periodParams,
   resolveReturnsPeriod,
-  bucketLabel,
 } from '@/lib/returns';
 import { RangePicker, YearOverYear } from '@/components/returns/RangePicker';
 import { addExpenseAction } from './actions';
@@ -46,8 +46,6 @@ const notices: Record<string, { tone: 'success' | 'warning'; text: string }> = {
   },
 };
 
-const returnsHref = (propertyId: string) => `/properties/${propertyId}?tab=returns`;
-
 export default async function ReturnsPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireManagerRole();
   const params = await searchParams;
@@ -56,11 +54,18 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
   const periodKey = period.key;
   const range = periodParams(period);
   const overview = await loadReturnsOverview(session.organizationId, period);
-  const selected =
-    overview.properties.find((p) => p.propertyId === params.property) ?? null;
+  const selected = overview.properties.find((p) => p.propertyId === params.property) ?? null;
+  const scoped = selected
+    ? await loadPropertyWorkspaceReturns(session.organizationId, selected.propertyId, period)
+    : null;
+  const activity = scoped ? propertyReportActivity(scoped) : overview;
+  const { monthly, yearly, expenseBreakdown } = activity;
+  const shownProperties = selected ? [selected] : overview.properties;
   const scope = selected ?? overview.portfolio;
+  const returnsHref = (propertyId: string) =>
+    `/properties/${propertyId}/returns?${new URLSearchParams(range)}`;
   const notice = params.notice ? notices[params.notice] : undefined;
-  const adding = params.add !== undefined;
+  const adding = params.add !== undefined || params.notice === 'expense-invalid';
   const query = (extra: Record<string, string> = {}) =>
     new URLSearchParams({
       ...range,
@@ -70,19 +75,13 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
   const exportHref = `/returns/export?${query()}`;
   const metrics = scope?.metrics;
   const occupancy =
-    overview.totalUnits > 0
-      ? Math.round((overview.occupiedUnits / overview.totalUnits) * 100)
-      : 0;
-  const maxMonthly = Math.max(
-    1,
-    ...overview.monthly.map((m) => Math.max(m.incomeCents, m.expensesCents)),
-  );
-  const maxNoi = Math.max(1, ...overview.properties.map((p) => p.metrics.noiCents));
-  const noiSeries = overview.monthly.map((m) => m.incomeCents - m.expensesCents);
-  const expenseSeries = overview.monthly.map((m) => m.expensesCents);
+    (scope?.units ?? 0) > 0 ? Math.round(((scope?.occupied ?? 0) / (scope?.units ?? 1)) * 100) : 0;
+  const maxNoi = Math.max(1, ...shownProperties.map((p) => Math.abs(p.metrics.noiCents)));
+  const noiSeries = monthly.map((m) => m.incomeCents - m.expensesCents);
+  const expenseSeries = monthly.map((m) => m.expensesCents);
   const noiTrend = selected ? null : trendOf(noiSeries);
   const expenseTrend = selected ? null : trendOf(expenseSeries, false);
-  const totalExpenses = overview.expenseBreakdown.reduce((s, e) => s + e.amountCents, 0);
+  const totalExpenses = expenseBreakdown.reduce((s, e) => s + e.amountCents, 0);
 
   return (
     <>
@@ -94,13 +93,27 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           { label: 'Export report', href: exportHref, primary: true },
         ]}
       />
+      {params.property && params.property !== 'all' && !selected && (
+        <Alert tone="warning">
+          <p>The selected property is unavailable. Showing the portfolio report.</p>
+        </Alert>
+      )}
       {notice && (
         <Alert tone={notice.tone}>
           <div>{notice.text}</div>
         </Alert>
       )}
 
-      <section className="toolbar">
+      {params.period === 'CUSTOM' &&
+        (period.key !== 'CUSTOM' || params.from !== range.from || params.to !== range.to) && (
+          <Alert tone="warning">
+            <p>
+              The date range was adjusted to valid months through the current month. Review the
+              displayed range before exporting.
+            </p>
+          </Alert>
+        )}
+      <section className={styles.toolbar} aria-label="Report filters">
         <RangePicker
           period={period}
           basePath="/returns"
@@ -129,6 +142,18 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
         </form>
       </section>
 
+      <p className={styles.context}>
+        {selected?.propertyName ?? 'Portfolio'} · {period.label}. Income follows settled payments.
+        Returns use the selected period; occupancy is current.
+      </p>
+      {overview.properties.length === 0 && (
+        <EmptyState
+          title="No properties to report"
+          description="Add a property to start tracking income, expenses and returns."
+          action="View properties"
+          href="/properties"
+        />
+      )}
       {metrics && (
         <section className="kpis three">
           <KpiCard
@@ -149,7 +174,11 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           <KpiCard
             label="Cap rate"
             value={formatPercent(metrics.capRate)}
-            note="NOI on property value"
+            note={
+              metrics.capRate === null
+                ? 'Add property value to calculate'
+                : 'Period NOI on property value'
+            }
           />
           <KpiCard
             label="Cash-on-cash return"
@@ -159,7 +188,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           <KpiCard
             label="Occupancy"
             value={`${occupancy}%`}
-            note={`${overview.occupiedUnits} of ${overview.totalUnits} units`}
+            note={`${scope?.occupied ?? 0} of ${scope?.units ?? 0} units · current occupancy`}
             ring={occupancy}
             ringLabel={`${occupancy}% occupied`}
           />
@@ -182,60 +211,15 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             <div>
               <h3>Income vs expenses</h3>
               <p className="muted" style={{ fontSize: 13, marginTop: 2 }}>
-                {period.granularity === 'quarter' ? 'Quarterly' : 'Monthly'}, {selected ? selected.propertyName : 'portfolio total'}
+                {period.granularity === 'quarter' ? 'Quarterly' : 'Monthly'},{' '}
+                {selected ? selected.propertyName : 'portfolio total'}
               </p>
             </div>
           </div>
-          <svg
-            viewBox="0 0 720 200"
-            style={{ display: 'block', width: '100%', height: 'auto', maxHeight: 220 }}
-            role="img"
-            aria-label={`${period.granularity === 'quarter' ? 'Quarterly' : 'Monthly'} income versus expenses for the selected period`}
-          >
-            {overview.monthly.map((point, index) => {
-              const slot = 680 / overview.monthly.length;
-              const barWidth = Math.min(14, slot * 0.4);
-              const x = 20 + index * slot + (slot - 2 * barWidth - 2) / 2;
-              const incomeHeight = (point.incomeCents / maxMonthly) * 150;
-              const expenseHeight = (point.expensesCents / maxMonthly) * 150;
-              const labelEvery = Math.ceil(overview.monthly.length / 12);
-              return (
-                <g key={point.month}>
-                  <rect
-                    x={x}
-                    y={170 - incomeHeight}
-                    width={barWidth}
-                    height={incomeHeight}
-                    rx={Math.min(4, barWidth / 3)}
-                    fill="var(--design-primary)"
-                  />
-                  <rect
-                    x={x + barWidth + 2}
-                    y={170 - expenseHeight}
-                    width={barWidth}
-                    height={expenseHeight}
-                    rx={Math.min(4, barWidth / 3)}
-                    fill="var(--design-accent)"
-                  />
-                  {index % labelEvery === 0 && (
-                    <text x={x} y={190} fontSize={11} fill="var(--design-muted)">
-                      {bucketLabel(point.month, overview.monthly.length > 12)}
-                    </text>
-                  )}
-                </g>
-              );
-            })}
-          </svg>
-          <div className="row" style={{ justifyContent: 'center', gap: 16, fontSize: 12, color: 'var(--design-muted)' }}>
-            <span className="row" style={{ gap: 6 }}>
-              <i style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--design-primary)' }} />
-              Income
-            </span>
-            <span className="row" style={{ gap: 6 }}>
-              <i style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--design-accent)' }} />
-              Expenses
-            </span>
-          </div>
+          <IncomeExpenseChart
+            rows={monthly}
+            label={`${selected?.propertyName ?? 'Portfolio'}: ${period.label}`}
+          />
         </Card>
         <Card>
           <div className="card-header">
@@ -246,27 +230,30 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
               </p>
             </div>
           </div>
-          <ul className="bar-list" aria-label="Net operating income by property">
-            {overview.properties.map((property) => (
+          <ul className={styles.barList} aria-label="Net operating income by property">
+            {shownProperties.map((property) => (
               <li key={property.propertyId}>
-                <span className="bar-name">{property.propertyName}</span>
-                <span className="bar-track">
+                <Link href={returnsHref(property.propertyId)}>{property.propertyName}</Link>
+                <strong>{formatUsd(property.metrics.noiCents)}</strong>
+                <span className={styles.track}>
                   <span
-                    className="bar-fill"
-                    style={{ width: `${Math.max(0, (property.metrics.noiCents / maxNoi) * 100)}%` }}
+                    className={styles.fill}
+                    style={{ width: `${(Math.abs(property.metrics.noiCents) / maxNoi) * 100}%` }}
                   />
                 </span>
-                <span className="bar-value">{formatUsd(property.metrics.noiCents)}</span>
               </li>
             ))}
           </ul>
         </Card>
       </section>
 
-      {!selected && overview.yearly.length > 1 && (
+      {yearly.length > 1 && (
         <Card>
-          <CardHeader title="Year over year" action={<span className="muted">{period.label}</span>} />
-          <YearOverYear rows={overview.yearly} />
+          <CardHeader
+            title="Year over year"
+            action={<span className="muted">{period.label}</span>}
+          />
+          <YearOverYear rows={yearly} />
         </Card>
       )}
 
@@ -280,84 +267,108 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             ROI includes 3% assumed appreciation · Yield is scheduled rent ÷ value
           </span>
         </div>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Property</th>
-              <th className="num">Income</th>
-              <th className="num">Expenses</th>
-              <th className="num">NOI</th>
-              <th className="num">Cap rate</th>
-              <th className="num">Cash-on-cash</th>
-              <th className="num">ROI</th>
-              <th className="num">Yield</th>
-            </tr>
-          </thead>
-          <tbody>
-            {overview.properties.map((property) => (
-              <tr key={property.propertyId}>
-                <td>
-                  <Link
-                    className="cell-main"
-                    href={returnsHref(property.propertyId)}
-                    style={{ color: 'inherit' }}
-                  >
-                    <span>
-                      <strong>{property.propertyName}</strong>
-                      <small>
-                        {property.units} {property.units === 1 ? 'unit' : 'units'} · {property.occupied} occupied
-                      </small>
-                    </span>
-                  </Link>
-                </td>
-                <td className="num">{formatUsd(property.metrics.incomeCents)}</td>
-                <td className="num">{formatUsd(property.metrics.expensesCents)}</td>
-                <td className="num">
-                  <strong>{formatUsd(property.metrics.noiCents)}</strong>
-                </td>
-                <td className="num">{formatPercent(property.metrics.capRate)}</td>
-                <td className="num">{formatPercent(property.metrics.cashOnCash)}</td>
-                <td className="num">{formatPercent(property.metrics.roi)}</td>
-                <td className="num">{formatPercent(property.metrics.yieldRate)}</td>
+        <div
+          className={styles.tableScroll}
+          role="region"
+          aria-label="Returns by property"
+          tabIndex={0}
+        >
+          <table className="table" aria-label="Returns by property">
+            <thead>
+              <tr>
+                <th scope="col">Property</th>
+                <th scope="col" className="num">
+                  Income
+                </th>
+                <th scope="col" className="num">
+                  Expenses
+                </th>
+                <th scope="col" className="num">
+                  NOI
+                </th>
+                <th scope="col" className="num">
+                  Cap rate
+                </th>
+                <th scope="col" className="num">
+                  Cash-on-cash
+                </th>
+                <th scope="col" className="num">
+                  ROI
+                </th>
+                <th scope="col" className="num">
+                  Yield
+                </th>
               </tr>
-            ))}
-            {overview.portfolio && (
-              <tr style={{ background: 'var(--rr-subtle)' }}>
-                <td>
-                  <div className="cell-main">
-                    <span>
-                      <strong>Portfolio</strong>
-                      <small>
-                        {overview.portfolio.units} {overview.portfolio.units === 1 ? 'unit' : 'units'} · {overview.portfolio.occupied} occupied
-                      </small>
-                    </span>
-                  </div>
-                </td>
-                <td className="num">
-                  <strong>{formatUsd(overview.portfolio.metrics.incomeCents)}</strong>
-                </td>
-                <td className="num">
-                  <strong>{formatUsd(overview.portfolio.metrics.expensesCents)}</strong>
-                </td>
-                <td className="num">
-                  <strong>{formatUsd(overview.portfolio.metrics.noiCents)}</strong>
-                </td>
-                <td className="num">
-                  <strong>{formatPercent(overview.portfolio.metrics.capRate)}</strong>
-                </td>
-                <td className="num">
-                  <strong>{formatPercent(overview.portfolio.metrics.cashOnCash)}</strong>
-                </td>
-                <td className="num">
-                  <strong>{formatPercent(overview.portfolio.metrics.roi)}</strong>
-                </td>
-                <td className="num">
-                  <strong>{formatPercent(overview.portfolio.metrics.yieldRate)}</strong>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {shownProperties.map((property) => (
+                <tr key={property.propertyId}>
+                  <td>
+                    <Link
+                      className="cell-main"
+                      href={returnsHref(property.propertyId)}
+                      style={{ color: 'inherit' }}
+                    >
+                      <span>
+                        <strong>{property.propertyName}</strong>
+                        <small>
+                          {property.units} {property.units === 1 ? 'unit' : 'units'} ·{' '}
+                          {property.occupied} occupied
+                        </small>
+                      </span>
+                    </Link>
+                  </td>
+                  <td className="num">{formatUsd(property.metrics.incomeCents)}</td>
+                  <td className="num">{formatUsd(property.metrics.expensesCents)}</td>
+                  <td className="num">
+                    <strong>{formatUsd(property.metrics.noiCents)}</strong>
+                  </td>
+                  <td className="num">{formatPercent(property.metrics.capRate)}</td>
+                  <td className="num">{formatPercent(property.metrics.cashOnCash)}</td>
+                  <td className="num">{formatPercent(property.metrics.roi)}</td>
+                  <td className="num">{formatPercent(property.metrics.yieldRate)}</td>
+                </tr>
+              ))}
+              {!selected && overview.portfolio && (
+                <tr style={{ background: 'var(--rr-subtle)' }}>
+                  <td>
+                    <div className="cell-main">
+                      <span>
+                        <strong>Portfolio</strong>
+                        <small>
+                          {overview.portfolio.units}{' '}
+                          {overview.portfolio.units === 1 ? 'unit' : 'units'} ·{' '}
+                          {overview.portfolio.occupied} occupied
+                        </small>
+                      </span>
+                    </div>
+                  </td>
+                  <td className="num">
+                    <strong>{formatUsd(overview.portfolio.metrics.incomeCents)}</strong>
+                  </td>
+                  <td className="num">
+                    <strong>{formatUsd(overview.portfolio.metrics.expensesCents)}</strong>
+                  </td>
+                  <td className="num">
+                    <strong>{formatUsd(overview.portfolio.metrics.noiCents)}</strong>
+                  </td>
+                  <td className="num">
+                    <strong>{formatPercent(overview.portfolio.metrics.capRate)}</strong>
+                  </td>
+                  <td className="num">
+                    <strong>{formatPercent(overview.portfolio.metrics.cashOnCash)}</strong>
+                  </td>
+                  <td className="num">
+                    <strong>{formatPercent(overview.portfolio.metrics.roi)}</strong>
+                  </td>
+                  <td className="num">
+                    <strong>{formatPercent(overview.portfolio.metrics.yieldRate)}</strong>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="grid-2">
@@ -371,10 +382,15 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             }
           />
           <div className="stack" style={{ gap: 14 }}>
-            {overview.expenseBreakdown.length === 0 && (
-              <EmptyState title="No expenses this period" description="Record an expense to include it in your returns." action="Add expense" href={`/returns?${query({ add: '1' })}`} />
+            {expenseBreakdown.length === 0 && (
+              <EmptyState
+                title="No expenses this period"
+                description="Record an expense to include it in your returns."
+                action="Add expense"
+                href={`/returns?${query({ add: '1' })}#add-expense`}
+              />
             )}
-            {overview.expenseBreakdown.map((entry) => (
+            {expenseBreakdown.map((entry) => (
               <div key={entry.category}>
                 <div className="row between">
                   <strong>{entry.label}</strong>
@@ -397,7 +413,11 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             ))}
           </div>
           <div style={{ marginTop: 16 }}>
-            <Button href={`/returns?${query({ add: '1' })}`} variant="secondary" size="sm">
+            <Button
+              href={`/returns?${query({ add: '1' })}#add-expense`}
+              variant="secondary"
+              size="sm"
+            >
               + Add expense
             </Button>
           </div>
@@ -406,8 +426,8 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           <CardHeader title="Export report" />
           <div className="stack">
             <p className="muted">
-              Download the returns summary, per-property table and expense detail for the selected
-              period and properties.
+              Download the returns summary with income and expense totals for the selected period
+              and properties.
             </p>
             <dl className="kv" style={{ gridTemplateColumns: '100px 1fr' }}>
               <dt>Period</dt>
@@ -415,7 +435,11 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
                 {periodKey} · {period.label}
               </dd>
               <dt>Scope</dt>
-              <dd>{selected ? selected.propertyName : `All properties (${overview.properties.length})`}</dd>
+              <dd>
+                {selected
+                  ? selected.propertyName
+                  : `All properties (${overview.properties.length})`}
+              </dd>
               <dt>Includes</dt>
               <dd>NOI, cash flow, cap rate, cash-on-cash, ROI, yield</dd>
             </dl>
@@ -427,7 +451,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
       </section>
 
       {adding && (
-        <Card>
+        <Card id="add-expense">
           <CardHeader
             title="Add expense"
             action={
@@ -443,7 +467,10 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             <input type="hidden" name="returnProperty" value={selected?.propertyId ?? 'all'} />
             <FormRow columns={3}>
               <Field label="Property">
-                <Select name="propertyId" required defaultValue={selected?.propertyId}>
+                <Select name="propertyId" required defaultValue={selected?.propertyId ?? ''}>
+                  <option value="" disabled>
+                    Choose a property
+                  </option>
                   {overview.properties.map((p) => (
                     <option key={p.propertyId} value={p.propertyId}>
                       {p.propertyName}

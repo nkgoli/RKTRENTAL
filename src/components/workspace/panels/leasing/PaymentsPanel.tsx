@@ -2,7 +2,12 @@ import { Alert } from '@/components/ui/Feedback';
 import { activeIntegration } from '@/lib/integrations/active';
 import { findProvider } from '@/lib/integrations/catalog';
 import { db } from '@/lib/db/client';
-import { ensureRentCharges, loadPropertyLedger, paymentsProviderLabel, summarizeUnits } from '@/lib/ledger';
+import {
+  ensureRentCharges,
+  loadPropertyLedger,
+  paymentsProviderLabel,
+  summarizeUnits,
+} from '@/lib/ledger';
 import type { ScopeFilter } from '@/lib/workspace/scope';
 import { PaymentsBoard, type BoardGroup } from './PaymentsBoard';
 import styles from './leasing.module.css';
@@ -13,17 +18,30 @@ const notices: Record<string, { tone: 'success' | 'warning'; text: string }> = {
   'payment-failed': { tone: 'warning', text: 'The payment could not be recorded.' },
   'invalid-amount': { tone: 'warning', text: 'Enter an amount greater than zero, like 1,850.00.' },
   'charge-created': { tone: 'success', text: 'Charge created.' },
-  'charge-invalid': { tone: 'warning', text: 'The charge could not be created. Check the type, description, date and amount.' },
+  'charge-invalid': {
+    tone: 'warning',
+    text: 'The charge could not be created. Check the type, description, date and amount.',
+  },
 };
 
 const dateParts = (date: Date) => ({
   month: date.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }),
   day: String(date.getUTCDate()).padStart(2, '0'),
-  label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }),
+  label: date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }),
 });
 
 /** Charge ledger for one property (and optionally one unit) with balance summary and charge/payment actions. */
-export async function PaymentsPanel({ organizationId, scope, recording, notice }: {
+export async function PaymentsPanel({
+  organizationId,
+  scope,
+  recording,
+  notice,
+}: {
   organizationId: string;
   scope: ScopeFilter;
   recording: boolean;
@@ -36,11 +54,15 @@ export async function PaymentsPanel({ organizationId, scope, recording, notice }
     activeIntegration(organizationId, 'payments', ['stripe', 'mock']),
     scope.unitId || !scope.propertyId
       ? Promise.resolve(0)
-      : db.unit.count({ where: { organizationId, propertyId: scope.propertyId, isImplicit: false } }),
+      : db.unit.count({
+          where: { organizationId, propertyId: scope.propertyId, isImplicit: false },
+        }),
   ]);
   const summary = unitCount > 1 ? summarizeUnits(ledger.groups) : null;
   const message = notice ? notices[notice] : undefined;
-  const providerName = connection ? (findProvider(connection.kind, connection.provider)?.name ?? connection.provider) : null;
+  const providerName = connection
+    ? (findProvider(connection.kind, connection.provider)?.name ?? connection.provider)
+    : null;
 
   const groups: BoardGroup[] = ledger.groups.map((group) => ({
     leaseId: group.leaseId,
@@ -72,30 +94,42 @@ export async function PaymentsPanel({ organizationId, scope, recording, notice }
     }),
   }));
 
-  return <section className={styles.panel} aria-label="Payments">
-    {message && <Alert tone={message.tone}><div>{message.text}</div></Alert>}
-    <PaymentsBoard
-      propertyId={scope.propertyId ?? ''}
-      unitId={scope.unitId}
-      balanceCents={ledger.balanceCents}
-      providerLabel={paymentsProviderLabel(connection, providerName)}
-      providerConnected={Boolean(providerName)}
-      tenants={ledger.tenants}
-      groups={groups}
-      summary={summary && {
-        totalBalanceCents: summary.totalBalanceCents,
-        units: summary.units.map((u) => ({
-          unitId: u.unitId,
-          leaseId: u.leaseId,
-          unitLabel: u.unitLabel,
-          tenantNames: u.tenantNames,
-          balanceCents: u.balanceCents,
-          status: u.status,
-          nextDue: u.nextDue && { dateLabel: dateParts(u.nextDue.dueDate).label, amountCents: u.nextDue.amountCents },
-        })),
-      }}
-      openRecord={recording}
-      today={now.toISOString().slice(0, 10)}
-    />
-  </section>;
+  return (
+    <section className={styles.panel} aria-label="Payments">
+      {message && (
+        <Alert tone={message.tone}>
+          <div>{message.text}</div>
+        </Alert>
+      )}
+      <PaymentsBoard
+        key={`${scope.propertyId}:${scope.unitId ?? 'all'}`}
+        propertyId={scope.propertyId ?? ''}
+        unitId={scope.unitId}
+        balanceCents={ledger.balanceCents}
+        providerLabel={paymentsProviderLabel(connection, providerName)}
+        providerConnected={Boolean(providerName)}
+        tenants={ledger.tenants}
+        groups={groups}
+        summary={
+          summary && {
+            totalBalanceCents: summary.totalBalanceCents,
+            units: summary.units.map((u) => ({
+              unitId: u.unitId,
+              leaseId: u.leaseId,
+              unitLabel: u.unitLabel,
+              tenantNames: u.tenantNames,
+              balanceCents: u.balanceCents,
+              status: u.status,
+              nextDue: u.nextDue && {
+                dateLabel: dateParts(u.nextDue.dueDate).label,
+                amountCents: u.nextDue.amountCents,
+              },
+            })),
+          }
+        }
+        openRecord={recording}
+        today={now.toISOString().slice(0, 10)}
+      />
+    </section>
+  );
 }

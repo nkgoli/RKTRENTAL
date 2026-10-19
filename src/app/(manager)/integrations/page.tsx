@@ -13,6 +13,9 @@ import {
 } from '@/lib/integrations/settings';
 import { Alert, Badge, Button } from '@/components/ui';
 import { KpiCard } from '@/components/dashboard/KpiCard';
+import { PageHeader } from '@/components/shell/PageHeader';
+import { providerActivityAt, providerSyncState } from '@/components/integrations/sync-state';
+import styles from '@/components/integrations/integrations.module.css';
 import { ProviderLogo } from '@/components/integrations/ProviderLogo';
 import { connectAction, disconnectAction, saveSettingsAction } from './actions';
 import { FeeSwitch } from './FeeSwitch';
@@ -32,11 +35,16 @@ function Hidden({ provider }: { provider: ProviderView }) {
 }
 
 function ProviderCard({ provider }: { provider: ProviderView }) {
-  const { health } = provider;
+  const sync = providerSyncState(provider);
+  const activityAt = providerActivityAt(provider);
   return (
-    <article className="card" data-provider={provider.provider} data-status={provider.status}>
-      <div className="row between">
-        <div className="provider">
+    <article
+      className={`card ${styles.provider}`}
+      data-provider={provider.provider}
+      data-status={provider.status}
+    >
+      <div className={styles.providerHeader}>
+        <div className={styles.identity}>
           <ProviderLogo logo={provider.logo} connected={provider.connected} />
           <div>
             <h3>{provider.name}</h3>
@@ -45,7 +53,11 @@ function ProviderCard({ provider }: { provider: ProviderView }) {
         </div>
         {provider.connected ? (
           <Badge tone={provider.status === 'ERROR' ? 'danger' : 'success'}>
-            {provider.status === 'ERROR' ? 'Error' : 'Connected'}
+            {provider.status === 'ERROR'
+              ? 'Error'
+              : provider.mode === 'mock'
+                ? 'Sandbox connected'
+                : 'Connected'}
           </Badge>
         ) : (
           <Badge tone="info">Available</Badge>
@@ -53,20 +65,38 @@ function ProviderCard({ provider }: { provider: ProviderView }) {
       </div>
       {provider.connected ? (
         <>
-          <div className="row between" style={{ marginTop: 18 }}>
-            <span className="muted">Sync health</span>
-            <Badge tone={health.tone}>{health.label}</Badge>
-          </div>
-          <div className="row between" style={{ marginTop: 14 }}>
-            <span className="muted">Last synced</span>
-            <strong>{formatRelative(provider.lastSyncAt)}</strong>
-          </div>
-          <details style={{ marginTop: 18 }}>
-            <summary className="btn btn-secondary btn-sm">Configure</summary>
+          <dl className={styles.sync}>
+            <dt>Sync status</dt>
+            <dd>
+              <Badge tone={sync.tone}>{sync.label}</Badge>
+            </dd>
+            <dt>{provider.mode === 'mock' ? 'Last sandbox activity' : 'Last recorded activity'}</dt>
+            <dd>
+              {activityAt ? (
+                <time
+                  dateTime={activityAt.toISOString()}
+                  title={activityAt.toLocaleString('en-US', { timeZone: 'UTC' }) + ' UTC'}
+                >
+                  {formatRelative(activityAt)}
+                </time>
+              ) : (
+                'No sync recorded'
+              )}
+            </dd>
+          </dl>
+          {!provider.health.outage && (
+            <p className={styles.hint}>
+              {provider.mode === 'mock'
+                ? 'Simulated activity only. No live provider transactions.'
+                : 'Activity includes connection setup and provider updates. It does not verify current availability.'}
+            </p>
+          )}
+          <details className={styles.configure}>
+            <summary className="btn btn-secondary btn-sm">Configure {provider.name}</summary>
             <dl className="kv" style={{ marginTop: 12 }}>
               <dt>Mode</dt>
               <dd>
-                {provider.mode === 'live' ? 'Live credentials' : 'Mock adapter (development)'}
+                {provider.mode === 'live' ? 'Live credentials' : 'Sandbox · simulated activity'}
               </dd>
               <dt>Credential</dt>
               <dd>
@@ -145,18 +175,25 @@ function SettingsCard({
   children: ReactNode;
 }) {
   return (
-    <form action={saveSettingsAction} className="card" aria-label={title} id={`${group}-settings`}>
+    <form
+      action={saveSettingsAction}
+      className={`card ${styles.settings}`}
+      aria-label={title}
+      id={`${group}-settings`}
+    >
       <input type="hidden" name="group" value={group} />
       <div className="card-header">
         <div>
           <h3>{title}</h3>
           <p className="muted">{description}</p>
         </div>
+      </div>
+      <div className="form">{children}</div>
+      <div className={styles.footer}>
         <Button type="submit" variant="primary" size="sm">
           Save settings
         </Button>
       </div>
-      <div className="form">{children}</div>
     </form>
   );
 }
@@ -173,7 +210,16 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="stack">
+    <section
+      className={styles.section}
+      id={
+        title === 'Payment providers'
+          ? 'payments-providers'
+          : title === 'Tenant screening providers'
+            ? 'screening-providers'
+            : 'comps-providers'
+      }
+    >
       <div>
         <p className="eyebrow">{eyebrow}</p>
         <h2>{title}</h2>
@@ -195,12 +241,22 @@ export default async function Page({
   const { payments, screening, comps } = view.settings;
   const providers = [...view.groups.payments, ...view.groups.screening, ...view.groups.comps];
   const connected = providers.filter((provider) => provider.connected);
-  const attention = providers.filter(
-    (provider) => provider.connected && (provider.status === 'ERROR' || provider.health.tone === 'danger'),
-  );
+  const attention = providers.filter((provider) => provider.connected && provider.health.outage);
 
   return (
-    <div className="page" style={{ padding: 0 }}>
+    <div className={styles.page}>
+      <PageHeader eyebrow="Settings" title="Integrations" actions={[]} />
+      <nav className={styles.jumpLinks} aria-label="Provider groups">
+        <a className="chip" href="#payments-providers">
+          Payments
+        </a>
+        <a className="chip" href="#screening-providers">
+          Screening
+        </a>
+        <a className="chip" href="#comps-providers">
+          Rent comps
+        </a>
+      </nav>
       <section className="kpis" aria-label="Integration status">
         <KpiCard
           label="Connected providers"
@@ -208,14 +264,14 @@ export default async function Page({
           note={`of ${providers.length} available`}
         />
         <KpiCard
-          label="Healthy connections"
-          value={connected.length - attention.length}
-          note="Syncing normally"
+          label="Activity recorded"
+          value={connected.filter((provider) => providerSyncState(provider).recorded).length}
+          note="Live connections with setup or provider activity"
         />
         <KpiCard
           label="Needs attention"
           value={attention.length}
-          note={attention.length ? 'Check sync errors below' : 'No sync problems'}
+          note={attention.length ? 'Check sync errors below' : 'No reported errors'}
         />
       </section>
       {error && (

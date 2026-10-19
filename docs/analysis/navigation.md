@@ -21,10 +21,12 @@ Ancestry checks confirmed these completed candidates are present:
 
 This change owns only navigation, scoped tests/helpers and this document. It does not
 change ROI unsaved-edit handling, Rent filters/application, calculations or authorization.
-The manager confirmed both baselines are already included. The ROI navigation/modal
-and Rent filter/apply corrections are still in progress with no completed SHAs; they
-are not prerequisites for this independently scoped sidebar verification and are not
-represented as verified here. The full two-feature request is not claimed
+The manager confirmed both baselines are already included. The later ROI navigation/modal
+correction `6025e4fb3b699017b54d032d31cd2b4d06b2a6e6` and Rent filter/apply correction
+`134efdaea75a5ebbce150bae1d272ce860da096e` were supplied at desktop handoff. They are
+not integrated into this tested runtime and are not represented as verified here.
+The manager explicitly confirmed they are not prerequisites for this independently
+scoped sidebar verification. The full two-feature request is not claimed
 complete. No push or Managed Preview publication is performed.
 
 ## Isolated verification
@@ -59,22 +61,43 @@ activates the real menu entry with Enter, follows explicit property selection to
 unit dashboard, and returns to selection. Its authorized data boundary is mocked;
 native runtime checks remain necessary for actual browser navigation.
 
-The tested implementation is commit `2cab17dffef05bba0031520bc3c0da16ebe489f1`;
-subsequent verification-note updates do not change its application source.
+The tested implementation is commit `2cab17dffef05bba0031520bc3c0da16ebe489f1`.
+The actual checkout HEAD during native checks was
+`2c343b49de78544bcb0390c1fa0bcb9c34129f49`, a documentation-only follow-up; its
+application source and the production output are identical to that implementation.
 
-Native existing-Edge desktop and 390px checks are pending the coordinated desktop
-turn: Rent correction, then ROI correction, then this sidebar checklist. Three early
-lease requests timed out; no further request is made before a preceding release is
-confirmed. The production app and isolated data are ready. No native pass or screenshot
-is claimed before that bounded turn.
+## Native existing-Edge results
 
-Native checklist (navigation only):
+After the manager relayed the preceding ROI owner's release, one bounded desktop
+request was granted for 600 seconds. Windows MCP drove a temporary tab in the existing
+Edge session against `http://localhost:3159` (the app redirected sign-in from 127.0.0.1
+to localhost). Responsive dimensions were explicitly entered as **390 × 844 CSS pixels**.
+Screenshots were captured through Windows MCP with `capture-native.ps1`; files below
+are under `tests/analysis-navigation/evidence/`.
 
-- Desktop: enter Rent Analysis from the sidebar; verify explicit selection, title and
-  only Rent Analysis highlighted; select Maple, verify its dashboard, then Change
-  property back to selection. Verify ROI Analysis and Returns remain distinct entries.
-- At 390px: open the menu, keyboard-activate Rent Analysis, verify the menu closes and
-  explicit selection appears; choose a property, return to selection, reopen the menu,
-  close with Escape and verify focus restoration. Record screenshots of the menu,
-  selection and selected dashboard without exercising filter/apply or ROI edits.
-- Restore the original Edge context, disable emulation and release the desktop.
+- Desktop sidebar Rent Analysis opened `/rent-analysis` with no selected property,
+  the “Choose a property” title and only Rent Analysis highlighted:
+  `desktop-selection.png`.
+- Explicitly selecting Maple Court reached `?property=seed-property-maple`, displayed
+  the “Rent Analysis” title and its 12-unit dashboard: `desktop-selected.png`.
+  Change property returned to selection. ROI Analysis opened its own explicit selector
+  with only ROI highlighted (`desktop-roi-entry.png`); Returns opened `/returns` with
+  “Returns and metrics” and its own highlight.
+- At 390px, the menu showed ROI Analysis, Rent Analysis and Returns as separate entries:
+  `phone-menu.png`. Eight Tab presses from the close control reached Rent Analysis;
+  the accessibility snapshot confirmed focus. Enter opened `/rent-analysis` with the
+  drawer closed and explicit selection: `phone-selection.png`.
+- Searching Maple with Enter, then selecting its Open Rent Analysis link reached its
+  dashboard at the same authorized property URL: `phone-selected.png`. Change property
+  returned to unfiltered selection. Reopening the drawer and pressing Escape closed it
+  and the accessibility snapshot confirmed focus on Open menu: `phone-return-focus.png`.
+- Direct legacy `/rent-comps` retained its existing redirect to
+  `/properties/seed-property-elm/listing?unit=seed-unit-elm-1`; no Rent comps sidebar
+  entry appeared: `desktop-legacy-redirect.png`. Its nav-model fallback title/hidden
+  state are also covered by the shell tests; the actual legacy route redirects first.
+
+The phone selection/context fit the viewport; the existing unit table remains internally
+scrollable. These checks exercise navigation only, not filter/apply or unsaved ROI edits.
+No business data was edited. Device emulation was disabled, DevTools closed, temporary
+tab closed and the original GitHub tab restored. `release_desktop` returned
+`released: true`. The isolated runtime/database are retained for review.

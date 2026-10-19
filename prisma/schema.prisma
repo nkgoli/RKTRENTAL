@@ -124,6 +124,7 @@ enum ExpenseCategory {
 }
 
 model Organization {
+  roiAnalyses         RoiAnalysisState[]
   id                  String               @id @default(cuid())
   name                String
   createdAt           DateTime             @default(now())
@@ -178,6 +179,7 @@ model User {
 }
 
 model Property {
+  roiAnalyses            RoiAnalysisState[]
   id                     String               @id @default(cuid())
   organizationId         String
   organization           Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -210,6 +212,23 @@ model Property {
   @@unique([id, organizationId])
   @@index([organizationId, archivedAt])
   @@index([organizationId, ownerId])
+}
+
+/// Forecast assumptions only; never a recorded Returns ledger.
+model RoiAnalysisState {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  propertyId     String
+  property       Property     @relation(fields: [propertyId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  revision       Int          @default(1)
+  version        Int          @default(1)
+  status         String
+  payload        Json
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, propertyId])
 }
 
 model Unit {

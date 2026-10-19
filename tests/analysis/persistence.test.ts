@@ -226,6 +226,32 @@ describe.skipIf(process.env.RUN_ANALYSIS_DB !== '1')(
         }),
       ).toMatchObject({ ok: false, code: 'INVALID' });
     });
+    it('preserves benchmark selections in drafts when comparison capital is zero', async () => {
+      const p = payload('property-c');
+      p.scenarios = [];
+      p.input.financing!.loanAmount = 100000;
+      p.input.financing!.downPaymentPercent = 0;
+      const current = await a.loadSaved('property-c');
+      if (!current.ok || !current.data) throw Error('missing current draft');
+      expect(
+        await a.save({
+          propertyId: 'property-c',
+          expectedRevision: current.data.revision,
+          status: 'DRAFT',
+          payload: p,
+        }),
+      ).toMatchObject({ ok: true });
+      const loaded = await a.loadSaved('property-c');
+      expect(loaded.ok && loaded.data?.payload.benchmarks).toEqual(p.benchmarks);
+      expect(
+        await a.save({
+          propertyId: 'property-c',
+          expectedRevision: current.data.revision + 1,
+          status: 'READY',
+          payload: p,
+        }),
+      ).toMatchObject({ ok: false, code: 'INVALID' });
+    });
     it('does not infer vacancy rents and includes a lease on its UTC end date', async () => {
       const ending = await a.loadDraft('property-a', new Date('2026-12-31T23:59:59Z'));
       expect(ending.ok && ending.data.payload.input.income?.monthlyRent).toBe(1850.25);

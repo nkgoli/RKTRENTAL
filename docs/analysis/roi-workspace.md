@@ -110,3 +110,7 @@ The final projection runtime uses a separate database/app on ports 55447/3147. T
 ## Named scenario extension
 
 Scenarios now participates in the same property, string-draft, dirty/stale, revision/CAS and late-response lifecycle. `RoiWorkspace` owns scenario drafts; Summary, Charts and Scenarios remain mounted. Validation recovery routes scenario errors to their visible disclosure. The [scenario extension contract](roi-scenarios.md) documents override inheritance, fixed-dollar precedence, public calculation snapshots, bounded comparison horizons, isolated runtime and native desktop/390px evidence for the next benchmark/asset panel builder. Preserve scenarios when adding those panels.
+
+## Benchmark and asset comparison extension
+
+Benchmarks and Compare now share the workspace's property-scoped benchmark selections and custom string drafts. See [roi-benchmarks.md](roi-benchmarks.md) for public API mapping, provenance, units, zero-capital draft behavior, exact verification and pending external sidebar identity. Summary, six Charts, named Scenarios, Benchmarks and Compare are functioning keyboard tabs; shared guards and save/conflict lifecycle remain authoritative.

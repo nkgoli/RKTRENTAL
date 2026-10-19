@@ -131,10 +131,12 @@ export function LineChart({
   label,
   years,
   series,
+  unit = 'USD',
 }: {
   label: string;
   years: number[];
   series: Series[];
+  unit?: string;
 }) {
   const graphic = useRef<SVGSVGElement>(null);
   const [width, setWidth] = useState(660);
@@ -161,14 +163,14 @@ export function LineChart({
         className={chartStyles.graph}
         viewBox={`0 0 ${width} 264`}
         role="img"
-        aria-label={`${label}. USD; exact values in the table.`}
+        aria-label={`${label}. ${unit}; exact values in the table.`}
       >
         <title>{label}</title>
         {[min, min + span / 2, min + span].map((tick, index) => (
           <g key={index}>
             <path d={`M74 ${y(tick)}H${width - 30}`} stroke="#e1e6ee" />
             <text x="64" y={y(tick) + 4} textAnchor="end">
-              {compact(tick)}
+              {unit === 'USD' ? compact(tick) : tick.toFixed(1)}
             </text>
           </g>
         ))}

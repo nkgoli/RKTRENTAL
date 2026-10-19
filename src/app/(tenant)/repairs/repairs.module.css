@@ -1,80 +1,245 @@
-.upload {
-  display: block;
-  border: 1px dashed #cbd5e1;
-  border-radius: var(--design-radius);
-  padding: 20px;
-  text-align: center;
-  color: var(--design-muted);
-  background: #f8fafc;
-  cursor: pointer;
+.repairs {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
 }
-.upload strong {
+.repairs > * {
+  min-width: 0;
+}
+.heading {
+  display: grid;
+  gap: 8px;
+}
+.heading h1 {
+  font-size: 32px;
+  line-height: 1.18;
+  letter-spacing: -0.035em;
+}
+.heading p {
+  margin: 0;
+}
+.spark {
+  display: inline-block;
+  margin-left: 8px;
+  transform: rotate(-12deg);
   color: var(--design-primary);
-  font-weight: 600;
+  font:
+    30px Georgia,
+    serif;
 }
-.upload input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  overflow: hidden;
+.repairs :global(.card) {
+  padding: 20px;
+  box-shadow: 0 2px 3px #17243b14;
 }
-.upload:focus-within {
-  outline: 2px solid var(--design-primary);
+.formHeader {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--rr-border);
+  margin-bottom: 20px;
+  gap: 12px;
+}
+.form {
+  gap: 16px;
+}
+.form :global(.field) {
+  gap: 8px;
+}
+.form :global(.field) > :is(select, textarea) {
+  min-height: 44px;
+  font-size: 16px;
+}
+.form textarea {
+  min-height: 88px;
+}
+.form textarea[aria-invalid='true'] {
+  border: 2px solid var(--design-danger);
+}
+.form :global(.hint) {
+  font-size: 12px;
+  font-weight: 400;
+}
+.entry {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
 }
 .option {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
-  border-radius: 8px;
+  padding: 12px;
+  min-height: 52px;
+  border-radius: 7px;
   background: var(--design-surface);
   border: 1px solid var(--rr-border-strong);
+  cursor: pointer;
 }
 .option:has(input:checked) {
   border-color: var(--design-primary);
   background: var(--rr-primary-tint);
+  box-shadow: inset 0 0 0 1px var(--design-primary);
+}
+.option input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--design-primary);
+  flex: none;
+}
+.option span {
+  font-size: 13px !important;
+}
+.emergency {
+  border-left: 3px solid var(--design-accent);
+  padding-left: 12px;
+}
+.upload {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.upload h3 {
+  font-size: 16px;
+}
+/* Scope presentation to the repair uploader; its shared selection/validation API is unchanged. */
+.upload [role='group'] {
+  background: var(--design-background);
+  border: 1px dashed var(--rr-border-strong);
+  border-radius: 7px;
+  padding: 20px 16px;
+  font-size: 13px;
+}
+.upload button {
+  font: 600 13px var(--design-font);
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--rr-border-strong);
+  border-radius: 7px;
+  background: var(--design-surface);
+  color: var(--design-text);
+}
+.upload button:disabled {
+  opacity: 1;
+  color: var(--design-muted);
+  border-color: var(--rr-border);
+  background: var(--design-background);
+  cursor: not-allowed;
+}
+.upload ul > li {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  border-color: var(--rr-border);
+  border-radius: 7px;
+}
+.upload ul > li > :last-child {
+  grid-column: 1 / -1;
+}
+.upload :global([role='status']):empty {
+  display: none;
+}
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.sectionHeader h2 {
+  font-size: 20px;
+}
+.sectionHeader span {
+  font-size: 12px;
+  color: var(--design-muted);
+}
+.request h3 {
+  font-size: 16px;
+}
+.request p {
+  overflow-wrap: anywhere;
+}
+.request :global(.progress) {
+  height: 6px;
+}
+.request :global(.progress span) {
+  background: var(--design-accent);
 }
 .photos {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 10px;
-}
-.photo {
-  border-radius: var(--design-radius);
-  aspect-ratio: 4 / 3;
-  background: #e2e8f0 center / cover no-repeat;
+  margin-top: 12px;
 }
 .timeline {
   list-style: none;
-  margin: 10px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0 0 0 12px;
+  border-left: 2px solid var(--rr-border);
+  display: grid;
+  gap: 8px;
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 .timeline small {
+  display: block;
   color: var(--design-muted);
 }
 .comment {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 12px;
+  align-items: end;
+}
+.comment label {
+  min-width: 0;
+  font-size: 13px;
 }
 .comment input {
-  flex: 1;
+  width: 100%;
   min-width: 0;
   font: inherit;
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 7px;
   border: 1px solid var(--rr-border-strong);
   min-height: 44px;
   font-size: 16px;
+  background: var(--design-surface);
+  color: var(--design-text);
+}
+.comment button {
+  min-height: 44px;
+}
+.error {
+  color: var(--design-danger);
+  font-size: 13px;
+}
+.repairs :global(.alert) {
+  font-size: 13px;
+  border-radius: 0 7px 7px 0;
+  border: 0;
+  border-left: 3px solid var(--design-primary);
+}
+.repairs :global(.alert.success) {
+  border-color: var(--design-accent);
+}
+.repairs :global(.alert.warning) {
+  border-color: var(--rr-warn);
+}
+.repairs :is(a, button, input, select, textarea, [id]) {
+  scroll-margin-block: 88px 112px;
+}
+@media (max-width: 599px) {
+  .repairs {
+    gap: 20px;
+  }
+  .heading h1 {
+    font-size: 28px;
+  }
+  .repairs :global(.card) {
+    padding: 16px;
+  }
 }
 
-.error {
-  color: var(--rr-bad);
-  font-size: 13px;
+.repairs :global(.alert.error) {
+  border-color: var(--design-danger);
 }

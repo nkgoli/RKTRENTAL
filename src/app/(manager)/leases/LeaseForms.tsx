@@ -1,19 +1,29 @@
-'use client';
+﻿'use client';
 
-import { useRouter } from 'next/navigation';
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useId, useRef, useState } from 'react';
 import { Alert, Button } from '@/components/ui';
-import { FileUploader } from '@/components/upload';
+import { saveLeaseAction, type LeaseFormState } from './actions';
 import {
-  activateLeaseAction,
-  editTermsAction,
-  recordNoticeAction,
-  saveLeaseAction,
-  terminateLeaseAction,
-  type LeaseFormState,
-} from './actions';
+  activateDetailLeaseAction,
+  editDetailTermsAction,
+  recordDetailNoticeAction,
+  terminateDetailLeaseAction,
+} from './[id]/actions';
+import { leaseResultMessages, type LeaseReturnScope } from './[id]/feedback';
 
 const initial: LeaseFormState = {};
+
+function FormFeedback({ state }: { state: LeaseFormState }) {
+  const feedback = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (state.message && !state.ok) feedback.current?.focus();
+  }, [state]);
+  return state.message ? (
+    <div ref={feedback} tabIndex={-1}>
+      <Alert tone={state.ok ? 'success' : 'error'}>{state.message}</Alert>
+    </div>
+  ) : null;
+}
 
 export type TermValues = {
   startDate: string;
@@ -31,6 +41,10 @@ export function TermFields({
   values: TermValues;
   errors?: Record<string, string>;
 }) {
+  const fieldId = useId();
+  const [draft, setDraft] = useState(values);
+  const valuesKey = JSON.stringify(values);
+  useEffect(() => setDraft(JSON.parse(valuesKey)), [valuesKey]);
   return (
     <>
       <div className="form-row">
@@ -39,22 +53,34 @@ export function TermFields({
           <input
             name="startDate"
             type="date"
-            defaultValue={values.startDate}
+            value={draft.startDate}
+            onChange={(event) => setDraft({ ...draft, startDate: event.target.value })}
             required
             aria-invalid={!!errors.startDate}
+            aria-describedby={errors.startDate ? fieldId + '-startDate-error' : undefined}
           />
-          {errors.startDate && <small role="alert">{errors.startDate}</small>}
+          {errors.startDate && (
+            <small id={fieldId + '-startDate-error'} role="alert">
+              {errors.startDate}
+            </small>
+          )}
         </label>
         <label className="field">
           End date
           <input
             name="endDate"
             type="date"
-            defaultValue={values.endDate}
+            value={draft.endDate}
+            onChange={(event) => setDraft({ ...draft, endDate: event.target.value })}
             required
             aria-invalid={!!errors.endDate}
+            aria-describedby={errors.endDate ? fieldId + '-endDate-error' : undefined}
           />
-          {errors.endDate && <small role="alert">{errors.endDate}</small>}
+          {errors.endDate && (
+            <small id={fieldId + '-endDate-error'} role="alert">
+              {errors.endDate}
+            </small>
+          )}
         </label>
       </div>
       <div className="form-row">
@@ -63,22 +89,34 @@ export function TermFields({
           <input
             name="monthlyRent"
             inputMode="decimal"
-            defaultValue={values.monthlyRent}
+            value={draft.monthlyRent}
+            onChange={(event) => setDraft({ ...draft, monthlyRent: event.target.value })}
             required
             aria-invalid={!!errors.monthlyRent}
+            aria-describedby={errors.monthlyRent ? fieldId + '-monthlyRent-error' : undefined}
           />
-          {errors.monthlyRent && <small role="alert">{errors.monthlyRent}</small>}
+          {errors.monthlyRent && (
+            <small id={fieldId + '-monthlyRent-error'} role="alert">
+              {errors.monthlyRent}
+            </small>
+          )}
         </label>
         <label className="field">
           Security deposit
           <input
             name="deposit"
             inputMode="decimal"
-            defaultValue={values.deposit}
+            value={draft.deposit}
+            onChange={(event) => setDraft({ ...draft, deposit: event.target.value })}
             required
             aria-invalid={!!errors.deposit}
+            aria-describedby={errors.deposit ? fieldId + '-deposit-error' : undefined}
           />
-          {errors.deposit && <small role="alert">{errors.deposit}</small>}
+          {errors.deposit && (
+            <small id={fieldId + '-deposit-error'} role="alert">
+              {errors.deposit}
+            </small>
+          )}
         </label>
       </div>
       <div className="form-row">
@@ -87,10 +125,16 @@ export function TermFields({
           <input
             name="lateFee"
             inputMode="decimal"
-            defaultValue={values.lateFee}
+            value={draft.lateFee}
+            onChange={(event) => setDraft({ ...draft, lateFee: event.target.value })}
             aria-invalid={!!errors.lateFee}
+            aria-describedby={errors.lateFee ? fieldId + '-lateFee-error' : undefined}
           />
-          {errors.lateFee && <small role="alert">{errors.lateFee}</small>}
+          {errors.lateFee && (
+            <small id={fieldId + '-lateFee-error'} role="alert">
+              {errors.lateFee}
+            </small>
+          )}
         </label>
         <label className="field">
           Grace period (days)
@@ -99,10 +143,16 @@ export function TermFields({
             type="number"
             min="0"
             max="31"
-            defaultValue={values.graceDays}
+            value={draft.graceDays}
+            onChange={(event) => setDraft({ ...draft, graceDays: Number(event.target.value) })}
             aria-invalid={!!errors.graceDays}
+            aria-describedby={errors.graceDays ? fieldId + '-graceDays-error' : undefined}
           />
-          {errors.graceDays && <small role="alert">{errors.graceDays}</small>}
+          {errors.graceDays && (
+            <small id={fieldId + '-graceDays-error'} role="alert">
+              {errors.graceDays}
+            </small>
+          )}
         </label>
       </div>
     </>
@@ -165,63 +215,106 @@ export function NewLeaseForm({
           </select>
         </label>
       )}
-      <Button type="submit" variant="primary" disabled={pending}>
+      <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
         {pending ? 'Saving…' : renewId ? 'Create renewal draft' : 'Create lease'}
       </Button>
     </form>
   );
 }
 
-export function EditTermsForm({ leaseId, values }: { leaseId: string; values: TermValues }) {
-  const [state, action, pending] = useActionState(editTermsAction, initial);
+export function EditTermsForm({
+  leaseId,
+  values,
+  returnScope,
+  saved = false,
+}: {
+  leaseId: string;
+  values: TermValues;
+  returnScope?: LeaseReturnScope;
+  saved?: boolean;
+}) {
+  const [state, action, pending] = useActionState(
+    editDetailTermsAction,
+    saved ? { ok: true, message: leaseResultMessages.terms } : initial,
+  );
   return (
-    <form className="form" action={action} noValidate id="edit-terms">
+    <form className="form" action={action} noValidate id="edit-terms" aria-label="Edit lease terms">
       <input type="hidden" name="leaseId" value={leaseId} />
-      {state.message && <Alert tone={state.ok ? 'success' : 'warning'}>{state.message}</Alert>}
+      <input type="hidden" name="returnScope" value={returnScope ?? ''} />
+      <FormFeedback state={state} />
       <TermFields values={values} errors={state.errors} />
-      <Button type="submit" variant="primary" disabled={pending}>
+      <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
         {pending ? 'Saving…' : 'Save terms'}
       </Button>
     </form>
   );
 }
 
-export function LeaseStatusActions({ leaseId, status }: { leaseId: string; status: string }) {
-  const [activeState, activate, activating] = useActionState(activateLeaseAction, initial);
-  const [endState, terminate, terminating] = useActionState(terminateLeaseAction, initial);
+export function LeaseStatusActions({
+  leaseId,
+  status,
+  returnScope,
+}: {
+  leaseId: string;
+  status: string;
+  returnScope?: LeaseReturnScope;
+}) {
+  const [activeState, activate, activating] = useActionState(activateDetailLeaseAction, initial);
+  const [endState, terminate, terminating] = useActionState(terminateDetailLeaseAction, initial);
   const [confirming, setConfirming] = useState(false);
+  const confirmation = useRef<HTMLFormElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const wasConfirming = useRef(false);
+  useEffect(() => {
+    if (confirming) confirmation.current?.focus();
+    else if (wasConfirming.current) trigger.current?.focus();
+    wasConfirming.current = confirming;
+  }, [confirming]);
   return (
     <div className="stack" style={{ gap: 8 }}>
       {status === 'DRAFT' && (
         <form action={activate}>
           <input type="hidden" name="leaseId" value={leaseId} />
-          <Button type="submit" variant="primary" disabled={activating}>
-            Activate lease
+          <input type="hidden" name="returnScope" value={returnScope ?? ''} />
+          <Button type="submit" variant="primary" disabled={activating} aria-busy={activating}>
+            {activating ? 'Activating…' : 'Activate lease'}
           </Button>
         </form>
       )}
       {status === 'ACTIVE' &&
         (confirming ? (
-          <form action={terminate} className="row">
+          <form
+            ref={confirmation}
+            action={terminate}
+            className="row"
+            tabIndex={-1}
+            aria-label="Confirm lease termination"
+          >
             <input type="hidden" name="leaseId" value={leaseId} />
+            <input type="hidden" name="returnScope" value={returnScope ?? ''} />
             <span>Terminate this lease?</span>
-            <Button type="submit" variant="danger" disabled={terminating}>
-              Confirm terminate
+            <Button type="submit" variant="danger" disabled={terminating} aria-busy={terminating}>
+              {terminating ? 'Terminating…' : 'Confirm terminate'}
             </Button>
-            <Button type="button" onClick={() => setConfirming(false)}>
+            <Button type="button" disabled={terminating} onClick={() => setConfirming(false)}>
               Cancel
             </Button>
           </form>
         ) : (
-          <Button type="button" variant="danger" onClick={() => setConfirming(true)}>
+          <button
+            ref={trigger}
+            type="button"
+            className="btn btn-danger"
+            onClick={() => setConfirming(true)}
+          >
             Terminate
-          </Button>
+          </button>
         ))}
       {activeState.message && (
-        <Alert tone={activeState.ok ? 'success' : 'warning'}>{activeState.message}</Alert>
+        <Alert tone={activeState.ok ? 'success' : 'error'}>{activeState.message}</Alert>
       )}
       {endState.message && (
-        <Alert tone={endState.ok ? 'success' : 'warning'}>{endState.message}</Alert>
+        <Alert tone={endState.ok ? 'success' : 'error'}>{endState.message}</Alert>
       )}
     </div>
   );
@@ -231,44 +324,71 @@ export function NoticeForm({
   leaseId,
   noticeGivenAt,
   moveOutDate,
+  returnScope,
+  saved = false,
 }: {
   leaseId: string;
   noticeGivenAt: string;
   moveOutDate: string;
+  returnScope?: LeaseReturnScope;
+  saved?: boolean;
 }) {
-  const [state, action, pending] = useActionState(recordNoticeAction, initial);
+  const [state, action, pending] = useActionState(
+    recordDetailNoticeAction,
+    saved ? { ok: true, message: leaseResultMessages.notice } : initial,
+  );
+  const fieldId = useId();
+  const [dates, setDates] = useState({ noticeGivenAt, moveOutDate });
+  useEffect(() => setDates({ noticeGivenAt, moveOutDate }), [noticeGivenAt, moveOutDate]);
   return (
-    <form className="form" action={action} noValidate>
+    <form
+      className="form"
+      action={action}
+      noValidate
+      id="lease-notice"
+      aria-label="Notice and move-out"
+    >
       <input type="hidden" name="leaseId" value={leaseId} />
-      {state.message && <Alert tone={state.ok ? 'success' : 'warning'}>{state.message}</Alert>}
+      <input type="hidden" name="returnScope" value={returnScope ?? ''} />
+      <FormFeedback state={state} />
       <div className="form-row">
         <label className="field">
           Notice given
-          <input name="noticeGivenAt" type="date" defaultValue={noticeGivenAt} required />
+          <input
+            name="noticeGivenAt"
+            type="date"
+            value={dates.noticeGivenAt}
+            onChange={(event) => setDates({ ...dates, noticeGivenAt: event.target.value })}
+            required
+            aria-invalid={!!state.errors?.noticeGivenAt}
+            aria-describedby={state.errors?.noticeGivenAt ? fieldId + '-notice-error' : undefined}
+          />
+          {state.errors?.noticeGivenAt && (
+            <small id={fieldId + '-notice-error'} role="alert">
+              {state.errors.noticeGivenAt}
+            </small>
+          )}
         </label>
         <label className="field">
           Planned move-out
-          <input name="moveOutDate" type="date" defaultValue={moveOutDate} />
-          {state.errors?.moveOutDate && <small role="alert">{state.errors.moveOutDate}</small>}
+          <input
+            name="moveOutDate"
+            type="date"
+            value={dates.moveOutDate}
+            onChange={(event) => setDates({ ...dates, moveOutDate: event.target.value })}
+            aria-invalid={!!state.errors?.moveOutDate}
+            aria-describedby={state.errors?.moveOutDate ? fieldId + '-moveout-error' : undefined}
+          />
+          {state.errors?.moveOutDate && (
+            <small id={fieldId + '-moveout-error'} role="alert">
+              {state.errors.moveOutDate}
+            </small>
+          )}
         </label>
       </div>
-      <Button type="submit" variant="secondary" disabled={pending}>
+      <Button type="submit" variant="secondary" disabled={pending} aria-busy={pending}>
         {pending ? 'Saving…' : 'Record notice'}
       </Button>
     </form>
-  );
-}
-
-export function LeaseUploader({ leaseId }: { leaseId: string }) {
-  const router = useRouter();
-  return (
-    <FileUploader
-      kind="document"
-      target={{ kind: 'lease', id: leaseId }}
-      documentKind="LEASE"
-      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-      label="Upload lease document"
-      onUploaded={() => router.refresh()}
-    />
   );
 }

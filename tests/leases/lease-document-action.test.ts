@@ -11,6 +11,7 @@ vi.mock('@/lib/db/client', () => ({ db: { document: { updateMany } } }));
 vi.mock('next/cache', () => ({ revalidatePath }));
 
 import { renameLeaseDocumentAction } from '@/app/(manager)/leases/[id]/documentActions';
+import { POST } from '@/app/(manager)/leases/[id]/documents/rename/route';
 
 describe('lease document rename', () => {
   it('updates only the file on the named lease in the signed-in organization', async () => {
@@ -32,7 +33,53 @@ describe('lease document rename', () => {
     form.set('id', 'doc-1');
     form.set('leaseId', 'lease-1');
     form.set('name', '   ');
-    await renameLeaseDocumentAction(form);
+    expect(await renameLeaseDocumentAction(form)).toEqual({ message: 'Enter a document name.' });
     expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it('reports a missing or unauthorized document without claiming success', async () => {
+    const form = new FormData();
+    form.set('id', 'missing-document');
+    form.set('leaseId', 'lease-1');
+    form.set('name', 'Agreement.pdf');
+    updateMany.mockResolvedValueOnce({ count: 0 });
+    expect(await renameLeaseDocumentAction(form)).toEqual({
+      message: 'This document is no longer available.',
+    });
+  });
+
+  it('returns recoverable feedback for a failed rename', async () => {
+    const form = new FormData();
+    form.set('id', 'doc-1');
+    form.set('leaseId', 'lease-1');
+    form.set('name', 'Agreement.pdf');
+    updateMany.mockRejectedValueOnce(new Error('Database unavailable'));
+    expect(await renameLeaseDocumentAction(form)).toEqual({
+      message: 'The file could not be renamed. Please try again.',
+    });
+  });
+
+  it('uses the result endpoint lease path and returns the persisted normalized name', async () => {
+    const form = new FormData();
+    form.set('id', 'doc-1');
+    form.set('leaseId', 'untrusted-lease');
+    form.set('name', '  Confirmed lease.pdf  ');
+    const response = await POST(
+      new Request('http://localhost/leases/lease-1/documents/rename', {
+        method: 'POST',
+        body: form,
+      }),
+      { params: Promise.resolve({ id: 'lease-1' }) },
+    );
+    expect(await response.json()).toEqual({
+      ok: true,
+      message: 'Document renamed.',
+      name: 'Confirmed lease.pdf',
+    });
+    expect(updateMany).toHaveBeenLastCalledWith({
+      where: { id: 'doc-1', leaseId: 'lease-1', organizationId: 'org-1' },
+      data: { name: 'Confirmed lease.pdf' },
+    });
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
   });
 });

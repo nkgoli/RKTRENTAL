@@ -20,9 +20,9 @@ Implemented **Implement light global and scoped lease portfolios** from Designs/
 From this assigned checkout, in PowerShell with permission to inspect Windows processes and listeners:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/leases/review-runtime.ps1 -Action start
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/leases/review-runtime.ps1 -Action status
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/leases/review-runtime.ps1 -Action stop
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/leases/portfolio-review-runtime.ps1 -Action start
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/leases/portfolio-review-runtime.ps1 -Action status
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/leases/portfolio-review-runtime.ps1 -Action stop
 ```
 
 Start reuses only a fully verified running instance or starts hidden processes on the reserved ports. The existing fixture directory and production builds must already exist. It never initializes, seeds or migrates a database. If a reserved port has an unverified owner it refuses; do not substitute a port or kill that owner. Runtime state is kept in `.playwright-mcp/lease-runtime.json`.

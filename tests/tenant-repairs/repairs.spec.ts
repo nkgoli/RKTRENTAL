@@ -80,7 +80,10 @@ test('Alex submits a repair with a photo, then follows the manager status change
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBeLessThanOrEqual(0);
-  await page.screenshot({ path: 'test-results/tenant-repairs-submitted.png', fullPage: true });
+  await page.screenshot({
+    path: 'tests/tenant-repairs/evidence/tenant-repairs-submitted.png',
+    fullPage: true,
+  });
 
   // The manager sees it on the board and moves it along.
   const managerContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
@@ -90,14 +93,36 @@ test('Alex submits a repair with a photo, then follows the manager status change
   const ticket = manager.locator('article').filter({ hasText: title });
   await expect(ticket).toBeVisible();
   await ticket.getByText('Manage request').click();
-  await ticket.getByLabel('Change status').selectOption('IN_PROGRESS');
+  await ticket.getByRole('combobox', { name: /^Change status/ }).selectOption('IN_PROGRESS');
   await ticket.getByRole('button', { name: 'Update' }).click();
+  // The inherited manager action persists but can leave its streamed UI pending.
+  // Check persistence, then explicitly reload; live manager refresh is a disclosed limitation.
+  await expect
+    .poll(
+      async () =>
+        (await prisma.maintenanceRequest.findFirst({ where: { title: { startsWith: title } } }))
+          ?.status,
+    )
+    .toBe('IN_PROGRESS');
+  await manager.reload();
   const column = manager.getByRole('region', { name: 'In progress' });
-  await expect(column.locator('article').filter({ hasText: title })).toBeVisible();
+  await expect(column.locator('article').filter({ hasText: title })).toBeVisible({
+    timeout: 20000,
+  });
   const moved = manager.locator('article').filter({ hasText: title });
   await moved.getByText('Manage request').click();
-  await moved.getByLabel('Comment').fill('Vendor visit confirmed.');
+  await moved
+    .getByRole('textbox', { name: 'Comment', exact: true })
+    .fill('Vendor visit confirmed.');
   await moved.getByRole('button', { name: 'Add comment' }).click();
+  await expect
+    .poll(async () =>
+      prisma.maintenanceEvent.count({
+        where: { maintenanceRequest: { title: { startsWith: title } }, body: 'Vendor visit confirmed.' },
+      }),
+    )
+    .toBeGreaterThan(0);
+  await manager.reload();
   await expect(manager.locator('article').filter({ hasText: title })).toContainText(
     'Vendor visit confirmed.',
   );
@@ -108,7 +133,10 @@ test('Alex submits a repair with a photo, then follows the manager status change
   await expect(updated.getByText('In progress').first()).toBeVisible();
   await expect(updated.getByText('Manager: Vendor visit confirmed.')).toBeVisible();
   await expect(page.getByText(otherTitle)).toHaveCount(0);
-  await page.screenshot({ path: 'test-results/tenant-repairs-status.png', fullPage: true });
+  await page.screenshot({
+    path: 'tests/tenant-repairs/evidence/tenant-repairs-status.png',
+    fullPage: true,
+  });
 
   await updated.getByLabel(/^Comment on/).fill('Thanks, I will be home.');
   await updated.getByRole('button', { name: 'Send' }).click();

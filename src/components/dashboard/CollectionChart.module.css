@@ -28,17 +28,32 @@
   background: var(--design-primary);
 }
 .legend span:last-child i {
-  background: #e2e8f0;
-  border: 1px solid #94a3b8;
+  background: none;
+  height: 0;
+  width: 14px;
+  border-top: 2px dashed var(--design-muted);
+}
+.grid path {
+  stroke: #e8edf4;
+  stroke-width: 1;
+}
+.grid text {
+  fill: var(--design-muted);
+  font-size: 9px;
+}
+.empty {
+  color: var(--design-muted);
+  padding: 16px 0;
 }
 .chart svg {
   display: block;
+  height: 160px;
 }
 .labels {
   display: flex;
   justify-content: space-between;
   gap: 4px;
-  padding: 6px 4px 0;
+  padding: 6px 4px 0 48px;
   font-size: 12px;
   color: var(--design-muted);
 }
@@ -49,8 +64,16 @@
 .amounts summary {
   cursor: pointer;
   color: var(--design-primary);
-  width: fit-content;
-  padding-block: 4px;
+  min-height: 44px;
+  padding-block: 12px;
+  border-top: 1px solid var(--rr-border);
+}
+.amounts th,
+.amounts td {
+  white-space: nowrap;
+}
+.amounts td {
+  text-align: right;
 }
 .amounts table {
   font-size: 12px;
@@ -60,4 +83,14 @@
   text-align: left;
   padding: 8px 0;
   color: var(--design-muted);
+}
+
+@media (max-width: 560px) {
+  .grid text {
+    font-size: 16px;
+  }
+  .labels {
+    font-size: 11px;
+    padding-left: 32px;
+  }
 }

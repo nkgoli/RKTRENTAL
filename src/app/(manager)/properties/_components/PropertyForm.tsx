@@ -1,41 +1,70 @@
-'use client';
+﻿'use client';
 
-import { useActionState, useId, useState } from 'react';
-import {
-  Alert,
-  Button,
-  Field,
-  FormRow,
-  Input,
-  Select,
-} from '@/components/ui';
-import {
-  createPropertyAction,
-  setPropertyArchivedAction,
-  type FormState,
-} from '../actions';
+import { useActionState, useEffect, useId, useRef, useState } from 'react';
+import { Alert, Button, Field, FormRow, Input, Select } from '@/components/ui';
+import { createPropertyAction, setPropertyArchivedAction, type FormState } from '../actions';
 import { FieldError } from './FieldError';
+import styles from '../properties.module.css';
 
 export type OwnerOption = { id: string; name: string };
 const empty: FormState = {};
 
-export function AddPropertyForm({ owners, onCancel }: { owners: OwnerOption[]; onCancel: () => void }) {
+export function AddPropertyForm({
+  owners,
+  onCancel,
+}: {
+  owners: OwnerOption[];
+  onCancel: () => void;
+}) {
   const [state, action, pending] = useActionState(createPropertyAction, empty);
   const [type, setType] = useState('MULTI_UNIT');
+  const [values, setValues] = useState<Record<string, string>>({ unitCount: '0' });
+  function inputProps(name: string) {
+    return {
+      name,
+      value: values[name] ?? '',
+      onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const value = event.target.value;
+        setValues((previous) => ({ ...previous, [name]: value }));
+      },
+    };
+  }
   const e = state.errors ?? {};
   const formId = useId();
+  const form = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (state.errors) form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  }, [state]);
 
   return (
     <>
-      <form className="form" action={action} noValidate>
+      <form
+        ref={form}
+        className={styles.propertyForm}
+        action={action}
+        noValidate
+        aria-busy={pending}
+      >
         {state.message && !state.ok && <Alert tone="warning">{state.message}</Alert>}
         <FormRow>
           <Field label="Property name">
-            <Input name="name" placeholder="e.g. Oak Terrace" required aria-invalid={!!e.name} aria-describedby={e.name ? `${formId}-name-error` : undefined} />
+            <Input
+              {...inputProps('name')}
+              placeholder="e.g. Oak Terrace"
+              required
+              aria-invalid={!!e.name}
+              aria-describedby={e.name ? `${formId}-name-error` : undefined}
+            />
             <FieldError id={`${formId}-name-error`} message={e.name} />
           </Field>
           <Field label="Type">
-            <Select name="type" aria-invalid={!!e.type} aria-describedby={e.type ? `${formId}-type-error` : undefined} value={type} onChange={(ev) => setType(ev.target.value)}>
+            <Select
+              name="type"
+              aria-invalid={!!e.type}
+              aria-describedby={e.type ? `${formId}-type-error` : undefined}
+              value={type}
+              onChange={(ev) => setType(ev.target.value)}
+            >
               <option value="MULTI_UNIT">Multi-unit building</option>
               <option value="SINGLE_UNIT">Single-unit home</option>
             </Select>
@@ -43,20 +72,45 @@ export function AddPropertyForm({ owners, onCancel }: { owners: OwnerOption[]; o
           </Field>
         </FormRow>
         <Field label="Street address">
-          <Input name="street" placeholder="214 Maple Ave" required aria-invalid={!!e.street} aria-describedby={e.street ? `${formId}-street-error` : undefined} />
+          <Input
+            {...inputProps('street')}
+            placeholder="214 Maple Ave"
+            required
+            aria-invalid={!!e.street}
+            aria-describedby={e.street ? `${formId}-street-error` : undefined}
+          />
           <FieldError id={`${formId}-street-error`} message={e.street} />
         </Field>
         <FormRow columns={3}>
           <Field label="City">
-            <Input name="city" placeholder="Austin" required aria-invalid={!!e.city} aria-describedby={e.city ? `${formId}-city-error` : undefined} />
+            <Input
+              {...inputProps('city')}
+              placeholder="Austin"
+              required
+              aria-invalid={!!e.city}
+              aria-describedby={e.city ? `${formId}-city-error` : undefined}
+            />
             <FieldError id={`${formId}-city-error`} message={e.city} />
           </Field>
           <Field label="State">
-            <Input name="state" placeholder="TX" maxLength={2} required aria-invalid={!!e.state} aria-describedby={e.state ? `${formId}-state-error` : undefined} />
+            <Input
+              {...inputProps('state')}
+              placeholder="TX"
+              maxLength={2}
+              required
+              aria-invalid={!!e.state}
+              aria-describedby={e.state ? `${formId}-state-error` : undefined}
+            />
             <FieldError id={`${formId}-state-error`} message={e.state} />
           </Field>
           <Field label="ZIP">
-            <Input name="postalCode" placeholder="78704" required aria-invalid={!!e.postalCode} aria-describedby={e.postalCode ? `${formId}-postalCode-error` : undefined} />
+            <Input
+              {...inputProps('postalCode')}
+              placeholder="78704"
+              required
+              aria-invalid={!!e.postalCode}
+              aria-describedby={e.postalCode ? `${formId}-postalCode-error` : undefined}
+            />
             <FieldError id={`${formId}-postalCode-error`} message={e.postalCode} />
           </Field>
         </FormRow>
@@ -64,11 +118,12 @@ export function AddPropertyForm({ owners, onCancel }: { owners: OwnerOption[]; o
           {type === 'MULTI_UNIT' ? (
             <Field label="Number of units" hint="You can add or rename units later.">
               <Input
-                name="unitCount"
+                {...inputProps('unitCount')}
                 type="number"
                 min={0}
-                defaultValue={0}
-                aria-invalid={!!e.unitCount} aria-describedby={e.unitCount ? `${formId}-unitCount-error` : undefined}
+
+                aria-invalid={!!e.unitCount}
+                aria-describedby={e.unitCount ? `${formId}-unitCount-error` : undefined}
               />
               <FieldError id={`${formId}-unitCount-error`} message={e.unitCount} />
             </Field>
@@ -79,15 +134,21 @@ export function AddPropertyForm({ owners, onCancel }: { owners: OwnerOption[]; o
           )}
           <Field label="Year built">
             <Input
-              name="yearBuilt"
+              {...inputProps('yearBuilt')}
               placeholder="2004"
               inputMode="numeric"
-              aria-invalid={!!e.yearBuilt} aria-describedby={e.yearBuilt ? `${formId}-yearBuilt-error` : undefined}
+              aria-invalid={!!e.yearBuilt}
+              aria-describedby={e.yearBuilt ? `${formId}-yearBuilt-error` : undefined}
             />
             <FieldError id={`${formId}-yearBuilt-error`} message={e.yearBuilt} />
           </Field>
           <Field label="Owner">
-            <Select name="ownerId" aria-invalid={!!e.ownerId} aria-describedby={e.ownerId ? `${formId}-ownerId-error` : undefined} defaultValue="" style={{ width: '100%' }}>
+            <Select
+              {...inputProps('ownerId')}
+              aria-invalid={!!e.ownerId}
+              aria-describedby={e.ownerId ? `${formId}-ownerId-error` : undefined}
+              style={{ width: '100%' }}
+            >
               <option value="">No owner</option>
               {owners.map((o) => (
                 <option key={o.id} value={o.id}>
@@ -101,7 +162,7 @@ export function AddPropertyForm({ owners, onCancel }: { owners: OwnerOption[]; o
         <p className="muted" style={{ fontSize: 13 }}>
           Add cover photos from the property page after saving.
         </p>
-        <div className="row">
+        <div className={styles.formActions}>
           <Button type="submit" variant="primary" disabled={pending}>
             {pending ? 'Saving…' : 'Save property'}
           </Button>
@@ -127,4 +188,3 @@ export function ArchiveButton({ propertyId, archived }: { propertyId: string; ar
     </form>
   );
 }
-

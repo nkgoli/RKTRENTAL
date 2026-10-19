@@ -1,4 +1,4 @@
-﻿import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 const base = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3294';
@@ -12,7 +12,7 @@ test.beforeAll(() => {
         '-ExecutionPolicy',
         'Bypass',
         '-File',
-        path.resolve('tests/leases/review-runtime.ps1'),
+        path.resolve('tests/leases/portfolio-review-runtime.ps1'),
         '-Action',
         'status',
       ],

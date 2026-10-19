@@ -2,7 +2,6 @@ import { Badge, type BadgeTone } from '@/components/ui/Badge';
 import { Alert, Progress } from '@/components/ui/Feedback';
 import { requireTenantRole } from '@/lib/auth/access';
 import { repairProgress, repairStatusLabel } from '@/lib/tenant-portal';
-import { commentRepairAction } from './actions';
 import { loadTenantRepairs } from './data';
 import { MAX_PHOTOS, parseDescription } from './format';
 import { RepairForm } from './RepairForm';
@@ -15,19 +14,19 @@ export const dynamic = 'force-dynamic';
 
 type SearchParams = Promise<{ notice?: string }>;
 
-const notices: Record<string, { tone: 'success' | 'warning'; text: string }> = {
+const notices: Record<string, { tone: 'success' | 'warning' | 'error'; text: string }> = {
   submitted: {
     tone: 'success',
     text: 'Repair request sent. Your manager will assign a vendor and confirm timing.',
   },
   commented: { tone: 'success', text: 'Comment added.' },
-  'comment-failed': { tone: 'warning', text: 'Write a comment of up to 2000 characters.' },
+  'comment-failed': { tone: 'error', text: 'Write a comment of up to 2000 characters.' },
   invalid: {
-    tone: 'warning',
+    tone: 'error',
     text: 'Choose a category, entry permission and urgency, and describe what needs fixing.',
   },
-  'too-many-photos': { tone: 'warning', text: `Add up to ${MAX_PHOTOS} photos.` },
-  'bad-photo': { tone: 'warning', text: 'Photos must be image files such as JPG or PNG.' },
+  'too-many-photos': { tone: 'error', text: `Add up to ${MAX_PHOTOS} photos.` },
+  'bad-photo': { tone: 'error', text: 'Photos must be image files such as JPG or PNG.' },
   'photo-failed': {
     tone: 'warning',
     text: 'Your request was sent, but a photo could not be uploaded.',
@@ -53,15 +52,20 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
 
   if (!view) {
     return (
-      <>
-        <h1 style={{ fontSize: 'var(--rr-h1)' }}>Repairs</h1>
+      <div className={styles.repairs}>
+        <h1 style={{ fontSize: 'var(--rr-h1)' }}>
+          Repairs
+          <span className={styles.spark} aria-hidden="true">
+            {'\u2733'}
+          </span>
+        </h1>
         <EmptyState
           title="No active lease"
           description="There is no active lease on your account yet, so you cannot send a repair request."
           action="Check again"
           href="/repairs"
         />
-      </>
+      </div>
     );
   }
 
@@ -72,15 +76,21 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
     );
 
   return (
-    <>
-      <div>
-        <h1 style={{ fontSize: 'var(--rr-h1)' }}>Repairs</h1>
+    <div className={styles.repairs}>
+      <header className={styles.heading}>
+        <p className="eyebrow">Tenant portal / Repairs</p>
+        <h1 style={{ fontSize: 'var(--rr-h1)' }}>
+          Repairs
+          <span className={styles.spark} aria-hidden="true">
+            {'\u2733'}
+          </span>
+        </h1>
         <p className="muted" style={{ fontSize: 13, marginTop: 2 }}>
           {view.propertyName}
           {view.unitLabel ? ` · ${view.unitLabel}` : ''} · Your manager will assign a vendor and
           confirm timing.
         </p>
-      </div>
+      </header>
 
       {notice && (
         <Alert tone={notice.tone}>
@@ -93,8 +103,8 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
         <a href="#your-requests">Your requests ({view.requests.length})</a>
       </nav>
       <section className="card" id="new-request" aria-labelledby="new-request-title">
-        <div className="card-header">
-          <h2 id="new-request-title" style={{ fontSize: 18 }}>
+        <div className={`card-header ${styles.formHeader}`}>
+          <h2 id="new-request-title" style={{ fontSize: 20 }}>
             New repair request
           </h2>
           {view.unitLabel && <Badge tone="info">{view.unitLabel}</Badge>}
@@ -103,9 +113,12 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
       </section>
 
       <section id="your-requests" aria-labelledby="your-requests-title">
-        <h2 id="your-requests-title" style={{ fontSize: 'var(--rr-h3)', marginBottom: 8 }}>
-          Your requests
-        </h2>
+        <div className={styles.sectionHeader}>
+          <h2 id="your-requests-title">Your requests</h2>
+          <span>
+            {view.requests.length} {view.requests.length === 1 ? 'request' : 'requests'}
+          </span>
+        </div>
         <div className="stack" style={{ gap: 12 }}>
           {view.requests.length === 0 && (
             <p className="muted">
@@ -117,9 +130,13 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
             const { category, text } = parseDescription(request.description);
             const own = request.tenantId === session.tenantId;
             return (
-              <article className="card" key={request.id} id={`request-${request.id}`}>
+              <article
+                className={`card ${styles.request}`}
+                key={request.id}
+                id={`request-${request.id}`}
+              >
                 <div className="row between">
-                  <strong style={{ fontSize: 14 }}>{request.title}</strong>
+                  <h3>{request.title}</h3>
                   <Badge tone={statusTone[request.status]}>
                     {repairStatusLabel(request.status)}
                   </Badge>
@@ -177,15 +194,19 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
                   </ul>
                 )}
                 {own && (
-                  <form className={styles.comment} action={commentRepairAction}>
+                  <form className={styles.comment} method="post" action="/repairs/comment">
                     <input type="hidden" name="requestId" value={request.id} />
-                    <input
-                      name="comment"
-                      required
-                      maxLength={2000}
-                      aria-label={`Comment on ${request.title}`}
-                      placeholder="Add a comment"
-                    />
+                    <label className="field" htmlFor={`comment-${request.id}`}>
+                      Comment on {request.title}
+                      <input
+                        id={`comment-${request.id}`}
+                        name="comment"
+                        required
+                        maxLength={2000}
+                        aria-label={`Comment on ${request.title}`}
+                        placeholder="Add a comment"
+                      />
+                    </label>
                     <button className="btn btn-secondary btn-sm" type="submit">
                       Send
                     </button>
@@ -196,6 +217,6 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
           })}
         </div>
       </section>
-    </>
+    </div>
   );
 }

@@ -19,7 +19,7 @@ export function CollectionChart({
   const height = 124;
   const base = 124;
   const max = Math.max(1, ...months.flatMap((m) => [m.dueCents, m.collectedCents]));
-  const slot = width / Math.max(months.length, 1);
+  const slot = (width - 48) / Math.max(months.length, 1);
   const barWidth = Math.max(2, slot * 0.62);
   const withYear = months.length > 12;
   const labelCount = Math.min(6, months.length);
@@ -53,6 +53,11 @@ export function CollectionChart({
           </span>
         </div>
       </div>
+      {!months.length && (
+        <p className={styles.empty}>
+          Collection data is unavailable. Choose another range or reload the dashboard.
+        </p>
+      )}
       <svg
         viewBox={`0 0 ${width} ${height}`}
         width="100%"
@@ -61,8 +66,23 @@ export function CollectionChart({
         role="img"
         aria-label={`Rent collected against rent due, last ${months.length} months`}
       >
+        <g aria-hidden="true" className={styles.grid}>
+          {[0, 0.5, 1].map((fraction) => (
+            <g key={fraction}>
+              <path d={`M48 ${base - fraction * 100}H640`} />
+              <text x="0" y={base - fraction * 100 - 4}>
+                {new Intl.NumberFormat('en-US', {
+                  style: 'currency',
+                  currency: 'USD',
+                  notation: 'compact',
+                  maximumFractionDigits: 0,
+                }).format(Math.round(max * fraction) / 100)}
+              </text>
+            </g>
+          ))}
+        </g>
         {months.map((month, index) => {
-          const x = index * slot + (slot - barWidth) / 2;
+          const x = 48 + index * slot + (slot - barWidth) / 2;
           const collected = (month.collectedCents / max) * 100;
           const due = (month.dueCents / max) * 100;
           return (
@@ -70,19 +90,19 @@ export function CollectionChart({
               <title>{`${bucketLabel(month.key, true)}: ${formatUsd(month.collectedCents)} of ${formatUsd(month.dueCents)}`}</title>
               <rect
                 x={x}
-                y={base - due}
-                width={barWidth}
-                height={due}
-                rx={2}
-                fill="var(--design-border, #e2e8f0)"
-              />
-              <rect
-                x={x}
                 y={base - collected}
                 width={barWidth}
                 height={collected}
                 rx={2}
-                fill="var(--design-primary)"
+                fill={
+                  index === months.length - 1 ? 'var(--design-accent)' : 'var(--design-primary)'
+                }
+              />
+              <path
+                d={`M${48 + index * slot} ${base - due}h${slot}`}
+                stroke="var(--design-muted)"
+                strokeWidth="1.5"
+                strokeDasharray="4 4"
               />
             </g>
           );
@@ -108,6 +128,7 @@ export function CollectionChart({
                 <th scope="col">Month</th>
                 <th scope="col">Collected</th>
                 <th scope="col">Due</th>
+                <th scope="col">Outstanding</th>
               </tr>
             </thead>
             <tbody>
@@ -116,6 +137,7 @@ export function CollectionChart({
                   <th scope="row">{bucketLabel(month.key, true)}</th>
                   <td>{formatUsd(month.collectedCents)}</td>
                   <td>{formatUsd(month.dueCents)}</td>
+                  <td>{formatUsd(Math.max(0, month.dueCents - month.collectedCents))}</td>
                 </tr>
               ))}
             </tbody>

@@ -1,4 +1,4 @@
-﻿import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { assertLeaseDatabase, checkout } from './database-identity.mjs';
@@ -12,7 +12,7 @@ try {
       '-ExecutionPolicy',
       'Bypass',
       '-File',
-      path.join(checkout, 'tests/leases/review-runtime.ps1'),
+      path.join(checkout, 'tests/leases/portfolio-review-runtime.ps1'),
       '-Action',
       'status',
     ],

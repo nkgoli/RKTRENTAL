@@ -9,8 +9,15 @@ import styles from '../auth.module.css';
 function Submit() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant="primary" block disabled={pending}>
-      {pending ? 'Signing in…' : 'Sign in'}
+    <Button type="submit" variant="primary" block disabled={pending} aria-busy={pending}>
+      {pending ? (
+        <>
+          <span className={styles.spinner} aria-hidden="true" />
+          Signing in…
+        </>
+      ) : (
+        'Sign in'
+      )}
     </Button>
   );
 }

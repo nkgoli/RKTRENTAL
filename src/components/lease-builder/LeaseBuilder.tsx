@@ -279,6 +279,9 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
           </svg>
         </Link>
         <div className={styles.place}>
+          <span className={styles.topCaption}>
+            {props.renewId ? 'Renew a lease' : 'Create a lease'}
+          </span>
           {props.placeLabel}
           {props.renewId && <small>Renewal</small>}
         </div>
@@ -300,8 +303,15 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
           <h1>{props.renewId ? 'Renew lease' : 'Create lease'}</h1>
           <p>Build the agreement for {props.placeLabel}, one step at a time.</p>
         </div>
-        <span className={styles.introDraft} role="status">
-          <span aria-hidden="true" />
+        <span
+          className={`${styles.introDraft} ${!created && !pending && !dirty && !leaseId ? styles.draftNeutral : ''} ${!created && !pending && dirty ? styles.draftUnsaved : ''}`}
+          role="status"
+        >
+          {pending ? (
+            <span className={styles.spinner} aria-hidden="true" />
+          ) : (
+            <span aria-hidden="true" />
+          )}
           {created
             ? 'Lease sent'
             : pending
@@ -322,7 +332,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
           <p className={styles.progressHint}>
             Next saves your progress. Return to any visited step.
           </p>
-          <ol className={styles.steps}>
+          <ol className={styles.steps} tabIndex={0} aria-label="All 10 lease creation steps">
             {WIZARD_STEPS.map((label, index) => {
               const done = index < furthest && index !== step;
               const current = index === step;
@@ -367,6 +377,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
               );
             })}
           </ol>
+          <p className={styles.phoneHint}>Scroll to see all 10 steps.</p>
         </nav>
 
         <section className={styles.card} aria-labelledby="step-title">
@@ -381,6 +392,19 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
                 </h2>
                 <p className={styles.sub}>{SUBTITLES[step]}</p>
               </div>
+              <span className={styles.panelIcon} aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  focusable="false"
+                >
+                  <path d="M14 3H5v18h14V8zM14 3v5h5M9 13h6M9 17h4" />
+                </svg>
+              </span>
             </div>
 
             {message && !created && (
@@ -450,8 +474,31 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
                       className={`${styles.btn} ${styles.primary}`}
                       disabled={pending}
                       onClick={next}
+                      data-next-step={step + 1}
+                      aria-busy={pending || undefined}
                     >
-                      {pending ? 'Saving…' : 'Next'}
+                      {pending ? (
+                        <>
+                          <span className={styles.spinner} aria-hidden="true" />
+                          Saving…
+                        </>
+                      ) : (
+                        <>
+                          Next
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.7"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12h14M14 7l5 5-5 5" />
+                          </svg>
+                        </>
+                      )}
                     </button>
                   ) : (
                     <button

@@ -19,24 +19,27 @@
   align-items: center;
   gap: 16px;
   min-height: 56px;
-  padding: 0 var(--rr-gutter);
-  background: #0b2545;
-  color: #fff;
+  padding: 8px 32px;
+  background: var(--design-surface);
+  border-bottom: 1px solid var(--rr-border);
+  color: var(--design-text);
 }
 
 .back {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  margin-left: -8px;
-  border-radius: 9px;
-  color: #fff;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border: 1px solid var(--rr-border-strong);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--design-primary);
   text-decoration: none;
 }
 .back:hover {
-  background: rgb(255 255 255 / 0.12);
+  background: var(--rr-primary-tint);
 }
 .back svg {
   width: 20px;
@@ -46,47 +49,57 @@
 .place {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 .place small {
-  margin-left: 10px;
-  color: rgb(255 255 255 / 0.65);
-  font-size: 13px;
-  font-weight: 400;
+  margin-left: 8px;
+  color: var(--design-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+.topCaption {
+  display: block;
+  color: var(--design-muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
 }
 
 .exit {
-  padding: 8px 16px;
-  border: 1px solid rgb(255 255 255 / 0.4);
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--rr-border-strong);
   border-radius: 8px;
-  background: transparent;
-  color: #fff;
+  background: #fff;
+  color: var(--design-primary);
   font: inherit;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
 }
 .exit:hover:not(:disabled) {
-  background: rgb(255 255 255 / 0.12);
+  background: var(--rr-primary-tint);
 }
 .exit:disabled {
-  opacity: 0.6;
-  cursor: progress;
+  color: var(--design-muted);
+  background: #edf0f5;
+  cursor: default;
 }
 
 .intro {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   gap: 24px;
   width: 100%;
-  max-width: 1120px;
+  max-width: 1152px;
   margin: 0 auto;
-  padding: 24px 24px 20px;
+  padding: 28px 32px 24px;
 }
 .introKicker {
   margin: 0 0 4px;
@@ -111,33 +124,70 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 12px;
-  border: 1px solid #dbe4f4;
+  padding: 6px 10px;
+  border: 1px solid #bddfe5;
   border-radius: 999px;
-  background: #fff;
-  color: #435a79;
+  background: var(--rr-ok-bg);
+  color: var(--design-accent);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   white-space: nowrap;
 }
 .introDraft span {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
+  flex: none;
   border-radius: 50%;
-  background: #067647;
+  background: currentColor;
+}
+.draftNeutral {
+  border-color: var(--rr-border);
+  background: #fff;
+  color: var(--design-muted);
+}
+.draftUnsaved {
+  border-color: #e4c49a;
+  background: var(--rr-warn-bg);
+  color: var(--rr-warn);
+}
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: lw-spin 0.8s linear infinite;
+}
+@keyframes lw-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+.introDraft span.spinner {
+  width: 14px;
+  height: 14px;
+  background: transparent;
 }
 
 .layout {
   display: grid;
-  grid-template-columns: 224px minmax(0, 1fr);
+  grid-template-columns: 208px minmax(0, 1fr);
   gap: 24px;
   justify-content: center;
   align-items: start;
   width: 100%;
-  max-width: 1120px;
+  max-width: 1152px;
   margin: 0 auto;
-  padding: 0 24px 40px;
+  padding: 0 32px 40px;
   scroll-margin-top: 72px;
+}
+.phoneHint {
+  display: none;
 }
 .layout > nav {
   min-width: 0;
@@ -232,24 +282,25 @@ button.step:hover .stepLabel {
   height: 14px;
 }
 .done {
-  color: #1f4b6e;
+  color: var(--design-text);
 }
 .done .marker {
-  border-color: #1d9a82;
-  color: #1d9a82;
+  border-color: var(--design-accent);
+  background: var(--rr-ok-bg);
+  color: var(--design-accent);
 }
 .current {
-  color: var(--rr-navy);
+  color: var(--design-primary);
   font-weight: 600;
 }
 .current .marker {
-  border-color: var(--rr-navy);
-  background: var(--rr-navy);
+  border-color: var(--design-primary);
+  background: var(--design-primary);
   color: #fff;
 }
 .current.done .marker {
-  border-color: var(--rr-navy);
-  background: var(--rr-navy);
+  border-color: var(--design-primary);
+  background: var(--design-primary);
   color: #fff;
 }
 
@@ -261,16 +312,35 @@ button.step:hover .stepLabel {
   min-width: 0;
 }
 .cardBody {
-  padding: 20px;
+  padding: 24px;
+  display: grid;
+  gap: 20px;
 }
 .cardHead {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e5e7eb;
+  margin: -24px -24px 0;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--rr-border);
+  border-radius: var(--design-radius) var(--design-radius) 0 0;
+  background: linear-gradient(110deg, var(--rr-primary-tint), var(--rr-ok-bg));
+}
+.panelIcon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--rr-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--design-accent);
+}
+.panelIcon svg {
+  width: 24px;
+  height: 24px;
 }
 .cardHead h2,
 .cardHead h1 {
@@ -298,45 +368,61 @@ button.step:hover .stepLabel {
 }
 
 .footer {
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
-  padding: 12px 0;
-  background: var(--design-surface);
+  position: static;
+  padding: 16px 0 0;
+  background: transparent;
   border-top: 1px solid var(--rr-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 24px;
 }
 .btn {
-  min-width: 96px;
-  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 94px;
+  min-height: 40px;
   padding: 8px 14px;
   border: 1px solid var(--rr-border-strong);
-  border-radius: 10px;
+  border-radius: 8px;
   background: #fff;
   color: var(--design-text);
   font: inherit;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
+  text-decoration: none;
   cursor: pointer;
 }
 .btn:hover:not(:disabled) {
-  background: var(--rr-hover);
+  background: var(--rr-primary-tint);
 }
 .btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  color: var(--design-muted);
+  background: #edf0f5;
+  border-color: #a6b5ca;
+  cursor: default;
+}
+.btn svg {
+  width: 18px;
+  height: 18px;
 }
 .primary {
   border-color: var(--design-primary);
   background: var(--design-primary);
   color: #fff;
+  box-shadow: 0 3px 0 #203fa8;
 }
 .primary:hover:not(:disabled) {
-  background: #12345f;
+  background: var(--rr-primary-hover);
+}
+.primary:active:not(:disabled) {
+  background: #203fa8;
+  box-shadow: none;
+}
+.primary:disabled {
+  box-shadow: none;
 }
 
 .disclaimer {
@@ -382,14 +468,21 @@ button.step:hover .stepLabel {
 .field select,
 .field textarea,
 .dateInput {
-  padding: 9px 10px;
+  min-height: 40px;
+  padding: 10px 12px;
   border: 1px solid var(--rr-border-strong);
-  border-radius: 6px;
+  border-radius: 7px;
   background: #fff;
   color: var(--design-text);
   font: inherit;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 400;
+}
+.field input:disabled,
+.field select:disabled {
+  color: var(--design-muted);
+  background: #edf0f5;
+  border-color: #a6b5ca;
 }
 .field textarea {
   min-height: 96px;
@@ -407,12 +500,8 @@ button.step:hover .stepLabel {
 .btn:focus-visible,
 .step:focus-visible,
 .back:focus-visible {
-  outline: 2px solid var(--design-primary);
-  outline-offset: 2px;
-}
-.exit:focus-visible,
-.back:focus-visible {
-  outline-color: #fff;
+  outline: 3px solid var(--design-primary);
+  outline-offset: 3px;
 }
 .dateField {
   max-width: 280px;
@@ -552,6 +641,88 @@ button.step:hover .stepLabel {
   font-size: 13px;
 }
 
+/* Term choices, hint bar and fee grid (light Term/Rent steps) */
+.hintbar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 13px 14px;
+  border: 1px solid #c7d5f7;
+  border-radius: 8px;
+  background: var(--rr-primary-tint);
+  color: var(--design-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.hintbar strong {
+  color: var(--design-primary);
+}
+.choiceList {
+  display: grid;
+  gap: 10px;
+}
+.choice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 16px;
+  border: 1px solid #a6b5ca;
+  border-radius: 9px;
+  min-width: 0;
+  cursor: pointer;
+}
+.choice input[type='radio'] {
+  width: 18px;
+  height: 18px;
+  margin: 3px 0;
+  flex: none;
+  accent-color: var(--design-primary);
+}
+.choiceOn {
+  border-color: var(--design-primary);
+  background: #f3f6ff;
+  box-shadow: inset 3px 0 var(--design-primary);
+}
+.choiceCopy {
+  flex: 1;
+  min-width: 0;
+}
+.choiceTitle {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.choiceTitle em {
+  color: var(--design-primary);
+  font-size: 12px;
+  font-style: normal;
+  text-align: right;
+}
+.choiceDesc {
+  display: block;
+  margin-top: 4px;
+  color: var(--design-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.customDate {
+  max-width: 240px;
+  margin-top: 12px;
+}
+.fees {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.fees .check {
+  height: 100%;
+}
+.fees .check:last-child {
+  grid-column: 1 / -1;
+}
+
 /* Charges preview */
 .ledger {
   border: 1px solid var(--rr-border);
@@ -560,11 +731,11 @@ button.step:hover .stepLabel {
 }
 .ledgerHead {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
-  background: var(--rr-subtle);
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--rr-primary-tint);
 }
 .ledgerHead h3 {
   margin: 0;
@@ -588,7 +759,7 @@ button.step:hover .stepLabel {
   font-variant-numeric: tabular-nums;
 }
 .ledgerTotal {
-  background: #f8faff;
+  background: var(--rr-ok-bg);
   font-weight: 600;
 }
 .ledgerNote {
@@ -672,32 +843,122 @@ button.step:hover .stepLabel {
   text-decoration: none;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 700px) {
+  .topbar {
+    padding: 12px 16px;
+    gap: 10px;
+  }
+  .back {
+    width: 44px;
+    height: 44px;
+  }
+  .exit {
+    min-height: 44px;
+    font-size: 12px;
+    padding: 8px;
+  }
+  .place {
+    font-size: 12px;
+  }
   .intro {
-    padding: 25px 20px 20px;
+    display: block;
+    padding: 22px 16px 20px;
+  }
+  .intro .introDraft {
+    margin-top: 12px;
   }
   .layout {
-    grid-template-columns: minmax(0, 1fr);
-    padding: 16px 12px 48px;
+    display: block;
+    padding: 0 16px 32px;
+  }
+  .layout > nav {
+    margin-bottom: 20px;
   }
   .steps {
     position: static;
     display: flex;
-    gap: 4px;
+    gap: 8px;
     overflow-x: auto;
-    padding: 4px;
+    overscroll-behavior-inline: contain;
+    padding: 3px 0 10px;
+    scrollbar-width: thin;
+  }
+  .steps:focus-visible {
+    outline: 3px solid var(--design-primary);
+    outline-offset: 3px;
   }
   .stepItem {
     flex: none;
+    min-height: 44px;
   }
   .step {
     width: auto;
-    padding: 8px 10px;
-    font-size: 14px;
+    min-height: 44px;
+    padding: 7px;
+    gap: 8px;
+    font-size: 13px;
     white-space: nowrap;
   }
-  .two {
+  .phoneHint {
+    display: block;
+    margin: 6px 0 0;
+    color: var(--design-muted);
+    font-size: 12px;
+  }
+  .cardBody {
+    padding: 18px;
+    gap: 20px;
+  }
+  .cardHead {
+    margin: -18px -18px 0;
+    padding: 18px;
+  }
+  .cardHead h2 {
+    font-size: 22px;
+  }
+  .panelIcon {
+    display: none;
+  }
+  .two,
+  .fees {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .field input,
+  .field select,
+  .dateInput {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .btn {
+    min-height: 44px;
+  }
+  .choice {
+    padding: 14px;
+    gap: 10px;
+    min-height: 44px;
+  }
+  .choiceTitle {
+    display: grid;
+    gap: 4px;
+  }
+  .choiceTitle em {
+    text-align: left;
+  }
+  .ledgerHead {
+    display: block;
+  }
+  .ledgerHead span {
+    display: block;
+    margin-top: 4px;
+    text-align: left;
+  }
+  .ledgerRow {
+    grid-template-columns: 60px minmax(0, 1fr);
+    gap: 8px;
+    padding: 12px;
+  }
+  .ledgerRow strong {
+    grid-column: 2;
   }
   .review {
     grid-template-columns: minmax(0, 1fr);
@@ -706,44 +967,8 @@ button.step:hover .stepLabel {
   .review dd {
     margin-bottom: 8px;
   }
-  .place small {
-    display: none;
-  }
-}
-@media (max-width: 620px) {
-  .topbar {
-    padding: 0 16px;
-  }
-  .intro {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 20px 16px;
-  }
-  .intro h1 {
-    font-size: var(--rr-h1);
-  }
-  .layout {
-    padding: 0 16px 32px;
-    gap: 16px;
-  }
-  .cardBody {
-    padding: 16px;
-  }
-  .ledgerHead {
-    flex-direction: column;
-    gap: 4px;
-  }
-  .ledgerRow {
-    grid-template-columns: 54px minmax(0, 1fr);
-    gap: 6px 10px;
-  }
-  .ledgerRow strong {
-    grid-column: 2;
-  }
-  .radio > span {
-    display: grid;
-    gap: 4px;
+  .disclaimer {
+    padding: 14px 18px;
   }
   .templateBar select {
     width: 100%;

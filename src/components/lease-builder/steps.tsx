@@ -124,6 +124,18 @@ function CheckList({
 
 // ------------------------------------------------------------------------------------ 1. Lease term
 
+const longDate = (isoDate: string) => {
+  const parsed = parseLeaseDate(isoDate);
+  return parsed
+    ? parsed.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+        timeZone: 'UTC',
+      })
+    : isoDate;
+};
+
 export function TermStep({ draft, update, errors }: StepProps) {
   const dates = endOptionDates(draft.startDate);
   const pick = (endOption: WizardDraft['endOption']) =>
@@ -131,68 +143,124 @@ export function TermStep({ draft, update, errors }: StepProps) {
       endOption,
       customEndDate: draft.customEndDate || (endOption === 'custom' ? dates.fullYear : ''),
     });
+  const startLabel = (() => {
+    const parsed = parseLeaseDate(draft.startDate);
+    return parsed
+      ? parsed.toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+          timeZone: 'UTC',
+        })
+      : null;
+  })();
   return (
     <div className={styles.fields}>
-      <Field
-        label="Start date"
-        error={errors.startDate}
-        className={styles.dateField}
-        hint="Move-in charges begin on this date."
-      >
-        <input
-          type="date"
-          value={draft.startDate}
-          onInput={(e) => update({ startDate: e.currentTarget.value })}
-        />
-      </Field>
+      <div className={styles.two}>
+        <Field
+          label="Start date"
+          error={errors.startDate}
+          hint="Move-in charges begin on this date."
+        >
+          <input
+            type="date"
+            value={draft.startDate}
+            onInput={(e) => update({ startDate: e.currentTarget.value })}
+          />
+        </Field>
+        <div className={styles.hintbar}>
+          <span>
+            {startLabel ? (
+              <>
+                Dates below are calculated from a <strong>{startLabel}</strong> start. Select a term
+                to set the end date.
+              </>
+            ) : (
+              'Select a start date to calculate the end date for each term.'
+            )}
+          </span>
+        </div>
+      </div>
+      <hr className={styles.rule} />
       <fieldset className={styles.radios}>
         <legend>End date</legend>
-        <label className={styles.radio}>
-          <input
-            type="radio"
-            name="endOption"
-            checked={draft.endOption === 'full-year'}
-            onChange={() => pick('full-year')}
-          />
-          <span>
-            Full year <span className={styles.date}>{dates.fullYear}</span>
-          </span>
-        </label>
-        <label className={styles.radio}>
-          <input
-            type="radio"
-            name="endOption"
-            checked={draft.endOption === 'month-to-month'}
-            onChange={() => pick('month-to-month')}
-          />
-          <span>
-            Month-to-month <span className={styles.date}>{dates.monthToMonth}</span>
-          </span>
-        </label>
-        <div className={cx(styles.radio, styles.radioCustom)}>
-          <input
-            type="radio"
-            name="endOption"
-            aria-label="Custom end date"
-            checked={draft.endOption === 'custom'}
-            onChange={() => pick('custom')}
-          />
-          <div>
-            <label htmlFor="custom-end-date" className={styles.hint}>
-              Custom end date
-            </label>
+        <div className={styles.choiceList}>
+          <label className={cx(styles.choice, draft.endOption === 'full-year' && styles.choiceOn)}>
             <input
-              id="custom-end-date"
-              className={styles.dateInput}
-              type="date"
-              aria-invalid={Boolean(errors.endDate)}
-              value={draft.customEndDate}
-              onChange={(e) => update({ endOption: 'custom', customEndDate: e.target.value })}
+              type="radio"
+              name="endOption"
+              checked={draft.endOption === 'full-year'}
+              onChange={() => pick('full-year')}
             />
+            <span className={styles.choiceCopy}>
+              <span className={styles.choiceTitle}>
+                <span>Full year</span>
+                <em>Ends {longDate(dates.fullYear)}</em>
+              </span>
+              <span className={styles.choiceDesc}>
+                A 12-month fixed term, ending the day before the anniversary.
+              </span>
+            </span>
+          </label>
+          <label
+            className={cx(styles.choice, draft.endOption === 'month-to-month' && styles.choiceOn)}
+          >
+            <input
+              type="radio"
+              name="endOption"
+              checked={draft.endOption === 'month-to-month'}
+              onChange={() => pick('month-to-month')}
+            />
+            <span className={styles.choiceCopy}>
+              <span className={styles.choiceTitle}>
+                <span>Month-to-month</span>
+                <em>First period ends {longDate(dates.monthToMonth)}</em>
+              </span>
+              <span className={styles.choiceDesc}>
+                The first period ends on the last day of the start month.
+              </span>
+            </span>
+          </label>
+          <div className={cx(styles.choice, draft.endOption === 'custom' && styles.choiceOn)}>
+            <input
+              type="radio"
+              name="endOption"
+              aria-label="Custom end date"
+              checked={draft.endOption === 'custom'}
+              onChange={() => pick('custom')}
+            />
+            <div className={styles.choiceCopy}>
+              <span className={styles.choiceTitle}>
+                <span>Custom end date</span>
+                <em>Choose a date</em>
+              </span>
+              <span className={styles.choiceDesc}>
+                Set a specific end date for a shorter or longer term.
+              </span>
+              <div className={styles.customDate}>
+                <label className={styles.field} htmlFor="custom-end-date">
+                  Custom end date
+                  <input
+                    id="custom-end-date"
+                    className={styles.dateInput}
+                    type="date"
+                    aria-invalid={Boolean(errors.endDate)}
+                    value={draft.customEndDate}
+                    onChange={(e) => update({ endOption: 'custom', customEndDate: e.target.value })}
+                  />
+                </label>
+              </div>
+            </div>
           </div>
         </div>
         <Err errors={errors} name="endDate" />
       </fieldset>
+      <div className={styles.hintbar}>
+        <span>
+          Full-year and month-to-month end dates follow your start date. A custom end date stays as
+          entered.
+        </span>
+      </div>
     </div>
   );
 }
@@ -367,7 +435,7 @@ export function RentStep({ draft, update, errors }: StepProps) {
           />
         </Field>
       </div>
-      <div className={styles.checks}>
+      <div className={styles.fees}>
         <label className={cx(styles.check, draft.moveInFeeEnabled && styles.checkOn)}>
           <input
             type="checkbox"

@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": [
+        "../../src/*"
+      ]
+    }
+  },
+  "include": [
+    "../../next-env.d.ts",
+    "../../src/**/*.ts",
+    "../../src/**/*.tsx",
+    "../../tests/**/*.ts",
+    "../../tests/**/*.tsx",
+    ".next/build-102d7024/types/**/*.ts",
+    ".next/verification-102d7024/types/**/*.ts"
+  ],
+  "exclude": [
+    "../../node_modules",
+    "../../.next"
+  ]
+}

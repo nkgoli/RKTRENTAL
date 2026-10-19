@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   apply: vi.fn(),
+  units: vi.fn(),
   clear: vi.fn(),
   revalidate: vi.fn(),
 }));
@@ -14,6 +15,7 @@ vi.mock('@/lib/auth/access', () => ({
 }));
 vi.mock('@/lib/comps/service', () => ({
   applyMarketRent: mocks.apply,
+  listPricingUnits: mocks.units,
   clearUnitComps: mocks.clear,
 }));
 vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidate }));
@@ -28,13 +30,16 @@ function form(values: Record<string, string>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.units.mockResolvedValue([{ id: 'u-4b' }]);
   mocks.apply.mockResolvedValue({ ok: true, rent: 2100 });
 });
 
 describe('comps actions authorization and revalidation', () => {
   it('denies both mutations before accessing data when the manager gate rejects', async () => {
     vi.mocked(requireManagerRole).mockRejectedValueOnce(new Error('Forbidden'));
-    await expect(applyRentAction({}, form({ unitId: 'u', rent: '2100' }))).rejects.toThrow('Forbidden');
+    await expect(applyRentAction({}, form({ unitId: 'u', rent: '2100' }))).rejects.toThrow(
+      'Forbidden',
+    );
     vi.mocked(requireManagerRole).mockRejectedValueOnce(new Error('Forbidden'));
     await expect(refreshCompsAction(form({ unitId: 'u' }))).rejects.toThrow('Forbidden');
     expect(mocks.apply).not.toHaveBeenCalled();

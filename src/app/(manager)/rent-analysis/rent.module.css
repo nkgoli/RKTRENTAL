@@ -1,0 +1,59 @@
+.workspace {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  --design-primary: #1e3a8a;
+  --design-text: #17142b;
+  --design-muted: #64748b;
+}
+.selection {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(240px, 1fr);
+  gap: 16px;
+  align-items: flex-start;
+}
+.search {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin: 16px 0;
+}
+.search label {
+  flex: 1;
+}
+.property {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid #e1e6ee;
+  padding: 16px 0;
+}
+.table {
+  max-width: 100%;
+  overflow: auto;
+  margin-top: 16px;
+}
+.table table {
+  white-space: nowrap;
+}
+@media (max-width: 800px) {
+  .selection {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .property {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .workspace input,
+  .workspace select {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .workspace button,
+  .workspace a[class*='btn'] {
+    min-height: 44px;
+  }
+}

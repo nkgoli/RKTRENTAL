@@ -23,7 +23,9 @@ for (const width of [390, 1280]) {
       if (phase === 'before' || phase === 'after') {
         for (const photo of await page.locator('main img').all()) {
           await photo.scrollIntoViewIfNeeded();
-          await expect.poll(() => photo.evaluate((image) => (image as HTMLImageElement).complete)).toBe(true);
+          await expect
+            .poll(() => photo.evaluate((image) => (image as HTMLImageElement).complete))
+            .toBe(true);
         }
         await page.evaluate(() => scrollTo(0, 0));
         await page.screenshot({
@@ -43,6 +45,11 @@ for (const width of [390, 1280]) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
         false,
       );
+      if (phase === 'after') {
+        await page.screenshot({
+          path: `tests/tenant-portal/evidence/light-home-lease/${route}-${width}-end-after.png`,
+        });
+      }
     }
   });
 }

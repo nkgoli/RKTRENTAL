@@ -1,9 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/Button';
 import styles from './applications.module.css';
+
+const reasons = [
+  { value: 'criteria-met', label: 'Meets written screening criteria' },
+  { value: 'credit-below-criteria', label: 'Credit score below written criteria' },
+  { value: 'background-review', label: 'Background report requires review' },
+  { value: 'eviction-review', label: 'Eviction report requires review' },
+  { value: 'application-incomplete', label: 'Application information incomplete' },
+];
 
 export function ScreeningSubmit({ disabled, again }: { disabled: boolean; again: boolean }) {
   const { pending } = useFormStatus();
@@ -23,7 +31,9 @@ function DecisionButtons({ reason }: { reason: string }) {
         name="decision"
         value="DECLINED"
         variant="danger"
-        disabled={pending || !reason || reason === 'criteria-met'}
+        disabled={
+          pending || !reasons.some((item) => item.value === reason && item.value !== 'criteria-met')
+        }
       >
         Decline
       </Button>
@@ -52,6 +62,7 @@ export function ReviewDecisionForm({
   unitId?: string;
 }) {
   const [reason, setReason] = useState('');
+  const id = useId();
   return (
     <form action={action} className={styles.decisionForm}>
       <input type="hidden" name="applicationId" value={applicationId} />
@@ -61,21 +72,26 @@ export function ReviewDecisionForm({
         <span>Decision reason</span>
         <select
           name="reason"
+          aria-label="Decision reason"
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           required
-          aria-describedby="decision-help"
+          aria-describedby={`${id}-value ${id}-help`}
         >
           <option value="" disabled>
             Select a written screening reason
           </option>
-          <option value="criteria-met">Meets written screening criteria</option>
-          <option value="credit-below-criteria">Credit score below written criteria</option>
-          <option value="background-review">Background report requires review</option>
-          <option value="eviction-review">Eviction report requires review</option>
-          <option value="application-incomplete">Application information incomplete</option>
+          {reasons.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
         </select>
-        <small id="decision-help">
+        <small id={`${id}-value`} aria-live="polite">
+          {reasons.find((item) => item.value === reason)?.label ??
+            'Select a written screening reason'}
+        </small>
+        <small id={`${id}-help`}>
           Select “Meets written screening criteria” to approve, or a specific reason to decline.
         </small>
       </label>

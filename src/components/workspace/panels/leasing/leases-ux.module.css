@@ -1,0 +1,25 @@
+.panel {
+  min-width: 0;
+}
+.panel li {
+  min-width: 0;
+}
+.panel li strong,
+.panel li small {
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (max-width: 600px) {
+  .actions {
+    width: 100%;
+  }
+  .actions a {
+    flex: 1;
+    justify-content: center;
+  }
+}

@@ -1,6 +1,14 @@
 'use client';
 
-import { useMemo, type ReactNode } from 'react';
+import {
+  cloneElement,
+  isValidElement,
+  useId,
+  useMemo,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { FileUploader, type UploadedDocument } from '@/components/upload';
 import {
   CLAUSE_OPTIONS,
@@ -51,16 +59,26 @@ function Field({
   children: ReactNode;
   className?: string;
 }) {
+  const descriptionId = useId();
+  const control = isValidElement(children)
+    ? cloneElement(
+        children as ReactElement<{ 'aria-invalid'?: boolean; 'aria-describedby'?: string }>,
+        {
+          'aria-invalid': Boolean(error),
+          'aria-describedby': hint || error ? descriptionId : undefined,
+        },
+      )
+    : children;
   return (
     <label className={cx(styles.field, className)}>
       {label}
-      {children}
-      {hint ? <small>{hint}</small> : null}
-      {error ? (
-        <small className={styles.error} role="alert">
-          {error}
-        </small>
-      ) : null}
+      {control}
+      {(hint || error) && (
+        <span id={descriptionId} className={styles.fieldHelp}>
+          {hint ? <small>{hint}</small> : null}
+          {error ? <small className={styles.error}>{error}</small> : null}
+        </span>
+      )}
     </label>
   );
 }
@@ -115,7 +133,12 @@ export function TermStep({ draft, update, errors }: StepProps) {
     });
   return (
     <div className={styles.fields}>
-      <Field label="Start date" error={errors.startDate} className={styles.dateField}>
+      <Field
+        label="Start date"
+        error={errors.startDate}
+        className={styles.dateField}
+        hint="Move-in charges begin on this date."
+      >
         <input
           type="date"
           value={draft.startDate}
@@ -162,6 +185,7 @@ export function TermStep({ draft, update, errors }: StepProps) {
               id="custom-end-date"
               className={styles.dateInput}
               type="date"
+              aria-invalid={Boolean(errors.endDate)}
               value={draft.customEndDate}
               onChange={(e) => update({ endOption: 'custom', customEndDate: e.target.value })}
             />
@@ -227,7 +251,10 @@ export function ChargesPreview({ draft }: { draft: WizardDraft }) {
         <div className={styles.ledgerRow}>
           <span>{shortDate(first.date)}</span>
           <span>
-            Monthly rent{preview.monthly.length > 1 ? ` · repeats on the ${draft.rentDueDay}${[1, 21].includes(draft.rentDueDay) ? 'st' : [2, 22].includes(draft.rentDueDay) ? 'nd' : [3, 23].includes(draft.rentDueDay) ? 'rd' : 'th'} through ${monthYear(last.date)}` : ''}
+            Monthly rent
+            {preview.monthly.length > 1
+              ? ` · repeats on the ${draft.rentDueDay}${[1, 21].includes(draft.rentDueDay) ? 'st' : [2, 22].includes(draft.rentDueDay) ? 'nd' : [3, 23].includes(draft.rentDueDay) ? 'rd' : 'th'} through ${monthYear(last.date)}`
+              : ''}
           </span>
           <strong>{formatMoney(first.amountCents)}</strong>
         </div>
@@ -269,9 +296,22 @@ export function RentStep({ draft, update, errors }: StepProps) {
           hint="Choose any day from the 1st through the 28th. The first rent period ends before the next due date."
           error={errors.rentDueDay}
         >
-          <select value={draft.rentDueDay} onChange={(e) => update({ rentDueDay: Number(e.target.value) })}>
+          <select
+            value={draft.rentDueDay}
+            onChange={(e) => update({ rentDueDay: Number(e.target.value) })}
+          >
             {Array.from({ length: 28 }, (_, index) => index + 1).map((day) => (
-              <option key={day} value={day}>{day}{[1, 21].includes(day) ? 'st' : [2, 22].includes(day) ? 'nd' : [3, 23].includes(day) ? 'rd' : 'th'} of each month</option>
+              <option key={day} value={day}>
+                {day}
+                {[1, 21].includes(day)
+                  ? 'st'
+                  : [2, 22].includes(day)
+                    ? 'nd'
+                    : [3, 23].includes(day)
+                      ? 'rd'
+                      : 'th'}{' '}
+                of each month
+              </option>
             ))}
           </select>
         </Field>
@@ -303,14 +343,29 @@ export function RentStep({ draft, update, errors }: StepProps) {
             checked={draft.prorateFirstMonth}
             onChange={(e) => update({ prorateFirstMonth: e.target.checked })}
           />
-          <span>Charge the prorated first period (otherwise the first full rent is due on the next due day)</span>
+          <span>
+            Charge the prorated first period (otherwise the first full rent is due on the next due
+            day)
+          </span>
         </label>
       )}
       <hr className={styles.rule} />
       <h3 className={styles.sectionTitle}>Optional fees</h3>
       <div className={styles.two}>
-        <Field label="Returned payment fee"><input inputMode="decimal" value={draft.returnedPaymentFee} onChange={(e) => update({ returnedPaymentFee: e.target.value })} /></Field>
-        <Field label="Key replacement fee"><input inputMode="decimal" value={draft.keyFee} onChange={(e) => update({ keyFee: e.target.value })} /></Field>
+        <Field label="Returned payment fee">
+          <input
+            inputMode="decimal"
+            value={draft.returnedPaymentFee}
+            onChange={(e) => update({ returnedPaymentFee: e.target.value })}
+          />
+        </Field>
+        <Field label="Key replacement fee">
+          <input
+            inputMode="decimal"
+            value={draft.keyFee}
+            onChange={(e) => update({ keyFee: e.target.value })}
+          />
+        </Field>
       </div>
       <div className={styles.checks}>
         <label className={cx(styles.check, draft.moveInFeeEnabled && styles.checkOn)}>
@@ -415,7 +470,9 @@ export function TenantsStep({
   return (
     <div className={styles.fields}>
       {sourceLabel && (
-        <p className={styles.sub}>Renewal for {sourceLabel}. Tenants carry over from the current lease.</p>
+        <p className={styles.sub}>
+          Renewal for {sourceLabel}. Tenants carry over from the current lease.
+        </p>
       )}
       {notice && <p className={styles.sub}>{notice}</p>}
       <div className={styles.checks} role="group" aria-label="Tenants">
@@ -423,7 +480,11 @@ export function TenantsStep({
           const on = draft.tenantIds.includes(t.id);
           return (
             <label key={t.id} className={cx(styles.check, on && styles.checkOn)}>
-              <input type="checkbox" checked={on} onChange={(e) => toggle(t.id, e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={on}
+                onChange={(e) => toggle(t.id, e.target.checked)}
+              />
               <span className={styles.checkCopy}>
                 <strong>{t.name}</strong>
                 <small>{t.email ?? 'No email on file'}</small>
@@ -469,7 +530,11 @@ export function OptionsStep({ draft, update, errors }: StepProps) {
             <option value={90}>90 days before end date</option>
           </select>
         </Field>
-        <Field label="Occupants (optional)" error={errors.occupants} hint="Names of everyone who will live in the unit.">
+        <Field
+          label="Occupants (optional)"
+          error={errors.occupants}
+          hint="Names of everyone who will live in the unit."
+        >
           <input value={draft.occupants} onChange={(e) => update({ occupants: e.target.value })} />
         </Field>
       </div>
@@ -481,22 +546,67 @@ export function OptionsStep({ draft, update, errors }: StepProps) {
       />
       <Err errors={errors} name="options" />
       <label className={styles.check}>
-        <input type="checkbox" checked={draft.assignedParking} onChange={(e) => update({ assignedParking: e.target.checked })} />
-        <span className={styles.checkCopy}><strong>Assigned parking</strong><small>Add the parking rule when this lease includes a space.</small></span>
+        <input
+          type="checkbox"
+          checked={draft.assignedParking}
+          onChange={(e) => update({ assignedParking: e.target.checked })}
+        />
+        <span className={styles.checkCopy}>
+          <strong>Assigned parking</strong>
+          <small>Add the parking rule when this lease includes a space.</small>
+        </span>
       </label>
-      <label className={styles.check}><input type="checkbox" checked={draft.balconyPatio} onChange={(e) => update({ balconyPatio: e.target.checked })} />
-        <span className={styles.checkCopy}><strong>Balcony or patio</strong><small>Include the outdoor space rule.</small></span></label>
-      <label className={styles.check}><input type="checkbox" checked={draft.sharedLaundry} onChange={(e) => update({ sharedLaundry: e.target.checked })} />
-        <span className={styles.checkCopy}><strong>Shared laundry</strong><small>Include the laundry rule.</small></span></label>
-      <label className={styles.check}><input type="checkbox" checked={draft.floodZone} onChange={(e) => update({ floodZone: e.target.checked })} />
-        <span className={styles.checkCopy}><strong>Flood zone</strong><small>Include the flood disclosure.</small></span></label>
+      <label className={styles.check}>
+        <input
+          type="checkbox"
+          checked={draft.balconyPatio}
+          onChange={(e) => update({ balconyPatio: e.target.checked })}
+        />
+        <span className={styles.checkCopy}>
+          <strong>Balcony or patio</strong>
+          <small>Include the outdoor space rule.</small>
+        </span>
+      </label>
+      <label className={styles.check}>
+        <input
+          type="checkbox"
+          checked={draft.sharedLaundry}
+          onChange={(e) => update({ sharedLaundry: e.target.checked })}
+        />
+        <span className={styles.checkCopy}>
+          <strong>Shared laundry</strong>
+          <small>Include the laundry rule.</small>
+        </span>
+      </label>
+      <label className={styles.check}>
+        <input
+          type="checkbox"
+          checked={draft.floodZone}
+          onChange={(e) => update({ floodZone: e.target.checked })}
+        />
+        <span className={styles.checkCopy}>
+          <strong>Flood zone</strong>
+          <small>Include the flood disclosure.</small>
+        </span>
+      </label>
       <fieldset className={styles.radios}>
         <legend>Utilities paid by tenant</legend>
-        {['Electricity', 'Gas', 'Water', 'Trash', 'Internet'].map((utility) => <label key={utility} className={styles.radio}>
-          <input type="checkbox" checked={draft.tenantUtilities.includes(utility)} onChange={(e) => update({ tenantUtilities: e.target.checked
-            ? [...draft.tenantUtilities, utility] : draft.tenantUtilities.filter((u) => u !== utility) })} />
-          {utility}
-        </label>)}
+        {['Electricity', 'Gas', 'Water', 'Trash', 'Internet'].map((utility) => (
+          <label key={utility} className={styles.radio}>
+            <input
+              type="checkbox"
+              checked={draft.tenantUtilities.includes(utility)}
+              onChange={(e) =>
+                update({
+                  tenantUtilities: e.target.checked
+                    ? [...draft.tenantUtilities, utility]
+                    : draft.tenantUtilities.filter((u) => u !== utility),
+                })
+              }
+            />
+            {utility}
+          </label>
+        ))}
       </fieldset>
     </div>
   );
@@ -561,7 +671,12 @@ export function DisclosuresStep({ draft, update, errors }: StepProps) {
 // ------------------------------------------------------------------------------------ 8. Attachments
 
 export type LeaseDocumentType = 'LEASE' | 'ADDENDUM' | 'DISCLOSURE' | 'OTHER';
-export type AttachmentFile = { id: string; name: string; sizeBytes: number; kind: LeaseDocumentType };
+export type AttachmentFile = {
+  id: string;
+  name: string;
+  sizeBytes: number;
+  kind: LeaseDocumentType;
+};
 
 export function AttachmentsStep({
   leaseId,
@@ -576,11 +691,24 @@ export function AttachmentsStep({
   onRemoved: (id: string) => void;
   onKindChanged: (id: string, kind: LeaseDocumentType) => void;
 }) {
+  const [typeError, setTypeError] = useState('');
+  const [savingType, setSavingType] = useState<string | null>(null);
   if (!leaseId)
     return <p className={styles.sub}>Save the lease term first, then add documents here.</p>;
   return (
     <div className={styles.fields}>
       <h3 className={styles.sectionTitle}>Documents to include</h3>
+      {files.length === 0 && (
+        <p className={styles.sub}>
+          No documents added yet. Include any lease agreement, addenda or disclosure files the
+          tenant should review.
+        </p>
+      )}
+      {typeError && (
+        <p className={styles.alert} role="alert">
+          {typeError}
+        </p>
+      )}
       <FileUploader
         key={leaseId}
         kind="document"
@@ -598,15 +726,27 @@ export function AttachmentsStep({
               className={styles.documentType}
               aria-label={`Type for ${item.name}`}
               value={file?.kind ?? 'LEASE'}
+              disabled={savingType !== null}
               onChange={async (event) => {
                 const kind = event.target.value as LeaseDocumentType;
-                const response = await fetch(`/api/files/${id}`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ kind }),
-                });
-                if (response.ok) onKindChanged(id, kind);
-                else window.alert('Document type could not be saved. Please try again.');
+                setTypeError('');
+                setSavingType(id);
+                try {
+                  const response = await fetch(`/api/files/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ kind }),
+                  });
+                  if (response.ok) onKindChanged(id, kind);
+                  else
+                    setTypeError(`The type for ${item.name} could not be saved. Please try again.`);
+                } catch {
+                  setTypeError(
+                    `The type for ${item.name} could not be saved. Check your connection and try again.`,
+                  );
+                } finally {
+                  setSavingType(null);
+                }
               }}
             >
               <option value="LEASE">Lease agreement</option>
@@ -635,7 +775,8 @@ export function AttachmentsStep({
         }}
       />
       <p className={styles.caption}>
-        Each file is stored as a lease document with the type selected above. Review required disclosures before sending.
+        Each file is stored as a lease document with the type selected above. Review required
+        disclosures before sending.
       </p>
     </div>
   );
@@ -648,10 +789,16 @@ export function LessorStep({ draft, update, errors }: StepProps) {
     <div className={styles.fields}>
       <div className={styles.two}>
         <Field label="Lessor name" error={errors.lessorName}>
-          <input value={draft.lessorName} onChange={(e) => update({ lessorName: e.target.value })} />
+          <input
+            value={draft.lessorName}
+            onChange={(e) => update({ lessorName: e.target.value })}
+          />
         </Field>
         <Field label="Phone (optional)">
-          <input value={draft.lessorPhone} onChange={(e) => update({ lessorPhone: e.target.value })} />
+          <input
+            value={draft.lessorPhone}
+            onChange={(e) => update({ lessorPhone: e.target.value })}
+          />
         </Field>
       </div>
       <Field label="Mailing address" error={errors.lessorAddress}>
@@ -713,7 +860,16 @@ export function ReviewStep({
       <h3 className={styles.reviewSection}>Rent, deposit &amp; fees</h3>
       <dl className={styles.review}>
         <dt>Monthly rent</dt>
-        <dd>{money(draft.monthlyRent)}, due on the {draft.rentDueDay}{[1, 21].includes(draft.rentDueDay) ? 'st' : [2, 22].includes(draft.rentDueDay) ? 'nd' : [3, 23].includes(draft.rentDueDay) ? 'rd' : 'th'}</dd>
+        <dd>
+          {money(draft.monthlyRent)}, due on the {draft.rentDueDay}
+          {[1, 21].includes(draft.rentDueDay)
+            ? 'st'
+            : [2, 22].includes(draft.rentDueDay)
+              ? 'nd'
+              : [3, 23].includes(draft.rentDueDay)
+                ? 'rd'
+                : 'th'}
+        </dd>
         <dt>Security deposit</dt>
         <dd>{money(draft.deposit)}</dd>
         {draft.moveInFeeEnabled && (
@@ -743,11 +899,35 @@ export function ReviewStep({
         <dt>Options</dt>
         <dd>{list(optionLabels(draft.options))}</dd>
         <dt>Clauses</dt>
-        <dd>{draft.template ? list(resolveTerms(draft.template, contextFromDraft(draft), draft.termOverrides).filter((t) => t.included && t.section === 'CLAUSE').map((t) => t.title)) : list(clauseLabels(draft.clauses))}</dd>
+        <dd>
+          {draft.template
+            ? list(
+                resolveTerms(draft.template, contextFromDraft(draft), draft.termOverrides)
+                  .filter((t) => t.included && t.section === 'CLAUSE')
+                  .map((t) => t.title),
+              )
+            : list(clauseLabels(draft.clauses))}
+        </dd>
         <dt>Rules</dt>
-        <dd>{draft.template ? list(resolveTerms(draft.template, contextFromDraft(draft), draft.termOverrides).filter((t) => t.included && t.section === 'RULE').map((t) => t.title)) : list(ruleLabels(draft.rules))}</dd>
+        <dd>
+          {draft.template
+            ? list(
+                resolveTerms(draft.template, contextFromDraft(draft), draft.termOverrides)
+                  .filter((t) => t.included && t.section === 'RULE')
+                  .map((t) => t.title),
+              )
+            : list(ruleLabels(draft.rules))}
+        </dd>
         <dt>Disclosures</dt>
-        <dd>{draft.template ? list(resolveTerms(draft.template, contextFromDraft(draft), draft.termOverrides).filter((t) => t.included && t.section === 'DISCLOSURE').map((t) => t.title)) : list(disclosureLabels(draft.disclosures))}</dd>
+        <dd>
+          {draft.template
+            ? list(
+                resolveTerms(draft.template, contextFromDraft(draft), draft.termOverrides)
+                  .filter((t) => t.included && t.section === 'DISCLOSURE')
+                  .map((t) => t.title),
+              )
+            : list(disclosureLabels(draft.disclosures))}
+        </dd>
         <dt>Attachments</dt>
         <dd>{attachments.length ? attachments.map((a) => a.name).join(', ') : 'None'}</dd>
       </dl>

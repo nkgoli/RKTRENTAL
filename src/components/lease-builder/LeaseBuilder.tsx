@@ -3,7 +3,13 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
-import { STEP, STEP_COUNT, WIZARD_STEPS, type TenantOption, type WizardDraft } from '@/lib/lease-create/types';
+import {
+  STEP,
+  STEP_COUNT,
+  WIZARD_STEPS,
+  type TenantOption,
+  type WizardDraft,
+} from '@/lib/lease-create/types';
 import { validateStep, withResolvedEnd } from '@/lib/lease-create/validation';
 import {
   completeSigningAction,
@@ -24,6 +30,7 @@ import {
 import styles from './lease-builder.module.css';
 import { TemplateTermsStep } from './TemplateTermsStep';
 import type { TemplateDefinition } from '@/lib/lease-create/templates';
+import { useBuilderShell } from './useBuilderShell';
 
 export type LeaseBuilderProps = {
   /** Property and unit shown in the top bar. */
@@ -45,14 +52,17 @@ export type LeaseBuilderProps = {
 };
 
 const SUBTITLES: Record<number, string> = {
-  [STEP.term]: 'Set move-in day and the lease term. The next step aligns rent to your chosen due day.',
-  [STEP.rent]: 'Choose the rent due day and review every move-in and recurring charge before sending.',
+  [STEP.term]:
+    'Set move-in day and the lease term. The next step aligns rent to your chosen due day.',
+  [STEP.rent]:
+    'Choose the rent due day and review every move-in and recurring charge before sending.',
   [STEP.tenants]: 'Choose who is on the lease and who signs as the primary tenant.',
   [STEP.options]: 'Renewal notice, occupants and other options for this lease.',
   [STEP.clauses]: 'Pick the clauses that belong in the agreement.',
   [STEP.rules]: 'Set the house rules tenants agree to.',
   [STEP.disclosures]: 'Include the disclosures this lease needs.',
-  [STEP.attachments]: 'Add documents to the lease packet. Assign a type to each file so tenants know what they are reviewing.',
+  [STEP.attachments]:
+    'Add documents to the lease packet. Assign a type to each file so tenants know what they are reviewing.',
   [STEP.lessor]: 'Who the lessor is on the agreement.',
   [STEP.review]: 'Check everything, then send the lease for e-signature.',
 };
@@ -64,7 +74,8 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
   const { tenants } = props;
   const [draft, setDraft] = useState<WizardDraft>(props.draft);
   const draftRef = useRef<WizardDraft>(props.draft);
-  const [hydrated, setHydrated] = useState(false);
+  const hydrated = useBuilderShell();
+  const [dirty, setDirty] = useState(false);
   const [step, setStep] = useState(props.step);
   const [furthest, setFurthest] = useState(Math.max(props.furthestStep, props.step));
   const [leaseId, setLeaseId] = useState(props.leaseId);
@@ -75,22 +86,26 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
   const [pending, startTransition] = useTransition();
   const [signState, signAction, signing] = useActionState(completeSigningAction, idle);
   const top = useRef<HTMLDivElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const errorSummary = useRef<HTMLDivElement>(null);
 
-  // The builder replaces the app chrome; keep the covered sidebar and header out of reach.
   useEffect(() => {
-    setHydrated(true);
-    const covered = Array.from(
-      document.querySelectorAll<HTMLElement>('#manager-sidebar, .topbar, .skip, a[href="#main-content"]'),
-    );
-    for (const el of covered) el.inert = true;
-    return () => {
-      for (const el of covered) el.inert = false;
-    };
-  }, []);
+    if (!hydrated) return;
+    heading.current?.focus({ preventScroll: true });
+    top.current?.scrollIntoView({ block: 'start' });
+    top.current
+      ?.querySelector('[aria-current="step"]')
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [step, hydrated]);
+
+  useEffect(() => {
+    if (message) errorSummary.current?.focus();
+  }, [message, errors]);
 
   const update = (patch: Partial<WizardDraft>) => {
     draftRef.current = withResolvedEnd({ ...draftRef.current, ...patch });
     setDraft(draftRef.current);
+    setDirty(true);
     setErrors({});
     setMessage('');
   };
@@ -99,22 +114,28 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
 
   /** Saves the current step as the lease draft and reports whether it went through. */
   async function save(from: number, to: number, strict: boolean): Promise<boolean> {
-    const result = await saveWizardStepAction({
-      leaseId: leaseId ?? undefined,
-      renewId: props.renewId ?? undefined,
-      step: from,
-      nextStep: to,
-      draft: draftRef.current,
-      strict,
-    });
-    if (!result.ok) {
-      setErrors(result.errors ?? {});
-      setMessage(result.message ?? 'Please fix the highlighted fields.');
+    try {
+      const result = await saveWizardStepAction({
+        leaseId: leaseId ?? undefined,
+        renewId: props.renewId ?? undefined,
+        step: from,
+        nextStep: to,
+        draft: draftRef.current,
+        strict,
+      });
+      if (!result.ok) {
+        setErrors(result.errors ?? {});
+        setMessage(result.message ?? 'Please fix the highlighted fields.');
+        return false;
+      }
+      setLeaseId(result.leaseId ?? leaseId);
+      setFurthest((f) => Math.max(f, result.furthestStep ?? to));
+      setDirty(false);
+      return true;
+    } catch {
+      setMessage('Your changes could not be saved. They are still here; try again.');
       return false;
     }
-    setLeaseId(result.leaseId ?? leaseId);
-    setFurthest((f) => Math.max(f, result.furthestStep ?? to));
-    return true;
   }
 
   function go(to: number) {
@@ -160,15 +181,21 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
     }
     startTransition(async () => {
       if (!leaseId) return;
-      const result = await sendWizardLeaseAction({
-        leaseId,
-        renewId: props.renewId ?? undefined,
-        draft: draftRef.current,
-      });
-      setSent(result);
-      if (!result.ok) {
-        setErrors(result.errors ?? {});
-        setMessage(result.message ?? 'The lease could not be sent.');
+      try {
+        const result = await sendWizardLeaseAction({
+          leaseId,
+          renewId: props.renewId ?? undefined,
+          draft: draftRef.current,
+        });
+        setSent(result);
+        if (!result.ok) {
+          setErrors(result.errors ?? {});
+          setMessage(result.message ?? 'The lease could not be sent.');
+        }
+      } catch {
+        setMessage(
+          'We could not confirm that the lease was sent. Check its status before trying again.',
+        );
       }
     });
   }
@@ -188,16 +215,41 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
       notice={props.notice}
     />,
     <OptionsStep key="options" draft={draft} update={update} errors={errors} />,
-    <TemplateTermsStep key="clauses" section="CLAUSE" draft={draft} update={update} templates={props.templates} isRenewal={Boolean(props.renewId)} />,
-    <TemplateTermsStep key="rules" section="RULE" draft={draft} update={update} templates={props.templates} isRenewal={Boolean(props.renewId)} />,
-    <TemplateTermsStep key="disclosures" section="DISCLOSURE" draft={draft} update={update} templates={props.templates} isRenewal={Boolean(props.renewId)} />,
+    <TemplateTermsStep
+      key="clauses"
+      section="CLAUSE"
+      draft={draft}
+      update={update}
+      templates={props.templates}
+      isRenewal={Boolean(props.renewId)}
+    />,
+    <TemplateTermsStep
+      key="rules"
+      section="RULE"
+      draft={draft}
+      update={update}
+      templates={props.templates}
+      isRenewal={Boolean(props.renewId)}
+    />,
+    <TemplateTermsStep
+      key="disclosures"
+      section="DISCLOSURE"
+      draft={draft}
+      update={update}
+      templates={props.templates}
+      isRenewal={Boolean(props.renewId)}
+    />,
     <AttachmentsStep
       key="attachments"
       leaseId={leaseId}
       files={attachments}
-      onUploaded={(file) => setAttachments((list) => [...list.filter((f) => f.id !== file.id), file])}
+      onUploaded={(file) =>
+        setAttachments((list) => [...list.filter((f) => f.id !== file.id), file])
+      }
       onRemoved={(id) => setAttachments((list) => list.filter((f) => f.id !== id))}
-      onKindChanged={(id, kind) => setAttachments((list) => list.map((f) => f.id === id ? { ...f, kind } : f))}
+      onKindChanged={(id, kind) =>
+        setAttachments((list) => list.map((f) => (f.id === id ? { ...f, kind } : f)))
+      }
     />,
     <LessorStep key="lessor" draft={draft} update={update} errors={errors} />,
     <ReviewStep
@@ -213,8 +265,16 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
   return (
     <div className={styles.page} role="region" aria-label="Create lease" inert={!hydrated}>
       <header className={styles.topbar}>
-        <Link className={styles.back} href={props.backHref} aria-label="Back">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <Link className={styles.back} href={props.backHref} aria-label="Back to property leases">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </Link>
@@ -222,29 +282,61 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
           {props.placeLabel}
           {props.renewId && <small>Renewal</small>}
         </div>
-        <button type="button" className={styles.exit} onClick={saveAndExit} disabled={pending || created}>
+        <button
+          type="button"
+          className={styles.exit}
+          onClick={saveAndExit}
+          disabled={pending || created}
+        >
           Save and exit
         </button>
       </header>
 
       <div className={styles.intro}>
         <div>
-          <p className={styles.introKicker}>Leasing workspace / New lease</p>
+          <p className={styles.introKicker}>
+            Leasing workspace / {props.renewId ? 'Renewal' : 'New lease'}
+          </p>
           <h1>{props.renewId ? 'Renew lease' : 'Create lease'}</h1>
           <p>Build the agreement for {props.placeLabel}, one step at a time.</p>
         </div>
-        <span className={styles.introDraft}><span aria-hidden="true" />{leaseId ? 'Draft saved' : 'New draft'}</span>
+        <span className={styles.introDraft} role="status">
+          <span aria-hidden="true" />
+          {created
+            ? 'Lease sent'
+            : pending
+              ? 'Saving…'
+              : dirty
+                ? 'Unsaved changes'
+                : leaseId
+                  ? 'Draft saved'
+                  : 'Not saved yet'}
+        </span>
       </div>
 
       <div className={styles.layout} ref={top}>
         <nav aria-label="Lease steps">
+          <p className={styles.progressNote}>
+            Step {step + 1} of {STEP_COUNT} · {WIZARD_STEPS[step]}
+          </p>
+          <p className={styles.progressHint}>
+            Next saves your progress. Return to any visited step.
+          </p>
           <ol className={styles.steps}>
             {WIZARD_STEPS.map((label, index) => {
               const done = index < furthest && index !== step;
               const current = index === step;
               const clickable = !created && !current && index <= furthest;
               const marker = done ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
                   <path d="M5 12.5l4.5 4.5L19 7.5" />
                 </svg>
               ) : (
@@ -256,7 +348,12 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
               return (
                 <li key={label} className={styles.stepItem}>
                   {clickable ? (
-                    <button type="button" className={className} onClick={() => jump(index)} disabled={pending}>
+                    <button
+                      type="button"
+                      className={className}
+                      onClick={() => jump(index)}
+                      disabled={pending}
+                    >
                       <span className={styles.marker}>{marker}</span>
                       <span className={styles.stepLabel}>{label}</span>
                     </button>
@@ -279,15 +376,29 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
                 <p className={styles.kicker}>
                   Step {String(step + 1).padStart(2, '0')} of {STEP_COUNT}
                 </p>
-                <h2 id="step-title">{WIZARD_STEPS[step]}</h2>
+                <h2 id="step-title" tabIndex={-1} ref={heading}>
+                  {WIZARD_STEPS[step]}
+                </h2>
                 <p className={styles.sub}>{SUBTITLES[step]}</p>
               </div>
-              <span className={styles.draftNote}>{leaseId ? 'Draft saved' : 'Not saved yet'}</span>
             </div>
 
             {message && !created && (
-              <div className={styles.alert} role="alert">
-                {message}
+              <div className={styles.alert} role="alert" tabIndex={-1} ref={errorSummary}>
+                <strong>{message}</strong>
+                {Object.keys(errors).length > 0 && (
+                  <ul>
+                    {Object.entries(errors).map(([field, error]) => (
+                      <li key={field}>{error}</li>
+                    ))}
+                  </ul>
+                )}
+                {step === STEP.review && Object.keys(errors).length > 0 && (
+                  <p>
+                    Use the lease steps to return to the fields above. Your draft stays saved as you
+                    go back.
+                  </p>
+                )}
               </div>
             )}
 
@@ -298,7 +409,8 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
                 </div>
                 <p className={styles.sub}>
                   Lease status: <strong>{esignStatus ?? 'NOT_SENT'}</strong>
-                  {esignStatus === 'SIGNED' && ' · Signed lease agreement.pdf is stored on the lease.'}
+                  {esignStatus === 'SIGNED' &&
+                    ' · Signed lease agreement.pdf is stored on the lease.'}
                 </p>
                 <div className={styles.created}>
                   <Link className={styles.link} href={`/leases/${sent.leaseId}`}>
@@ -316,7 +428,13 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
               </div>
             ) : (
               <>
-                {body}
+                <fieldset
+                  className={styles.stepFields}
+                  disabled={pending}
+                  aria-label={WIZARD_STEPS[step]}
+                >
+                  {body}
+                </fieldset>
                 <div className={styles.footer}>
                   <button
                     type="button"
@@ -327,15 +445,28 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
                     Back
                   </button>
                   {step < STEP_COUNT - 1 ? (
-                    <button type="button" className={`${styles.btn} ${styles.primary}`} disabled={pending} onClick={next}>
+                    <button
+                      type="button"
+                      className={`${styles.btn} ${styles.primary}`}
+                      disabled={pending}
+                      onClick={next}
+                    >
                       {pending ? 'Saving…' : 'Next'}
                     </button>
                   ) : (
-                    <button type="button" className={`${styles.btn} ${styles.primary}`} disabled={pending} onClick={send}>
+                    <button
+                      type="button"
+                      className={`${styles.btn} ${styles.primary}`}
+                      disabled={pending}
+                      onClick={send}
+                    >
                       {pending ? 'Sending…' : 'Send for e-signature'}
                     </button>
                   )}
                 </div>
+                {step < STEP_COUNT - 1 && (
+                  <p className={styles.nextHint}>Next: {WIZARD_STEPS[step + 1]}</p>
+                )}
               </>
             )}
           </div>

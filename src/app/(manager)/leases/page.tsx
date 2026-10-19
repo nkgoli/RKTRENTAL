@@ -10,6 +10,7 @@ import { formatMoney } from '@/lib/properties/format';
 import { signLabel, term } from '@/lib/leases/format';
 import { leasesDb, type LeaseListItem } from '@/lib/leases/queries';
 import { EmptyState } from '@/components/RouteStates';
+import styles from './leases-ux.module.css';
 
 type Tab = 'active' | 'expiring' | 'drafts' | 'ended';
 const tabs: Tab[] = ['active', 'expiring', 'drafts', 'ended'];
@@ -78,11 +79,7 @@ export default async function LeasesPage({
 
   return (
     <>
-      <ScopedWorkspace
-        organizationId={session.organizationId}
-        filter={scope}
-        activeTab="leases"
-      />
+      <ScopedWorkspace organizationId={session.organizationId} filter={scope} activeTab="leases" />
       <PageHeader
         eyebrow="Leasing"
         actions={[
@@ -92,23 +89,34 @@ export default async function LeasesPage({
         ]}
       />
       <section className="kpis" aria-label="Lease stats">
-        <KpiCard label="Active leases" value={counts.active} note="Current leases in your portfolio" />
+        <KpiCard
+          label="Active leases"
+          value={counts.active}
+          note="Current leases in your portfolio"
+        />
         <KpiCard
           label="Expiring in 60 days"
           value={counts.expiring}
-          note="Renewal reminders ready"
+          note="Active leases ending in the next 60 days"
         />
         <KpiCard label="Awaiting e-signature" value={counts.awaiting} note="Pending signatures" />
       </section>
       <Card flush>
         <div style={{ padding: '12px var(--rr-card-pad) 0' }}>
-          <div className="row between" style={{ marginBottom: 8, flexWrap: 'wrap' }}>
-            <h2 style={{ fontSize: 'var(--rr-h3)' }}>Leases</h2>
-            <form role="search" action="/leases" method="get">
+          <div className={styles.toolbar}>
+            <div>
+              <h2>Lease portfolio</h2>
+              <p className={styles.intro}>
+                Review current terms, continue a draft or prepare a renewal.
+              </p>
+            </div>
+            <form className={styles.search} role="search" action="/leases" method="get">
               {tab !== 'active' && <input type="hidden" name="tab" value={tab} />}
-              {scope.propertyId && <input type="hidden" name="propertyId" value={scope.propertyId} />}
+              {scope.propertyId && (
+                <input type="hidden" name="propertyId" value={scope.propertyId} />
+              )}
               {scope.unitId && <input type="hidden" name="unitId" value={scope.unitId} />}
-              <label className="search" style={{ minWidth: 230, height: 32 }}>
+              <label className="search">
                 <span aria-hidden="true">⌕</span>
                 <input
                   name="q"
@@ -117,6 +125,10 @@ export default async function LeasesPage({
                   placeholder="Search tenant or property"
                 />
               </label>
+              <button type="submit" className="btn btn-secondary btn-sm">
+                Search
+              </button>
+              {q && <Link href={tabHref(tab, '', 1, scope)}>Clear search</Link>}
             </form>
           </div>
           <Tabs
@@ -127,16 +139,28 @@ export default async function LeasesPage({
             }))}
           />
         </div>
-        <div style={{ overflowX: 'auto' }}>
+        <div
+          className={styles.scroll}
+          role="region"
+          aria-label="Lease portfolio results"
+          tabIndex={0}
+        >
           <table className="table">
+            <caption className={styles.caption}>
+              {rows.length} {tab === 'expiring' ? 'expiring' : tab} lease
+              {rows.length === 1 ? '' : 's'}
+              {q && ` matching “${q}”`}. Open a lease to manage its agreement, files and payments.
+            </caption>
             <thead>
               <tr>
-                <th>Tenant</th>
-                <th>Property / unit</th>
-                <th>Lease term</th>
-                <th className="num">Rent</th>
-                <th>E-sign status</th>
-                <th>Actions</th>
+                <th scope="col">Tenant</th>
+                <th scope="col">Property / unit</th>
+                <th scope="col">Lease term</th>
+                <th scope="col" className="num">
+                  Rent
+                </th>
+                <th scope="col">E-sign status</th>
+                <th scope="col">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -152,8 +176,20 @@ export default async function LeasesPage({
                           ? 'Try another search or view to find a lease.'
                           : 'Create a lease to connect a tenant with a property.'
                       }
-                      action={q || tab !== 'active' ? 'View active leases' : 'Create a lease'}
-                      href={q || tab !== 'active' ? '/leases' : '/leases/new'}
+                      action={
+                        q
+                          ? 'Clear search'
+                          : tab !== 'active'
+                            ? 'View active leases'
+                            : 'Create a lease'
+                      }
+                      href={
+                        q
+                          ? tabHref(tab, '', 1, scope)
+                          : tab !== 'active'
+                            ? tabHref('active', '', 1, scope)
+                            : '/leases/new'
+                      }
                     />
                   </td>
                 </tr>
@@ -166,7 +202,7 @@ export default async function LeasesPage({
                   <tr key={lease.id}>
                     <td>
                       <div className="cell-main">
-                                                <div>
+                        <div>
                           <strong>
                             {tenant ? (
                               <Link href={`/tenants/${tenant.id}`} style={{ color: 'inherit' }}>
@@ -218,9 +254,26 @@ export default async function LeasesPage({
                       </Badge>
                     </td>
                     <td>
-                      <Link className="btn btn-ghost btn-sm" href={leaseHref(lease.id, scope)}>
-                        View
-                      </Link>
+                      <div className={styles.actions}>
+                        <Link
+                          className={`btn btn-${lease.status === 'DRAFT' ? 'secondary' : 'ghost'} btn-sm`}
+                          href={
+                            lease.status === 'DRAFT'
+                              ? `/leases/new?draft=${lease.id}`
+                              : leaseHref(lease.id, scope)
+                          }
+                        >
+                          {lease.status === 'DRAFT' ? 'Continue setup' : 'View'}
+                        </Link>
+                        {lease.status === 'ACTIVE' && (
+                          <Link
+                            className="btn btn-ghost btn-sm"
+                            href={`/leases/new?renew=${lease.id}`}
+                          >
+                            Renew
+                          </Link>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

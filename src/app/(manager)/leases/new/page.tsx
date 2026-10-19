@@ -16,7 +16,12 @@ import { leaseName } from '@/lib/leases/format';
 import { leasesDb } from '@/lib/leases/queries';
 import { unitLabel } from '@/lib/properties/format';
 import { listTemplates } from '@/lib/lease-create/template-service';
-import type { TemplateDefinition, TemplateItem, TermOverride, TermsContext } from '@/lib/lease-create/templates';
+import type {
+  TemplateDefinition,
+  TemplateItem,
+  TermOverride,
+  TermsContext,
+} from '@/lib/lease-create/templates';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +29,7 @@ type Search = {
   draft?: string;
   renew?: string;
   unit?: string;
+  property?: string;
   applicant?: string;
   tenant?: string;
   fresh?: string;
@@ -32,8 +38,15 @@ type Search = {
 export default async function NewLeasePage({ searchParams }: { searchParams: Promise<Search> }) {
   const session = await requireManagerRole();
   const organizationId = session.organizationId;
-  const { draft: draftId, renew: renewId, unit: unitParam, applicant: applicantId, tenant: tenantParam, fresh } =
-    await searchParams;
+  const {
+    draft: draftId,
+    renew: renewId,
+    unit: unitParam,
+    property: propertyParam,
+    applicant: applicantId,
+    tenant: tenantParam,
+    fresh,
+  } = await searchParams;
 
   const data = leasesDb(organizationId);
   const [options, source] = await Promise.all([
@@ -53,7 +66,10 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
     snapshot = await loadLeaseDraft(organizationId, draftId);
     if (!snapshot) {
       // A draft that has been sent is a normal lease now.
-      const sent = await db.lease.findFirst({ where: { id: draftId, organizationId }, select: { id: true } });
+      const sent = await db.lease.findFirst({
+        where: { id: draftId, organizationId },
+        select: { id: true },
+      });
       if (sent) redirect(`/leases/${sent.id}`);
       notFound();
     }
@@ -73,19 +89,27 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
   if (!unit) {
     return (
       <UnitPicker
-        backHref="/leases"
-        units={options.units.map((u) => ({
-          id: u.id,
-          label: unitLabel(u.property, u),
-          status: u.status,
-        }))}
+        backHref={
+          propertyParam ? `/properties/${encodeURIComponent(propertyParam)}/leases` : '/leases'
+        }
+        context={{ applicant: applicantId, tenant: tenantParam }}
+        units={options.units
+          .filter((u) => !propertyParam || u.propertyId === propertyParam)
+          .map((u) => ({
+            id: u.id,
+            label: unitLabel(u.property, u),
+            status: u.status,
+          }))}
       />
     );
   }
 
   const templateData = await listTemplates(organizationId);
-  const propertyDefaultId = templateData.properties.find((p) => p.id === unit.propertyId)?.defaultLeaseTemplateId;
-  const defaultTemplate = templateData.templates.find((t) => t.id === propertyDefaultId) ?? templateData.templates[0];
+  const propertyDefaultId = templateData.properties.find(
+    (p) => p.id === unit.propertyId,
+  )?.defaultLeaseTemplateId;
+  const defaultTemplate =
+    templateData.templates.find((t) => t.id === propertyDefaultId) ?? templateData.templates[0];
 
   let initial = snapshot?.draft;
   if (!initial) {
@@ -95,16 +119,27 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
     );
     if (source) {
       initial = renewalDefaults(source);
-      const signed = source.termsSnapshot && typeof source.termsSnapshot === 'object' && !Array.isArray(source.termsSnapshot)
-        ? source.termsSnapshot as Record<string, unknown> : null;
+      const signed =
+        source.termsSnapshot &&
+        typeof source.termsSnapshot === 'object' &&
+        !Array.isArray(source.termsSnapshot)
+          ? (source.termsSnapshot as Record<string, unknown>)
+          : null;
       const priorContext = signed?.context as TermsContext | undefined;
-      const carriedItems = Array.isArray(signed?.items) ? signed.items as TemplateItem[] : [];
-      initial = { ...initial,
-        template: signed?.template as TemplateDefinition ?? defaultTemplate,
-        termOverrides: signed?.overrides as Record<string, TermOverride> ?? {},
+      const carriedItems = Array.isArray(signed?.items) ? (signed.items as TemplateItem[]) : [];
+      initial = {
+        ...initial,
+        template: (signed?.template as TemplateDefinition) ?? defaultTemplate,
+        termOverrides: (signed?.overrides as Record<string, TermOverride>) ?? {},
         renewalTerms: carriedItems,
-        options: (priorContext?.petsAllowed ?? carriedItems.some((item) => item.includeWhen === 'PETS_ALLOWED')) ? ['pets-allowed'] : [],
-        assignedParking: priorContext?.assignedParking ?? carriedItems.some((item) => item.includeWhen === 'ASSIGNED_PARKING'),
+        options:
+          (priorContext?.petsAllowed ??
+          carriedItems.some((item) => item.includeWhen === 'PETS_ALLOWED'))
+            ? ['pets-allowed']
+            : [],
+        assignedParking:
+          priorContext?.assignedParking ??
+          carriedItems.some((item) => item.includeWhen === 'ASSIGNED_PARKING'),
         tenantUtilities: priorContext?.tenantUtilities ?? [],
         balconyPatio: priorContext?.balconyPatio ?? unit.hasBalconyPatio,
         sharedLaundry: priorContext?.sharedLaundry ?? unit.property.hasSharedLaundry,
@@ -119,7 +154,8 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
       });
       const rent = unit.listedRent?.toString() ?? '';
       const preselected =
-        applicantTenant ?? (tenantParam ? options.tenants.find((t) => t.id === tenantParam) : undefined);
+        applicantTenant ??
+        (tenantParam ? options.tenants.find((t) => t.id === tenantParam) : undefined);
       initial = withResolvedEnd(
         emptyDraft({
           unitId: unit.id,
@@ -160,12 +196,14 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
         id: d.id,
         name: d.name,
         sizeBytes: Number(d.sizeBytes),
-        kind: d.kind === 'LEASE' || d.kind === 'ADDENDUM' || d.kind === 'DISCLOSURE' ? d.kind : 'OTHER' as const,
+        kind:
+          d.kind === 'LEASE' || d.kind === 'ADDENDUM' || d.kind === 'DISCLOSURE'
+            ? d.kind
+            : ('OTHER' as const),
       }))
     : [];
 
-  const renewSource =
-    snapshot?.renewId && !source ? await data.detail(snapshot.renewId) : source;
+  const renewSource = snapshot?.renewId && !source ? await data.detail(snapshot.renewId) : source;
   return (
     <LeaseBuilder
       key={snapshot?.leaseId ?? 'new'}

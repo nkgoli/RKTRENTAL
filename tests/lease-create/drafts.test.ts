@@ -59,23 +59,31 @@ describe.skipIf(!live)('lease draft persistence (database)', () => {
     );
 
   it('saves each step and resumes on the saved step with the entered values', async () => {
-    const first = await saveLeaseDraft(organizationId, {
-      step: STEP.term,
-      nextStep: STEP.rent,
-      draft: draft(),
-      strict: true,
-    }, db);
+    const first = await saveLeaseDraft(
+      organizationId,
+      {
+        step: STEP.term,
+        nextStep: STEP.rent,
+        draft: draft(),
+        strict: true,
+      },
+      db,
+    );
     expect(first).toMatchObject({ ok: true, step: STEP.rent });
     if (!first.ok) return;
     created.push(first.leaseId);
 
-    const second = await saveLeaseDraft(organizationId, {
-      leaseId: first.leaseId,
-      step: STEP.rent,
-      nextStep: STEP.clauses,
-      draft: { ...draft(), occupants: 'Two adults' },
-      strict: true,
-    }, db);
+    const second = await saveLeaseDraft(
+      organizationId,
+      {
+        leaseId: first.leaseId,
+        step: STEP.rent,
+        nextStep: STEP.clauses,
+        draft: { ...draft(), occupants: 'Two adults' },
+        strict: true,
+      },
+      db,
+    );
     expect(second).toMatchObject({ ok: true, leaseId: first.leaseId, furthestStep: STEP.clauses });
 
     const resumed = await loadLeaseDraft(organizationId, first.leaseId, db);
@@ -91,13 +99,17 @@ describe.skipIf(!live)('lease draft persistence (database)', () => {
     expect(await findOpenDraft(organizationId, { unitId }, db)).toBe(first.leaseId);
 
     // Save and exit on an earlier step keeps the furthest step reached.
-    await saveLeaseDraft(organizationId, {
-      leaseId: first.leaseId,
-      step: STEP.term,
-      nextStep: STEP.term,
-      draft: draft(),
-      strict: false,
-    }, db);
+    await saveLeaseDraft(
+      organizationId,
+      {
+        leaseId: first.leaseId,
+        step: STEP.term,
+        nextStep: STEP.term,
+        draft: draft(),
+        strict: false,
+      },
+      db,
+    );
     expect(await loadLeaseDraft(organizationId, first.leaseId, db)).toMatchObject({
       step: STEP.term,
       furthestStep: STEP.clauses,
@@ -105,13 +117,17 @@ describe.skipIf(!live)('lease draft persistence (database)', () => {
   });
 
   it('refuses to continue past a step with invalid values', async () => {
-    const bad = await saveLeaseDraft(organizationId, {
-      leaseId: created[0],
-      step: STEP.rent,
-      nextStep: STEP.tenants,
-      draft: { ...draft(), monthlyRent: 'abc' },
-      strict: true,
-    }, db);
+    const bad = await saveLeaseDraft(
+      organizationId,
+      {
+        leaseId: created[0],
+        step: STEP.rent,
+        nextStep: STEP.tenants,
+        draft: { ...draft(), monthlyRent: 'abc' },
+        strict: true,
+      },
+      db,
+    );
     expect(bad).toMatchObject({ ok: false });
   });
 
@@ -131,13 +147,14 @@ describe.skipIf(!live)('lease draft persistence (database)', () => {
     expect(new Set(descriptions).size).toBe(descriptions.length);
     expect(descriptions.sort()).toEqual(
       [
-        `rent:${leaseId}:2031-05`,
+        // A partial first period has its own key; recurring rent starts on the next due day.
+        `prorated:${leaseId}:2031-05-15`,
         `rent:${leaseId}:2031-06`,
         `setup:deposit:${leaseId}`,
         `setup:move-in-fee:${leaseId}`,
       ].sort(),
     );
-    const may = lease.charges.find((c) => c.description === `rent:${leaseId}:2031-05`);
+    const may = lease.charges.find((c) => c.description === `prorated:${leaseId}:2031-05-15`);
     expect(may?.amount.toString()).toBe('1014.52');
 
     const statement = buildLeaseStatement({

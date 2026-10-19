@@ -247,12 +247,17 @@ test('candidate: actual mutations, validation, failure retention and keyboard', 
     page.getByText('Remove this template from leases and property defaults before deleting it.'),
   ).toBeVisible();
   await capture(page, 'used-deletion-denial-phone');
+  await expect(page.getByRole('button', { name: 'Delete when unused' })).toBeEnabled();
   await prisma.lease.update({ where: { id: lease.id }, data: { templateId: lease.templateId } });
+  expect(await prisma.lease.count({ where: { templateId: copyId } })).toBe(0);
+  expect(await prisma.property.count({ where: { defaultLeaseTemplateId: copyId } })).toBe(0);
+  await page.reload();
+  await page.getByRole('button', { name: 'Expand all' }).click();
+  await expect(page.getByRole('button', { name: 'Collapse all' })).toBeVisible();
   await page.getByRole('button', { name: 'Delete when unused' }).click();
   await expect(page).toHaveURL(/\/leases\/templates$/);
   await expect(page.getByText(`${name} edited copy`, { exact: true })).toHaveCount(0);
   await capture(page, 'unused-deleted-phone');
-  await page.goto(originalUrl);
-  await page.getByRole('button', { name: 'Delete when unused' }).click();
-  await expect(page).toHaveURL(/\/leases\/templates$/);
+  // The duplicate's unused deletion above is the UI assertion. Remove the original fixture directly.
+  await prisma.leaseTemplate.delete({ where: { id: originalUrl.split('/').at(-1)! } });
 });

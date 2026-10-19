@@ -226,12 +226,12 @@ export function TemplateEditor({
           <div className={styles['lt-panel']}>
             <div className={styles['lt-panel-head']}>
               <h2>{name || 'Untitled template'}</h2>
-              <span>
-                v{version} · Saving creates a new version. Sent and signed leases keep their
-                wording.
-              </span>
+              <span className={styles['lt-badge']}>v{version}</span>
             </div>
             <div className={styles['lt-panel-body']}>
+              <p className={styles['lt-feedback']}>
+                Saving creates a new version. Sent and signed leases keep their wording.
+              </p>
               <label className={styles['lt-field']}>
                 Template name
                 <input

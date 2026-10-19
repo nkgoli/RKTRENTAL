@@ -693,6 +693,8 @@
 .page .lt-item > button span {
   color: var(--design-primary);
   font-size: 11px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .reorder {
   display: flex;

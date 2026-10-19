@@ -49,14 +49,12 @@ export function WorkspaceHeader({ scope, units, coverKind, coverSrc }: {
         <span aria-current="page">{current.unitId && !current.unitIsImplicit ? `Unit ${current.unitNumber}` : title}</span>
       </nav>
       <div className={styles.titleLine}>
-        <div>
-          <h1>{title}</h1>
-          {scope.propertyAddress && <p className={styles.address}>{scope.propertyAddress}</p>}
-        </div>
+        <h1>{title}</h1>
         <div className={styles.badges}>
           <Badge tone={status === 'Occupied' || status === 'Active' ? 'success' : 'info'}>{status}</Badge>
           <Badge tone="info">{propertyTypeLabel(scope)}</Badge>
         </div>
+        {scope.propertyAddress && <p className={styles.address}>{scope.propertyAddress}</p>}
       </div>
       {propertyTypeLabel(scope) === 'Multi-unit' && <UnitSwitcher propertyName={scope.propertyName} units={units} />}
     </div>

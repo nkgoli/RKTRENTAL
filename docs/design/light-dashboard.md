@@ -50,11 +50,50 @@ Final browser console contained only the existing missing `/favicon.ico` 404. Th
 - `tests/dashboard/evidence/desktop-after.png` and `phone-after.png`: real production dashboard at 1440 and 390 CSS pixels, with monthly disclosure open on phone.
 - `tests/dashboard/evidence/native-desktop-before.png`: existing Edge session baseline, Windows MCP snapshot at 2560 x 1600 display resolution. Desktop lease was acquired and released.
 
-**Required final native Edge desktop/390px review is pending.** During its leased window, personal browsing changed the active tab between automation actions. The desktop was released without continuing to compete for focus; a quiet bounded window was requested through the typed task question. This does not affect the passing isolated Playwright results, but task acceptance must wait for the required native review. Empty/error states have component coverage, not an induced production database-outage browser test.
+**Required final native Edge desktop/390px review is pending.** During earlier leased windows, the active tab or foreground window changed between automation actions. The desktop was released without continuing to compete for focus. The manager has confirmed the handover, superseded the duplicate readiness questions, and confirmed that no quiet window is active. The manager coordinates the next window; the builder must not independently request another human window or acquire the desktop. This does not affect the passing isolated Playwright results, but task acceptance must wait for the required native review. Empty/error states have component coverage, not an induced production database-outage browser test.
+
+### Runtime readiness for manager coordination
+
+The takeover confirmed these coordinates on **2026-10-19**. The runtime is prepared and **stopped**, not currently serving the dashboard. There is no outstanding implementation work before the native review.
+
+| Item | Retained state |
+| --- | --- |
+| Candidate before this documentation update | `2c13a1a1b489928d8e94aea5f497665a5522985d`; tested implementation `741b0b78069842a77d2930d8b46aeffeaec281e0` is unchanged. |
+| Foundation ancestry | All four exact foundation/coverage/system commits listed above were reconfirmed as ancestors. |
+| Production build | `.next/BUILD_ID` is `AFP2Fu5f6Vc4ZfOZT7itT`. No rebuild is needed. |
+| Web runtime | Next 15.5.27 started successfully on `http://localhost:3228`, then its task-owned process was stopped. |
+| Fixture database | PostgreSQL 16.14 started successfully from `tests/dashboard/.runtime/postgres` on port `55428`, then completed a clean fast shutdown. Data remains on disk. |
+| Desktop | Lease released. No native final screenshots or flow acceptance were added during takeover. |
+| Shutdown check | Neither port `3228` nor `55428` had a listening process after shutdown. |
+| Reused evidence | Dashboard tests, scoped lint, typecheck, build, browser checks and before/after images above remain applicable; no passed suite was repeated. |
+
+`pg_ctl start` failed with Windows restricted-token error 87 in this execution environment. Launching the retained `postgres.exe` directly succeeded. PostgreSQL recovered the prior interrupted cluster automatically; no files were removed and no migration, seed or reset was run. `pg_ctl stop` worked and shut the database down cleanly.
+
+Once the manager coordinates the review, start two task-owned PowerShell processes from the assigned checkout. The first command reuses the existing cluster:
+
+```powershell
+& 'prisma/node_modules/@embedded-postgres/windows-x64/native/bin/postgres.exe' -D 'tests/dashboard/.runtime/postgres' -p 55428
+```
+
+For the second process, set `DATABASE_URL` explicitly to the retained **local fixture** database `rocketrental` on `localhost:55428`, using the fixture credentials already defined in `scripts/embedded-postgres.mjs`. Then serve the existing production build:
+
+```powershell
+node node_modules/next/dist/bin/next start -p 3228
+```
+
+Before the desktop window, confirm PostgreSQL reports ready, Next reports ready, and `/sign-in` responds. Use the existing seeded manager identity from `tests/dashboard/dashboard.spec.ts`. These startup checks do not replace the pending native browser observations.
+
+After review, stop only the task-owned Next process and shut down the retained database:
+
+```powershell
+& 'prisma/node_modules/@embedded-postgres/windows-x64/native/bin/pg_ctl.exe' stop -D 'tests/dashboard/.runtime/postgres' -m fast -w
+```
+
+Keep the fixture directory and existing screenshots. Record the new native screenshots under `tests/dashboard/evidence/`, the final observed flow outcomes here, and the exact resulting candidate in the typed task report.
 
 ### Pending native checklist
 
-Wait for the explicit quiet-window signal; silence does not establish availability. Reuse the retained fixture cluster and production build above without migrating, reseeding or rebuilding.
+Wait for the manager's explicit quiet-window signal; silence does not establish availability. Reuse the retained fixture cluster and production build above without migrating, reseeding or rebuilding. Complete only the missing native observations; preserve passing checks.
 
 1. Acquire one bounded desktop lease and use only the dashboard review tab in the existing Edge session.
 2. At desktop width, inspect collection/history, leases/attention and property/activity composition; capture the final native screenshot against the preserved baseline.

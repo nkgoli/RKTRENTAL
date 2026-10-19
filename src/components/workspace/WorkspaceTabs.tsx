@@ -26,11 +26,17 @@ export function WorkspaceTabs({ propertyId, unitId, activeTab }: { propertyId: s
   const selected = tabs.find((tab) => tab.key === routeTab)?.key ?? activeTab ?? 'overview';
 
   return <nav className={styles.tabs} aria-label="Workspace sections">
-    {tabs.map((tab) => <Link
+    {tabs.map((tab) => {
+      // Production RSC transitions to this report can remain pending after a
+      // successful response. Use the same document navigation as its range
+      // controls; retain native keyboard/history behavior and the scoped URL.
+      const TabLink = tab.key === 'returns' ? 'a' : Link;
+      return <TabLink
       key={tab.key}
       href={workspaceTabHref(propertyId, tab.key, selectedUnit)}
       className={`${styles.tab} ${selected === tab.key ? styles.active : ''}`}
       aria-current={selected === tab.key ? 'page' : undefined}
-    >{tab.label}</Link>)}
+    >{tab.label}</TabLink>;
+    })}
   </nav>;
 }

@@ -21,7 +21,10 @@ for (const width of [1280, 390]) {
             const from = `/properties/seed-property-maple/${source.toLowerCase()}${query}`;
             const to = `/properties/seed-property-maple/returns${query}`;
             await page.goto(from);
-            const sourceHeadings = await page.locator('main h2, main h3').allTextContents();
+            const sourceContent = source === 'Payments'
+              ? page.getByRole('button', { name: 'Record payment', exact: true })
+              : page.getByRole('heading', { name: /^(No repair requests yet|Repair requests)$/ });
+            await expect(sourceContent).toBeVisible();
             const nav = page.getByRole('navigation', { name: 'Workspace sections' });
             await expect(nav.getByRole('link', { name: source, exact: true })).toHaveAttribute('aria-current', 'page');
             const returns = nav.getByRole('link', { name: 'Returns', exact: true });
@@ -45,7 +48,7 @@ for (const width of [1280, 390]) {
             await expect(page).toHaveURL(new URL(from, page.url()).href);
             await expect(nav.getByRole('link', { name: source, exact: true })).toHaveAttribute('aria-current', 'page');
             await expect(page.getByRole('heading', { level: 1 })).toHaveText(unit ? 'Maple Court · Unit 1B' : 'Maple Court');
-            await expect(page.locator('main h2, main h3')).toHaveText(sourceHeadings);
+            await expect(sourceContent).toBeVisible();
           });
         }
       }

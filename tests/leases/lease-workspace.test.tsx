@@ -13,13 +13,12 @@ vi.mock('@/components/shell/PageHeader', () => ({ PageHeader: () => null }));
 vi.mock('@/app/(manager)/leases/LeaseForms', () => ({
   EditTermsForm: () => <form aria-label="Edit lease terms" />,
   NoticeForm: () => <form aria-label="Record lease notice" />,
-  LeaseUploader: () => <div>Upload lease document</div>,
   LeaseStatusActions: ({ status }: { status: string }) => (
     <button>{status === 'DRAFT' ? 'Activate lease' : 'Terminate'}</button>
   ),
 }));
 vi.mock('@/app/(manager)/leases/[id]/LeaseDocumentGrid', () => ({
-  LeaseDocumentGrid: () => <div>Document controls</div>,
+  LeaseDocumentGrid: () => <div>Upload lease document · Document controls</div>,
 }));
 
 import LeaseDetailPage from '@/app/(manager)/leases/[id]/page';

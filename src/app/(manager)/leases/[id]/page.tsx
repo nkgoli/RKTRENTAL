@@ -3,19 +3,20 @@ import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/shell/PageHeader';
 import type { ReactNode } from 'react';
 import { workspaceTabHref } from '@/components/workspace/routes';
-import workspaceStyles from '@/components/workspace/Workspace.module.css';
-import { Avatar, Badge } from '@/components/ui';
+import { Alert, Avatar, Badge } from '@/components/ui';
+import { Icon } from '@/components/shell/Icons';
 import { requireManagerRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
 import { LeaseDocumentGrid } from './LeaseDocumentGrid';
 import { LeaseSectionNavigation } from './LeaseSectionNavigation';
+import { leaseResult, leaseResultMessages } from './feedback';
 import styles from './lease-detail.module.css';
 import { dateInput } from '@/lib/leases/core';
 import { EVENT_LABEL } from '@/lib/leases/events';
 import { money, signLabel, statusLabel, term } from '@/lib/leases/format';
 import { leasesDb } from '@/lib/leases/queries';
 import { formatAddress, formatDate, initials } from '@/lib/properties/format';
-import { EditTermsForm, LeaseStatusActions, LeaseUploader, NoticeForm } from '../LeaseForms';
+import { EditTermsForm, LeaseStatusActions, NoticeForm } from '../LeaseForms';
 import type { TemplateItem } from '@/lib/lease-create/templates';
 
 const CHARGE_LABEL: Record<string, string> = {
@@ -58,7 +59,7 @@ export default async function LeaseDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ propertyId?: string; unitId?: string; tab?: string }>;
+  searchParams: Promise<{ propertyId?: string; unitId?: string; tab?: string; saved?: string }>;
 }) {
   const session = await requireManagerRole();
   const [{ id }, query] = await Promise.all([params, searchParams]);
@@ -78,8 +79,7 @@ export default async function LeaseDetailPage({
     signedTerms?.template && typeof signedTerms.template === 'object'
       ? (signedTerms.template as { name?: string })
       : null;
-  const title =
-    property.name + (lease.unit.isImplicit ? '' : ' · Unit ' + lease.unit.number) + ' Lease';
+  const title = property.name + (lease.unit.isImplicit ? '' : ' · Unit ' + lease.unit.number);
   const onlinePaymentsEnabled =
     (await db.providerConnection.count({
       where: { organizationId: session.organizationId, kind: 'PAYMENTS', status: 'CONNECTED' },
@@ -126,6 +126,8 @@ export default async function LeaseDetailPage({
   const activeTab = LEASE_TABS.find((tab) => tab.key === query.tab)?.key ?? 'overview';
   // Derive scope from the authorized lease, never from caller-supplied IDs.
   const scoped = Boolean(query.propertyId || query.unitId);
+  const returnScope = query.unitId ? 'unit' : scoped ? 'property' : undefined;
+  const saved = leaseResult(query.saved);
   const backHref = scoped
     ? workspaceTabHref(property.id, 'leases', query.unitId ? lease.unitId : undefined)
     : '/leases';
@@ -160,9 +162,9 @@ export default async function LeaseDetailPage({
       />
 
       <div className={styles.workspace}>
-        <Link className={styles.backLink} href={backHref}>
+        <a className={styles.backLink} href={backHref}>
           ← {scoped ? `${property.name} leases` : 'All leases'}
-        </Link>
+        </a>
         <section className={styles.summaryLine} aria-label="Lease summary">
           <Badge
             tone={
@@ -184,7 +186,7 @@ export default async function LeaseDetailPage({
               ? lease.tenants.map(({ tenant }, index) => (
                   <span key={tenant.id}>
                     {index > 0 && ', '}
-                    <Link href={`/tenants/${tenant.id}`}>{tenant.name}</Link>
+                    <a href={`/tenants/${tenant.id}`}>{tenant.name}</a>
                   </span>
                 ))
               : 'No tenants yet'}
@@ -195,20 +197,16 @@ export default async function LeaseDetailPage({
           </span>
         </section>
 
-        <LeaseSectionNavigation
-          activeTab={activeTab}
-          className={`${workspaceStyles.tabs} ${styles.tabs}`}
-        >
+        {/* Document links avoid the reproduced stalled client section transition. */}
+        <LeaseSectionNavigation activeTab={activeTab} className={styles.tabs}>
           {LEASE_TABS.map((tab) => (
-            <Link
+            <a
               key={tab.key}
               href={tabHref(tab.key)}
-              className={`${workspaceStyles.tab} ${activeTab === tab.key ? workspaceStyles.active : ''}`}
               aria-current={activeTab === tab.key ? 'page' : undefined}
-              scroll={false}
             >
               {tab.label}
-            </Link>
+            </a>
           ))}
         </LeaseSectionNavigation>
         <div className={styles.panel} id={`lease-${activeTab}`}>
@@ -241,27 +239,27 @@ export default async function LeaseDetailPage({
                     title="Leased premises"
                     action={<Badge>One property · one unit</Badge>}
                   />
-                  <div className="row between">
+                  <div className={styles.premises}>
+                    <span className={styles.building} aria-hidden="true">
+                      <Icon name="properties" />
+                    </span>
                     <div>
-                      <h2 style={{ fontSize: 18 }}>
-                        <Link href={`/properties/${property.id}`}>{property.name}</Link>
+                      <h3>
+                        <a href={`/properties/${property.id}`}>{property.name}</a>
                         {!lease.unit.isImplicit && (
                           <>
                             {' '}
                             ·{' '}
-                            <Link href={`/properties/${property.id}/units/${lease.unitId}`}>
+                            <a href={`/properties/${property.id}/units/${lease.unitId}`}>
                               Unit {lease.unit.number}
-                            </Link>
+                            </a>
                           </>
                         )}
-                      </h2>
+                      </h3>
                       <p className="muted" style={{ marginTop: 4 }}>
                         {formatAddress(property)}
                       </p>
                     </div>
-                    <Link className="btn btn-secondary btn-sm" href={`/properties/${property.id}`}>
-                      View property
-                    </Link>
                   </div>
                   <p className="muted" style={{ marginTop: 14 }}>
                     This lease covers{' '}
@@ -270,6 +268,9 @@ export default async function LeaseDetailPage({
                       : `Unit ${lease.unit.number} only`}{' '}
                     at {property.name}.
                   </p>
+                  <a className={styles.secondaryLink} href={`/properties/${property.id}`}>
+                    View property <span aria-hidden="true">→</span>
+                  </a>
                 </section>
                 <section className={styles.section}>
                   <SectionHeader
@@ -282,12 +283,7 @@ export default async function LeaseDetailPage({
                   />
                   {!lease.tenants.length && <p className="muted">No tenants yet.</p>}
                   {lease.tenants.map(({ tenant, isPrimary }) => (
-                    <Link
-                      key={tenant.id}
-                      className="list-item"
-                      href={`/tenants/${tenant.id}`}
-                      style={{ color: 'inherit' }}
-                    >
+                    <a key={tenant.id} className="list-item" href={`/tenants/${tenant.id}`}>
                       <Avatar initials={initials(tenant.name)} />
                       <span className="file-meta">
                         <strong>{tenant.name}</strong>
@@ -295,14 +291,14 @@ export default async function LeaseDetailPage({
                           {isPrimary ? 'Primary tenant' : 'Tenant'} · {tenant.email ?? 'No email'}
                         </small>
                       </span>
-                      <span>→</span>
-                    </Link>
+                      <span aria-hidden="true">→</span>
+                    </a>
                   ))}
                 </section>
                 <section className={styles.section}>
                   <SectionHeader
                     title="Agreement & move-out"
-                    action={<Link href={tabHref('agreement')}>Manage agreement →</Link>}
+                    action={<a href={tabHref('agreement')}>Manage agreement →</a>}
                   />
                   <dl className={styles.compactFacts}>
                     <dt>Signature</dt>
@@ -319,7 +315,7 @@ export default async function LeaseDetailPage({
                 <section className={styles.section}>
                   <SectionHeader
                     title="Rent summary"
-                    action={<Link href={tabHref('payments')}>View rent ledger →</Link>}
+                    action={<a href={tabHref('payments')}>View rent ledger →</a>}
                   />
                   <dl className={styles.compactFacts}>
                     <dt>Balance due</dt>
@@ -331,15 +327,18 @@ export default async function LeaseDetailPage({
                         : 'None yet'}
                     </dd>
                   </dl>
-                  <Link className={styles.secondaryLink} href={tabHref('documents')}>
+                  <a className={styles.secondaryLink} href={tabHref('documents')}>
                     Lease documents ({lease.documents.length}) →
-                  </Link>
+                  </a>
                 </section>
               </div>
             </>
           )}
           {activeTab === 'agreement' && (
             <>
+              {(saved === 'activated' || saved === 'terminated') && (
+                <Alert tone="success">{leaseResultMessages[saved]}</Alert>
+              )}
               <section className={styles.section}>
                 <SectionHeader title="Lease terms" />
                 <dl className="kv">
@@ -360,20 +359,22 @@ export default async function LeaseDetailPage({
                 </dl>
                 {(lease.status === 'ACTIVE' || lease.status === 'DRAFT') && (
                   // The form repeats every value above, so it stays folded until asked for.
-                  <details className={styles.editTerms}>
-                    <summary className="btn btn-secondary btn-sm">Edit terms</summary>
-                    <EditTermsForm leaseId={lease.id} values={terms} />
+                  <details className={styles.editTerms} open={saved === 'terms'}>
+                    <summary>Edit terms</summary>
+                    <EditTermsForm
+                      leaseId={lease.id}
+                      values={terms}
+                      returnScope={returnScope}
+                      saved={saved === 'terms'}
+                    />
                   </details>
                 )}
               </section>
               {signedTerms && (
                 <section className={styles.section} aria-labelledby="terms-as-signed">
                   <div className={styles.sectionHeading}>
-                    <div>
-                      <p className="eyebrow">Signed agreement snapshot</p>
-                      <h2 id="terms-as-signed">Terms as signed</h2>
-                    </div>
-                    <span className="muted">Locked at send</span>
+                    <h2 id="terms-as-signed">Terms as signed</h2>
+                    <Badge tone="info">Locked at send</Badge>
                   </div>
                   <p className="muted">
                     {snapshotTemplate?.name ?? 'Lease template'} · v{lease.templateVersion ?? 1}
@@ -414,7 +415,7 @@ export default async function LeaseDetailPage({
                     No agreement snapshot is recorded for this lease. Check Documents for an
                     uploaded signed agreement.
                   </p>
-                  <Link href={tabHref('documents')}>View lease documents →</Link>
+                  <a href={tabHref('documents')}>View lease documents →</a>
                 </section>
               )}
 
@@ -439,14 +440,16 @@ export default async function LeaseDetailPage({
                   <dd>{lease.moveOutDate ? formatDate(lease.moveOutDate) : 'Not scheduled'}</dd>
                 </dl>
                 {lease.status === 'ACTIVE' && (
-                  <details className={styles.editTerms}>
-                    <summary className="btn btn-secondary btn-sm">
+                  <details className={styles.editTerms} open={saved === 'notice'}>
+                    <summary>
                       {noticeGiven ? 'Update notice or move-out' : 'Record notice or move-out'}
                     </summary>
                     <NoticeForm
                       leaseId={lease.id}
                       noticeGivenAt={lease.noticeGivenAt ? dateInput(lease.noticeGivenAt) : ''}
                       moveOutDate={lease.moveOutDate ? dateInput(lease.moveOutDate) : ''}
+                      returnScope={returnScope}
+                      saved={saved === 'notice'}
                     />
                   </details>
                 )}
@@ -454,7 +457,11 @@ export default async function LeaseDetailPage({
               {(lease.status === 'ACTIVE' || lease.status === 'DRAFT') && (
                 <section className={styles.section}>
                   <SectionHeader title="Lease actions" />
-                  <LeaseStatusActions leaseId={lease.id} status={lease.status} />
+                  <LeaseStatusActions
+                    leaseId={lease.id}
+                    status={lease.status}
+                    returnScope={returnScope}
+                  />
                 </section>
               )}
             </>
@@ -469,9 +476,9 @@ export default async function LeaseDetailPage({
                   </p>
                 </div>
               </div>
-              <LeaseUploader leaseId={lease.id} />
               <LeaseDocumentGrid
                 leaseId={lease.id}
+                withUploader
                 documents={lease.documents.map((file) => ({
                   id: file.id,
                   name: file.name,
@@ -487,22 +494,22 @@ export default async function LeaseDetailPage({
               <SectionHeader
                 title="Rent ledger"
                 action={
-                  <Link className="btn btn-ghost btn-sm" href={paymentsHref}>
+                  <a className="btn btn-ghost btn-sm" href={paymentsHref}>
                     View payments →
-                  </Link>
+                  </a>
                 }
               />
-              <div className="grid-2">
+              <div className={styles.ledgerFacts}>
                 <div>
-                  <div className="eyebrow">Balance due</div>
-                  <strong style={{ fontSize: 20 }}>
+                  <small>Balance due</small>
+                  <strong>
                     {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
                       balance,
                     )}
                   </strong>
                 </div>
                 <div>
-                  <div className="eyebrow">Last payment</div>
+                  <small>Last payment</small>
                   <strong>
                     {lastPayment
                       ? formatDate(lastPayment.paidAt ?? lastPayment.createdAt)
@@ -511,7 +518,7 @@ export default async function LeaseDetailPage({
                 </div>
               </div>
               {charges.slice(0, 3).map((charge) => (
-                <div className="list-item" key={charge.id}>
+                <div className={styles.ledgerLine} key={charge.id}>
                   <Badge>{CHARGE_LABEL[charge.kind] ?? 'Charge'}</Badge>
                   <span className="file-meta">
                     <strong>{money(charge.amount)}</strong>
@@ -527,71 +534,85 @@ export default async function LeaseDetailPage({
             </section>
           )}
           {activeTab === 'activity' && (
-            <section className={styles.section}>
-              <SectionHeader
-                title="E-signature history"
-                action={
-                  <Badge tone={lease.eSignStatus === 'SIGNED' ? 'success' : 'info'}>
-                    {signLabel(lease.eSignStatus)}
-                  </Badge>
-                }
-              />
-              <p className="muted">
-                {lease.signedAt
-                  ? `Fully signed ${formatDate(lease.signedAt)}`
-                  : lease.eSignStatus === 'SIGNED'
-                    ? 'Marked signed; signature time was not recorded.'
-                    : 'No completed signature recorded yet.'}
-              </p>
-              {signerStatus.length > 0 && (
-                <div aria-label="Signers" style={{ marginTop: 12 }}>
-                  {signerStatus.map(({ tenant, event }) => (
-                    <div className="list-item" key={tenant.id}>
-                      <Avatar initials={initials(tenant.name)} size="sm" />
-                      <span className="file-meta">
-                        <strong>{tenant.name}</strong>
-                        <small>
-                          {event
-                            ? `${EVENT_LABEL[event.kind]} · ${formatDate(event.createdAt)}`
-                            : signedOnPaper
-                              ? `Signed${lease.signedAt ? ` · ${formatDate(lease.signedAt)}` : ''}`
-                              : 'Not sent'}
-                        </small>
-                      </span>
-                      <Badge
-                        tone={
-                          event?.kind === 'SIGNED' || (!event && signedOnPaper)
-                            ? 'success'
+            <div className={styles.overviewGrid}>
+              <section className={styles.section}>
+                <SectionHeader
+                  title="E-signature history"
+                  action={
+                    <Badge
+                      tone={
+                        lease.eSignStatus === 'SIGNED'
+                          ? 'success'
+                          : lease.eSignStatus === 'PARTIALLY_SIGNED'
+                            ? 'warning'
+                            : 'info'
+                      }
+                    >
+                      {signLabel(lease.eSignStatus)}
+                    </Badge>
+                  }
+                />
+                <p className="muted">
+                  {lease.signedAt
+                    ? `Fully signed ${formatDate(lease.signedAt)}`
+                    : lease.eSignStatus === 'SIGNED'
+                      ? 'Marked signed; signature time was not recorded.'
+                      : 'No completed signature recorded yet.'}
+                </p>
+                {signerStatus.length > 0 && (
+                  <div aria-label="Signers" style={{ marginTop: 12 }}>
+                    {signerStatus.map(({ tenant, event }) => (
+                      <div className="list-item" key={tenant.id}>
+                        <Avatar initials={initials(tenant.name)} size="sm" />
+                        <span className="file-meta">
+                          <strong>{tenant.name}</strong>
+                          <small>
+                            {event
+                              ? `${EVENT_LABEL[event.kind]} · ${formatDate(event.createdAt)}`
+                              : signedOnPaper
+                                ? `Signed${lease.signedAt ? ` · ${formatDate(lease.signedAt)}` : ''}`
+                                : 'Not sent'}
+                          </small>
+                        </span>
+                        <Badge
+                          tone={
+                            event?.kind === 'SIGNED' || (!event && signedOnPaper)
+                              ? 'success'
+                              : event?.kind === 'DECLINED'
+                                ? 'danger'
+                                : 'info'
+                          }
+                        >
+                          {event?.kind === 'SIGNED' || (!event && signedOnPaper)
+                            ? 'Signed'
                             : event?.kind === 'DECLINED'
-                              ? 'danger'
-                              : 'info'
-                        }
-                      >
-                        {event?.kind === 'SIGNED' || (!event && signedOnPaper)
-                          ? 'Signed'
-                          : event?.kind === 'DECLINED'
-                            ? 'Declined'
-                            : event
-                              ? 'Awaiting'
-                              : 'Draft'}
-                      </Badge>
-                    </div>
+                              ? 'Declined'
+                              : event
+                                ? 'Awaiting'
+                                : 'Draft'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+              <section className={styles.section}>
+                <SectionHeader title="Activity" />
+                <ol className={styles.timeline}>
+                  {activities.map((item, index) => (
+                    <li className={styles.event} key={index}>
+                      <span className={styles.eventDot} aria-hidden="true">
+                        ↗
+                      </span>
+                      <span className="file-meta">
+                        <strong>{item.text}</strong>
+                        <small>{formatDate(item.date)}</small>
+                      </span>
+                    </li>
                   ))}
-                </div>
-              )}
-              <div className="card-header" style={{ margin: '20px 0 8px' }}>
-                <h2>Activity</h2>
-              </div>
-              {activities.map((item, index) => (
-                <div className="list-item" key={index}>
-                  <span className="avatar sm">•</span>
-                  <span className="file-meta">
-                    <strong>{item.text}</strong>
-                    <small>{formatDate(item.date)}</small>
-                  </span>
-                </div>
-              ))}
-            </section>
+                </ol>
+              </section>
+            </div>
           )}
         </div>
       </div>

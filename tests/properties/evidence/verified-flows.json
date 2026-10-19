@@ -1,0 +1,199 @@
+﻿{
+  "sourceCommit": "007dc7d0c0d1ac8a0e14f8e446cf2573f9883418",
+  "candidateBuild": "koxUetsbfNhQp2sImbbDn",
+  "baselineCommit": "4adfb9649c4fdf65c1ed07a0152a3038775c581c",
+  "baselineBuild": "Tl00hLRKUfTaiZwTV4H97",
+  "browser": "Playwright Chromium, headless, fresh isolated automation contexts",
+  "nativeEdgeAcceptance": "pending manager coordination",
+  "flows": [
+    {
+      "flow": "baseline",
+      "width": 1280,
+      "url": "http://localhost:3231/properties?view=list",
+      "properties": 8,
+      "candidateCommit": "007dc7d0c0d1ac8a0e14f8e446cf2573f9883418",
+      "candidateBuild": "koxUetsbfNhQp2sImbbDn",
+      "observedUtc": "2026-10-19T22:54:04.126Z"
+    },
+    {
+      "flow": "seeded directory",
+      "width": 1280,
+      "cards": 8,
+      "filters": {
+        "multi": 5,
+        "single": 3,
+        "vacancies": 7,
+        "archived": 0
+      },
+      "search": "Cedar1/no-match0",
+      "tableColumns": 6,
+      "tableScrollLeft": 0,
+      "url": "http://localhost:3232/properties?view=list",
+      "candidateCommit": "007dc7d0c0d1ac8a0e14f8e446cf2573f9883418",
+      "candidateBuild": "koxUetsbfNhQp2sImbbDn",
+      "observedUtc": "2026-10-19T22:54:19.649Z"
+    },
+    {
+      "flow": "seeded directory",
+      "width": 390,
+      "cards": 8,
+      "filters": {
+        "multi": 5,
+        "single": 3,
+        "vacancies": 7,
+        "archived": 0
+      },
+      "search": "Cedar1/no-match0",
+      "tableColumns": 6,
+      "tableScrollLeft": 163,
+      "url": "http://localhost:3232/properties?view=list",
+      "candidateCommit": "007dc7d0c0d1ac8a0e14f8e446cf2573f9883418",
+      "candidateBuild": "koxUetsbfNhQp2sImbbDn",
+      "observedUtc": "2026-10-19T22:54:19.649Z"
+    },
+    {
+      "flow": "dialog errors and cancel",
+      "width": 1280,
+      "valuesRetained": true,
+      "focusTrap": true,
+      "escape": true,
+      "returnFocus": true,
+      "queryPreserved": true,
+      "candidateCommit": "007dc7d0c0d1ac8a0e14f8e446cf2573f9883418",
+      "candidateBuild": "koxUetsbfNhQp2sImbbDn",
+      "observedUtc": "2026-10-19T22:54:19.649Z"
+    },
+    {
+      "flow": "dialog errors and cancel",
+      "width": 390,
+      "valuesRetained": true,
+      "focusTrap": true,
+      "escape": true,
+      "returnFocus": true,
+      "queryPreserved": true,
+      "candidateCommit": "007dc7d0c0d1ac8a0e14f8e446cf2573f9883418",
+      "candidateBuild": "koxUetsbfNhQp2sImbbDn",
+      "observedUtc": "2026-10-19T22:54:19.649Z"
+    },
+    {
+      "flow": "actual creation",
+      "type": "MULTI_UNIT",
+      "id": "cmvfuq0wy0001b9gc0e6dj679",
+      "name": "Directory review MULTI_UNIT 1792450457599",
+      "units": 2,
+      "url": "http://localhost:3232/properties/cmvfuq0wy0001b9gc0e6dj679",
+      "organizationScoped": true,
+      "reloadPersisted": true,
+      "pendingDisabled": true,
+      "candidateCommit": "007dc7d0c0d1ac8a0e14f8e446cf2573f9883418",
+      "candidateBuild": "koxUetsbfNhQp2sImbbDn",
+      "observedUtc": "2026-10-19T22:54:19.649Z"
+    },
+    {
+      "flow": "actual creation",
+      "type": "SINGLE_UNIT",
+      "id": "cmvfuq1w00005b9gc5x7fxxl2",
+      "name": "Directory review SINGLE_UNIT 1792450458892",
+      "units": 1,
+      "url": "http://localhost:3232/properties/cmvfuq1w00005b9gc5x7fxxl2",
+      "organizationScoped": true,
+      "reloadPersisted": true,
+      "pendingDisabled": true,
+      "candidateCommit": "007dc7d0c0d1ac8a0e14f8e446cf2573f9883418",
+      "candidateBuild": "koxUetsbfNhQp2sImbbDn",
+      "observedUtc": "2026-10-19T22:54:19.649Z"
+    },
+    {
+      "flow": "baseline",
+      "width": 1280,
+      "url": "http://localhost:3231/properties?view=list",
+      "properties": 10,
+      "candidateCommit": "007dc7d0c0d1ac8a0e14f8e446cf2573f9883418",
+      "candidateBuild": "koxUetsbfNhQp2sImbbDn",
+      "observedUtc": "2026-10-19T22:54:50.557Z"
+    },
+    {
+      "flow": "baseline",
+      "width": 390,
+      "url": "http://localhost:3231/properties?view=list",
+      "properties": 10,
+      "candidateCommit": "007dc7d0c0d1ac8a0e14f8e446cf2573f9883418",
+      "candidateBuild": "koxUetsbfNhQp2sImbbDn",
+      "observedUtc": "2026-10-19T22:54:50.557Z"
+    },
+    {
+      "flow": "seeded directory",
+      "width": 1280,
+      "cards": 10,
+      "filters": {
+        "multi": 6,
+        "single": 4,
+        "vacancies": 9,
+        "archived": 0
+      },
+      "search": "Cedar1/no-match0",
+      "tableColumns": 6,
+      "tableScrollLeft": 0,
+      "url": "http://localhost:3232/properties?view=list",
+      "candidateCommit": "007dc7d0c0d1ac8a0e14f8e446cf2573f9883418",
+      "candidateBuild": "koxUetsbfNhQp2sImbbDn",
+      "observedUtc": "2026-10-19T22:54:50.557Z"
+    },
+    {
+      "flow": "seeded directory",
+      "width": 390,
+      "cards": 10,
+      "filters": {
+        "multi": 6,
+        "single": 4,
+        "vacancies": 9,
+        "archived": 0
+      },
+      "search": "Cedar1/no-match0",
+      "tableColumns": 6,
+      "tableScrollLeft": 170,
+      "url": "http://localhost:3232/properties?view=list",
+      "candidateCommit": "007dc7d0c0d1ac8a0e14f8e446cf2573f9883418",
+      "candidateBuild": "koxUetsbfNhQp2sImbbDn",
+      "observedUtc": "2026-10-19T22:54:50.557Z"
+    },
+    {
+      "flow": "seeded directory",
+      "width": 1280,
+      "cards": 10,
+      "filters": {
+        "multi": 6,
+        "single": 4,
+        "vacancies": 9,
+        "archived": 0
+      },
+      "search": "Cedar1/no-match0",
+      "tableColumns": 6,
+      "tableScrollLeft": 0,
+      "url": "http://localhost:3232/properties?view=list",
+      "candidateCommit": "007dc7d0c0d1ac8a0e14f8e446cf2573f9883418",
+      "candidateBuild": "koxUetsbfNhQp2sImbbDn",
+      "observedUtc": "2026-10-19T22:55:31.844Z"
+    },
+    {
+      "flow": "seeded directory",
+      "width": 390,
+      "cards": 10,
+      "filters": {
+        "multi": 6,
+        "single": 4,
+        "vacancies": 9,
+        "archived": 0
+      },
+      "search": "Cedar1/no-match0",
+      "tableColumns": 6,
+      "tableScrollLeft": 188,
+      "url": "http://localhost:3232/properties?view=list",
+      "candidateCommit": "007dc7d0c0d1ac8a0e14f8e446cf2573f9883418",
+      "candidateBuild": "koxUetsbfNhQp2sImbbDn",
+      "observedUtc": "2026-10-19T22:55:31.844Z"
+    }
+  ],
+  "snapshotArchiveSha256": "8A28897225E916CE8DC679924CF1F645023C19076D2CEA568B7A3E3500B3C734",
+  "baselineArchiveSha256": "D308EFA3268BBA46DDA8B668C1CB82F7F67324DEE5B66C21865A13811FD787BE"
+}

@@ -1,0 +1,29 @@
+﻿{
+  "candidateCommit": "007dc7d0c0d1ac8a0e14f8e446cf2573f9883418",
+  "candidateDirectory": "candidate-007dc7d",
+  "candidateBuild": "koxUetsbfNhQp2sImbbDn",
+  "baselineCommit": "4adfb9649c4fdf65c1ed07a0152a3038775c581c",
+  "baselineBuild": "Tl00hLRKUfTaiZwTV4H97",
+  "sourceFiles": [
+    {
+      "sha256": "EA63328BAE039BF082564C050A650FEA0232AB0797CEF16E2040C91B8FCDFAEE",
+      "path": "src/app/(manager)/properties/page.tsx"
+    },
+    {
+      "sha256": "EC5C1F62ED6ADE8E329D76A867FECE895A2B93C042BBA8336EEF5AA968D9B829",
+      "path": "src/app/(manager)/properties/properties.module.css"
+    },
+    {
+      "sha256": "8D272A51089B624BE2BCC5FE1D2D498B2A6632BFFAA42EE890D9D7E97DFDC4A5",
+      "path": "src/app/(manager)/properties/_components/AddPropertyDialog.tsx"
+    },
+    {
+      "sha256": "6E2C028065C9C54B6BD5FC010F5DAFB617E1743C85F9E1506A47350B78CC2DEA",
+      "path": "src/app/(manager)/properties/_components/PropertyForm.tsx"
+    },
+    {
+      "sha256": "C01CA829AFDEB9EDFAA51C67A65FC0B1BF0D3C4CC00AF42C72335AA2FF8827AF",
+      "path": "src/app/(manager)/properties/_components/FieldError.tsx"
+    }
+  ]
+}

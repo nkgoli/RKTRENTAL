@@ -1,0 +1,61 @@
+﻿{
+  "observedUtc": "2026-10-19T22:55:49.1122397Z",
+  "checkout": "C:\\Users\\nkgol\\RocketRental\\.orchestra\\workspaces\\@2f9n5vihnwf0oxvzdq4\\repository",
+  "candidateCommit": "007dc7d0c0d1ac8a0e14f8e446cf2573f9883418",
+  "candidateBuild": "koxUetsbfNhQp2sImbbDn",
+  "baselineBuild": "Tl00hLRKUfTaiZwTV4H97",
+  "postgresRunning": true,
+  "baselineRunning": true,
+  "candidateRunning": true,
+  "identities": {
+    "baselineBuild": "Tl00hLRKUfTaiZwTV4H97",
+    "baseline": {
+      "pid": 46084,
+      "createdUtc": "2026-10-19T22:53:46.2264572Z",
+      "executable": "C:\\Program Files\\nodejs\\node.exe"
+    },
+    "candidateBuild": "koxUetsbfNhQp2sImbbDn",
+    "checkout": "C:\\Users\\nkgol\\RocketRental\\.orchestra\\workspaces\\@2f9n5vihnwf0oxvzdq4\\repository",
+    "candidateCommit": "007dc7d0c0d1ac8a0e14f8e446cf2573f9883418",
+    "postgres": {
+      "pid": 59720,
+      "createdUtc": "2026-10-19T22:53:46.1917985Z",
+      "executable": "C:\\Users\\nkgol\\RocketRental\\.orchestra\\workspaces\\@2f9n5vihnwf0oxvzdq4\\repository\\prisma\\node_modules\\@embedded-postgres\\windows-x64\\native\\bin\\postgres.exe"
+    },
+    "candidate": {
+      "pid": 36876,
+      "createdUtc": "2026-10-19T22:53:46.2350140Z",
+      "executable": "C:\\Program Files\\nodejs\\node.exe"
+    },
+    "launcherPid": 61936
+  },
+  "http": [
+    {
+      "port": 3231,
+      "status": 200,
+      "signIn": true
+    },
+    {
+      "port": 3232,
+      "status": 200,
+      "signIn": true
+    }
+  ],
+  "listeners": [
+    {
+      "LocalAddress": "127.0.0.1",
+      "LocalPort": 55431,
+      "OwningProcess": 59720
+    },
+    {
+      "LocalAddress": "127.0.0.1",
+      "LocalPort": 3232,
+      "OwningProcess": 36876
+    },
+    {
+      "LocalAddress": "127.0.0.1",
+      "LocalPort": 3231,
+      "OwningProcess": 46084
+    }
+  ]
+}

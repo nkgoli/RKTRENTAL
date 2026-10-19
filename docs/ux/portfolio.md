@@ -1,136 +1,141 @@
 # Property, unit and listing workspace review
 
-Reviewed 18 October 2026; resumed 19 October 2026. **Implementation and design updates are committed; the isolated review app is ready, and native Edge acceptance is blocked by desktop access.** This report distinguishes source/test evidence, design renders, and the desktop checks that remain outstanding.
+Reviewed 18–19 October 2026. **The property, unit and listing improvements are committed, all six design screens were rendered and inspected, and native Edge desktop/phone evidence now exists.** Desktop access is resolved. The review found and corrected undersized inline edit controls. The final phone editor, compatibility, cross-property and scoped-navigation checks are recorded below.
 
 ## Basis and scope
 
-- Read the foundation's [full app review](full-app-review.md) before implementation. Its compact spacing, flat cards, navy palette, global focus treatment and established workspace tabs remain the baseline.
-- Read Designs/rocketrental-app revision 288 screens `properties`, `property-detail`, `unit-detail`, `property-listing`, `sfh-listing`, and `rent-comps`. Updated only these screens plus CSS scoped beneath their `.portfolio` wrapper. Other writers' screens and styles were preserved.
-- Read Diagrams/rocketrental-mindmap revision 4, including `f-props` and `f-comps`. These branches have no additional repository file attachments. The task attachment list was empty.
-- Confirmed the declared foundation candidate is the checkout's starting HEAD and ancestor. The shared checkout acquired concurrent changes in other areas during this work; none were edited or included in this area's intended commit.
-- No database migration, seed, rent update, property archive, unit deletion, upload, provider change or lease submission was performed. Tests for rejected submissions use mocked actions and isolated in-memory fixtures.
+- Read the foundation's [full app review](full-app-review.md) before implementation. Kept its compact spacing, flat cards, navy palette, global focus treatment and established workspace tabs.
+- Read Designs/rocketrental-app revision 288 and updated only `properties`, `property-detail`, `unit-detail`, `property-listing`, `sfh-listing`, `rent-comps` and styles beneath their owned `.portfolio` wrapper. The current shared design has advanced beyond this area's last save; other writers' screens remain preserved.
+- Followed Diagrams/rocketrental-mindmap revision 4, including `f-props` and `f-comps`. Those nodes had no further repository attachments; the task attachment list was empty.
+- Confirmed the declared foundation commit was the starting HEAD and ancestor. Used the assigned shared checkout and committed explicit owned paths. Other areas' changes were preserved.
+- No migration, seed/reset, successful property/unit edit, rent application, archive, deletion, upload, provider refresh or lease/payment submission was performed. An empty add-property submission was rejected by validation; no record was created. Financial/destructive rejection tests use mocked actions and in-memory fixtures.
 
 ## Route and screen coverage
 
-“Improved” below describes implemented source and inspected design work. It does **not** claim a passed native browser acceptance check.
-
-| Route or view | Design screen | Disposition and rationale | Evidence / remaining check |
-| --- | --- | --- | --- |
-| `/properties`, grid | properties | Improved. Visible Search action; filters expose their selected state and a real focus target; long names/addresses wrap; existing photo retrieval and fallback illustrations remain. Add property retains the active search/filter/view. | Design render and source review. Native desktop/390px before/after pending. |
-| `/properties?view=list` | properties, list state | Improved. Named keyboard-focusable table scroll region; existing fields, filters and links retained. Grid/List controls gain larger pointer targets. | Source review; native narrow scrolling/focus pending. |
-| `/properties?add=1` | properties, add state | Improved. Existing native dialog and cancel/close behavior retained. Field errors now have stable IDs and are associated with the inputs, including property type and owner. | Mocked rejected submission and single-family explanation tests passed. Native dialog focus, Escape and phone layout pending. |
-| `/properties/:id` | property-detail | Improved. Units show beds/baths/size alongside unit number; tenant names link to their profiles; Open links identify their unit; Add unit is reachable from the table header. Table has named keyboard scrolling. Next steps use simple rows. Actual property type labels the facts card. | Design render, source review, existing timeline tests. Native unit selection, table paging and linked tabs pending. |
-| `/properties/:id?unit=:unitId` | unit-detail | Improved through scoped facts/media/timeline styles. Existing lease history, payment strip, inline facts, next steps, media and deletion restrictions remain. Focus outlines on timeline links stay visible inside their clipped track. | Design render, media/timeline tests; native occupied/vacant/archived and edit/cancel states pending. |
-| Property add-unit form | property-detail, add state | Improved. A bounded single-column form aligns with the workspace; errors are associated with inputs. Existing validation, reset-after-success and server action remain. | Mocked rejected submission passed. Native empty/duplicate/success states pending; creation must use an isolated fixture. |
-| Property/unit inline edit forms | property-detail / unit-detail | Already coherent in behavior: existing labeled inline fields, Save/Cancel, pending state, active-lease status restriction, archive/restore and delete confirmation are preserved. Scoped facts layout is tightened for narrow widths. | Source review only for live edit/cancel, confirmation and restricted states. Shared InlineFacts.tsx was outside the owned files and was not edited. |
-| `/properties/:id/listing`, multiple active units | property-listing | Improved. Saved market rent is distinguished from a new comp suggestion; current lease vs listed rent is explicit; missing estimates say Not set; count identifies units with estimates; each See comps link names its unit. Empty state links back to the property. | Design render, existing listing-mode tests. Native table scrolling, empty data and See comps transition pending. |
-| `/properties/:id/listing`, single active home | sfh-listing | Improved. One compact Rent comps subject card replaces repeated headings. Home terminology remains when filters send the implicit unit ID. Existing count-based listing-mode rules are preserved. | Design render and home terminology/continuation component test. Native property/filter/lease transition pending. |
-| `/properties/:id/listing?unit=:unitId` | rent-comps | Improved. Subject, status, list price and selector are grouped; filters use shrinkable 6/3/2-column tracks; map and summary stack below 900px; nearest comps and legends wrap. Comparison table is contained in a named keyboard scroll region. Excluded rows retain readable contrast and their note updates when re-included. | Design render; inclusion, all-excluded, no-match, rejected-rent and continuation tests passed. Native desktop/phone filters, focus, map readability and provider failure pending. |
-| `/rent-comps` | rent-comps, compatibility landing | Already coherent. Selects an authorized pricing unit, retains filter parameters, and redirects through the compatibility route into its property listing. No-unit recovery remains. | Source review and canonical routing tests; native cross-property selector pending. |
-| `/properties/:id/units/:unitId` with overview/listing/returns tab | unit-detail / rent-comps, compatibility route | Already coherent. Redirects to the canonical property workspace, preserves unit and relevant query values; the destination checks property/organization membership. | Listing/filter and Returns/period redirect tests passed; native redirect and invalid-unit boundary pending. |
-| Legacy property `?tab=` and documents destination | property-detail, compatibility helpers | Already coherent. Canonical routing helper retains unit context and filters; documents route remains an overview destination. No changes to another area's documents route. | Routing tests passed, including documents unit/notice retention. |
-
-Scoped Applications, Leases, Payments, Returns, Maintenance and Documents contents remain with their respective areas. Existing tab destinations were checked by the shared scoped-tabs tests. The completed lease detail's Overview / Agreement / Documents / Payments / Activity tabs were not edited.
-
-## Important interaction and state decisions
-
-- Rent suggestions and market-gap calculations are unchanged. Applying rent still calls the existing action; adjacent copy clarifies that it updates the saved market estimate, not the lease or listed rent. Rejected rent now identifies the input and associates its message. The continuation says Create lease for a vacant/turnover unit and Use for renewal for an occupied unit, with the same existing wizard destination.
-- Filters retain automatic select/radio submission and the explicit Update comps button. Radio-chip focus is drawn on the visible label. No-match recovery still resets filters for the selected unit; excluding every comp removes the suggestion/apply form and explains how to recover.
-- No-provider/error UI and Integrations recovery are preserved. Cached and last-synced indicators still use the existing provider service. A live provider failure was not induced.
-- Photo grids retain uploaded imagery, missing-preview fallback, cover/order/remove controls, documents and upload modes. Captions can wrap. Coarse-pointer media controls are 44px; the grid gives them enough space. Image data/storage were not changed.
-- Empty directory, empty units, archived property, missing unit and permission boundaries retain existing server-side checks and recovery. The no-units listing has a contextual recovery link instead of an otherwise empty table. These states still need native review.
-- The schematic map remains explicitly labeled as schematic. No geographic accuracy, provider freshness or rent outcome is claimed from the design examples.
-
-## Design revisions and render evidence
-
-Latest area update was revision **300**. Other areas may advance the shared design after this report. Screens were read and written individually with revision guards. The design's size ceiling was encountered and resolved by consolidating styles within the owned screens; no other screens were removed or moved.
-
-| Screen | Area save revision | Inspected render |
+| Route / state | Design | Disposition and observed coverage |
 | --- | --- | --- |
-| properties | 297 | [Revision 300](../../tests/portfolio/evidence/design-properties-r300.png) |
-| property-detail | 298 | [Revision 300](../../tests/portfolio/evidence/design-property-detail-r300.png) |
-| unit-detail | 294 | [Revision 300](../../tests/portfolio/evidence/design-unit-detail-r300.png) |
-| property-listing | 292 | [Revision 292](../../tests/portfolio/evidence/design-property-listing-r292.png) |
-| rent-comps | 299 | [Revision 300](../../tests/portfolio/evidence/design-rent-comps-r300.png) |
-| sfh-listing | 300 | [Revision 300](../../tests/portfolio/evidence/design-sfh-listing-r300.png) |
+| `/properties`, grid | properties | **Improved.** Visible Search action, selected filters, wrapping names/addresses and larger Grid/List targets. Existing imagery retained. Native desktop and 390px phone reviewed. |
+| `/properties?view=list` | properties | **Improved.** Named keyboard-focusable table region. Native List transition and no-match search/recovery passed. Search submitted with Enter; query/view retained. |
+| `/properties?add=1` | properties | **Improved.** Add keeps search/filter/view; stable field-error IDs associate messages with inputs. Native initial Close focus, Tab focus on Property name, Escape/cancel, phone dialog scrolling and rejected empty submission observed. |
+| `/properties/:id` | property-detail | **Improved.** Units expose configuration, tenant links and named Open links; header Add unit reaches the bounded form. Actual property type labels facts; next steps are compact rows. Native Maple overview, unit table, add-unit anchor and media/empty-document sections reviewed. |
+| `/properties/:id?unit=:unitId` | unit-detail | **Improved.** Compact facts/media, visible timeline focus and readable inline editing. Native timeline link to Unit 1A, keyboard switch to 1B, All units recovery, Edit/Cancel and active-lease restrictions observed. Desktop and phone overview reviewed. |
+| Property add-unit form | property-detail | **Improved.** Bounded single-column layout and input-associated errors. Native desktop layout and anchor reviewed; mocked rejected submission passed. Successful/duplicate live creation not exercised. |
+| Property/unit inline facts | property-detail / unit-detail | **Improved after native review.** Bare controls were too small. Owned CSS now supplies consistent 40px controls, visible focus/error treatment, readable hints, single-column phone fields and 44px coarse-pointer targets. Shared InlineFacts behavior, Save/Cancel, restrictions and confirmations unchanged. Corrected desktop and phone editor inspected, including Tab focus, occupied-status restriction, scrolling to Save/Cancel, and cancellation without saving. |
+| `/properties/:id/listing`, multiple units | property-listing | **Improved.** Saved market estimate distinguished from a new suggestion; current lease/listed rent identified; missing estimates say Not set; See comps names its unit. Native desktop table and phone horizontal scroll to actions passed; See comps opened the selected unit listing. |
+| `/properties/:id/listing`, single home | sfh-listing | **Improved.** Removed duplicate comparison heading; compact subject/status/list price; preserved property-level home context. Native 18 Elm Street desktop and phone reviewed. Home terminology/filter continuation component test passed. |
+| `/properties/:id/listing?unit=:unitId` | rent-comps | **Improved.** Compact subject/selector, shrinkable filters, stacked narrow map/summary, readable exclusions, named table region and associated rent errors. Native desktop and phone filters/map/summary reviewed; checkbox exclusion of all six comps removed suggestion/apply controls; Space re-included a comp and restored the summary. |
+| `/rent-comps` compatibility landing | rent-comps | **Already coherent.** Chooses an authorized unit, retains pricing filters and redirects to its property listing. Source and canonical-route tests reviewed; native compatibility redirect with radius=1 and keyboard cross-property selection to 18 Elm Street passed. |
+| `/properties/:id/units/:unitId` compatibility | unit-detail / rent-comps | **Already coherent.** Preserves unit and relevant query values; destination validates property/organization membership. Listing/filter and Returns/period routing tests passed; native legacy listing redirect preserved unit/radius; missing-unit URL showed Page not found and recovery navigation. |
+| Legacy property `?tab=` / documents destination | property-detail | **Already coherent.** Canonical helper retains unit/filter context; documents remain an overview destination. Routing test includes unit/notice retention. No other area's document route changed. |
 
-All six renders were visually inspected. Corrected the detached Search button, oversize workspace heading, missing property-media section, repeated comparison heading and unnecessarily tall unit facts layout during iteration. Design screenshots are static examples; they are **not** Windows MCP screenshots or proof of application behavior. Their examples use the established design fixtures, while the application continues to render actual records and imagery.
+Scoped Applications, Leases, Payments, Returns, Maintenance and Documents contents remain with their area owners. Shared scoped-tab tests passed. Native links to Applications, Leases, Payments and Maintenance retained Unit 1B. Returns loaded directly with the correct unit, but client tab navigation stalled; see the specific finding below. The established lease-detail Overview / Agreement / Documents / Payments / Activity tabs were not edited.
 
-## Checks performed
+## Native Windows MCP evidence
 
-| Check | Observed result |
-| --- | --- |
-| `npm.cmd run test -- tests/portfolio tests/properties tests/rent-comps tests/workspace/media.test.tsx tests/workspace/timeline.test.ts` | Passed: 25 tests, 6 files before the final rent-error association test and routing tests were added. Unchanged successful checks reused. |
-| `npm.cmd run test -- tests/portfolio/routing.test.ts tests/rent-comps/workbench.test.tsx tests/workspace/workspace.test.tsx tests/workspace/scoped-tabs.test.tsx` | 13 passed, 1 failed. All 7 new/updated portfolio/comps tests passed, both scoped-tab tests passed, and 4 of 5 workspace tests passed. The remaining failure is the concurrent Returns chart-label change, outside this task. |
-| TypeScript, `npm.cmd run typecheck` | Passed on the shared tree at 21:32 PDT. Later production build encountered the cross-area type mismatch below; that earlier result is not a claim that the final shared tree is type-clean. |
-| ESLint on every changed TS/TSX file with `--max-warnings=0`; repeated on final CompsWorkbench and new tests | Passed. |
-| Scoped `git diff --check` | Passed for the owned changes at review. |
-| `node --import ./prisma/os-userinfo.mjs C:/Users/nkgol/RocketRental/node_modules/next/dist/bin/next build` | Application compilation passed; build failed at type validation in concurrently edited `src/app/(manager)/leases/new/page.tsx:78`: the supplied `context` prop is absent from that area's UnitPicker props. Also emitted warnings in other areas' maintenance/returns CSS and tenant forms. No cross-area repair was attempted. |
-| Existing workspace Returns regression | `tests/workspace/workspace.test.tsx:95` expected the older chart label `Unit 4B monthly income versus expenses over the selected range`; current Returns renders `Unit 4B: Nov 2025 – Oct 2026`. React also reported an SVG title-children warning in that area. Left for its owner. |
-| Live financial/destructive tests | Not run. Rejected property/unit/rent submissions were tested with mocked actions; no live record was modified. |
-| Required Windows MCP desktop/phone/keyboard checks | Blocked, as below. |
+Used the human's existing **Personal Microsoft Edge** session on a **2560×1600** display. Phone checks used that same Edge tab's native DevTools responsive mode at **390×844**, not another browser or a Playwright session. Screenshots are unedited Windows MCP capture bytes.
 
-## Native Edge runtime and blocker
+Each focused batch had its own granted desktop lease. The original manager tab was observed at **http://localhost:3104/dashboard** and left at its original mid-page scroll. A separate fifth tab in the existing window was used for review. Device emulation and DevTools were closed, the fourth manager tab restored and ownership released between batches.
 
-The initial Windows MCP Snapshot observed the human's existing **Personal Microsoft Edge** window, maximized on a 2560×1600 display. Its active RocketRental page was **http://localhost:3101/dashboard**. This is the pre-existing foundation runtime; no inspected candidate runtime URL or build ID is claimed for this task.
+| Screen | Desktop before (reference app) | Desktop after | Phone after |
+| --- | --- | --- | --- |
+| Properties | [Before](../../tests/portfolio/evidence/desktop-before-properties.png) | [After](../../tests/portfolio/evidence/desktop-after-properties.png) | [390px](../../tests/portfolio/evidence/phone-after-properties.png) |
+| Property overview | [Before](../../tests/portfolio/evidence/desktop-before-property.png) | [After](../../tests/portfolio/evidence/desktop-after-property.png) | [390px](../../tests/portfolio/evidence/phone-after-property.png) |
+| Unit overview | [Before](../../tests/portfolio/evidence/desktop-before-unit.png) | [After](../../tests/portfolio/evidence/desktop-after-unit.png) | [390px](../../tests/portfolio/evidence/phone-after-unit.png) |
+| Multi-unit listing | [Before](../../tests/portfolio/evidence/desktop-before-listing.png) | [After](../../tests/portfolio/evidence/desktop-after-listing.png) | [390px](../../tests/portfolio/evidence/phone-after-listing.png) |
+| Unit rent comps | [Before](../../tests/portfolio/evidence/desktop-before-comps.png) | [After](../../tests/portfolio/evidence/desktop-after-comps.png) | [390px](../../tests/portfolio/evidence/phone-after-comps.png) |
+| Single-family listing | [Before](../../tests/portfolio/evidence/desktop-before-sfh.png) | [After](../../tests/portfolio/evidence/desktop-after-sfh.png) | [390px](../../tests/portfolio/evidence/phone-after-sfh.png) |
 
-Desktop ownership was granted before observation. Two attempts to click the observed Properties navigation item returned:
+Useful interaction evidence:
 
-> Automatic approval review failed: Selected model is at capacity. Please try a different model.
+- Directory [List view](../../tests/portfolio/evidence/desktop-after-list.png), [no matches](../../tests/portfolio/evidence/desktop-after-empty.png), [dialog keyboard focus](../../tests/portfolio/evidence/desktop-after-property-focus.png), [phone dialog](../../tests/portfolio/evidence/phone-after-add-property.png) and [phone validation errors](../../tests/portfolio/evidence/phone-after-property-errors.png).
+- Property [unit table before](../../tests/portfolio/evidence/desktop-before-property-units.png), [after](../../tests/portfolio/evidence/desktop-after-property-units.png), [Add unit](../../tests/portfolio/evidence/desktop-after-add-unit.png) and [keyboard unit switch](../../tests/portfolio/evidence/desktop-keyboard-unit-switch.png).
+- Inline editor [native finding](../../tests/portfolio/evidence/desktop-unit-editor-before-fix.png) and [corrected controls](../../tests/portfolio/evidence/desktop-after-unit-editor.png), [phone keyboard focus](../../tests/portfolio/evidence/phone-after-unit-editor.png) and [phone actions](../../tests/portfolio/evidence/phone-after-unit-editor-actions.png).
+- Comparison [summary](../../tests/portfolio/evidence/desktop-after-comps-summary.png), [rows](../../tests/portfolio/evidence/desktop-after-comparison-rows.png), [all excluded](../../tests/portfolio/evidence/desktop-after-comps-empty.png), [phone map](../../tests/portfolio/evidence/phone-after-comps-map.png), [phone market summary](../../tests/portfolio/evidence/phone-after-comps-summary.png) and [phone listing actions after horizontal scroll](../../tests/portfolio/evidence/phone-after-listing-scroll.png).
+- Restored original manager view after [batch 2](../../tests/portfolio/evidence/desktop-restored-batch2.png) [batch 3](../../tests/portfolio/evidence/desktop-restored-batch3.png) and [final batch](../../tests/portfolio/evidence/desktop-restored-batch4.png).
 
-The tool explicitly said neither action executed and that this was review infrastructure failure, not an unsafe-action determination. The required browser action was not bypassed through another tool/profile. Ownership was released. A later lease request timed out with four waiters; the pending observation was stopped and the desktop yielded again. No later click or navigation executed.
+- Compatibility: [legacy unit redirect](../../tests/portfolio/evidence/desktop-legacy-unit-redirect.png), [rent-comps landing](../../tests/portfolio/evidence/desktop-comps-compatibility.png), [cross-property selector](../../tests/portfolio/evidence/desktop-cross-property-selector.png) and [invalid unit](../../tests/portfolio/evidence/desktop-invalid-unit.png).
+- Linked workspace entries: [Leases](../../tests/portfolio/evidence/desktop-linked-leases.png), [Payments with keyboard focus](../../tests/portfolio/evidence/desktop-linked-payments.png), [Applications](../../tests/portfolio/evidence/desktop-linked-applications.png) and [Maintenance](../../tests/portfolio/evidence/desktop-linked-maintenance.png).
 
-Typed clarification notifications also failed on the same approval-service capacity error. This is a reporting limitation, not an accepted question receipt. The source and this report preserve the concrete evidence for resumption.
+The desktop before captures use the existing **http://localhost:3100** reference runtime. Its source/build was not independently pinned, so these are observed reference views, not a reconstructed historical commit. No baseline process or build output was changed. Later phone-before navigation to port 3100 was rejected by automatic approval review: it interpreted preserving baseline runtimes as prohibiting access. No rejected navigation executed and no alternate method bypassed it. **There are desktop before/after and phone after captures; no phone-before capture is claimed.**
 
-In the first attempt, Git staging was attempted with only the owned paths. The sandbox refused creation of the worktree's external `index.lock`. The authorized escalation request then failed on the same approval-model capacity error before execution. The typed working-set checkpoint also failed automatic approval review; no successful checkpoint receipt is claimed from that attempt.
+Native unit switching completed with the correct URL, title, status and lease data. All units navigation was slower during one batch; an immediate snapshot still showed the previous unit, then the canonical property overview appeared. Only the settled result is counted. The final batch requested sign-in again and used the existing public local demo account; the reason for the expired session was not established, and no account details were changed.
 
-On resumption, the declared foundation commit remained an ancestor and the owned changes were intact alongside other areas' commits. The current scope was revalidated. A fresh desktop request returned `DESKTOP_CONTROL_WAIT_TIMEOUT` with two waiters. A typed question about the desktop turn and coordinated `http://localhost:3102` runtime was accepted by Orchestra. The leasing coverage report identifies that runtime as Operations-owned and preserves ports 3100/3101 as references; the Operations report still identifies its earlier port-3112 snapshot. No competing server or build was started. Required app observation remains pending readiness confirmation and desktop access.
+## Specific unresolved navigation finding
 
-**No task-specific native before/after screenshots were captured.** There is no desktop or phone visual acceptance claim. The design captures above do not replace that requirement.
+At approximately **06:33–06:36 UTC**, selecting the Returns tab from Unit 1B Payments did not settle: keyboard Tab/Enter followed by a 15-second wait, then a click with a 20-second wait left the Payments URL/content in place. The visible target was `/properties/seed-property-maple/returns?unit=seed-unit-maple-2`. A later click from Maintenance also left that page in place after a 10-second wait. These are failed client transitions, not passed checks.
 
-## Isolated candidate runtime: ready
+Opening that exact Returns URL directly loaded the correct Unit 1B income/expense view immediately. The other scoped tabs and compatibility routes worked. Native DevTools showed no console error during the failed transition. The server emitted no error in the reviewed output. Source inspection confirmed a normal Next Link and correct scoped href; neither the shared WorkspaceTabs component nor the Returns destination is owned or modified by this task. The cause is **unresolved**, and no speculative cross-area fix was made.
 
-The manager superseded the proposed port-3102 dependency and authorized an isolated review runtime. The scoped implementation commit is `6259ab8212cb0ce040260d222fdc64f04595758b`. The review app at **http://localhost:3115** uses an archive of that exact commit, not another checkout or the concurrent unstaged files. The archive SHA-256 is `1e46a8ef418ade3017d218f2e73c0f4618173388f15a94c8668fab9a69e86f90`.
+Evidence: [stalled from Payments](../../tests/portfolio/evidence/desktop-returns-tab-stalled.png), [stalled from Maintenance](../../tests/portfolio/evidence/desktop-returns-tab-from-maintenance.png), [direct Returns succeeds](../../tests/portfolio/evidence/desktop-returns-direct.png). This needs shared navigation/Returns follow-up; the portfolio result does not claim this transition passed.
 
-The snapshot and all Next output are beneath `tests/portfolio/.runtime/app`. Its worker-visible `next.config.ts` sets `distDir: '.next-portfolio'` and the build ID **`portfolio-6259ab8212cb-20261019052420`**. The only snapshot configuration adjustments are that isolated output directory and build identifier; application source comes unchanged from the commit. The reusable launcher is [review-runtime.cjs](../../tests/portfolio/review-runtime.cjs); its metadata and caches stay ignored in `.runtime/`.
+## Behavior and data preserved
 
-The isolated production build **passed** source compilation, lint/type validation, page data collection, all 22 static pages and build tracing. The first attempt failed because the worker resolved a relative preload path from the snapshot; rerunning with the absolute preload below fixed that environment issue. This successful candidate build supersedes the earlier shared-tree type failure for this snapshot. Next emitted a multiple-lockfile workspace-root warning; the configured build output remained inside the owned runtime directory.
+- Rent calculation and apply action are unchanged. Copy distinguishes saved market estimates from lease/listed rent. Rejected rent identifies the field. Vacant/turnover continuation says Create lease; occupied continuation says Use for renewal.
+- Automatic select/radio filter submission and Update comps remain. No-match reset preserves selected-unit context; excluding every comp removes suggestion/apply and explains recovery.
+- Provider-error/Integrations recovery and cached/last-synced indicators remain. No live provider failure was induced.
+- Existing uploaded imagery and illustrated/gradient fallbacks, cover/order/remove controls and document/upload modes remain. Captions wrap and coarse-pointer controls are 44px. Storage and image data were preserved.
+- Native property and unit views showed missing facts, empty photo/document states and occupied-unit restrictions. Archived/no-unit and permission branches remain server checked and were source reviewed rather than created by changing shared data.
+- The map explicitly says it is schematic. No geographic accuracy, provider freshness or financial outcome is inferred from visual examples.
+
+## Design revisions and inspection
+
+All six owned screens were read/written individually with revision guards and visually inspected. Last area save was revision **300**; later shared revisions do not invalidate these earlier observed renders.
+
+| Screen | Area save | Inspected render |
+| --- | --- | --- |
+| properties | 297 | [r300](../../tests/portfolio/evidence/design-properties-r300.png) |
+| property-detail | 298 | [r300](../../tests/portfolio/evidence/design-property-detail-r300.png) |
+| unit-detail | 294 | [r300](../../tests/portfolio/evidence/design-unit-detail-r300.png) |
+| property-listing | 292 | [r292](../../tests/portfolio/evidence/design-property-listing-r292.png) |
+| rent-comps | 299 | [r300](../../tests/portfolio/evidence/design-rent-comps-r300.png) |
+| sfh-listing | 300 | [r300](../../tests/portfolio/evidence/design-sfh-listing-r300.png) |
+
+Iteration corrected detached Search, oversized workspace headings, missing property media, repeated comparison headings and tall facts layouts. The design size ceiling was resolved within owned markup/styles; no other screen was removed. Static design fixtures are distinct from actual runtime records and native evidence. The later inline-input CSS fix uses the same control styling without changing these read-only screen structures.
+
+## Candidate and runtime identity
+
+Main implementation: `6259ab8212cb0ce040260d222fdc64f04595758b`. Runtime helper/report: `a05b495422d8fa57d7b2a5e5f263d4446e043f09`; queue history/report: `783bc8082a76fcc332bb067a95fb8c1a94a129f5`. Native editor correction and versioned runtime helper: **`dd01785856b60c1ec2d0ad4b8c28f0ce6046d184`**.
+
+Ready URL: **http://localhost:3115**. The currently served snapshot is an archive of the last commit above, not an uncommitted tree or a different checkout.
+
+- Build ID: `portfolio-dd01785856b6-20261019060646`
+- Source archive SHA-256: `91de3ce986d60f84f95bfd5c7ab8fbd49a6018454910fda6e072f49584d29ab8`
+- Snapshot/output: `tests/portfolio/.runtime/facts/app/.next-portfolio`
+- Worker-visible config SHA-256: `0ed0e335b9d805756aa13719b4dd66684750537130c7852370d95436c1defe01`
+- Health at **2026-10-19T06:07:47.216Z**: HTTP 200 at `/sign-in`, read-only database `SELECT 1` succeeded, served HTML/build file matched the expected build ID.
+- Local database port 5433 and existing storage were reused. No database preparation or cleanup ran.
+
+The [review helper](../../tests/portfolio/review-runtime.cjs) keeps all generated files beneath the ignored owned runtime directory. Only snapshot config adds isolated `distDir` and build identity. The original 6259ab8 snapshot/build `portfolio-6259ab8212cb-20261019052420` remains on disk; its owned server was stopped after the corrected build succeeded, then the corrected snapshot was started on the same port. Unrelated processes, ports 3100/3101 and shared `.next` were untouched.
+
+Desktop batch 2 (approximately 05:58–06:05 UTC) reviewed the earlier 6259ab8 application. Batches 3 (06:13–06:22 UTC) and 4 (06:30–06:37 UTC) reviewed the corrected dd01785 build. The only owned application delta between them is the inline facts CSS; unchanged screen captures are reused.
+
+To recheck the existing current runtime without preparing/rebuilding:
 
 ```powershell
-node tests/portfolio/review-runtime.cjs prepare
-Expand-Archive -LiteralPath 'tests/portfolio/.runtime/source.zip' -DestinationPath 'tests/portfolio/.runtime/app'
-node tests/portfolio/review-runtime.cjs configure
-node --env-file=C:/Users/nkgol/RocketRental/.env --import file:///C:/Users/nkgol/RocketRental/.orchestra/workspaces/@6fmicph499j20nbevsv/repository/prisma/os-userinfo.mjs tests/portfolio/review-runtime.cjs build
-node --env-file=C:/Users/nkgol/RocketRental/.env --import file:///C:/Users/nkgol/RocketRental/.orchestra/workspaces/@6fmicph499j20nbevsv/repository/prisma/os-userinfo.mjs tests/portfolio/review-runtime.cjs start
+$env:PORTFOLIO_REVIEW_REVISION='facts'
 node --env-file=C:/Users/nkgol/RocketRental/.env --import file:///C:/Users/nkgol/RocketRental/.orchestra/workspaces/@6fmicph499j20nbevsv/repository/prisma/os-userinfo.mjs tests/portfolio/review-runtime.cjs health
 ```
 
-Preparation ran once; reuse the existing snapshot on resumption. The server bound successfully to `127.0.0.1:3115`. At **2026-10-19 05:25:37.782 UTC**, the health check observed **HTTP 200** at `http://localhost:3115/sign-in`, a successful read-only database query, and a matching build ID in both the served HTML and the isolated `BUILD_ID` file. This verifies runtime availability and identity, not a native app flow. The runtime uses the existing local database on port 5433 and existing file storage; no migration, seed, reset or data submission occurred. Ports 3100/3101, shared `.next`, unrelated processes and other tasks' staged changes were preserved.
+## Checks and limitations
 
-Only after that successful health check, a fresh `take_desktop` returned this exact receipt:
+| Check | Observed result |
+| --- | --- |
+| Scoped portfolio/property/comps/media/timeline tests | **Passed:** 25 tests in 6 files. Reused successful unchanged checks. |
+| Follow-up routing/comps/scoped-tabs tests | **Passed:** all 7 new/updated portfolio/comps tests and both scoped-tab tests. |
+| Shared workspace test included in follow-up | Historical **failure** outside scope: 4/5 passed; Returns chart label expected older wording. No unrelated test/source edit was made. |
+| Changed TypeScript ESLint with max warnings 0 | **Passed.** |
+| Initial shared-tree typecheck | **Passed** at 21:32 PDT; later shared build encountered another area's concurrent UnitPicker type mismatch. |
+| Isolated production build, original and corrected candidates | **Passed:** source compilation, lint/types, data collection, 22 static pages and tracing. Corrected build supersedes the initial shared-build type failure for the reviewed snapshot. |
+| Corrected runtime helper syntax / scoped whitespace | **Passed:** node syntax check and git diff check. |
+| Runtime health/build identity | **Passed** for both snapshots; current identity above. |
+| Native desktop/phone/keyboard | **Passed for owned screen review:** six main screens, directory/dialog errors, empty media/comparisons, keyboard focus/selectors/checkboxes, phone editor and compatibility routes observed. Scoped Returns client transition failed separately below. |
+| Scoped Returns client transition | **Failed** from Payments and Maintenance despite correct href; direct destination passed. Cause unresolved, outside the files modified by this task. |
+| Financial/destructive and successful shared-data mutations | **Not run live.** Mocked rejection tests passed. Existing confirmations/permissions preserved. |
+| Live provider failure, archived/no-unit fixture, full screen-reader audit | **Not run live.** Existing branches source reviewed; no new data or provider failure was manufactured. |
+| Phone-before reference screenshots | **Not run:** automatic approval review rejected baseline navigation. Existing desktop before captures and phone after captures retained. |
 
-```json
-{"granted":false,"reasonCode":"DESKTOP_CONTROL_WAIT_TIMEOUT","waiters":3,"next":"Another agent has the desktop. Call take_desktop again to keep your place, or do other work first."}
-```
+The scoped test commands were `npm.cmd run test -- tests/portfolio tests/properties tests/rent-comps tests/workspace/media.test.tsx tests/workspace/timeline.test.ts` and the follow-up `npm.cmd run test -- tests/portfolio/routing.test.ts tests/rent-comps/workbench.test.tsx tests/workspace/workspace.test.tsx tests/workspace/scoped-tabs.test.tsx`. Successful checks were reused rather than rerunning unrelated suites. The final CSS/helper change was checked by `node --check tests/portfolio/review-runtime.cjs`, scoped whitespace validation and the corrected isolated production build.
 
-The receipt supplied no holder, queue, request or diagnostic ID. The attempt-scoped operational trace for 2026-10-19 05:25–05:27 UTC returned no records, so no additional desktop diagnostic identifier is available. Missing trace records do not establish why the queue timed out. `release_desktop` returned `{"released":false}`. No Windows action was issued, no desktop ownership was bypassed, and no unchanged acquisition loop was repeated. The current manager view was not altered. Native before/after, phone and keyboard evidence remain blocked on a granted desktop turn.
+Earlier desktop access failures are historical, not a current blocker. The [12 timestamped queue receipts](../../tests/portfolio/evidence/desktop-queue.json) document the earlier 05:30–05:40 UTC wait. After the manager verified availability, this task obtained its own leases and gathered the native evidence above. Approval-capacity and external Git-index errors from the first attempt were resolved before the scoped commits.
 
-### Retained queue window after corrected guidance
-
-The manager then clarified that normal wait responses should be retried while retaining the queue place. From **2026-10-19 05:30:18 UTC through 05:40:34 UTC**, this task remained ready to review and made **12 sequential acquisition requests**, retaining its place between every response. Each returned `granted: false` with `DESKTOP_CONTROL_WAIT_TIMEOUT`. The reported waiter count was two for the first six receipts, one for the next two, two for the next three, and three on the final receipt. No queue position or holder identity was exposed, so those counts are not represented as proof of position advancement.
-
-The exact timestamped receipts are preserved in [desktop-queue.json](../../tests/portfolio/evidence/desktop-queue.json). No authority or service error occurred during this window. No request returned ownership, so no Edge action, screenshot, phone emulation or keyboard test was attempted. Commentary updates were provided during the wait. After the bounded window, `release_desktop` again returned `{"released":false}`. The attempt-scoped operational trace covering 05:30–05:41 UTC returned an empty records list; there is no additional holder, queue, request or diagnostic ID available from these tools. The original manager view was untouched.
-
-After the queue window, the same runtime health check passed again at **2026-10-19 05:41:22.513 UTC**: HTTP 200, database reachable, and the same matching served build identity. No rebuild or restart was performed.
-
-The runtime, implementation commit and design evidence remain intact. Desktop access is the sole remaining execution blocker; it requires a granted turn rather than another build or a different browser session.
-
-## Remaining acceptance work
-
-1. Obtain a desktop turn. Capture the reference/before application views in the existing Edge session, if that runtime remains available.
-2. Reuse the verified isolated candidate at port 3115. Its recorded source/build identity and successful build are above; do not rebuild or reprepare an unchanged snapshot. Preserve the reference runtimes and database/storage.
-3. At desktop and 390px, inspect all six screens plus directory list/no matches, property and unit edit/cancel, add-property dialog/focus/Escape, add-unit rejected input, media missing/empty states, comparison no matches/all excluded/provider error and invalid-unit recovery. Capture native before/after images and important focus states.
-4. Verify all-units/unit/property switching, filter retention, compatibility redirects and entry into linked workspace tabs. Verify scroll regions with the keyboard and touch-size controls in phone emulation.
-5. Exercise successful or destructive/financial submissions only against an isolated fixture. Reuse the successful scoped tests, and rerun affected checks if native review requires a source fix.
-
-The scoped source work is preserved for review and completion. The Git candidate is reported separately from native acceptance. Full acceptance, integration, publication and remote push have not been claimed.
+Changed source covers directory/forms, compatibility routing, listing/comparison components, overview/media/timeline styles, and focused regression tests. The final candidate/report commit is submitted separately from runtime identity. No integration into the root target branch, remote push, Preview publication or independent acceptance is claimed.

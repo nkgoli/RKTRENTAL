@@ -21,8 +21,10 @@ Ancestry checks confirmed these completed candidates are present:
 
 This change owns only navigation, scoped tests/helpers and this document. It does not
 change ROI unsaved-edit handling, Rent filters/application, calculations or authorization.
-Parallel corrections have not been represented as verified here; their exact candidate
-identities were requested from the manager. The full two-feature request is not claimed
+The manager confirmed both baselines are already included. The ROI navigation/modal
+and Rent filter/apply corrections are still in progress with no completed SHAs; they
+are not prerequisites for this independently scoped sidebar verification and are not
+represented as verified here. The full two-feature request is not claimed
 complete. No push or Managed Preview publication is performed.
 
 ## Isolated verification
@@ -57,6 +59,22 @@ activates the real menu entry with Enter, follows explicit property selection to
 unit dashboard, and returns to selection. Its authorized data boundary is mocked;
 native runtime checks remain necessary for actual browser navigation.
 
-Native existing-Edge desktop and 390px checks are pending a desktop lease. The first
-lease request timed out because another agent held the desktop. No native pass or
-screenshot is claimed before that bounded turn.
+The tested implementation is commit `2cab17dffef05bba0031520bc3c0da16ebe489f1`;
+subsequent verification-note updates do not change its application source.
+
+Native existing-Edge desktop and 390px checks are pending the coordinated desktop
+turn: Rent correction, then ROI correction, then this sidebar checklist. Three early
+lease requests timed out; no further request is made before a preceding release is
+confirmed. The production app and isolated data are ready. No native pass or screenshot
+is claimed before that bounded turn.
+
+Native checklist (navigation only):
+
+- Desktop: enter Rent Analysis from the sidebar; verify explicit selection, title and
+  only Rent Analysis highlighted; select Maple, verify its dashboard, then Change
+  property back to selection. Verify ROI Analysis and Returns remain distinct entries.
+- At 390px: open the menu, keyboard-activate Rent Analysis, verify the menu closes and
+  explicit selection appears; choose a property, return to selection, reopen the menu,
+  close with Escape and verify focus restoration. Record screenshots of the menu,
+  selection and selected dashboard without exercising filter/apply or ROI edits.
+- Restore the original Edge context, disable emulation and release the desktop.

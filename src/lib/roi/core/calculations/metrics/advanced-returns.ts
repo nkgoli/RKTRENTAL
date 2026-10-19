@@ -1,4 +1,4 @@
-import { round } from '../../../utils/index.js';
+import { round } from '../../../utils/index';
 
 /**
  * Advanced return metrics for real estate investment analysis

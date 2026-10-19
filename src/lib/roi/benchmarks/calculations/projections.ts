@@ -5,7 +5,7 @@ import type {
   PropertyInvestmentSummary,
   ComparisonResult,
   BenchmarkType,
-} from '../types.js';
+} from '../types';
 
 /**
  * Project investment growth for a benchmark over time

@@ -1,4 +1,4 @@
-import type { BenchmarkData, BenchmarkType } from '../types.js';
+import type { BenchmarkData, BenchmarkType } from '../types';
 
 /**
  * Historical market benchmark data

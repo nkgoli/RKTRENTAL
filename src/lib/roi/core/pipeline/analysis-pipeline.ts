@@ -1,12 +1,12 @@
-import { round } from '../../utils/index.js';
-import { DealInputSchema, type DealInput } from '../domain/schemas/deal-input.schema.js';
-import type { AnalysisResult, SummaryMetrics } from '../domain/schemas/analysis-result.schema.js';
+import { round } from '../../utils/index';
+import { DealInputSchema, type DealInput } from '../domain/schemas/deal-input.schema';
+import type { AnalysisResult, SummaryMetrics } from '../domain/schemas/analysis-result.schema';
 import {
   calculateIncomeBreakdown,
   calculateExpenseBreakdown,
   calculateNOI,
   calculateOER,
-} from '../calculations/metrics/noi.js';
+} from '../calculations/metrics/noi';
 import {
   calculateTotalCashRequired,
   calculateLoanAmount,
@@ -14,12 +14,9 @@ import {
   calculateCashOnCash,
   calculateGRM,
   calculateDSCR,
-} from '../calculations/metrics/returns.js';
-import { calculateLeveragedIRR, calculateUnleveragedIRR } from '../calculations/metrics/irr.js';
-import {
-  calculateInvestmentNPV,
-  calculateProfitabilityIndex,
-} from '../calculations/metrics/npv.js';
+} from '../calculations/metrics/returns';
+import { calculateLeveragedIRR, calculateUnleveragedIRR } from '../calculations/metrics/irr';
+import { calculateInvestmentNPV, calculateProfitabilityIndex } from '../calculations/metrics/npv';
 import {
   calculateEquityMultipleFromCashflows,
   calculateTotalReturn,
@@ -28,17 +25,14 @@ import {
   calculateBreakEvenOccupancy,
   calculatePaybackPeriod,
   calculateRentToPrice,
-} from '../calculations/metrics/advanced-returns.js';
-import { generateAmortizationSchedule } from '../calculations/projections/amortization.js';
+} from '../calculations/metrics/advanced-returns';
+import { generateAmortizationSchedule } from '../calculations/projections/amortization';
 import {
   generateMonthlyCashflows,
   generateAnnualCashflows,
-} from '../calculations/projections/cashflows.js';
-import {
-  generateEquityTimeline,
-  calculateSaleProceeds,
-} from '../calculations/projections/equity.js';
-import { evaluateWarnings } from './warnings.js';
+} from '../calculations/projections/cashflows';
+import { generateEquityTimeline, calculateSaleProceeds } from '../calculations/projections/equity';
+import { evaluateWarnings } from './warnings';
 
 export interface AnalysisOptions {
   /** Discount rate for NPV calculation (as decimal, e.g., 0.08 for 8%) */

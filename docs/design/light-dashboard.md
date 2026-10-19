@@ -51,3 +51,14 @@ Final browser console contained only the existing missing `/favicon.ico` 404. Th
 - `tests/dashboard/evidence/native-desktop-before.png`: existing Edge session baseline, Windows MCP snapshot at 2560 x 1600 display resolution. Desktop lease was acquired and released.
 
 **Required final native Edge desktop/390px review is pending.** During its leased window, personal browsing changed the active tab between automation actions. The desktop was released without continuing to compete for focus; a quiet bounded window was requested through the typed task question. This does not affect the passing isolated Playwright results, but task acceptance must wait for the required native review. Empty/error states have component coverage, not an induced production database-outage browser test.
+
+### Pending native checklist
+
+Wait for the explicit quiet-window signal; silence does not establish availability. Reuse the retained fixture cluster and production build above without migrating, reseeding or rebuilding.
+
+1. Acquire one bounded desktop lease and use only the dashboard review tab in the existing Edge session.
+2. At desktop width, inspect collection/history, leases/attention and property/activity composition; capture the final native screenshot against the preserved baseline.
+3. Emulate 390 x 844 CSS pixels; inspect stacking, readable amounts, property identities and page overflow. Capture the final native phone screenshot.
+4. Use keyboard focus and Enter on **View monthly amounts**, then Tab into **Monthly rent collection amounts**. Confirm exact values and the selected URL range remain available.
+5. Open the existing late-payment, lease and property contextual links, confirming their intended identities; return to the dashboard. These flows already pass in isolated Playwright and need only the missing native observation.
+6. Restore the review tab's device emulation and browser state, release the lease promptly, stop only the task-owned runtime, and record observations/screenshots in this handoff. Preserve every passing check unless source or relevant runtime changes.

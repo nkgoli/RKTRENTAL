@@ -127,7 +127,15 @@ const compact = (value: number) =>
   }).format(value);
 
 /** Shared zero baseline, including negative data; exact values live in the tables. */
-function LineChart({ label, years, series }: { label: string; years: number[]; series: Series[] }) {
+export function LineChart({
+  label,
+  years,
+  series,
+}: {
+  label: string;
+  years: number[];
+  series: Series[];
+}) {
   const graphic = useRef<SVGSVGElement>(null);
   const [width, setWidth] = useState(660);
   useEffect(() => {

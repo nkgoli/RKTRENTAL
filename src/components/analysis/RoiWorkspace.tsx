@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -16,6 +16,8 @@ import {
   loadSavedRoiAnalysisAction,
   saveRoiAnalysisAction,
 } from '@/app/(manager)/roi-analysis/actions';
+import { RoiScenarios } from './RoiScenarios';
+import { applyScenarios, scenarioDrafts, type ScenarioDraft } from '@/lib/analysis/scenarios';
 import { PropertySelector } from './PropertySelector';
 import { AnalysisTabs, RoiProjections } from './RoiProjections';
 import {
@@ -66,6 +68,7 @@ export function RoiWorkspace({
   const [selected, setSelected] = useState('');
   const [payload, setPayload] = useState<AnalysisPayload | null>(null);
   const [values, setValues] = useState<Values>({});
+  const [scenarios, setScenarios] = useState<ScenarioDraft[]>([]);
   const [tax, setTax] = useState(false);
   const [revision, setRevision] = useState(0);
   const [dirty, setDirty] = useState(false);
@@ -90,6 +93,7 @@ export function RoiWorkspace({
 
   function install(p: AnalysisPayload, rev: number) {
     setPayload(p);
+    setScenarios(scenarioDrafts(p));
     setValues(valuesFrom(p));
     setTax(!!p.options.tax);
     setRevision(rev);
@@ -240,7 +244,7 @@ export function RoiWorkspace({
     queueMicrotask(() => returnFocus.current?.focus());
   }
   function focusField(path: string) {
-    setView('summary');
+    setView(path.startsWith('scenarios') ? 'scenarios' : 'summary');
     setTimeout(() => {
       const field =
         document.getElementById(path) ?? document.getElementById('input.purchase.purchasePrice');
@@ -289,7 +293,7 @@ export function RoiWorkspace({
   function validate(calculate: boolean) {
     if (!payload) return null;
     try {
-      const p = PayloadSchema.parse(applyValues(payload, values, tax));
+      const p = PayloadSchema.parse(applyScenarios(applyValues(payload, values, tax), scenarios));
       const changed = allFields.filter((f) => values[f.path] !== valuesFrom(payload)[f.path]);
       p.evidence = [
         ...p.evidence.filter(
@@ -315,7 +319,11 @@ export function RoiWorkspace({
       const found = issues(error).map((i) => ({
         ...i,
         path:
-          i.path.startsWith('options') || i.path.startsWith('input') ? i.path : `input.${i.path}`,
+          i.path.startsWith('scenarios') ||
+          i.path.startsWith('options') ||
+          i.path.startsWith('input')
+            ? i.path
+            : `input.${i.path}`,
       }));
       setErrors(found);
       setStale(true);
@@ -509,10 +517,32 @@ export function RoiWorkspace({
                   choices={[
                     { id: 'summary', label: 'Summary' },
                     { id: 'charts', label: 'Charts' },
+                    { id: 'scenarios', label: 'Scenarios' },
                   ]}
                   value={view}
                   onChange={setView}
                 />
+                <div
+                  id="roi-section-panel-scenarios"
+                  role="tabpanel"
+                  aria-labelledby="roi-section-tab-scenarios"
+                  hidden={view !== 'scenarios'}
+                >
+                  <RoiScenarios
+                    key={selected}
+                    drafts={scenarios}
+                    onChange={(d) => {
+                      setScenarios(d);
+                      setDirty(true);
+                      setStale(true);
+                    }}
+                    snapshot={calculatedPayload}
+                    stale={stale}
+                    errors={errors}
+                    base={applyValues(payload, values, tax)}
+                    saving={saving}
+                  />
+                </div>
                 <div
                   id="roi-section-panel-charts"
                   role="tabpanel"

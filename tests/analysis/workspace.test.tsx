@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+﻿// @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -549,4 +549,95 @@ describe('ROI projection interactions', () => {
     const table = screen.getByRole('table', { name: /Projection amounts/ });
     expect(within(table).getAllByText('$10,800.00')).toHaveLength(3);
   });
+});
+
+it('creates, validates, saves and removes named scenarios through shared state', async () => {
+  await open();
+  fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Create scenario' }));
+  const name = document.getElementById('scenarios.0.name') as HTMLInputElement;
+  fireEvent.change(name, { target: { value: 'Rent case' } });
+  const override = document.getElementById(
+    'scenarios.0.overrides.income.monthlyRent',
+  ) as HTMLInputElement;
+  fireEvent.change(override, { target: { value: 'invalid' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+  await waitFor(() => expect(document.activeElement).toBe(override));
+  expect(override.closest('details')?.open).toBe(true);
+  expect(override.value).toBe('invalid');
+  expect(saveRoiAnalysisAction).not.toHaveBeenCalled();
+  fireEvent.change(override, { target: { value: '1200' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+  expect(screen.getByRole('region', { name: 'Scenario metrics' }).textContent).toContain(
+    'Rent case',
+  );
+  expect(screen.getByRole('region', { name: 'Scenario metrics' }).textContent).toContain(
+    '$13,200.00',
+  );
+  expect(screen.getByRole('region', { name: 'Scenario metrics' }).textContent).toContain(
+    '$2,400.00',
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
+  await screen.findByText('Saved ready - revision 1');
+  const saved = vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as {
+    payload: ReturnType<typeof make>;
+  };
+  expect(saved.payload.input.income?.monthlyRent).toBe(1000);
+  expect(saved.payload.scenarios[0].overrides.income?.monthlyRent).toBe(1200);
+  expect(saved.payload.scenarios[0].name).toBe('Rent case');
+  fireEvent.click(screen.getByRole('button', { name: 'Remove Rent case' }));
+  expect(screen.queryByLabelText('Scenario name')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
+  expect(screen.getByRole('alertdialog')).toBeTruthy();
+});
+
+it('retains scenario edits through conflicts and invalid navigation recovery, then reloads per property', async () => {
+  const stored = make('a');
+  stored.scenarios = [
+    { id: 'saved-case', name: 'Saved case', overrides: { expenses: { maintenance: 0 } } },
+  ];
+  vi.mocked(loadSavedRoiAnalysisAction).mockImplementation(async (id) => ({
+    ok: true,
+    data:
+      id === 'a'
+        ? {
+            propertyId: 'a',
+            payload: stored,
+            status: 'READY',
+            revision: 4,
+            missing: [],
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-01-01T00:00:00Z',
+          }
+        : null,
+  }));
+  await open();
+  fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
+  const name = () => document.getElementById('scenarios.0.name') as HTMLInputElement;
+  expect(name().value).toBe('Saved case');
+  fireEvent.change(name(), { target: { value: '' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
+  expect(screen.getByRole('alertdialog').contains(document.activeElement)).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Correct highlighted assumption' }));
+  await waitFor(() => expect(document.activeElement).toBe(name()));
+  expect(name().value).toBe('');
+  fireEvent.change(name(), { target: { value: 'Kept case' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel property change' }));
+  vi.mocked(saveRoiAnalysisAction).mockResolvedValue({ ok: false, code: 'CONFLICT' });
+  fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+  await screen.findByText(/A newer revision exists/);
+  expect(name().value).toBe('Kept case');
+  expect(vi.mocked(saveRoiAnalysisAction).mock.calls[0][0]).toMatchObject({
+    expectedRevision: 4,
+    payload: { scenarios: [{ name: 'Kept case', overrides: { expenses: { maintenance: 0 } } }] },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Reload saved analysis' }));
+  fireEvent.click(screen.getByRole('button', { name: /Discard/ }));
+  await waitFor(() => expect(name().value).toBe('Saved case'));
+  fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
+  fireEvent.click(screen.getByRole('button', { name: /Property b/ }));
+  await screen.findByText(/New analysis/);
+  fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
+  expect(screen.queryByLabelText('Scenario name')).toBeNull();
 });

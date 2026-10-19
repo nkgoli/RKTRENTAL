@@ -15,3 +15,16 @@
   overflow-wrap: anywhere;
   cursor: pointer;
 }
+.scenarios dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px 16px;
+  font-size: 13px;
+}
+.scenarios dl > div {
+  display: contents;
+}
+.scenarios dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

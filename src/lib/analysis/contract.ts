@@ -141,8 +141,14 @@ export const PayloadSchema = z
   });
 export type AnalysisPayload = z.infer<typeof PayloadSchema>;
 export type AssumptionEvidence = z.infer<typeof EvidenceSchema>;
-export type ValidationIssue = { path: string; message: string };
+export type ValidationIssue = { path: string; message: string; scenarioId?: string };
+class ScenarioCalculationError extends Error {
+  constructor(readonly validationIssues: ValidationIssue[]) {
+    super(validationIssues.map((issue) => issue.message).join('; '));
+  }
+}
 export function issues(error: unknown): ValidationIssue[] {
+  if (error instanceof ScenarioCalculationError) return error.validationIssues;
   return error instanceof z.ZodError
     ? error.issues.map((i) => ({ path: i.path.join('.'), message: i.message }))
     : [{ path: '', message: error instanceof Error ? error.message : 'Invalid analysis' }];
@@ -168,15 +174,39 @@ export function calculatePayload(payload: AnalysisPayload) {
   const serialized = OptionsSchema.parse(payload.options);
   const options: AnalysisOptions = { ...serialized, startDate: new Date(serialized.startDate) };
   const base = analyze(input, options);
-  const scenarios = payload.scenarios.map((s) => ({
-    id: s.id,
-    name: s.name,
-    result: analyzeWithScenario(
-      input,
-      rehydrateInput(s.overrides),
-      s.options ? { ...s.options, startDate: new Date(s.options.startDate) } : options,
-    ),
-  }));
+  const scenarios = payload.scenarios.map((s, index) => {
+    try {
+      return {
+        id: s.id,
+        name: s.name,
+        result: analyzeWithScenario(
+          input,
+          rehydrateInput(s.overrides),
+          s.options ? { ...s.options, startDate: new Date(s.options.startDate) } : options,
+        ),
+      };
+    } catch (error) {
+      // The engine can reject merged assumptions without a field path (for example,
+      // cross-field loan limits or monetary overflow). Preserve the owning scenario
+      // for both client recalculation and server saves; never blame the saved base.
+      throw new ScenarioCalculationError(
+        issues(error).map((issue) => {
+          let field = issue.path ? `overrides.${issue.path}` : '';
+          if (issue.message === 'Loan exceeds purchase price') {
+            if (s.overrides.financing?.loanAmount !== undefined)
+              field = 'overrides.financing.loanAmount';
+            else if (s.overrides.purchase?.purchasePrice !== undefined)
+              field = 'overrides.purchase.purchasePrice';
+          }
+          return {
+            path: `scenarios.${index}${field ? `.${field}` : ''}`,
+            scenarioId: s.id,
+            message: `${s.name}: ${issue.message}`,
+          };
+        }),
+      );
+    }
+  });
   const comparison = payload.benchmarks.length
     ? compareWithBenchmarks(base, payload.benchmarks)
     : null;

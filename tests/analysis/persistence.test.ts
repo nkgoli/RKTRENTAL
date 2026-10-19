@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { analysisService } from '../../src/lib/analysis/service';
 import { calculatePayload } from '../../src/lib/analysis/contract';
 import { payload } from './fixture';
+import { applyScenarios, scenarioExamples } from '../../src/lib/analysis/scenarios';
 
 describe.skipIf(process.env.RUN_ANALYSIS_DB !== '1')(
   'isolated analysis persistence and authorization',
@@ -251,6 +252,64 @@ describe.skipIf(process.env.RUN_ANALYSIS_DB !== '1')(
           payload: p,
         }),
       ).toMatchObject({ ok: false, code: 'INVALID' });
+    });
+    it('rejects contextual scenario failures without replacing the saved base, then persists editable examples', async () => {
+      const before = await a.loadSaved('property-a');
+      if (!before.ok || !before.data) throw Error('missing saved base');
+      const original = before.data;
+      for (const status of ['DRAFT', 'READY'] as const) {
+        for (const overflow of [false, true]) {
+          const p = structuredClone(original.payload);
+          p.scenarios = [
+            {
+              id: 'stress',
+              name: 'Stress case',
+              overrides: overflow
+                ? {
+                    income: { annualRentGrowth: 100 },
+                    appreciationExit: { holdingPeriodYears: 50 },
+                  }
+                : { financing: { loanAmount: 200000 } },
+            },
+          ];
+          const response = await a.save({
+            propertyId: 'property-a',
+            expectedRevision: original.revision,
+            status,
+            payload: p,
+          });
+          expect(response).toMatchObject({
+            ok: false,
+            code: 'INVALID',
+            issues: [
+              {
+                scenarioId: 'stress',
+                path: overflow ? 'scenarios.0' : 'scenarios.0.overrides.financing.loanAmount',
+                message: expect.stringContaining('Stress case:'),
+              },
+            ],
+          });
+          const after = await a.loadSaved('property-a');
+          expect(after.ok && after.data).toEqual(original);
+        }
+      }
+      const edited = applyScenarios(
+        original.payload,
+        scenarioExamples.map((example, index) => ({ ...example, id: `example-${index}` })),
+      );
+      const saved = await a.save({
+        propertyId: 'property-a',
+        expectedRevision: original.revision,
+        status: 'READY',
+        payload: edited,
+      });
+      expect(saved.ok).toBe(true);
+      const restored = await a.loadSaved('property-a');
+      if (!restored.ok || !restored.data) throw Error('missing saved examples');
+      expect(restored.data.payload.scenarios).toEqual(edited.scenarios);
+      expect(restored.data.payload.input).toEqual(original.payload.input);
+      expect(calculatePayload(restored.data.payload)).toEqual(calculatePayload(edited));
+      expect(await b.loadSaved('property-a')).toEqual({ ok: false, code: 'NOT_FOUND' });
     });
     it('does not infer vacancy rents and includes a lease on its UTC end date', async () => {
       const ending = await a.loadDraft('property-a', new Date('2026-12-31T23:59:59Z'));

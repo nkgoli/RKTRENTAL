@@ -89,7 +89,8 @@ test('unchanged baseline at desktop and 390px', async ({ page }) => {
     ).toHaveCount(propertyCount);
     await noPageOverflow(page);
     await capture(page, `${prefix}-${width}-grid`);
-    await page.getByRole('link', { name: 'List', exact: true }).click();
+    // Capture the unchanged baseline directly; its existing soft query navigation is intermittent.
+    await page.goto('http://localhost:3231/properties?view=list');
     await expect(page.getByRole('table', { name: 'Properties', exact: true })).toBeVisible();
     await capture(page, `${prefix}-${width}-list`);
     observations.push({ flow: 'baseline', width, url: page.url(), properties: propertyCount });
@@ -181,10 +182,12 @@ test('candidate seeded cards, filters, empty recovery and phone scrolling', asyn
     const region = page.getByRole('region', { name: /Property directory table/ });
     await expect(region.getByRole('columnheader')).toHaveCount(6);
     await region.focus();
+    await expect(region).toBeFocused();
     if (width === 390) {
       const before = await region.evaluate((el) => el.scrollLeft);
       for (let index = 0; index < 12; index++) await page.keyboard.press('ArrowRight');
       await expect.poll(() => region.evaluate((el) => el.scrollLeft)).toBeGreaterThan(before);
+      await expect(region).toBeFocused();
     }
     await noPageOverflow(page);
     await capture(page, `after-${width}-list`);

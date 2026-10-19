@@ -135,20 +135,43 @@ The task runs `wscript.exe` with
 `rocketrental-review-3216.cmd` hidden. The wrapper sets the database/auth environment and runs
 `next start -p 3216` from this checkout.
 
-Stop:
+Stop only the confirmed review process and only the exact task registration:
 
 ```powershell
-$c = Get-NetTCPConnection -State Listen -LocalPort 3216 -ErrorAction SilentlyContinue
-if ($c) { Stop-Process -Id $c.OwningProcess -Force }
+$expectedPid = 31004
+$expectedCreated = [datetime]'2026-10-19 14:51:16'
+$proc = Get-CimInstance Win32_Process -Filter "ProcessId=$expectedPid" -ErrorAction SilentlyContinue
+if (
+  -not $proc -or
+  $proc.Name -ne 'node.exe' -or
+  $proc.CommandLine -notmatch 'next start -p 3216' -or
+  [math]::Abs(($proc.CreationDate - $expectedCreated).TotalSeconds) -gt 5
+) {
+  throw 'Refusing to stop: PID 31004 no longer matches the recorded review process.'
+}
+Stop-Process -Id $expectedPid -Force
+
+$task = Get-ScheduledTask -TaskName 'RocketRentalReview3216' -ErrorAction SilentlyContinue
+$action = $task.Actions | Select-Object -First 1
+if (
+  -not $task -or
+  $action.Execute -ne 'wscript.exe' -or
+  $action.Arguments -ne '"C:\Users\nkgol\AppData\Local\Temp\opencode\rocketrental-review-3216-hidden.vbs"'
+) {
+  throw 'Refusing to remove: the scheduled task action no longer matches this review.'
+}
 Unregister-ScheduledTask -TaskName 'RocketRentalReview3216' -Confirm:$false
 ```
 
-Current identity at the time of writing: candidate
-`97b94840fe6e16135c346e7fd0d29951643beb1b`, build `1j-Rdcc6JnMEAZt3np19U`, node PID 31004
-created 2026-10-19 14:51:16 local, parent `cmd.exe` PID 25404. Both
-`http://localhost:3216/sign-in` and `http://127.0.0.1:3216/sign-in` return HTTP 200. The process
-is task-launched and orphaned from the agent command session; turnover survival has not yet
-been observed, so durable readiness is not claimed from startup alone.
+Do not force-stop whichever process happens to own port 3216, and do not remove a task whose
+action no longer matches this review.
+
+Current identity: candidate `65d883afb785c048c207ada7f105676e6157ce46` (implementation
+`539debe`, partial-observation handoff `97b9484`), build `1j-Rdcc6JnMEAZt3np19U`, node PID
+31004 created 2026-10-19 14:51:16 local, parent `cmd.exe` PID 25404. Both
+`http://localhost:3216/sign-in` and `http://127.0.0.1:3216/sign-in` return HTTP 200. The same
+PID was still listening after the turn boundary, so turnover survival is observed for this
+task-owned hidden process; the manager also received HTTP 200 independently.
 
 ## Pending native Edge checklist
 

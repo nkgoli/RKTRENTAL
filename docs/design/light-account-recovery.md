@@ -80,6 +80,46 @@ Before/after screenshots are in `.playwright-mcp/` in this checkout:
 - `after-shared-states-390.png` (element capture of the `/ui` page-states section, excluding the
   unrelated wide table specimen)
 
+## Native Edge observations (partial)
+
+The manager reviewed the existing Edge tab under the human grant and released the desktop at
+21:11:32 UTC. The account runtime was served from `http://localhost:3216` (candidate
+`539debee6a6c8f41287a574938c2147e82d8c336`, build `1j-Rdcc6JnMEAZt3np19U`) during the
+21:07:29–21:17:18 UTC hold.
+
+Observed:
+
+- Desktop 1699x887 default `/sign-in`: passed visually.
+- Empty submit: stayed on `/sign-in`, showed the native "Please fill out this field" message
+  and moved focus to the email field.
+- Show/Hide: the text/password type and the accessible "Show characters" / "Hide characters"
+  label changed. Exact value retention could not be observed because browser inspection
+  redacts password values.
+- Desktop `/sign-in?error=invalid`: readable feedback; both inputs had
+  `aria-describedby="sign-in-error"`.
+- 390px invalid state: measured `scrollWidth === innerWidth === 390`.
+
+Not run or not claimed:
+
+- The phone capture sequence aborted when the server stopped; no phone screenshot is claimed.
+- Manager sign-in/sign-out, the logged-out state, manager/public 404 and `/ui` native checks
+  remain unrun.
+- No on-disk screenshot paths were generated; the default/error desktop captures are images in
+  the manager turn transcript.
+
+## Review-server lifecycle diagnosis
+
+- The review server is a child of the agent's execution turn. Turn-end cleanup cancels the
+  command and its descendants; WMI- and App-launched processes also did not survive turn
+  boundaries.
+- Overlapping start attempts produced `EADDRINUSE`; the process that was actually serving could
+  be killed while a duplicate failed, leaving the port refused.
+- The 21:07:29–21:17:18 hold kept one server (PID 53576, HTTP 200) alive for the desktop
+  default/error captures. The server stopped at the hold end, which aborted the phone capture.
+- Next window: start exactly one server in the same turn as the hold, verify the port, hold
+  60–120 seconds beyond the window end, do not start duplicates, and keep the turn active until
+  the manager confirms release.
+
 ## Pending native Edge checklist
 
 The manager performs these checks in the existing Edge session after a fresh bounded human
@@ -142,7 +182,9 @@ the desktop release confirmation. Return those observations for this Task's reco
 - The source/state handoff at `output/account-recovery/source-state-handoff.md` from the closed
   design task was not present in this checkout or in the project artifacts. The implementation
   used the approved design revision and the existing source anchors instead.
-- The native existing-Edge review is pending the manager's bounded human grant. The review
-  server is running on port 3216 and the checklist above is the exact remaining scope; the
-  manager returns the observed results for this Task's record.
+- The native existing-Edge review is partially observed: the desktop default sign-in, empty
+  submit, Show/Hide and invalid-credential states passed, and the 390px invalid state measured
+  no horizontal scroll. Manager sign-in/sign-out, the logged-out state, manager/public 404,
+  `/ui` and the phone captures remain unrun. Native acceptance stays pending; the review server
+  is stopped and the checklist above is the remaining scope.
 - No upstream push, deployment or Preview publication was performed.

@@ -4,4 +4,4 @@ export {
   getAllBenchmarks,
   getDefaultBenchmarks,
   createCustomBenchmark,
-} from './market-data.js';
+} from './market-data';

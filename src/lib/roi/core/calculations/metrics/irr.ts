@@ -1,4 +1,4 @@
-import { round } from '../../../utils/index.js';
+import { round } from '../../../utils/index';
 
 /**
  * IRR (Internal Rate of Return) calculation using Newton-Raphson method

@@ -1,5 +1,5 @@
-import type { DealInput } from '../domain/schemas/deal-input.schema.js';
-import type { Warning, SummaryMetrics } from '../domain/schemas/analysis-result.schema.js';
+import type { DealInput } from '../domain/schemas/deal-input.schema';
+import type { Warning, SummaryMetrics } from '../domain/schemas/analysis-result.schema';
 
 /**
  * Evaluate input and metrics to generate warnings

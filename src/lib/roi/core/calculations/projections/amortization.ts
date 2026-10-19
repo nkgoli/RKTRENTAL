@@ -1,6 +1,6 @@
-import { round, fromPercent, calculateMonthlyPayment } from '../../../utils/index.js';
-import type { DealInput } from '../../domain/schemas/deal-input.schema.js';
-import type { AmortizationEntry } from '../../domain/schemas/analysis-result.schema.js';
+import { round, fromPercent, calculateMonthlyPayment } from '../../../utils/index';
+import type { DealInput } from '../../domain/schemas/deal-input.schema';
+import type { AmortizationEntry } from '../../domain/schemas/analysis-result.schema';
 
 export interface AmortizationSummary {
   monthlyPayment: number;

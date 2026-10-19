@@ -1,9 +1,9 @@
-import { round, fromPercent } from '../../../utils/index.js';
-import type { DealInput } from '../../domain/schemas/deal-input.schema.js';
+import { round, fromPercent } from '../../../utils/index';
+import type { DealInput } from '../../domain/schemas/deal-input.schema';
 import type {
   EquityTimelineEntry,
   AmortizationEntry,
-} from '../../domain/schemas/analysis-result.schema.js';
+} from '../../domain/schemas/analysis-result.schema';
 
 /**
  * Generate equity timeline showing equity growth over holding period

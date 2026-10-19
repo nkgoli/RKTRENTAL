@@ -1,4 +1,4 @@
-import { round } from '../../../utils/index.js';
+import { round } from '../../../utils/index';
 
 /**
  * NPV (Net Present Value) calculation

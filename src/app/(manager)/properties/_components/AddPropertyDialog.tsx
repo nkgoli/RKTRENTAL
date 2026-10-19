@@ -1,14 +1,13 @@
 ﻿'use client';
 
 import { useEffect, useRef } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { AddPropertyForm, type OwnerOption } from './PropertyForm';
 import styles from '../properties.module.css';
 
 /** "+ Add property" opens this dialog via `?add=1`; closing drops the param again. */
 export function AddPropertyDialog({ owners }: { owners: OwnerOption[] }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const wantsOpen = params.get('add') === '1';
@@ -35,7 +34,8 @@ export function AddPropertyDialog({ owners }: { owners: OwnerOption[] }) {
     const next = new URLSearchParams(params.toString());
     next.delete('add');
     const qs = next.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    // Closing changes only local dialog state; keep the loaded directory in place.
+    window.history.replaceState(null, '', qs ? `${pathname}?${qs}` : pathname);
   }
 
   return (

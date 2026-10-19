@@ -18,6 +18,7 @@ vi.mock('@/app/(manager)/properties/actions', () => ({
 beforeEach(() => {
   nav.params = new URLSearchParams('view=list&filter=multi&q=Oak&add=1');
   nav.replace.mockClear();
+  vi.spyOn(window.history, 'replaceState').mockImplementation(nav.replace);
   HTMLDialogElement.prototype.showModal = function () {
     this.setAttribute('open', '');
   };
@@ -28,6 +29,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   document.body.style.overflow = '';
 });
 it('focuses the first input, locks scrolling and removes only add on cancellation', async () => {
@@ -36,9 +38,7 @@ it('focuses the first input, locks scrolling and removes only add on cancellatio
   expect(document.activeElement).toBe(input);
   expect(document.body.style.overflow).toBe('hidden');
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-  expect(nav.replace).toHaveBeenCalledWith('/properties?view=list&filter=multi&q=Oak', {
-    scroll: false,
-  });
+  expect(nav.replace).toHaveBeenCalledWith(null, '', '/properties?view=list&filter=multi&q=Oak');
 });
 it('closes after URL navigation and resets cancelled values on the next opening', async () => {
   const { rerender } = render(<AddPropertyDialog owners={[]} />);

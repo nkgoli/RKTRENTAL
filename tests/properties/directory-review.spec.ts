@@ -36,9 +36,33 @@ async function openDialog(page: Page) {
 }
 
 test.afterAll(async () => {
+  const existing = fs.existsSync(path.join(evidence, 'chromium-observations.json'))
+    ? JSON.parse(
+        fs
+          .readFileSync(path.join(evidence, 'chromium-observations.json'), 'utf8')
+          .replace(/^\uFEFF/, ''),
+      )
+    : [];
+  const identity = JSON.parse(
+    fs
+      .readFileSync(path.resolve('tests/properties/.runtime/review-config.json'), 'utf8')
+      .replace(/^\uFEFF/, ''),
+  );
   fs.writeFileSync(
     path.join(evidence, 'chromium-observations.json'),
-    JSON.stringify(observations, null, 2),
+    JSON.stringify(
+      [
+        ...existing,
+        ...observations.map((item) => ({
+          ...item,
+          candidateCommit: identity.candidateCommit,
+          candidateBuild: identity.candidateBuild,
+          observedUtc: new Date().toISOString(),
+        })),
+      ],
+      null,
+      2,
+    ),
   );
   await db.$disconnect();
 });
@@ -62,19 +86,34 @@ test('unchanged baseline at desktop and 390px', async ({ page }) => {
 
 test('candidate seeded cards, filters, empty recovery and phone scrolling', async ({ page }) => {
   await signIn(page, 'http://localhost:3232');
+  const organization = await db.user.findFirstOrThrow({
+    where: { email: 'jordan.mills@rocketrental.example' },
+    select: { organizationId: true },
+  });
+  const records = await db.property.findMany({
+    where: { organizationId: organization.organizationId, archivedAt: null },
+    include: { units: { where: { status: { not: 'ARCHIVED' } } } },
+    orderBy: { name: 'asc' },
+  });
+  const units = records.flatMap((record) => record.units);
+  const occupancy = Math.round(
+    (units.filter((unit) => unit.status === 'OCCUPIED').length / units.length) * 100,
+  );
+  const multi = records.filter((record) => record.type === 'MULTI_UNIT').length;
+  const single = records.filter((record) => record.type === 'SINGLE_UNIT').length;
+  const vacancies = records.filter((record) =>
+    record.units.some((unit) => unit.status !== 'OCCUPIED'),
+  ).length;
   for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     await page.goto('/properties');
     const directory = page.getByRole('region', { name: 'Property directory', exact: true });
-    await expect(directory.getByRole('link')).toHaveCount(4);
-    await expect(directory.getByRole('heading', { level: 3 })).toHaveText([
-      '18 Elm Street',
-      'Cedar Row Townhomes',
-      'Harbor View Lofts',
-      'Maple Court',
-    ]);
-    await expect(page.getByText('91% occupancy', { exact: true })).toBeVisible();
-    expect(await directory.locator('a > div[aria-hidden=true] > svg').count()).toBe(4);
+    await expect(directory.getByRole('link')).toHaveCount(records.length);
+    await expect(directory.getByRole('heading', { level: 3 })).toHaveText(
+      records.map((record) => record.name),
+    );
+    await expect(page.getByText(`${occupancy}% occupancy`, { exact: true })).toBeVisible();
+    expect(await directory.locator('a > div[aria-hidden=true] > svg').count()).toBe(records.length);
     await expect(directory.locator('a > div[aria-hidden=true] > svg').first()).toBeVisible();
     await noPageOverflow(page);
     await capture(page, `after-${width}-grid`);
@@ -83,9 +122,9 @@ test('candidate seeded cards, filters, empty recovery and phone scrolling', asyn
     await page.goto('/properties');
     const filters = page.getByRole('navigation', { name: 'Property filters' });
     for (const [label, count] of [
-      ['Multi-unit', 3],
-      ['Single-unit', 1],
-      ['Has vacancies', 3],
+      ['Multi-unit', multi],
+      ['Single-unit', single],
+      ['Has vacancies', vacancies],
     ] as const) {
       await filters.getByRole('link', { name: new RegExp('^' + label) }).click();
       await expect(page).toHaveURL(
@@ -107,9 +146,14 @@ test('candidate seeded cards, filters, empty recovery and phone scrolling', asyn
       page.getByRole('heading', { name: 'No properties match this view' }),
     ).toBeVisible();
     await page.getByRole('link', { name: 'Clear filters' }).click();
+    await expect(page).toHaveURL(/\/properties$/);
+    await expect(
+      page.getByRole('region', { name: 'Property directory', exact: true }).getByRole('link'),
+    ).toHaveCount(records.length);
     const search = page.getByRole('search');
     await search.getByRole('searchbox').fill('Cedar');
     await search.getByRole('button', { name: 'Search', exact: true }).click();
+    await expect(page).toHaveURL(/q=Cedar$/);
     await expect(
       page.getByRole('region', { name: 'Property directory', exact: true }).getByRole('link'),
     ).toHaveCount(1);
@@ -120,6 +164,7 @@ test('candidate seeded cards, filters, empty recovery and phone scrolling', asyn
     ).toBeVisible();
     await capture(page, `after-${width}-empty-search`);
     await page.getByRole('link', { name: 'Clear filters' }).click();
+    await expect(page).toHaveURL(/\/properties$/);
     await page.getByRole('link', { name: 'List', exact: true }).click();
     const region = page.getByRole('region', { name: /Property directory table/ });
     await expect(region.getByRole('columnheader')).toHaveCount(6);
@@ -134,8 +179,8 @@ test('candidate seeded cards, filters, empty recovery and phone scrolling', asyn
     observations.push({
       flow: 'seeded directory',
       width,
-      cards: 4,
-      filters: 'multi3/single1/vacancies3/archived0',
+      cards: records.length,
+      filters: { multi, single, vacancies, archived: 0 },
       search: 'Cedar1/no-match0',
       tableColumns: 6,
       tableScrollLeft: await region.evaluate((el) => el.scrollLeft),

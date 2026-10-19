@@ -61,3 +61,7 @@ The inherited manager maintenance status action persisted `IN_PROGRESS` to the i
 ## Submitted scope
 
 Application: repairs/page.tsx, RepairForm.tsx, repairs.module.css and comment/route.ts only. Tests and runtime helper are confined to tests/tenant-repairs; this handoff is docs/design/light-tenant-repairs.md. Existing untracked `prisma/.home-lease-review-postgres/` data remains untouched. Git supplies the exact changed-file manifest and candidate SHA.
+
+## Shared-client turnover
+
+After the manager assigned Payment the next exclusive shared build/review slot, the repair-owned app listener on port 3227 (PID 58272) was stopped. No common `.next` or generated Prisma write was started, and no unrelated process was terminated. Although build output is isolated at `tests/tenant-repairs/.review-app/.next` (build `SZJQyT5M5qQ6bfe8gG18w`), the snapshot dependency junction targets the checkout node_modules, including its generated Prisma client. Stopping the repair app releases that shared DLL. Port 3227 had no listening entry afterward. The isolated database on 55427, source snapshot, storage and evidence remain preserved. Native Edge is still not run; no native grant is active. Restart only after the manager signals that Payment has released the shared-client slot. Earlier health/runtime-ready observations above precede this deliberate shutdown.

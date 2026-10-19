@@ -1,6 +1,6 @@
 # Tenant lease download and repair photo verification
 
-The isolated integrated runtime is ready for manager-coordinated native existing-Edge checks. Neither native file outcome is verified yet. No desktop grant or file approval was acquired by this Task.
+The isolated integrated runtime was prepared and has now been released on manager instruction. Both native file outcomes remain unverified. The retained build, fixture and start handoff are ready for a future freshly coordinated review window. No desktop grant or file approval was acquired by this Task.
 
 ## Source, build and fixture
 
@@ -35,6 +35,16 @@ After the manager releases review, run `runtime.ps1 stop` with process-inspectio
 
 ## Native evidence and remaining limitation
 
-Pending manager observations and capture references. Previous cancelled download and upload approvals remain explicitly unverified. This Task has performed no native chooser selection, upload or download, acquired no desktop, and requested no human approval directly. Runtime release is pending review; it is not claimed complete. No push, merge, publication or deployment.
+Manager response `2f002f715964940695e9b19ee458c99a255f3fe664fe9e2ff89ec16ea8541d7b`, clientRef `response`, reported no fresh native file observations. The later property-only window ended at 23:30:54 UTC after Edge app-switch cancellation and desktop release; that grant did not cover these file operations. Earlier cancelled lease-download and photo-upload approvals remain unverified at both desktop and 390px. No native download destination, selected count/preview, upload result or persisted native photo can be certified. No new native captures exist; prior captures remain in their original manager transcripts and are not invented as file references. This Task acquired no desktop, performed no chooser selection/upload/download and asked no human directly. The manager authorized runtime cleanup only, with no pass or waiver. No push, merge, publication or deployment.
+
+## Verified runtime release
+
+Revalidated current listener command lines before shutdown: app 51836 served this exact snapshot on 3238, parent wrapper 55980; database 34196 used this snapshot's `.file-review/postgres` on 55438, parent helper 36292 and wrapper 46208. No saved PID alone was used as authority.
+
+`runtime.ps1 stop` initially failed at PowerShell Stop-Process with a NullReferenceException; the app remained listening. The helper now uses the Windows process API after the same identity guard. Retrying stopped the app, but elevated pg_ctl could not signal the sandbox-owned database (Operation not permitted). Running the same fixture-specific `pg_ctl -D tests/tenant-file-verification/.review-app/.file-review/postgres stop -m fast -w` under its original sandbox account succeeded: server stopped. After revalidating the remaining database helper and wrapper command lines/parentage, only those two owned processes were released. App wrapper had already exited.
+
+Final `netstat -ano` contained no 3238 or 55438 entries; process queries found none of the five verified runtime/helper PIDs. Both fixture hashes above still match, `.next/BUILD_ID` remains `-ATEDz0E63DKdXPbtl4rx`, database PG_VERSION and the lease storage object remain present. Build, storage, database and fixtures were not deleted or reseeded. No application implementation or passing regression suite was repeated.
+
+Future shutdown must inspect identities with suitable permission, then run PostgreSQL control under the database-owning account. Elevated inspection does not imply that elevated pg_ctl can control a sandbox-owned instance. The guarded helper refuses identity mismatches and reports control failure rather than killing the database forcibly. Preserve this historical readiness/start handoff for a future fresh manager-coordinated native window; the runtime is currently stopped.
 
 Setup observations: initial sandboxed Prisma engine download failed; approved engine generation succeeded. PostgreSQL initially logged a restricted-token warning but initialized successfully and seeded normally. Next reported its existing multiple-lockfile workspace-root warning. Read-only process inspection required elevation because sandbox CIM access was denied.

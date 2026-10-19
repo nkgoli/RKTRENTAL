@@ -58,7 +58,7 @@ switch ($Mode) {
      $process = Get-CimInstance Win32_Process -Filter "ProcessId=$($listener.OwningProcess)"
      if ($listener.LocalPort -eq 3238) {
        if ($process.CommandLine -notlike "*$app*" -or $process.CommandLine -notmatch 'next.*start.*3238') { throw 'App identity mismatch; untouched.' }
-       Stop-Process -Id $process.ProcessId
+       [System.Diagnostics.Process]::GetProcessById([int]$process.ProcessId).Kill()
      } else {
        $db = Join-Path $data 'postgres'
        if ($process.CommandLine -notlike "*$db*") { throw 'Database identity mismatch; untouched.' }

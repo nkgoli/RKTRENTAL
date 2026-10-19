@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RoiWorkspace } from '@/components/analysis/RoiWorkspace';
 import { applyValues, valuesFrom } from '@/components/analysis/fields';
@@ -72,6 +73,34 @@ async function open() {
 }
 const rent = () => document.getElementById('input.income.monthlyRent') as HTMLInputElement;
 describe('ROI summary workspace', () => {
+  it('supports keyboard selection, guarded switching and correction in a closed disclosure', async () => {
+    const user = userEvent.setup();
+    render(<RoiWorkspace selection={{ ok: true, data: properties }} />);
+    await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole('searchbox'));
+    await user.keyboard('Property a');
+    await user.tab();
+    await user.keyboard('{Enter}');
+    await screen.findByRole('button', { name: 'Save draft' });
+    fireEvent.change(rent(), { target: { value: '' } });
+    const disclosure = rent().closest('details')!;
+    disclosure.open = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+    await waitFor(() => expect(document.activeElement).toBe(rent()));
+    expect(disclosure.open).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
+    const keep = screen.getByRole('button', { name: 'Keep editing' });
+    expect(document.activeElement).toBe(keep);
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Discard and continue' }),
+    );
+    await user.tab();
+    expect(document.activeElement).toBe(keep);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(rent().value).toBe('');
+  });
   it('requires explicit searchable selection and rejects foreign URLs', async () => {
     const { unmount } = render(<RoiWorkspace selection={{ ok: true, data: properties }} />);
     expect(loadRoiDraftAction).not.toHaveBeenCalled();

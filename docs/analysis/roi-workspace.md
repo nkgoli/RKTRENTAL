@@ -1,4 +1,4 @@
-﻿# ROI summary workspace and extension contract
+# ROI summary workspace and extension contract
 
 ## Implemented boundary
 
@@ -49,10 +49,10 @@ The baseline includes engine candidate `535e1688d89bb81d0267c4f94660a8983b485579
 
 - TypeScript check passed.
 - Owned TypeScript/test ESLint passed after correcting the initial effect dependency warning.
-- UI/contract/shell checks passed: 45 tests across 3 files, including explicit selection, invalid property URLs, edit/recalculate/stale results, incomplete draft, ready save, conflict/transport recovery, dirty property switch and late response protection.
+- UI/contract/shell checks passed: 45 tests across 3 files, including explicit selection, invalid property URLs, edit/recalculate/stale results, incomplete draft, ready save, conflict/transport recovery, dirty property switch and late response protection. A subsequent focused workspace run passed all 6 tests after adding keyboard selection, modal focus containment/Escape and opening a closed disclosure to focus the invalid field.
 - The isolated harness passed 34 analysis tests, including migration preservation over a populated pre-analysis schema, manager/organization authorization and revision concurrency. It retained its database under `.data/analysis-postgres-1a9f3188-e448-4c30-bd1b-0415156a91fe` and stopped that cluster.
-- The dedicated review database was initialized and all 19 migrations applied, then the existing demo seed populated 4 properties/45 units. Existing user databases/configuration were untouched.
-- Production build failed on the public engine's explicit `.js` imports of TypeScript modules, including `utils/index.js` and `deal-input.schema.js`. Engine and Next config are outside this Task's owned paths; a typed question requests the foundation owner's correction or expanded authority. The failed build is not a UI test failure.
+- The dedicated review database was initialized and all 19 migrations applied, then the existing demo seed populated 4 properties/45 units. The dedicated cluster and launcher were stopped with demo data retained. Existing user databases/configuration were untouched.
+- Production build failed on the public engine's explicit `.js` imports of TypeScript modules, including `utils/index.js` and `deal-input.schema.js`. Engine and Next config are outside this Task's owned paths; the manager confirmed that the foundation owner will supply the correction and its exact SHA for synchronization. Source ownership remains unchanged; no engine or Next-config workaround is made here. The failed build is not a UI test failure.
 - Native Edge desktop/390px, screenshots and runtime interaction checks remain **not run**, dependent on that build correction. No browser pass or published output is claimed.
 
 Focused commands are `node node_modules/typescript/bin/tsc --noEmit`, owned-path ESLint, and `node node_modules/vitest/vitest.mjs run --config vitest.config.ts tests/analysis/contract.test.ts tests/analysis/workspace.test.tsx tests/ui/manager-shell.test.tsx`. The migration/authorization command is `node --import ./prisma/os-userinfo.mjs tests/analysis/run-isolated.mjs`. Reuse valid database evidence; rerun affected UI checks after edits.

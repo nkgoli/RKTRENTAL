@@ -49,7 +49,7 @@ export function AddPropertyDialog({ owners }: { owners: OwnerOption[] }) {
         if (event.key !== 'Tab') return;
         const elements = Array.from(
           event.currentTarget.querySelectorAll<HTMLElement>(
-            'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]',
+            'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, a[href], [tabindex="0"]',
           ),
         ).filter((element) => element.getClientRects().length > 0);
         const first = elements[0];
@@ -87,6 +87,9 @@ export function AddPropertyDialog({ owners }: { owners: OwnerOption[] }) {
           ×
         </button>
       </div>
+      <p className="muted">
+        Start with the basics. ROI details are optional and can be added later.
+      </p>
       {wantsOpen && <AddPropertyForm owners={owners} onCancel={() => ref.current?.close()} />}
     </dialog>
   );

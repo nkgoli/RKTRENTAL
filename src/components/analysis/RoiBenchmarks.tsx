@@ -138,19 +138,19 @@ export function RoiBenchmarks({
             </p>
             {customFields.map((field) => {
               const path = `benchmarks.${selected.findIndex((b) => b.type === 'custom')}.${field}`;
+              const label = {
+                name: 'Custom name',
+                historicalCAGR: 'Custom total return (% / year, -100 to 100)',
+                averageYield: 'Custom yield (%, 0 to 100; not added)',
+                volatility: 'Custom volatility reference (%, 0 to 100)',
+                source: 'Custom source and period',
+              }[field];
               return (
                 <label className={styles.field} key={field}>
-                  {
-                    {
-                      name: 'Custom name',
-                      historicalCAGR: 'Custom total return (% / year, -100 to 100)',
-                      averageYield: 'Custom yield (%, 0 to 100; not added)',
-                      volatility: 'Custom volatility reference (%, 0 to 100)',
-                      source: 'Custom source and period',
-                    }[field]
-                  }
+                  {label}
                   <input
                     id={compare ? path : undefined}
+                    aria-label={label}
                     value={custom[field]}
                     aria-invalid={errors.some((e) => e.path === path)}
                     onChange={(e) => onCustomChange({ ...custom, [field]: e.target.value })}

@@ -6,6 +6,7 @@ import { requireManagerRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
 import { propertiesDb } from '@/lib/properties/data';
 import { parsePropertyInput, parseUnitInput, type FieldErrors } from '@/lib/properties/validation';
+import { parseRoiInputs } from '@/lib/properties/roi-inputs';
 
 export type FormState = { ok?: boolean; message?: string; errors?: FieldErrors };
 
@@ -24,6 +25,7 @@ export async function createPropertyAction(
   const result = await propertiesDb(session.organizationId).createProperty(parsed.data);
   if (!result.ok) return failed(result.errors);
   revalidatePath('/properties');
+  revalidatePath('/roi-analysis');
   redirect(`/properties/${result.id}`);
 }
 
@@ -40,6 +42,24 @@ export async function updatePropertyAction(
   revalidatePath('/properties');
   revalidatePath(`/properties/${propertyId}`);
   return { ok: true, message: 'Property saved.' };
+}
+
+export async function updatePropertyRoiAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await requireManagerRole();
+  const propertyId = String(formData.get('propertyId') ?? '');
+  const parsed = parseRoiInputs(formData.get('roiInputs'));
+  if (!parsed.success) return failed(parsed.errors);
+  const result = await propertiesDb(session.organizationId).updateRoiInputs(
+    propertyId,
+    parsed.data ?? { version: 1, input: {}, options: {} },
+  );
+  if (!result.ok) return failed(result.errors);
+  revalidatePath(`/properties/${propertyId}`);
+  revalidatePath('/roi-analysis');
+  return { ok: true, message: 'ROI details saved.' };
 }
 
 export async function setPropertyArchivedAction(
@@ -106,5 +126,7 @@ export async function deleteEmptyUnitAction(formData: FormData): Promise<never> 
   });
   revalidatePath('/properties');
   revalidatePath(`/properties/${propertyId}`);
-  redirect(`/properties/${propertyId}?notice=${result.count ? 'unit-deleted' : 'unit-delete-blocked'}`);
+  redirect(
+    `/properties/${propertyId}?notice=${result.count ? 'unit-deleted' : 'unit-delete-blocked'}`,
+  );
 }

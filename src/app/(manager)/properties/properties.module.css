@@ -341,6 +341,38 @@
   font-size: 12px;
   font-weight: 400;
 }
+.roiDetails {
+  border: 1px solid var(--rr-border);
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 0;
+}
+.roiDetails summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 10px 0;
+}
+.roiDetails p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.roiGroup {
+  border-top: 1px solid var(--rr-border);
+  margin-top: 12px;
+}
+.roiGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 12px 0;
+}
+.roiEditor {
+  margin-top: 24px;
+  background: var(--design-surface);
+  border: 1px solid var(--rr-border);
+  border-radius: 12px;
+  padding: 20px;
+}
 @media (max-width: 640px) {
   .grid {
     grid-template-columns: minmax(0, 1fr);
@@ -373,6 +405,9 @@
   }
   .dialog {
     padding: 16px;
+  }
+  .roiGrid {
+    grid-template-columns: minmax(0, 1fr);
   }
   .propertyForm :global(.form-row),
   .propertyForm :global(.form-row.three) {

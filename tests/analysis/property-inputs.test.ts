@@ -84,6 +84,38 @@ describe.skipIf(process.env.RUN_ANALYSIS_DB !== '1')('property ROI database roun
     if (!result.ok) throw Error('create failed');
     return result.id;
   }
+  it('patches ROI details without changing basics, sibling assumptions or another organization', async () => {
+    const id = await create(source());
+    const before = await db.property.findUniqueOrThrow({ where: { id } });
+    await Promise.all([
+      properties.updateRoiInputs(id, {
+        version: 1,
+        input: { income: { monthlyRent: 0 } },
+        options: {},
+      }),
+      properties.updateRoiInputs(id, {
+        version: 1,
+        input: { expenses: { insurance: 432 } },
+        options: {},
+      }),
+    ]);
+    const reloaded = await properties.getProperty(id);
+    expect(reloaded?.name).toBe(before.name);
+    expect(reloaded?.roiInputs.input.income?.monthlyRent).toBe(0);
+    expect(reloaded?.roiInputs.input.expenses?.insurance).toBe(432);
+    expect(reloaded?.roiInputs.input.expenses?.propertyTax).toBe(1200);
+    expect(reloaded?.roiInputs.input.purchase?.purchasePrice).toBe(100000);
+    expect(
+      (
+        await foreign.updateRoiInputs(id, {
+          version: 1,
+          input: { income: { monthlyRent: 9999 } },
+          options: {},
+        })
+      ).ok,
+    ).toBe(false);
+    expect((await properties.getProperty(id))?.roiInputs.input.income?.monthlyRent).toBe(0);
+  });
   it('creates no-data properties, reloads unknowns, and upgrades an existing property with partial values', async () => {
     const id = await create();
     const row = await db.property.findUniqueOrThrow({ where: { id } });

@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { Alert } from '@/components/ui';
 import { UnitOverview, PropertyOverview } from '@/components/workspace/WorkspaceOverview';
 import { AddUnitForm } from '../_components/UnitForm';
+import { PropertyRoiEditor } from '../_components/PropertyRoiEditor';
 import { requireManagerRole } from '@/lib/auth/access';
 import { propertiesDb } from '@/lib/properties/data';
 import { listWorkspacePhotos } from '@/lib/storage/service';
@@ -42,6 +43,7 @@ export default async function PropertyOverviewPage({ params, searchParams }: {
     {notice === 'unit-deleted' && <Alert tone="success">Unit deleted.</Alert>}
     {notice === 'unit-delete-blocked' && <Alert tone="warning">This unit has linked records or is the single-family home unit, so it could not be deleted.</Alert>}
     <PropertyOverview property={{ ...property, photos }} owners={owners} timeline={timeline} payments={payments} unitsPage={first(query.unitsPage)} />
+    <PropertyRoiEditor propertyId={property.id} initial={property.roiInputs} />
     {!property.archived && property.type !== 'SINGLE_UNIT' && <section className={styles.forms}>
       <AddUnitForm propertyId={property.id} />
     </section>}

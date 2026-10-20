@@ -75,6 +75,97 @@ async function open() {
   await screen.findByRole('button', { name: 'Save draft' });
 }
 const rent = () => document.getElementById('input.income.monthlyRent') as HTMLInputElement;
+describe('property autofill and calculation sufficiency', () => {
+  it.each([0, 60000])(
+    'calculates saved property defaults on selection with loan %s',
+    async (loanAmount) => {
+      const p = make();
+      p.input.financing = {
+        ...p.input.financing,
+        loanAmount,
+        downPaymentPercent: loanAmount ? 40 : 100,
+        interestRate: loanAmount ? 5 : 0,
+      };
+      vi.mocked(loadRoiDraftAction).mockResolvedValueOnce({
+        ok: true,
+        data: { payload: p, missing: [], facts },
+      });
+      await open();
+      const expected = calculatePayload(p).base.summaryMetrics.annualCashFlow;
+      const formatted = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0,
+      }).format(expected);
+      expect(
+        within(screen.getByRole('region', { name: 'Year 1 at a glance' })).getByText(formatted),
+      ).toBeTruthy();
+      expect(rent().value).toBe('1000');
+      expect(document.body.textContent).not.toContain('Required');
+    },
+  );
+  it('automatically calculates when the last missing assumption is entered and removes results when cleared', async () => {
+    const p = make();
+    delete p.input.income!.monthlyRent;
+    vi.mocked(loadRoiDraftAction).mockResolvedValueOnce({
+      ok: true,
+      data: { payload: p, missing: [], facts },
+    });
+    await open();
+    expect(screen.getByRole('link', { name: /Scheduled rent.*Enter a value/ })).toBeTruthy();
+    expect(document.body.textContent).not.toContain('input.income');
+    fireEvent.change(rent(), { target: { value: '1000' } });
+    expect(
+      within(screen.getByRole('region', { name: 'Year 1 at a glance' })).getByText('$10,800'),
+    ).toBeTruthy();
+    fireEvent.change(rent(), { target: { value: '' } });
+    expect(screen.queryByText('$10,800')).toBeNull();
+  });
+  it('loads a saved zero and intentionally missing assumption ahead of complete property defaults', async () => {
+    const p = make();
+    p.input.income!.monthlyRent = 0;
+    delete p.input.expenses!.insurance;
+    vi.mocked(loadSavedRoiAnalysisAction).mockResolvedValue({
+      ok: true,
+      data: {
+        propertyId: 'a',
+        payload: p,
+        revision: 3,
+        status: 'DRAFT',
+        missing: [],
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+    });
+    await open();
+    expect(rent().value).toBe('0');
+    expect((document.getElementById('input.expenses.insurance') as HTMLInputElement).value).toBe(
+      '',
+    );
+    expect(screen.getByRole('link', { name: /Insurance.*Enter a value/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Reload saved analysis' }));
+    await screen.findByText('Loaded draft - revision 3');
+    expect(rent().value).toBe('0');
+    expect(screen.queryByText('$10,800')).toBeNull();
+  });
+  it('expands missing sections into real focus targets and keeps a recorded price', async () => {
+    const p = make();
+    p.input = { purchase: { purchasePrice: 250000 } };
+    p.options = {};
+    vi.mocked(loadRoiDraftAction).mockResolvedValueOnce({
+      ok: true,
+      data: { payload: p, missing: [], facts },
+    });
+    await open();
+    expect(
+      (document.getElementById('input.purchase.purchasePrice') as HTMLInputElement).value,
+    ).toBe('250000');
+    const link = screen.getByRole('link', { name: /Property tax.*Enter a value/ });
+    fireEvent.click(link);
+    await waitFor(() => expect(document.activeElement?.id).toBe('input.expenses.propertyTax'));
+    expect(document.body.textContent).not.toMatch(/input\.|options\.|Required/);
+  });
+});
 describe('ROI summary workspace', () => {
   it('supports keyboard selection, guarded switching and correction in a closed disclosure', async () => {
     const user = userEvent.setup();
@@ -114,14 +205,18 @@ describe('ROI summary workspace', () => {
     await screen.findByText(/unavailable or archived/);
     expect(loadRoiDraftAction).not.toHaveBeenCalled();
   });
-  it('recalculates, preserves zero, and marks invalid prior results stale', async () => {
+  it('calculates automatically, preserves zero, and clears invalid prior results', async () => {
     await open();
+    expect(
+      screen.getByText('Calculated automatically from your current assumptions.'),
+    ).toBeTruthy();
     fireEvent.change(rent(), { target: { value: '0' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
-    expect(screen.queryByText(/Out of date/)).toBeNull();
+    expect(
+      within(screen.getByRole('region', { name: 'Year 1 at a glance' })).getByText('-$1,200'),
+    ).toBeTruthy();
     fireEvent.change(rent(), { target: { value: '' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
-    expect(screen.getByText(/Out of date/)).toBeTruthy();
+    expect(screen.queryByText('-$1,200')).toBeNull();
+    expect(screen.getByText(/No valid projection is available yet/)).toBeTruthy();
     expect(rent().value).toBe('');
     fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
     expect(saveRoiAnalysisAction).not.toHaveBeenCalled();
@@ -415,9 +510,10 @@ describe('ROI projection interactions', () => {
     fireEvent.change(rent(), { target: { value: 'not-rent' } });
     tab('Charts');
     tab('Sensitivity');
-    expect(screen.getByRole('button', { name: 'Update sensitivity' }).matches(':disabled')).toBe(
-      true,
-    );
+    expect(screen.queryByRole('button', { name: 'Update sensitivity' })).toBeNull();
+    expect(
+      screen.getByRole('heading', { name: 'Complete your assumptions to see charts' }),
+    ).toBeTruthy();
     expect(screen.queryByRole('table', { name: /Year 1 cash-on-cash/ })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
     await waitFor(() => expect(document.activeElement).toBe(rent()));
@@ -512,11 +608,11 @@ describe('ROI projection interactions', () => {
     fireEvent.change(growth, { target: { value: '100' } });
     fireEvent.change(hold, { target: { value: '50' } });
     fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
-    expect(screen.getByText(/safe monetary precision/)).toBeTruthy();
+    expect(screen.getAllByText(/safe monetary precision/).length).toBeGreaterThan(0);
     expect(rent().value).toBe('10000000000');
     fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
     await screen.findByText('Saved draft - revision 1');
-    expect(screen.getByText(/safe monetary precision/)).toBeTruthy();
+    expect(screen.getAllByText(/safe monetary precision/).length).toBeGreaterThan(0);
     fireEvent.change(hold, { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
     tab('Charts');

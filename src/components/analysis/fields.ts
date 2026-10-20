@@ -1,4 +1,5 @@
-import type { AnalysisPayload } from '@/lib/analysis';
+import type { AnalysisPayload, ValidationIssue } from '@/lib/analysis';
+import type { PropertyRoiInputs } from '@/lib/properties/roi-inputs';
 
 export type FieldSpec = {
   path: string;
@@ -126,7 +127,7 @@ export function readPath(object: unknown, path: string): unknown {
       object,
     );
 }
-export function valuesFrom(payload: AnalysisPayload): Values {
+export function valuesFrom(payload: Pick<AnalysisPayload, 'input' | 'options'>): Values {
   return Object.fromEntries(
     allFields.map((f) => {
       const v = readPath(payload, f.path);
@@ -137,12 +138,77 @@ export function valuesFrom(payload: AnalysisPayload): Values {
     }),
   );
 }
+
+/** Property patches omit blanks and untouched values; zero is always an explicit value. */
+export function propertyRoiPatch(values: Values, original?: Values): PropertyRoiInputs {
+  const patch: PropertyRoiInputs = { version: 1, input: {}, options: {} };
+  for (const f of groups.flatMap((g) => g.fields)) {
+    const raw = values[f.path]?.trim();
+    if (!raw || (original && raw === original[f.path])) continue;
+    const keys = f.path.split('.');
+    let parent = patch as unknown as Record<string, unknown>;
+    for (const key of keys.slice(0, -1)) {
+      parent[key] ??= {};
+      parent = parent[key] as Record<string, unknown>;
+    }
+    parent[keys.at(-1)!] =
+      f.kind === 'date' ? `${raw}T00:00:00.000Z` : f.kind === 'select' ? raw : Number(raw);
+  }
+  return patch;
+}
+
+export function fieldLabel(path: string): string {
+  const direct = allFields.find((f) => f.path === path);
+  if (direct) return direct.label;
+  const scenario = path.match(/^scenarios\.(\d+)(?:\.overrides)?(?:\.(.*))?$/);
+  if (scenario) {
+    const field = allFields.find((f) => f.path === `input.${scenario[2]}`);
+    return `Scenario ${Number(scenario[1]) + 1}${field ? ` · ${field.label}` : ''}`;
+  }
+  if (path.startsWith('benchmarks')) return 'Custom benchmark';
+  if (path.startsWith('options.tax')) return 'Tax assumptions';
+  return (
+    groups.find((g) => g.fields.some((f) => f.path.startsWith(`${path}.`)))?.title ??
+    'Analysis assumptions'
+  );
+}
+
+/** Expand absent sections into focusable controls and translate schema wording for managers. */
+export function friendlyIssues(found: ValidationIssue[]): ValidationIssue[] {
+  const expanded = found.flatMap((issue) => {
+    let path = issue.path.replace(/^roiInputs\./, '');
+    if (path && !/^(input|options|scenarios|benchmarks)(\.|$)/.test(path)) path = `input.${path}`;
+    if (!path && issue.message === 'Loan exceeds purchase price')
+      path = 'input.financing.loanAmount';
+    const fields = allFields.filter((f) => !f.optional && f.path.startsWith(`${path}.`));
+    const targets =
+      issue.message === 'Required' && fields.length ? fields.map((f) => f.path) : [path];
+    return targets.map((target) => ({
+      ...issue,
+      path: target || 'input.purchase.purchasePrice',
+      message:
+        issue.message === 'Required'
+          ? 'Enter a value to calculate. Use 0 only when it applies.'
+          : /Expected number|received nan|received null|finite/i.test(issue.message)
+            ? 'Enter a valid number in the units shown.'
+            : /Invalid enum|Expected.*received/.test(issue.message)
+              ? 'Choose a value from the available options.'
+              : issue.message.includes('ISO timestamp')
+                ? 'Choose a valid date between 1900 and 2100.'
+                : issue.message,
+    }));
+  });
+  return expanded.filter(
+    (issue, index) => expanded.findIndex((v) => v.path === issue.path) === index,
+  );
+}
 export function applyValues(
   payload: AnalysisPayload,
   values: Values,
   taxEnabled: boolean,
 ): AnalysisPayload {
   const copy = structuredClone(payload);
+  const original = valuesFrom(payload);
   for (const f of allFields) {
     if (f.path.startsWith('options.tax.') && !taxEnabled) continue;
     const keys = f.path.split('.');
@@ -152,6 +218,7 @@ export function applyValues(
       parent = parent[key] as Record<string, unknown>;
     }
     const raw = values[f.path]?.trim() ?? '';
+    if (raw === original[f.path]) continue;
     const key = keys[keys.length - 1];
     if (!raw) delete parent[key];
     else

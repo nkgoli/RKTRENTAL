@@ -4,6 +4,7 @@ import { useActionState, useEffect, useId, useRef, useState } from 'react';
 import { Alert, Button, Field, FormRow, Input, Select } from '@/components/ui';
 import { createPropertyAction, setPropertyArchivedAction, type FormState } from '../actions';
 import { FieldError } from './FieldError';
+import { PropertyRoiFields } from './PropertyRoiFields';
 import styles from '../properties.module.css';
 
 export type OwnerOption = { id: string; name: string };
@@ -19,6 +20,7 @@ export function AddPropertyForm({
   const [state, action, pending] = useActionState(createPropertyAction, empty);
   const [type, setType] = useState('MULTI_UNIT');
   const [values, setValues] = useState<Record<string, string>>({ unitCount: '0' });
+  const [roiValues, setRoiValues] = useState<Record<string, string>>({});
   function inputProps(name: string) {
     return {
       name,
@@ -159,6 +161,7 @@ export function AddPropertyForm({
             <FieldError id={`${formId}-ownerId-error`} message={e.ownerId} />
           </Field>
         </FormRow>
+        <PropertyRoiFields values={roiValues} onChange={setRoiValues} errors={state.errors} />
         <p className="muted" style={{ fontSize: 13 }}>
           Add cover photos from the property page after saving.
         </p>

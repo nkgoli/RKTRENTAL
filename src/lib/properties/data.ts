@@ -1,6 +1,6 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
-import { readPropertyRoiInputs, roiStorage } from './roi-inputs';
+import { readPropertyRoiInputs, roiStorage, type PropertyRoiInputs } from './roi-inputs';
 import {
   IMPLICIT_UNIT_NUMBER,
   checkTypeChange,
@@ -419,6 +419,19 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
     return { ok: true, id };
   }
 
+  async function updateRoiInputs(id: string, patch: PropertyRoiInputs): Promise<WriteResult> {
+    return client.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Property" WHERE id = ${id} AND "organizationId" = ${organizationId} FOR UPDATE`;
+      const current = await tx.property.findFirst({ where: { id, organizationId } });
+      if (!current) return { ok: false, errors: { _form: 'Property not found' } };
+      await tx.property.updateMany({
+        where: { id, organizationId },
+        data: roiStorage(current.roiInputs, patch),
+      });
+      return { ok: true, id };
+    });
+  }
+
   async function setPropertyArchived(id: string, archived: boolean): Promise<WriteResult> {
     const existing = await client.property.findFirst({
       where: { id, organizationId },
@@ -520,6 +533,7 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
     getUnit,
     createProperty,
     updateProperty,
+    updateRoiInputs,
     setPropertyArchived,
     createUnit,
     updateUnit,

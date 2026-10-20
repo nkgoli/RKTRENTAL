@@ -99,8 +99,37 @@ describe('property autofill and calculation sufficiency', () => {
     fireEvent.change(field('input.financing.loanAmount'), { target: { value: '50000' } });
     expect(summary().queryByText('$10,800')).toBeNull();
     expect(screen.getByRole('link', { name: /Interest rate.*financed purchase/ })).toBeTruthy();
-    fireEvent.change(field('input.financing.loanAmount'), { target: { value: '0' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Pay in cash · No loan' }));
     expect(summary().getByText('$10,800')).toBeTruthy();
+    expect(field('input.financing.downPaymentPercent').value).toBe('');
+    expect(field('input.financing.loanTermYears').value).toBe('');
+  });
+  it('chooses cash without overwriting saved financing assumptions', async () => {
+    const p = make();
+    p.input.financing = {
+      ...p.input.financing,
+      loanAmount: 60000,
+      downPaymentPercent: 40,
+      interestRate: 5,
+    };
+    vi.mocked(loadRoiDraftAction).mockResolvedValueOnce({
+      ok: true,
+      data: { payload: p, missing: [], facts },
+    });
+    await open();
+    fireEvent.click(screen.getByRole('button', { name: 'Pay in cash · No loan' }));
+    expect(
+      within(screen.getByRole('region', { name: 'Year 1 at a glance' })).getByText('$10,800'),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
+    await waitFor(() => expect(saveRoiAnalysisAction).toHaveBeenCalledOnce());
+    expect(vi.mocked(saveRoiAnalysisAction).mock.calls[0][0]).toMatchObject({
+      payload: {
+        input: {
+          financing: { loanAmount: 0, downPaymentPercent: 40, interestRate: 5, loanTermYears: 30 },
+        },
+      },
+    });
   });
   it.each([0, 60000])(
     'calculates saved property defaults on selection with loan %s',

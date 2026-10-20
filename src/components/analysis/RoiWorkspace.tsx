@@ -816,29 +816,14 @@ export function RoiWorkspace({
                       units shown beside each assumption.
                     </p>
                     <fieldset disabled={saving}>
-                      <label className={styles.check}>
-                        <input
-                          type="checkbox"
-                          checked={
-                            values['input.financing.loanAmount'] === '0' &&
-                            values['input.financing.downPaymentPercent'] === '100'
-                          }
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              edit('input.financing.loanAmount', '0');
-                              edit('input.financing.downPaymentPercent', '100');
-                            } else {
-                              edit('input.financing.loanAmount', '');
-                              edit('input.financing.downPaymentPercent', '');
-                            }
-                          }}
-                        />
-                        All-cash purchase
-                      </label>
+                      <button type="button" onClick={() => edit('input.financing.loanAmount', '0')}>
+                        Pay in cash · No loan
+                      </button>
                       <p>
-                        All-cash sets loan amount to 0 and down payment to 100%. Enter explicit
-                        interest rate, term and other required loan assumptions. With a zero loan
-                        amount, these do not add debt payments.
+                        A $0 loan means no debt payments or lender costs. Loan-only details are not
+                        needed. Other saved loan details stay available if your plans change. To
+                        finance the purchase, enter a loan amount or clear it and enter a down
+                        payment percentage.
                       </p>
                       {groups.map((g) => (
                         <details key={g.title} open>

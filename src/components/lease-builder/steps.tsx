@@ -245,15 +245,20 @@ export function TermStep({ draft, update, errors }: StepProps) {
                     className={styles.dateInput}
                     type="date"
                     aria-invalid={Boolean(errors.endDate)}
+                    aria-describedby={errors.endDate ? 'custom-end-date-error' : undefined}
                     value={draft.customEndDate}
                     onChange={(e) => update({ endOption: 'custom', customEndDate: e.target.value })}
                   />
                 </label>
+                {errors.endDate ? (
+                  <small id="custom-end-date-error" className={styles.error} role="alert">
+                    {errors.endDate}
+                  </small>
+                ) : null}
               </div>
             </div>
           </div>
         </div>
-        <Err errors={errors} name="endDate" />
       </fieldset>
       <div className={styles.hintbar}>
         <span>
@@ -291,6 +296,9 @@ export function ChargesPreview({ draft }: { draft: WizardDraft }) {
           <h3>Scheduled charges preview</h3>
         </div>
         <p className={styles.ledgerNote}>Enter the rent and lease dates to preview the charges.</p>
+        <p className={styles.ledgerNote}>
+          Preview only. Charges are created when the lease is sent or activated.
+        </p>
       </div>
     );
   const first = preview.monthly[0];
@@ -330,6 +338,9 @@ export function ChargesPreview({ draft }: { draft: WizardDraft }) {
       <p className={styles.ledgerNote}>
         {preview.monthly.length} monthly rent charge{preview.monthly.length === 1 ? '' : 's'} are
         scheduled. Late fees are conditional and are not included until the rule applies.
+      </p>
+      <p className={styles.ledgerNote}>
+        Preview only. Charges are created when the lease is sent or activated.
       </p>
     </div>
   );
@@ -436,79 +447,91 @@ export function RentStep({ draft, update, errors }: StepProps) {
         </Field>
       </div>
       <div className={styles.fees}>
-        <label className={cx(styles.check, draft.moveInFeeEnabled && styles.checkOn)}>
-          <input
-            type="checkbox"
-            checked={draft.moveInFeeEnabled}
-            onChange={(e) => update({ moveInFeeEnabled: e.target.checked })}
-          />
-          <span className={styles.checkCopy}>
-            <strong>Move-in fee</strong>
-            <small>One-time charge due at move-in</small>
-            {draft.moveInFeeEnabled && (
-              <input
-                aria-label="Move-in fee amount"
-                inputMode="decimal"
-                value={draft.moveInFee}
-                placeholder="150.00"
-                onChange={(e) => update({ moveInFee: e.target.value })}
-              />
-            )}
-            <Err errors={errors} name="moveInFee" />
-          </span>
-        </label>
-        <label className={cx(styles.check, draft.petDepositEnabled && styles.checkOn)}>
-          <input
-            type="checkbox"
-            checked={draft.petDepositEnabled}
-            onChange={(e) => update({ petDepositEnabled: e.target.checked })}
-          />
-          <span className={styles.checkCopy}>
-            <strong>Pet deposit</strong>
-            <small>One-time, refundable deposit</small>
-            {draft.petDepositEnabled && (
-              <input
-                aria-label="Pet deposit amount"
-                inputMode="decimal"
-                value={draft.petDeposit}
-                placeholder="250.00"
-                onChange={(e) => update({ petDeposit: e.target.value })}
-              />
-            )}
-            <Err errors={errors} name="petDeposit" />
-          </span>
-        </label>
-        <label className={cx(styles.check, draft.lateFeeEnabled && styles.checkOn)}>
-          <input
-            type="checkbox"
-            checked={draft.lateFeeEnabled}
-            onChange={(e) => update({ lateFeeEnabled: e.target.checked })}
-          />
-          <span className={styles.checkCopy}>
-            <strong>Late fee rules</strong>
-            <small>Apply only if rent remains unpaid after the grace period.</small>
-            {draft.lateFeeEnabled && (
-              <span className={styles.two}>
+        <div className={cx(styles.check, styles.feeCard, draft.moveInFeeEnabled && styles.checkOn)}>
+          <label className={styles.feeToggle}>
+            <input
+              type="checkbox"
+              checked={draft.moveInFeeEnabled}
+              onChange={(e) => update({ moveInFeeEnabled: e.target.checked })}
+            />
+            <span className={styles.checkCopy}>
+              <strong>Move-in fee</strong>
+              <small>One-time charge due at move-in</small>
+            </span>
+          </label>
+          {draft.moveInFeeEnabled && (
+            <div className={styles.feeFields}>
+              <Field label="Move-in fee amount" error={errors.moveInFee}>
                 <input
-                  aria-label="Late fee grace period (days)"
+                  inputMode="decimal"
+                  value={draft.moveInFee}
+                  placeholder="150.00"
+                  onChange={(e) => update({ moveInFee: e.target.value })}
+                />
+              </Field>
+            </div>
+          )}
+        </div>
+        <div
+          className={cx(styles.check, styles.feeCard, draft.petDepositEnabled && styles.checkOn)}
+        >
+          <label className={styles.feeToggle}>
+            <input
+              type="checkbox"
+              checked={draft.petDepositEnabled}
+              onChange={(e) => update({ petDepositEnabled: e.target.checked })}
+            />
+            <span className={styles.checkCopy}>
+              <strong>Pet deposit</strong>
+              <small>One-time, refundable deposit</small>
+            </span>
+          </label>
+          {draft.petDepositEnabled && (
+            <div className={styles.feeFields}>
+              <Field label="Pet deposit amount" error={errors.petDeposit}>
+                <input
+                  inputMode="decimal"
+                  value={draft.petDeposit}
+                  placeholder="250.00"
+                  onChange={(e) => update({ petDeposit: e.target.value })}
+                />
+              </Field>
+            </div>
+          )}
+        </div>
+        <div className={cx(styles.check, styles.feeCard, draft.lateFeeEnabled && styles.checkOn)}>
+          <label className={styles.feeToggle}>
+            <input
+              type="checkbox"
+              checked={draft.lateFeeEnabled}
+              onChange={(e) => update({ lateFeeEnabled: e.target.checked })}
+            />
+            <span className={styles.checkCopy}>
+              <strong>Late fee rules</strong>
+              <small>Apply only if rent remains unpaid after the grace period.</small>
+            </span>
+          </label>
+          {draft.lateFeeEnabled && (
+            <div className={cx(styles.feeFields, styles.two)}>
+              <Field label="Late fee grace period (days)" error={errors.graceDays}>
+                <input
                   type="number"
                   min={0}
                   max={31}
                   value={draft.graceDays}
                   onChange={(e) => update({ graceDays: Number(e.target.value) })}
                 />
+              </Field>
+              <Field label="Late fee amount" error={errors.lateFee}>
                 <input
-                  aria-label="Late fee amount"
                   inputMode="decimal"
                   value={draft.lateFee}
                   onChange={(e) => update({ lateFee: e.target.value })}
                 />
-              </span>
-            )}
-            <Err errors={errors} name="lateFee" />
-            <Err errors={errors} name="graceDays" />
-          </span>
-        </label>
+              </Field>
+            </div>
+          )}
+        </div>
       </div>
       <ChargesPreview draft={draft} />
     </div>

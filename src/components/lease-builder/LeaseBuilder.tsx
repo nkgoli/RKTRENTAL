@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
 import {
   STEP,
@@ -70,7 +69,6 @@ const SUBTITLES: Record<number, string> = {
 const idle: WizardActionState = {};
 
 export function LeaseBuilder(props: LeaseBuilderProps) {
-  const router = useRouter();
   const { tenants } = props;
   const [draft, setDraft] = useState<WizardDraft>(props.draft);
   const draftRef = useRef<WizardDraft>(props.draft);
@@ -168,7 +166,10 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
 
   function saveAndExit() {
     startTransition(async () => {
-      if (await save(step, step, false)) router.push(props.exitHref);
+      // Leave the wizard with a document navigation after persistence succeeds.
+      // A client-router push can interrupt the action's pending router update and
+      // strand the wizard in Saving, even though the draft was already persisted.
+      if (await save(step, step, false)) window.location.assign(props.exitHref);
     });
   }
 

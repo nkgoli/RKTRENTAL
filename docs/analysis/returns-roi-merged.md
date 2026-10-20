@@ -5,13 +5,13 @@ rent and expenses sit beside the projection for the same property, period and sc
 
 ## Routes and navigation
 
-| Entry                                       | Behaviour                                                                                                                       |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Sidebar **Returns & ROI** → `/roi-analysis` | Replaces the separate "ROI Analysis" and "Returns" entries. It stays current on `/returns`.                                     |
-| `/roi-analysis?property=ID&view=actual`     | **Actual vs projected** tab. `period` (`MTD…5Y`, or `CUSTOM` with `from`/`to` YYYY-MM) is kept in the URL on every tab.        |
+| Entry                                       | Behaviour                                                                                                                          |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Sidebar **Returns & ROI** → `/roi-analysis` | Replaces the separate "ROI Analysis" and "Returns" entries. It stays current on `/returns`.                                        |
+| `/roi-analysis?property=ID&view=actual`     | **Actual vs projected** tab. `period` (`MTD…5Y`, or `CUSTOM` with `from`/`to` YYYY-MM) is kept in the URL on every tab.            |
 | `/properties/ID/returns[?period…]`          | Redirects to the workspace above with its period. With `?unit=` it keeps the unit-allocated report, which links to the comparison. |
-| `/returns` (Portfolio returns)              | Kept for portfolio totals, the expense form and the CSV export. Property links open the property's comparison.                 |
-| `/returns/export`                           | Unchanged CSV export, also linked from the comparison as "Export returns summary".                                             |
+| `/returns` (Portfolio returns)              | Kept for portfolio totals, the expense form and the CSV export. Property links open the property's comparison.                     |
+| `/returns/export`                           | Unchanged CSV export, also linked from the comparison as "Export returns summary".                                                 |
 
 Switching property keeps the Actual vs projected view and its period. Other tabs reset to
 Summary as before. Saved analyses, scenarios, benchmarks and the unsaved-changes guard are unchanged.

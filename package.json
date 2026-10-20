@@ -21,7 +21,8 @@
     "db:local": "npm install --prefix prisma && npm run db:local --prefix prisma",
     "db:migrate:dev": "prisma migrate dev",
     "db:reset": "node scripts/db-reset.mjs",
-    "preview": "node scripts/preview.mjs"
+    "preview": "node scripts/preview.mjs",
+    "demo:roi": "node --env-file-if-exists=.env --import ./prisma/os-userinfo.mjs --import tsx prisma/load-roi-examples.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -46,21 +46,57 @@ benchmarks and the unsaved-changes guard are unchanged.
   assumed appreciation and scheduled rent, and keeps the expense form and its CSV.
 - Logic: `src/lib/analysis/actuals.ts`. UI: `src/components/analysis/RoiActuals.tsx`.
 
-## Verification (isolated runtime, not the user's app)
+## Live verification on localhost:3100 (2026-10-20)
 
-`tests/analysis/combined-review-runtime.mjs` was run against a build of this checkout:
-embedded PostgreSQL on 55568, app on 3168, seed data plus one labelled `TEST No Records` property.
+The user's app at `http://localhost:3100` now serves this code. It was started the same way as
+before (`scripts/start.ps1 -Port 3100 -DbPort 5433` from the project root, embedded PostgreSQL
+on 5433, database `rocketrental`). The old copy was stopped by ending its Next.js process, so the
+launcher shut PostgreSQL down cleanly. The relaunch rebuilt the app, applied migrations
+(none were pending) and skipped the demo seed ("Demo seed is up to date"). It runs in a new
+minimized PowerShell window; Ctrl+C there stops the app and its database.
 
-- Maple Court YTD: $214,000 recorded rent from 110 settled payments and $80,000 expenses from
-  60 rows. Both match direct database sums. Expense coverage is partial (records start 2026-01-15).
-- Harbor (no ROI inputs): actuals shown, projection "No projection", 19 assumptions requested.
-  A saved rent of 41000 survived reload.
-- TEST No Records: every line is "Not recorded", with lease, expense and financing steps.
-- At 390px nothing overflows horizontally; rows stack.
+- Source: project `main` fast-forwarded to the submitted candidate, then the build ran from it.
+  It contains the accepted actual-returns, merged UI and demo-provenance commits.
+- Account: the demo manager `jordan.mills@rocketrental.example`.
+- Database preserved: a snapshot taken before and after both restarts was identical. It covered
+  7 properties, the 4 `seed-roi-inputs-v1` provenance sets with their timestamps, no saved
+  analyses, 123 payments, 72 expenses, 133 charges and 47 leases. Nothing was reseeded.
 
-Screenshots: `merged-maple-actual-ytd-desktop.png`, `merged-harbor-switch-no-projection.png`,
-`merged-no-data-desktop.png`, `merged-maple-actual-390.png`, `merged-summary-card-390.png`.
+What was checked in the browser:
 
-The user's app on localhost:3100 still runs the earlier build. It was not rebuilt or restarted
-here. The data-population task it depends on (TASK-839819CD, commit 32d2da6) was still
-verifying and is not in this branch.
+- **Maple Court, YTD (Jan 1 – Oct 20, 2026)**: operating income $77,150 is complete and
+  recorded. Rent records cover 293 of 293 days. Expenses are $24,000, but only Aug–Oct have
+  records, so they cover 81 of 293 days and show as partial, with Jan–Jul listed as
+  unverified. NOI ($53,150) is partial and has no difference. Debt service and cash flow show
+  "Not recorded".
+- **CSV export**: the file is `actual-vs-projected-maple-court-2026-01-01-to-2026-10-20.csv`
+  (`live-final-maple-ytd-comparison.csv`). It reconciles to direct database sums: 40 settled
+  payments total $77,150.00 and 18 expenses total $24,000.00, in months 2026-08 to 2026-10.
+  Partial and unavailable cells keep their status, and unavailable cells are blank.
+- **Demo provenance**: the Summary tab says 28 assumptions are fictional demo values
+  (`seed-roi-inputs-v1`), and each field is labelled. A property with no records shows no demo
+  notice.
+- **History and URLs**: these were all restored correctly:
+  - switching Maple (actual, YTD) to Harbor kept the actual view and YTD;
+  - Back and Forward each restored their property, view and period;
+  - Back to a plain `?property=seed-property-harbor` entry returned to Summary and 12M;
+  - a custom Feb–Apr 2026 address survived reload, Back and Forward.
+
+  The legacy link `/properties/seed-property-maple/returns?period=YTD` opens the actual view for
+  YTD.
+
+- **No data** (`TEST No-ROI Verification (fictional)`): every line is "Not recorded". The page
+  lists steps to add assumptions, a lease, an expense and financing.
+- **Portfolio returns**: the page states which figures are estimates. Its column headers and
+  CSV headers label scheduled debt, assumed appreciation and scheduled rent. "+ Add expense"
+  is still there.
+- At 390px nothing overflows horizontally.
+
+Screenshots: `live-final-maple-actual-ytd-desktop.png`, `live-final-maple-summary-demo-desktop.png`,
+`live-final-harbor-switch-actual-ytd.png`, `live-final-no-data-desktop.png`,
+`live-final-portfolio-estimates-desktop.png`, `live-final-maple-actual-390.png`,
+`live-final-maple-summary-390.png`. The older `merged-*.png` captures came from an isolated
+runtime before this change.
+
+Temporary resources were removed: the throwaway PostgreSQL used for the database tests, the
+snapshot scripts and the worktree build output.

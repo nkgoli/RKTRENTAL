@@ -1,0 +1,28 @@
+Property,Maple Court
+Property ID,seed-property-maple
+Scope,Whole property
+Period from,2026-01-01
+Period to (inclusive),2026-10-20
+Displayed period,"Jan 1, 2026 – Oct 20, 2026 (through today)"
+As of,2026-10-20T16:47:21.714Z
+Currency,USD
+Actual basis,"Recorded cash: settled payments by paid date, expenses by date"
+Projected basis,Saved property details (analysis not yet saved); Year-1 rate × 293 of 365 days
+
+Line,Actual status,Actual (recorded),Projected status,Projected (ROI assumptions),Difference,Notes
+Operating income,recorded,77150.00,projected,210478.36,-133328.36,
+Operating expenses,partial,24000.00,projected,80896.90,,No expense recorded in 2026-01-01 – 2026-07-31. | Actual is partial
+Net operating income,partial,53150.00,projected,129581.46,,Expense coverage is partial | Actual is partial
+Debt service,unavailable,,projected,120554.97,,Loan payments are not recorded; see scheduled debt service. | Actual not recorded
+Cash flow,unavailable,,projected,-2051.32,,loan payments are not recorded | Expense coverage is partial | Actual not recorded
+
+Coverage,Status,Evidenced days,Period days,Notes
+Rent records,complete,293,293,
+Expense records,partial,81,293,No expense recorded in 2026-01-01 – 2026-07-31.
+
+Scheduled and estimated (not actual),Status,Amount,Basis,Notes
+Rent billed (scheduled),recorded,78750.00,scheduled,
+Debt service (scheduled),derived,28898.63,scheduled,"Property.annualDebtService prorated to the period (months ÷ 12, or days ÷ 365)."
+Cash flow after scheduled debt (estimate),partial,24251.37,scheduled,Recorded NOI minus scheduled (not paid) debt service. | Expense coverage is partial
+NOI annualized from actuals (estimate),partial,66210.75,annualized,Period NOI × 365 ÷ 293 days; seasonality is not adjusted. | Expense coverage is partial
+Actual cap rate for the period,partial,1.88%,recorded,Expense coverage is partial

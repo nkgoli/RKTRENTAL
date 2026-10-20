@@ -1,76 +1,110 @@
 # Light property and unit overview verification
 
-Scope: **Complete property and unit overview browser evidence** (test work kind). This file records the verification state for the integrated light property and unit overviews without altering application source. Application implementation remains `89fce3685016b878b3688a0e3995e733362a8141`; directory acceptance remains `82c224610bbcf61ceb7d28f5d073b910936d4c55`.
+Scope: **Complete property and unit overview browser evidence** (test work kind).
+Application implementation remains `89fce3685016b878b3688a0e3995e733362a8141`;
+directory acceptance remains `82c224610bbcf61ceb7d28f5d073b910936d4c55`.
+This Task's owned paths are `docs/design/light-property-overview-verification.md`
+(this file), `docs/design/light-property-overviews.md` (preserved unchanged),
+and `tests/workspace/native-review/`.
 
 ## Candidate and ancestry (observed this session)
 
-- Checkout HEAD: `2c6768f4853ec71e7449e8a6f3d6bee20d66b900` on `orchestra/work-2gcjdifqik3o7helc0b-7ayz0cfdt4c2fcsyxpn`; `git status --short` clean before this change.
-- Expected base/target `2c6768f4853ec71e7449e8a6f3d6bee20d66b900` matches HEAD; target ref `refs/heads/main` observed at the same commit in project context.
-- `git merge-base --is-ancestor` returned 0 for all three: implementation `89fce3685016b878b3688a0e3995e733362a8141`, directory `82c224610bbcf61ceb7d28f5d073b910936d4c55`, and integrated merge `8f5f1be8980c0f138d8e922512328437773a4ee6`. All three are contained in HEAD.
-- `89fce36` touches only overview presentation (11 files: `docs/design/light-property-overviews.md`, `WorkspaceOverview.tsx`, `WorkspaceOverview.module.css`, `Workspace.module.css`, `WorkspaceHeader.tsx`, `LeaseTimeline.module.css`, `WorkspaceMedia.tsx`, `WorkspaceMedia.module.css`, `FileUploader.module.css`, `DeleteUnitControl.tsx`, workspace route CSS). No calculation, route, identity, pagination, confirmation-semantics, or server-guard change.
-- Only this Task's owned paths are changed here: `docs/design/light-property-overview-verification.md` (new), `tests/workspace/native-review/` (new placeholder). `docs/design/light-property-overviews.md` is preserved unchanged.
+- Work branch `orchestra/work-2gcjdifqik3o7helc0b-7ayz0cfdt4c2fcsyxpn`, HEAD now
+  past `1f72f27adc9b2708c2c882187304afb87b169d3e` (the pending-state handoff).
+- `git merge-base --is-ancestor` returned 0 for implementation
+  `89fce3685016b878b3688a0e3995e733362a8141`, directory
+  `82c224610bbcf61ceb7d28f5d073b910936d4c55`, and integrated merge
+  `8f5f1be8980c0f138d8e922512328437773a4ee6`; all are contained in the work branch.
+- Baseline for before/after: `4adfb9649c4fdf65c1ed07a0152a3038775c581c`. The
+  measured source delta `4adfb96..HEAD` in the three overview files is 77
+  insertions / 24 deletions, all from `89fce36` (overview header, glance band,
+  unit cards/table, timeline/media/delete styling).
 
 ## Reused prior evidence (inherited, not rerun)
 
-Per the Task instruction, prior passing checks are reused and not repeated:
+- Workspace tests: 9 files, 29 tests passed; `tsc --noEmit` passed; scoped ESLint
+  passed; `npm.cmd run build` passed (from `TASK-4DAD8933`, preserved).
+- New files in this Task were typechecked and linted directly: project
+  `tsc --noEmit` passes with them, and ESLint `--max-warnings=0` passes on
+  `tests/workspace/native-review/overview-review.spec.ts` and
+  `review.playwright.config.ts`.
 
-- Workspace tests: 9 files, 29 tests passed (`npm.cmd run test -- tests/workspace`).
-- `tsc --noEmit` passed; scoped ESLint on `src/components/workspace`, `DeleteUnitControl.tsx`, `UnitForm.tsx` passed with `--max-warnings=0`; `npm.cmd run build` passed (Prisma generate, Next static pages).
-- These are **component/test/build results only**. They do not constitute desktop/390px browser evidence or affected-flow browser results.
+## Task-owned isolated runtime (implemented, measured)
 
-## Designs read (static, not browser verification)
+All paths are task-owned; no shared checkout, shared client, sibling fixture,
+or common `.next` was written.
 
-- `Designs/rocketrental-light-portfolio` revision 24: `property-detail`, `property-detail-phone`, `unit-detail`, `unit-detail-phone` (overview order, headings, canonical `/properties/{id}?unit={unitId}` links, ≤640px unit-card swap, tokens).
-- `Designs/rocketrental-light-system` revision 7: shared controls, tokens, responsive navigation guidance.
-- Design reads establish intent only; no design screenshot is claimed as application verification.
+| Purpose | Identity |
+| --- | --- |
+| Baseline source | `tests/workspace/native-review/.runtime/baseline/` = `git archive 4adfb96` (24 entries), `node_modules` via junction to the checkout install |
+| Candidate source | `tests/workspace/native-review/.runtime/candidate-1f72f27/` = `git archive HEAD` (at `1f72f27`, contains `89fce36`), `node_modules` via junction |
+| Baseline production build | `.next/BUILD_ID` = `GPkMC-fReltH7INFyPztO`, built with isolated env (dummy secret, `STORAGE_LOCAL_DIR=.runtime/storage-baseline`) |
+| Candidate production build | `.next/BUILD_ID` = `EheygKX6UxTxKO1h1ktwh`, same isolated setup (`storage-candidate`) |
+| Source snapshot hashes | 11 overview files, SHA-256, in `.runtime/review-config.json` and committed `tests/workspace/native-review/evidence/runtime-identity.json` |
+| Isolated fixture | `.runtime/postgres/`, fresh `initdb` (PG 16, `PG_VERSION` present, superuser `rocketrental`, trust auth), port **55441**; no migrations/seeds applied yet |
+| Ports | **3241** baseline, **3242** candidate, **55441** DB — all verified free (`Get-NetTCPConnection` shows zero listeners on all three) |
+| Browser | Playwright Chromium (`chromium-1248` + headless shell + ffmpeg) in `.runtime/browsers/` (`PLAYWRIGHT_BROWSERS_PATH`) |
+| Spec | `tests/workspace/native-review/overview-review.spec.ts` + `review.playwright.config.ts`; sign-in as `jordan.mills@rocketrental.example`, fixtures `seed-property-maple` (vacant `seed-unit-maple-7` = 3A, occupied `seed-unit-maple-11` = 4B), `seed-property-elm`; disposable `synth-ov-*` records created/removed by the spec |
+| Harness | `tests/workspace/native-review/overview-review.ps1` (`Start`/`Launch`/`Status`/`Stop`) with snapshot, fixture, free-port, and recorded-process ownership guards; `-Action Status` exercised and returns the expected `No services have been recorded` guard |
 
-## Exact source / route identities for the remaining browser pass
+Setup note: the checkout had no `node_modules`, so `npm.cmd install` (package-lock, `--cache` inside owned `.runtime/npm-cache`) and `npm.cmd install` in `prisma/` (embedded-postgres) were run; `prisma/package-lock.json` showed an 8-line collateral diff and was reverted with `git checkout`. Root `node_modules/` and `prisma/node_modules/` are gitignored build artifacts, unchanged in Git (`git status` clean apart from this Task's owned paths).
 
-- Property overview route: `src/app/(manager)/properties/[id]/page.tsx` → `/properties/{propertyId}` (`PropertyOverview` in `src/components/workspace/WorkspaceOverview.tsx`).
-- Unit overview scope: `/properties/{propertyId}?unit={unitId}` (unit switcher `src/components/workspace/UnitSwitcher.tsx`, canonical links preserved).
-- Supporting behavior: inline facts (`InlineFacts.tsx`), lease timeline (`LeaseTimeline.tsx`), media (`WorkspaceMedia.tsx`, `ManagedUploads.tsx`, `FileUploader`), guarded delete (`src/components/units/DeleteUnitControl.tsx`), add unit (`UnitForm.tsx` in `properties/_components`).
-- No new isolated build was produced in this run (no rebuild per instruction). The next runtime must record its own `.next/BUILD_ID` values for baseline and candidate before any capture is claimed.
-- No synthetic records or files were created in this run; review fixtures were preserved untouched. Proposed disposable identities for the future pass (not created): property `Overview Browser Check <UTC date>` with one occupied and one vacant unit, plus disposable PNG/PDF uploads under the isolated runtime temp dir only.
+## Environment blocker: this sandbox denies all loopback binds
 
-## Partial manager observations (distinct attribution, not builder results)
+The live run (migrate + seed + `next start` on 3241/3242 + Playwright) cannot
+execute in this session; nothing was started and no result is invented.
 
-From `docs/design/light-property-directory.md` § "Completed manager native Edge review" and "Supplemental overview observations" — manager-supplied, window **2026-10-19 23:26:39–23:30:54 UTC**, desktop grant `156d150cb6fb4699836070e9101b0b1dcf280f86509fb02ba9429b95393a98ab`, desktop 1699×888, phone 390×844:
+- `postgres.exe -D .runtime/postgres -p 55441 -h 127.0.0.1` exits immediately:
+  `FATAL: could not create any TCP/IP sockets` after
+  `could not listen on IPv4 address "127.0.0.1": Permission denied`
+  (`.runtime/setup-postgres.stderr.log`).
+- Minimal probe `node -e "net.createServer().listen(PORT,'127.0.0.1')"` fails with
+  `EACCES` for ports 3000, 8000, ephemeral 0, on both `127.0.0.1` and `::1`.
+- Consequence: `prisma migrate deploy`, the demo seed, `next start`, and the
+  `overview-review.spec.ts` run all require a bind-capable session. The spec,
+  both production builds, the initialized fixture, and the Chromium binaries are
+  ready so that session can run: harness `Start` → `Status` (both `/sign-in`
+  HTTP 200) → migrate/seed with `SEED_DEMO_PASSWORDS=1` → Playwright with
+  `OVERVIEW_DATABASE_URL`/`OVERVIEW_BASELINE_URL=http://localhost:3241`/
+  `OVERVIEW_CANDIDATE_URL=http://localhost:3242`/
+  `OVERVIEW_STORAGE_DIR=<.runtime/storage-candidate>` →
+  `... -Action Stop` → `Status` (zero listeners, `postmaster.pid` absent).
+- Runtime release in this session: verified — zero listeners on 3241/3242/55441,
+  no `postmaster.pid` in `.runtime/postgres/`, no `services.json` recorded,
+  no desktop acquisition, no human contact.
 
-- Created property's phone overview seen: 0/2 occupancy, two vacant links, empty rent/media; `scrollWidth 375 <= 390`.
-- Enter on Unit 1 opened `?unit=cmvfvy7ix000ab9gcreta4am2` with readable vacant "Create lease" and scoped tabs.
-- Editing unit number to 99 then cancelling kept Unit 1; later Tab showed blue Status focus.
-- Delete opened a native confirmation, **but no accept was issued**. Inspection/dismissal timed out → dismissal/deletion outcome **unverified**.
-- Fallback Windows-MCP App switch was user-cancelled; all UI work stopped; desktop release confirmed. Baseline tab closed/reset; **candidate viewport reset and tab cleanup unverified**.
-
-These remain the only native overview observations and are partial by the manager's own record.
-
-## Remaining browser checklist (all PENDING — no fresh captures this run)
+## Remaining browser checklist (NOT RUN — no captures yet)
 
 | Flow / state | Desktop | 390px phone | Status |
 | --- | --- | --- | --- |
-| Real property navigation `/properties/{id}` | before/after captures missing | before/after captures missing | PENDING — needs manager-coordinated grant |
-| Occupied unit scope `?unit=` | not exercised in browser | not exercised in browser | PENDING |
-| Vacant unit scope `?unit=` | partial manager observation only (above) | partial manager observation only | PENDING — accept as partial, not a pass |
-| Unit switcher + canonical scope links | inherited component tests only | inherited component tests only | PENDING |
-| Phone layout (table → cards ≤640px), keyboard focus order | missing | missing | PENDING |
-| Inline save / cancel / validation | missing (cancel partially seen, save untouched) | missing | PENDING |
-| Add-unit protected/delete-archive states | missing; delete-confirm dismissal explicitly unverified | missing | PENDING — do not infer deletion |
-| Media upload / cover / order / remove, preview-failure recovery | missing | missing | PENDING |
-| Final candidate viewport cleanup after app-switch cancellation | unverified | unverified | PENDING |
+| Property overview navigation, glance band, payments, timeline, units | captures missing | captures missing | spec ready, needs live run |
+| Occupied unit scope (`?unit=seed-unit-maple-11`), switcher, scoped tabs | not exercised | not exercised | spec ready |
+| Vacant unit scope (`?unit=seed-unit-maple-7`), keyboard switcher nav | not exercised | not exercised | spec ready |
+| Phone cards (≤640px) vs desktop table, keyboard focus, no overflow | missing | missing | spec ready |
+| Inline edit cancel (seed 3A), validation, save (disposable `synth-ov-*`) | missing | — | spec ready |
+| Add-unit on disposable property (incl. `Unit number is required`) | missing | — | spec ready |
+| Guarded delete (dialog dismiss, no deletion) + implicit-unit guard | missing | — | spec ready |
+| Media upload/cover/reorder/remove + preview-failure recovery | missing | — | spec ready |
+| Baseline before-captures | missing | missing | spec ready |
 
-No desktop or 390px before/after screenshots exist for overviews in this checkout; `tests/workspace/native-review/` contained no files before this change (observed `Get-ChildItem` path-not-found).
+## Partial manager native observations (distinct attribution, not builder results)
 
-## Guarded runtime handoff and release (observed)
-
-- Listener check this session (`netstat` for 3231/3232/55431): **zero listeners** on all three review ports. Directory services were already stopped; nothing was restarted and no ownership was assumed.
-- Guarded commands for the future pass (from the assigned checkout, Status first; Start only after Status proves free ports, fixture presence, and no recorded live services; Stop validates PID/start-time/executable identity before touching anything):
-  - `powershell.exe -NoProfile -File tests/workspace/native-review/overview-review.ps1 -Action Status`
-  - `powershell.exe -NoProfile -File tests/workspace/native-review/overview-review.ps1 -Action Stop` then `-Action Start` then `-Action Status`
-  - The placeholder script does not exist yet; the commands above are the reserved interface. Do not substitute another checkout, shared client, or port.
-- No active human desktop grant exists. Native existing-Edge work stays **pending a fresh manager-coordinated grant**; desktop was not acquired, the human was not asked, and cancelled file approvals were not bypassed.
-- No push, deployment, Preview publication, or independent integration occurred. Sibling work and fixtures preserved.
+From the directory handoff, manager-supplied window **2026-10-19 23:26:39–23:30:54 UTC**
+(existing Edge, desktop 1699×888, phone 390×844): created property's phone
+overview showed 0/2 occupancy with empty rent/media; `scrollWidth 375 <= 390`;
+Enter on Unit 1 opened `?unit=cmvfvy7ix000ab9gcreta4am2` with readable vacant
+"Create lease" and scoped tabs; editing number to 99 then cancelling kept Unit 1;
+Tab showed blue Status focus; delete opened a native confirmation but **no accept
+was issued** — inspection/dismissal timed out, outcome unverified; fallback
+Windows-MCP App switch was user-cancelled; candidate viewport reset and tab
+cleanup unverified. Native existing-Edge and native file actions remain pending
+until the manager coordinates a fresh grant.
 
 ## Limitations
 
-- This handoff closes no browser gap: it records exact identities, the remaining checklist, the guarded runtime interface, and the verified released state so the next manager-coordinated native pass can proceed without re-deriving context.
-- If a concrete application failure blocks that pass, the blocker report must cite the exact reproduction and affected source path for a bounded scope correction.
+- No desktop/390px captures and no affected-flow browser results exist yet; the
+  checklist above is explicit, not a pass. The only new verified artifacts are
+  the two isolated production builds, the initialized fixture, the exercised
+  harness guards, typecheck/lint of the new files, and the release state.
+- No push, deployment, Preview publication, or independent integration occurred.
+  Sibling work, review fixtures, and prior passing checks are preserved.

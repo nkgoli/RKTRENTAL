@@ -1,35 +1,91 @@
-# Actual demo ROI investigation — blocked browser custody
+# Actual demo ROI investigation — resolved
 
-Observed 2026-10-20. The requested population and complete property-to-ROI verification remain unfinished. No database or application source changes were made.
+Observed and resolved 2026-10-20 in the user's running demo app. The earlier browser-custody
+blocker is cleared; the full flow below was performed in the authenticated app.
 
-## Identified environment
+## Environment
 
-Read-only browser inventory found the user's RocketRental tab at http://localhost:3100/dashboard (other historical RocketRental tabs were also present). Configured Orchestra Playwright successfully navigated to that origin's ROI URL with property=seed-property-maple, then redirected to sign-in in its separate profile. Screenshot: actual-demo-sign-in.png (workspace root; tool returned that actual location).
+- Browser origin: http://localhost:3100, signed in as the seed demo manager Jordan Mills
+  (jordan.mills@rocketrental.example, organization seed-rocket-rental), the account shown in the
+  admitted screenshot.
+- App: Next PID 60368 running the root checkout's `next start -p 3100`, launched by
+  `scripts/start.ps1 -Port 3100 -DbPort 5433`. Root HEAD 2baf757b56fd8d74b355d5db06ca1d283b804614,
+  `.next/BUILD_ID` xGPw1-iniRu859GLdczxJ. The app was not rebuilt or restarted; this task changed no
+  runtime source, so the running build is the one verified.
+- Database: PostgreSQL on localhost:5433, database rocketrental, schema public. PID 60368 holds
+  established connections to 5433; nothing listens on 5432 (the `.env` default), which
+  `start.ps1` overrides with `-DbPort`. Credentials are not recorded here.
 
-Windows process inspection identified Next PID 60368, parent 42892, running the root project's node_modules/next/dist/bin/next start -p 3100. Parent launch was scripts/start.ps1 -Port 3100 -DbPort 5433; its database launcher was PID 26996. A TCP listener on 3100 belonged to 60368. No process was stopped or restarted. Managed Preview inspection returned absent, generation 0.
+## Reproduction and cause
 
-Root Git HEAD and task HEAD were both 2baf757b56fd8d74b355d5db06ca1d283b804614. Root BUILD_ID was xGPw1-iniRu859GLdczxJ, timestamp 2026-10-20T15:42:50Z. Built ROI route exists. This identifies the observed build artifact and checkout; it does not prove that every built byte matches HEAD. Root had unrelated modifications to prisma/package-lock.json and untracked start-rocketrental.ps1; both were preserved. Required predecessor commits f67ec4934b53b6c19f116fe21f5deebed826df35 and 47eb2d16354f94d11a7967db076743dec1f46b5e passed ancestry checks in the task checkout.
+Signed in and opened `/roi-analysis?property=seed-property-maple`: Maple Court, 214 Maple Ave,
+Whole property, Revision 0, purchase price 2830000 and loan 1980000 filled, "19 assumptions to
+review", all outputs Unavailable — identical to the screenshot (live-maple-before.png).
 
-## Stored records and cause findings
+Cause: the four `prisma/seed.ts` properties carry only canonical price/debt columns; their
+optional `Property.roiInputs` was null and no `RoiAnalysisState` existed. The existing
+`npm run demo:roi` loader only creates three separate `demo-roi-v1-*` example properties (loaded
+into a different isolated database earlier) and never populated the seed properties. The app
+behaved correctly: new drafts map recorded price/debt only, and unknown assumptions stay unknown
+(Maple's scheduled rent is also absent because unit 3A has no active lease, so the lease schedule
+is incomplete). No mapping, persistence or saved-analysis precedence defect was found.
 
-Read-only Prisma queries used the bundled local PostgreSQL target on localhost:5433, database rocketrental, public schema. Credentials were not recorded. Queries selected property identifiers, organization, name, street, purchasePrice, loanAmount, roiInputs and updatedAt, and all RoiAnalysisState propertyId/revision/status rows.
+## Fix and data change
 
-| Property ID | Organization | Price | Loan | ROI inputs |
-| --- | --- | ---: | ---: | --- |
-| seed-property-maple | seed-rocket-rental | 2830000 | 1980000 | null |
-| seed-property-harbor | seed-rocket-rental | 4790000 | 3350000 | null |
-| seed-property-cedar | seed-rocket-rental | 1470000 | 1030000 | null |
-| seed-property-elm | seed-rocket-rental | 413000 | 289000 | null |
-| maintenance-pages-property | maintenance-pages-synthetic-20261019 | null | null | null |
+`prisma/seed-roi-inputs.ts` defines fictional/demo v1 forecast assumptions (`seed-roi-inputs-v1`)
+for the four seed properties; monthly rent is the sum of the seed's fictional unit rents. It is
+applied by `npm run demo:roi` (and alone via `npm run demo:roi -- --seed-inputs-only`). Under the
+property row lock, it writes only when the record has the seed organization, name and street, is
+not archived, and `roiInputs` is still null. It never writes price/debt, units, leases or saved
+analyses. A second run reported `preserved: existing ROI inputs` for all four.
 
-The four seed records had updatedAt 2026-10-16T19:09:11.587Z. Maple name/address match the admitted screenshot (Maple Court, 214 Maple Ave). Its ID, seed organization, name/address and price/debt align with prisma/seed.ts. RoiAnalysisState query returned an empty array across the database. No existing saved override explains these missing values. Account identity in the separate Playwright session remains unverified because sign-in was not completed.
+Applied with `--seed-inputs-only` to the live database:
 
-Source findings: src/lib/analysis/service.ts reads optional property roiInputs, overlays supplied sections/options, preserves canonical price/debt and explicit clears, and does not invent financial assumptions. RoiWorkspace.tsx:180 prefers saved.data.payload over a new property draft. prisma/load-roi-examples.ts calls loadRoiExamples under sandbox guards. prisma/roi-examples.ts creates only demo-roi-v1-financed/cash/tight and saves complete READY analyses for those new examples; it never populates the four seed properties or their roiInputs and preserves existing saved analyses. None of those three example records exists in this live database. docs/analysis/fictional-roi-examples.md explicitly documents the previous task's separate fictional_roi_demo database on 55579 and app on 3179, not this environment. This explains why prior isolated demonstration did not fill the user's Maple record. No mapping defect is established by these findings; live authenticated UI reproduction remains required.
+| Property | Before roiInputs | After (price/debt unchanged) |
+| --- | --- | --- |
+| seed-property-maple | null | rent 23000/mo, tax 52000, insurance 14000, rate 6.5% |
+| seed-property-harbor | null | rent 42490/mo, tax 88000, insurance 24000, rate 6.75% |
+| seed-property-cedar | null | rent 13200/mo, tax 27000, insurance 8000, rate 6.25% |
+| seed-property-elm | null | rent 1690/mo, tax 7600, insurance 1900, rate 6.5% |
 
-## Unresolved browser access
+Common values: closing 25000, rehab 15000, furnishing 0; 30-year conventional, points 0, lender
+fees 3500; other income 0, vacancy 5%, rent growth 2%; HOA/utilities/leasing/other 0, maintenance
+5%, capex 5%, management 8%, expense growth 2.5%; appreciation 3%, hold 10 years, selling 6%;
+start 2026-01-01, discount rate 0.08.
 
-After successful navigation/snapshot/screenshot, browser_fill_form and browser_click returned HTTP 503 ACP_RUNTIME_MCP_CONTROLLER_UNAVAILABLE with delivery notDispatched. A follow-up browser_snapshot returned MCP_SESSION_NOT_FOUND. Thus no sign-in, editing, creation, calculation, reload or property switching was performed. No fictional values were written without completing live environment verification. The supplied input screenshot was inspected directly; its 19 missing assumptions and unavailable outputs were confirmed visually, but not reproduced in an authenticated current session.
+Preservation: before/after snapshots show unchanged price/loan columns, unit and lease table
+hashes (98289b85… and 8990da31…), `RoiAnalysisState` still empty, and the unrelated
+maintenance-pages-property (organization maintenance-pages-synthetic-20261019) untouched.
 
-Restore the configured Orchestra Playwright session/controller, then authenticate the demo account, reproduce Maple, verify exact build/runtime identity as far as available, apply explicitly labeled additive assumptions only to confirmed demo records while preserving edits/clears and unrelated rows, and run the requested complete/partial/no-data customer-entry and demo selection/reload/switch flows. Do not reseed the database or substitute another fixture. No new app/database/review process was created. Desktop inventory ownership was acquired and released; personal tabs were neither attached to nor modified. App listener availability was observed before the browser bridge failure; end-of-task HTTP availability should be checked separately.
+## Live browser results
 
-Final availability check: Invoke-WebRequest http://localhost:3100/sign-in returned HTTP 200. The retained screenshot is copied to docs/analysis/actual-demo-sign-in.png.
+| Property | Annual cash flow | Cap rate | Cash-on-cash | Leveraged IRR |
+| --- | ---: | ---: | ---: | ---: |
+| Maple Court | -$2,555 | 5.7% | -0.3% | 8.4% |
+| Harbor View Lofts | $21,911 | 6.4% | 1.5% | 9.9% |
+| Cedar Row Townhomes | $11,499 | 6.5% | 2.4% | 10.1% |
+| 18 Elm Street | -$15,723 | 1.8% | -9.4% | -2.1% |
+
+Each showed "Calculated automatically from your current assumptions". Maple checks: gross
+potential income $276,000 (23000 × 12), debt service $150,179 (1.98M, 6.5%, 30 years), cash
+required $893,500 (850000 down + 25000 + 15000 + 3500). Harbor stayed calculated after a page
+reload; switching Harbor → Maple through Change property gave the same Maple results.
+Screenshots: live-maple-after.png, live-harbor-after-reload.png.
+
+Customer entry through the dedicated pages:
+
+- Add page, test property `cmvgvmcno0001b9kw3fw52wgl` "TEST ROI Verification (fictional)
+  2026-10-20": price 321000, closing 0, loan 240000, rate 6.125, rent 2345, vacancy 4. The Edit page
+  reloaded exactly those values with every other field blank. Adding loan term 30 through Edit
+  persisted. ROI prefilled all seven values as property source and listed 16 remaining assumptions
+  with no calculation (live-test-property-partial-roi.png).
+- Add page with no ROI details, test property `cmvgvn4n10005b9kw0prz2dx3` "TEST No-ROI
+  Verification (fictional) 2026-10-20": saved normally, stored roiInputs empty and price/debt null.
+
+Both test properties are left in the demo organization, clearly labeled, for review; archive them
+from the property page if not wanted. No demo analysis was saved, so no saved override was created.
+
+## Isolated check
+
+`tests/roi/seed-roi-inputs.test.ts` confirms the four input sets omit price/debt, combine with
+the seed columns with no missing data, and give Maple the same -$2,555 annual cash flow seen live.

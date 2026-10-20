@@ -120,7 +120,7 @@ describe('projection adapters and public model reconciliation', () => {
     { rentMin: 'bad' },
     { rentMin: '-1' },
     { rentMin: '3000', rentMax: '1000' },
-    { rentSteps: '8' },
+    { rentSteps: '10' },
     { rentSteps: '1.5' },
     { vacancyMax: '101' },
     { rentSteps: '1' },

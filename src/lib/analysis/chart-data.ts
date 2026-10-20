@@ -326,3 +326,272 @@ export function calendarYear(result: ResultLike, year: number) {
 /** C5 reference mini bar: |rate| × 500%, capped at the track. */
 export const miniBarWidth = (rate: number | null) =>
   rate == null || !Number.isFinite(rate) ? 0 : Math.min(100, Math.abs(rate) * 500);
+
+type Breakdown = {
+  propertyTax: number;
+  insurance: number;
+  hoa: number;
+  maintenance: number;
+  capex: number;
+  propertyManagement: number;
+  utilities: number;
+  leasing: number;
+  other: number;
+  total: number;
+};
+
+/**
+ * C10 categories in the reference colours. RocketRental also has utilities and
+ * leasing; capital reserves (CapEx) sit below NOI, so they are not operating costs.
+ */
+export const expenseCategories = [
+  {
+    key: 'propertyTax',
+    name: 'Property Tax',
+    color: '#ef4444',
+    about: 'Annual property taxes paid to local government',
+  },
+  {
+    key: 'propertyManagement',
+    name: 'Management',
+    color: '#f97316',
+    about: 'Property management fees (a fixed amount, or a percentage of effective income)',
+  },
+  {
+    key: 'insurance',
+    name: 'Insurance',
+    color: '#f59e0b',
+    about: 'Landlord/hazard insurance premium',
+  },
+  {
+    key: 'maintenance',
+    name: 'Maintenance',
+    color: '#10b981',
+    about: 'Recurring repairs and upkeep (small/medium fixes)',
+  },
+  { key: 'hoa', name: 'HOA', color: '#3b82f6', about: 'Homeowners Association fees' },
+  { key: 'utilities', name: 'Utilities', color: '#8b5cf6', about: 'Owner-paid utilities' },
+  {
+    key: 'leasing',
+    name: 'Leasing',
+    color: '#0ea5e9',
+    about: 'Leasing and tenant-placement costs',
+  },
+  { key: 'other', name: 'Misc', color: '#94a3b8', about: 'Other operating costs you entered' },
+] as const;
+export const capexCategory = {
+  key: 'capex',
+  name: 'CapEx',
+  color: '#14b8a6',
+  about:
+    'Savings for major replacements (roof, HVAC, appliances). Deducted below NOI, so not part of operating expenses.',
+} as const;
+
+type ExpenseRow = {
+  year: number;
+  operatingExpenses: number;
+  reserves: number;
+  effectiveGrossIncome: number;
+};
+
+/**
+ * Operating categories for a projection year. Every operating cost grows by the
+ * same expense-growth multiplier in the engine, so each category is its Year-1
+ * amount times that year's operating total ÷ Year-1 inputs; the categories then
+ * add up to the projection table's operating expenses exactly. Reserves come
+ * straight from the projection row.
+ */
+export function expenseYear(breakdown: Breakdown, rows: ExpenseRow[], year: number) {
+  const row = rows.find((r) => r.year === year);
+  const first = rows[0];
+  if (!row || !first) return null;
+  const factor = (r: ExpenseRow) =>
+    breakdown.total > 0 ? r.operatingExpenses / breakdown.total : 0;
+  const total = row.operatingExpenses;
+  const categories = expenseCategories
+    .map((c) => {
+      const value = breakdown[c.key] * factor(row);
+      const year1Value = breakdown[c.key] * factor(first);
+      return {
+        ...c,
+        value,
+        year1Value,
+        percent: total > 0 ? value / total : null,
+        change: value - year1Value,
+      };
+    })
+    .filter((c) => c.value > 0);
+  return {
+    year,
+    total,
+    year1Total: first.operatingExpenses,
+    growth: year > 1 && first.operatingExpenses > 0 ? total / first.operatingExpenses - 1 : null,
+    effectiveIncome: row.effectiveGrossIncome,
+    reserves: row.reserves,
+    reservesYear1: first.reserves,
+    categories,
+  };
+}
+
+export type ExpenseSort = 'amount' | 'percent' | 'change';
+export function sortExpenses<T extends { value: number; percent: number | null; change: number }>(
+  categories: T[],
+  mode: ExpenseSort,
+) {
+  const sorted = [...categories];
+  if (mode === 'percent') sorted.sort((a, b) => (b.percent ?? 0) - (a.percent ?? 0));
+  else if (mode === 'change') sorted.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+  else sorted.sort((a, b) => b.value - a.value);
+  return sorted;
+}
+
+type LoanYear = {
+  year: number;
+  payment: number;
+  principal: number;
+  interest: number;
+  balance: number;
+  cumulativePrincipal: number;
+  cumulativeInterest: number;
+};
+
+/** C13 schedule rows: beginning balance and share of the original loan repaid. */
+export function loanSummaries(rows: LoanYear[], loanAmount: number) {
+  return rows.map((r, i) => ({
+    ...r,
+    beginning: i === 0 ? loanAmount : rows[i - 1].balance,
+    paidOff: loanAmount > 0 ? (loanAmount - r.balance) / loanAmount : null,
+  }));
+}
+export type LoanSummary = ReturnType<typeof loanSummaries>[number];
+
+/** C13 milestones: first year 25/50/75% is repaid and annual principal first beats interest. */
+export function loanMilestones(rows: LoanSummary[]) {
+  const first = (test: (r: LoanSummary) => boolean) => rows.find(test)?.year ?? null;
+  return {
+    quarter: first((r) => (r.paidOff ?? 0) >= 0.25),
+    half: first((r) => (r.paidOff ?? 0) >= 0.5),
+    threeQuarter: first((r) => (r.paidOff ?? 0) >= 0.75),
+    principalBeatsInterest: first((r) => r.principal > r.interest),
+  };
+}
+
+type ExitResult = {
+  year: number;
+  result: {
+    saleProceeds: {
+      grossSalePrice: number;
+      sellingCosts: number;
+      loanPayoff: number;
+      netProceeds: number;
+    };
+    summaryMetrics: {
+      totalReturn: number;
+      totalCashRequired: number;
+      totalReturnPercent: number | null;
+      irrLeveraged: number | null;
+    };
+    annualCashflows: { cumulativeCashFlow: number }[];
+  };
+};
+
+/** C14 exit-year rows, each from its own engine run (true leveraged IRR). */
+export function exitRows(rows: ExitResult[]) {
+  return rows.map(({ year, result }) => {
+    const sale = result.saleProceeds;
+    const m = result.summaryMetrics;
+    return {
+      year,
+      salePrice: sale.grossSalePrice,
+      sellingCosts: sale.sellingCosts,
+      loanPayoff: sale.loanPayoff,
+      netProceeds: sale.netProceeds,
+      cashFlow: result.annualCashflows.at(-1)?.cumulativeCashFlow ?? 0,
+      totalCashBack: m.totalReturn + m.totalCashRequired,
+      invested: m.totalCashRequired,
+      profit: m.totalReturn,
+      roi: m.totalReturnPercent,
+      irr: m.irrLeveraged,
+    };
+  });
+}
+export type ExitRow = ReturnType<typeof exitRows>[number];
+
+/** Best IRR (true IRR only), best profit, and the first exit year that is profitable. */
+export function exitLandmarks(rows: ExitRow[]) {
+  let bestIrr: ExitRow | null = null;
+  let bestProfit: ExitRow | null = null;
+  for (const r of rows) {
+    if (r.irr != null && Number.isFinite(r.irr) && (!bestIrr || r.irr > bestIrr.irr!)) bestIrr = r;
+    if (!bestProfit || r.profit > bestProfit.profit) bestProfit = r;
+  }
+  return { bestIrr, bestProfit, breakeven: rows.find((r) => r.profit > 0) ?? null };
+}
+
+export type HeatPalette = { low: string; mid: string; high: string };
+/** Reference red → amber → green. */
+export const heatPalette: HeatPalette = { low: '#ef4444', mid: '#fbbf24', high: '#22c55e' };
+/**
+ * Colour-blind-safe diverging palette (RdBu). The reference maps losses to blue
+ * and the best returns to red; here losses stay on the red end so the meaning of
+ * red matches the default palette.
+ */
+export const colorblindPalette: HeatPalette = { low: '#b2182b', mid: '#f7f7f7', high: '#2166ac' };
+
+function mix(a: string, b: string, t: number) {
+  const p = (h: string, i: number) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16);
+  return `#${[0, 1, 2]
+    .map((i) =>
+      Math.round(p(a, i) + (p(b, i) - p(a, i)) * t)
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`;
+}
+
+/** Reference 3-stop scale over the grid's own min…max (midpoint = mid colour). */
+export function heatColor(min: number, max: number, value: number, palette: HeatPalette) {
+  if (max === min) return palette.mid;
+  const t = Math.max(0, Math.min(1, (value - min) / (max - min)));
+  return t <= 0.5
+    ? mix(palette.low, palette.mid, t * 2)
+    : mix(palette.mid, palette.high, (t - 0.5) * 2);
+}
+
+/**
+ * Break-even contour through a grid (`cells[row][column]`, rows bottom-to-top):
+ * the interpolated column where each row crosses `level`. Rows without a crossing
+ * break the line, so it never joins across a gap the data does not show.
+ */
+export function breakevenContour(cells: ChartValue[][], level = 0) {
+  const runs: { row: number; column: number }[][] = [];
+  let run: { row: number; column: number }[] = [];
+  cells.forEach((row, r) => {
+    let point: { row: number; column: number } | null = null;
+    for (let c = 0; c < row.length - 1 && !point; c++) {
+      const a = row[c];
+      const b = row[c + 1];
+      if (a == null || b == null || a === b) continue;
+      if ((a <= level && b > level) || (a > level && b <= level))
+        point = { row: r, column: c + (level - a) / (b - a) };
+    }
+    if (point) run.push(point);
+    else if (run.length) {
+      runs.push(run);
+      run = [];
+    }
+  });
+  if (run.length) runs.push(run);
+  return runs;
+}
+
+/** Amortization x labels like the reference: Year 1, 3, 5, 7, 9, then every third year. */
+export function amortizationTicks(years: number[]) {
+  const picks = years.flatMap((y, i) => ((y <= 9 ? y % 2 === 1 : y % 3 === 0) ? [i] : []));
+  const last = years.length - 1;
+  if (last >= 0 && picks.at(-1) !== last) {
+    if (picks.length && years[last] - years[picks.at(-1)!] < 2) picks.pop();
+    picks.push(last);
+  }
+  return picks;
+}

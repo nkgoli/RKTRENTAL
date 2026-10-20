@@ -246,6 +246,69 @@
 .tiles strong[data-tone='teal'] {
   color: #0f766e;
 }
+.tiles strong[data-tone='green'] {
+  color: #15803d;
+}
+.tiles strong[data-tone='amber'] {
+  color: #b45309;
+}
+.tiles strong[data-tone='slate'] {
+  color: #0f172a;
+}
+.tiles > div[data-tone='blue'] {
+  background: #eff6ff;
+}
+.tiles > div[data-tone='blue'] dt {
+  color: #1d4ed8;
+}
+.tiles > div[data-tone='muted'] {
+  background: #f8fafc;
+}
+.tiles > div[data-tone='muted'] dt {
+  color: #475569;
+}
+.tiles > div[data-tone='muted'] strong {
+  color: #0f172a;
+}
+.tiles > div[data-tone='card'] {
+  background: white;
+  border: 1px solid #e2e8f0;
+  padding: 12px;
+}
+.tiles > div[data-tone='card'] dt {
+  gap: 8px;
+  color: #475569;
+}
+.tiles > div[data-tone='card'] strong {
+  color: #0f172a;
+}
+.tiles
+  > div:is([data-tone='blue'], [data-tone='muted'], [data-tone='card'], [data-tone='amber'])
+  small {
+  color: #526174;
+}
+.iconChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #475569;
+}
+.iconChip[data-tone='teal'] {
+  background: #f0fdfa;
+  color: #0d9488;
+}
+.iconChip[data-tone='amber'] {
+  background: #fffbeb;
+  color: #d97706;
+}
+.icon {
+  flex: none;
+}
 .tiles small {
   display: block;
   margin-top: 2px;
@@ -310,6 +373,75 @@
 .chips li[data-tone='amber'] {
   background: #fef3c7;
   color: #92400e;
+}
+.chips[data-size='sm'] li {
+  padding: 4px 10px;
+  font-size: 10px;
+  border: 1px solid #e2e8f0;
+}
+.chips[data-size='sm'] li[data-tone='tealSoft'] {
+  border-color: #99f6e4;
+}
+.chips[data-size='sm'] li[data-tone='amber'] {
+  background: #fffbeb;
+  color: #b45309;
+  border-color: #fde68a;
+}
+/* Toggle chips (Exit "Best IRR" etc.): the chip is the button. */
+.chips li[data-button] {
+  padding: 0;
+  background: none;
+}
+.chips li[data-button] button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  background: #f1f5f9;
+  color: #334155;
+  cursor: pointer;
+}
+.chips li[data-button][data-tone='teal'] button {
+  background: #f0fdfa;
+  border-color: #99f6e4;
+  color: #0f766e;
+}
+.chips li[data-button][data-tone='amber'] button {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #b45309;
+}
+.chips li[data-button] button:hover {
+  filter: brightness(0.97);
+}
+.chips li[data-button] button[aria-pressed='true'] {
+  background: #334155;
+  border-color: #334155;
+  color: white;
+  box-shadow: 0 4px 6px -1px #0f172a1a;
+}
+.chips li[data-button][data-tone='teal'] button[aria-pressed='true'] {
+  background: #0d9488;
+  border-color: #0d9488;
+}
+.chips li[data-button][data-tone='amber'] button[aria-pressed='true'] {
+  background: #b45309;
+  border-color: #b45309;
+}
+.refLine line {
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.refLine text {
+  fill: currentColor !important;
+  font-size: 10px !important;
+  font-weight: 600;
 }
 .figure {
   font-family: var(--chart-mono);
@@ -518,6 +650,24 @@
   border-radius: 2px;
   border: 1px solid #2dd4bf;
   background: linear-gradient(#14b8a666, #14b8a61a);
+}
+/* Recharts default legend icon: a line through a hollow dot. */
+.legend i[data-kind='dotLine'] {
+  position: relative;
+  width: 14px;
+  height: 0;
+  border-top: 2px solid currentColor;
+}
+.legend i[data-kind='dotLine']::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: -5px;
+  width: 4px;
+  height: 4px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: white;
 }
 .legend i[data-kind='gap'] {
   height: 0;

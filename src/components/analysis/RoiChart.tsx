@@ -16,7 +16,69 @@ import {
 } from '@/lib/analysis/chart-data';
 import { dollars } from '@/lib/analysis/projections';
 import styles from './analysis.module.css';
+import chartStyles from './projections.module.css';
 import c from './roi-chart.module.css';
+
+/** Exact table beside every chart: USD to the cent, readable without hover. */
+export function ExactTable({
+  caption,
+  headers,
+  rows,
+}: {
+  caption: string;
+  headers: string[];
+  rows: ReactNode[][];
+}) {
+  return (
+    <div
+      className={`${styles.table} ${chartStyles.exact}`}
+      role="region"
+      tabIndex={0}
+      aria-label={caption}
+    >
+      <table>
+        <caption>{caption}</caption>
+        <thead>
+          <tr>
+            {headers.map((header) => (
+              <th scope="col" key={header}>
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={index}>
+              {row.map((cell, column) =>
+                column === 0 ? (
+                  <th scope="row" key={column}>
+                    {cell}
+                  </th>
+                ) : (
+                  <td key={column}>{cell}</td>
+                ),
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function Statement({ rows }: { rows: [string, ReactNode][] }) {
+  return (
+    <dl className={styles.statement}>
+      {rows.map(([label, value]) => (
+        <div key={label}>
+          <dt>{label}</dt>
+          <dd>{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
 /** RealROI palette (Tailwind teal/slate/red). Bars get a darker outline for 3:1 edges. */
 export const chartColors = {
@@ -37,6 +99,15 @@ export const chartColors = {
   sky: '#0284c7',
   amber: '#b45309',
   violet: '#7c3aed',
+  violetMid: '#8b5cf6',
+  orange: '#f97316',
+  amberMid: '#f59e0b',
+  amberBright: '#fbbf24',
+  green500: '#22c55e',
+  blue: '#3b82f6',
+  sky500: '#0ea5e9',
+  sky600: '#0284c7',
+  emeraldDark: '#059669',
 } as const;
 /** Line colours for multi-series charts; each passes 3:1 against white. */
 export const seriesPalette = [
@@ -72,6 +143,9 @@ export type ChartSeries = {
   dash?: string;
   /** Leave the series out of the legend (a custom legend names it). */
   hideLegend?: boolean;
+  /** Fill and outline of the emphasised (selected) bar. */
+  activeColor?: string;
+  activeStroke?: string;
 };
 
 export type ChartMarker = {
@@ -84,10 +158,18 @@ export type ChartMarker = {
   align?: 'start' | 'end' | 'center';
 };
 export type ChartBand = { from: number; to: number; color: string; opacity?: number };
-export type ChartArea = { upper: ChartValue[]; lower: ChartValue[]; color: string };
+/** Fill between two series: the 0.4 → 0.1 gradient, or a flat fill at `opacity`. */
+export type ChartArea = {
+  upper: ChartValue[];
+  lower: ChartValue[];
+  color: string;
+  opacity?: number;
+};
+/** Horizontal reference line (e.g. "Initial: $102,000"), labelled at the right end. */
+export type ChartRefLine = { value: number; label: string; color: string; dash?: string };
 export type LegendItem = {
   label: string;
-  kind: 'bar' | 'line' | 'dashed' | 'band' | 'area';
+  kind: 'bar' | 'line' | 'dashed' | 'band' | 'area' | 'dotLine';
   color: string;
 };
 type Sign = '−' | '+' | '=';
@@ -101,6 +183,8 @@ export type TipRow =
       /** A dollar amount on an indexed chart. */
       money?: boolean;
       tone?: 'auto' | 'teal' | 'red' | 'muted';
+      /** Explicit value colour (e.g. the amortization series colours). */
+      color?: string;
       total?: boolean;
       swatch?: { color: string; kind?: 'bar' | 'line' };
     }
@@ -189,7 +273,7 @@ export function InfoTip({ label, children }: { label: string; children: ReactNod
   );
 }
 
-type Tone = 'teal' | 'tealSoft' | 'slate' | 'red' | 'amber';
+type Tone = 'teal' | 'tealSoft' | 'slate' | 'red' | 'amber' | 'blue' | 'muted' | 'card';
 
 /** Pale metric tiles; values use the mono numeric face like the reference. */
 export function Tiles({
@@ -200,10 +284,13 @@ export function Tiles({
     label: string;
     value: ReactNode;
     note?: ReactNode;
+    /** `card` is the bordered white KPI card of the amortization schedule. */
     tone?: Tone;
     info?: ReactNode;
     /** Value colour when it differs from the tone (e.g. a red loss on a teal tile). */
-    valueTone?: 'teal' | 'red' | 'slate';
+    valueTone?: 'teal' | 'red' | 'slate' | 'green' | 'amber';
+    /** Small icon chip before the label (reference KPI cards). */
+    icon?: { name: IconName; tone?: 'slate' | 'teal' | 'amber' };
   }[];
   size?: 'lg' | 'sm';
 }) {
@@ -212,6 +299,11 @@ export function Tiles({
       {items.map((item) => (
         <div key={item.label} data-tone={item.tone ?? 'teal'}>
           <dt>
+            {item.icon && (
+              <span className={c.iconChip} data-tone={item.icon.tone ?? 'slate'} aria-hidden="true">
+                <Icon name={item.icon.name} size={12} />
+              </span>
+            )}
             {item.label}
             {item.info && <InfoTip label={item.label}>{item.info}</InfoTip>}
           </dt>
@@ -320,8 +412,8 @@ export function useHorizon(length: number, label: string, preferred = 30) {
   return [shown, control] as const;
 }
 
-type ChipIcon = 'target' | 'down' | 'up';
-const chipIcons: Record<ChipIcon, ReactNode> = {
+/** Lucide icon outlines used by the reference cards. */
+const iconPaths = {
   target: (
     <>
       <circle cx="12" cy="12" r="10" />
@@ -341,36 +433,140 @@ const chipIcons: Record<ChipIcon, ReactNode> = {
       <path d="M16 7h6v6" />
     </>
   ),
+  zap: (
+    <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" />
+  ),
+  dollar: (
+    <>
+      <path d="M12 2v20" />
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </>
+  ),
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
+    </>
+  ),
+  calendar: (
+    <>
+      <rect width="18" height="18" x="3" y="4" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </>
+  ),
+  percent: (
+    <>
+      <path d="M19 5 5 19" />
+      <circle cx="6.5" cy="6.5" r="2.5" />
+      <circle cx="17.5" cy="17.5" r="2.5" />
+    </>
+  ),
+  piggy: (
+    <>
+      <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z" />
+      <path d="M2 9v1c0 1.1.9 2 2 2h1" />
+      <path d="M16 11h.01" />
+    </>
+  ),
+  eye: (
+    <>
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  sparkles: (
+    <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+  ),
+  settings: (
+    <>
+      <path d="M20 7h-9M14 17H5" />
+      <circle cx="17" cy="17" r="3" />
+      <circle cx="7" cy="7" r="3" />
+    </>
+  ),
+  reset: (
+    <>
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </>
+  ),
+  chevronDown: <path d="m6 9 6 6 6-6" />,
+  chevronRight: <path d="m9 18 6-6-6-6" />,
+  pie: (
+    <>
+      <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+      <path d="M22 12A10 10 0 0 0 12 2v10z" />
+    </>
+  ),
 };
+export type IconName = keyof typeof iconPaths;
 
-/** Landmark chips summarising the chart in words, with a lucide-style icon or a dot. */
+export function Icon({ name, size = 14 }: { name: IconName; size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" className={c.icon}>
+      <g
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        {iconPaths[name]}
+      </g>
+    </svg>
+  );
+}
+
+/**
+ * Landmark chips summarising the chart in words, with a lucide-style icon or a dot.
+ * Chips with `onClick` are toggle buttons (the Exit "Best IRR" chips).
+ */
 export function Chips({
   items,
+  size,
+  label,
 }: {
-  items: { text: ReactNode; tone?: Tone; icon?: ChipIcon; info?: ReactNode; infoLabel?: string }[];
+  items: {
+    text: ReactNode;
+    tone?: Tone;
+    icon?: IconName;
+    info?: ReactNode;
+    infoLabel?: string;
+    onClick?: () => void;
+    pressed?: boolean;
+  }[];
+  /** `sm` is the 10 px bordered chip of the amortization milestones. */
+  size?: 'sm';
+  label?: string;
 }) {
   if (!items.length) return null;
   return (
-    <ul className={c.chips}>
-      {items.map((item, index) => (
-        <li key={index} data-tone={item.tone ?? 'slate'} data-icon={item.icon ? true : undefined}>
-          {item.icon && (
-            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-              <g
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                {chipIcons[item.icon]}
-              </g>
-            </svg>
-          )}
-          {item.text}
-          {item.info && <InfoTip label={item.infoLabel ?? 'this landmark'}>{item.info}</InfoTip>}
-        </li>
-      ))}
+    <ul className={c.chips} data-size={size} aria-label={label}>
+      {items.map((item, index) => {
+        const body = (
+          <>
+            {item.icon && <Icon name={item.icon} size={size === 'sm' ? 12 : 14} />}
+            {item.text}
+          </>
+        );
+        return (
+          <li
+            key={index}
+            data-tone={item.tone ?? 'slate'}
+            data-icon={item.icon ? true : undefined}
+            data-button={item.onClick ? true : undefined}
+          >
+            {item.onClick ? (
+              <button type="button" aria-pressed={!!item.pressed} onClick={item.onClick}>
+                {body}
+              </button>
+            ) : (
+              body
+            )}
+            {item.info && <InfoTip label={item.infoLabel ?? 'this landmark'}>{item.info}</InfoTip>}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -516,6 +712,11 @@ export function ComboChart({
   xFormat = String,
   barRadius = 'top',
   format,
+  refLines = [],
+  emphasis = null,
+  emphasizeHover = false,
+  onSelect,
+  xTicks,
 }: {
   label: string;
   years: (number | string)[];
@@ -542,6 +743,15 @@ export function ComboChart({
   barRadius?: 'top' | 'all';
   /** Exact formatter matching the adjacent table; defaults to cents or 4-dp index. */
   format?: (value: number) => string;
+  refLines?: ChartRefLine[];
+  /** Index whose bars are emphasised; the other bars drop to half opacity. */
+  emphasis?: number | null;
+  /** Emphasise the hovered index too when nothing is selected. */
+  emphasizeHover?: boolean;
+  /** Click, tap, Enter or Space on an index selects it. */
+  onSelect?: (index: number) => void;
+  /** Year-label indexes when the chart has its own tick set. */
+  xTicks?: number[];
 }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(660);
@@ -577,6 +787,7 @@ export function ComboChart({
       ...areas.flatMap((a) => [...a.upper, ...a.lower]),
       ...extents.top,
       ...extents.bottom,
+      ...refLines.map((r) => r.value),
     ],
     narrow ? 4 : 5,
   );
@@ -621,9 +832,28 @@ export function ComboChart({
       : r.money && unit !== 'USD'
         ? dollars(r.value)
         : exact(r.value);
-  const reference = referenceTickIndexes(years);
-  const fit = xTickIndexes(n, innerW, narrow ? 34 : 40);
+  const reference = xTicks ?? referenceTickIndexes(years);
+  const longest = Math.max(1, ...reference.map((i) => xFormat(years[i] ?? '').length));
+  const fit = xTickIndexes(n, innerW, Math.max(narrow ? 34 : 40, longest * 7 + 8));
   const ticks = reference.length <= fit.length ? reference : fit;
+  const emphasised = emphasis ?? (emphasizeHover ? active : null);
+  // Bar paint for one index: the emphasised bar darkens, the others fade.
+  const paint = (s: ChartSeries, i: number, fill: string) =>
+    emphasised == null
+      ? { fill, fillOpacity: s.opacity, stroke: s.stroke ?? outline[fill], style: undefined }
+      : i === emphasised
+        ? {
+            fill: s.activeColor ?? fill,
+            fillOpacity: s.opacity,
+            stroke: s.activeStroke ?? s.stroke ?? outline[fill],
+            style: { strokeWidth: 2 },
+          }
+        : {
+            fill,
+            fillOpacity: (s.opacity ?? 1) * 0.5,
+            stroke: s.stroke ?? outline[fill],
+            style: { strokeOpacity: 0.5 },
+          };
   const hasGap = series.some((s) => s.values.slice(0, n).some((v) => v == null));
   const hasNegativeBar = series.some(
     (s) => s.kind === 'bar' && s.negativeColor && s.values.some((v) => v != null && v < 0),
@@ -689,9 +919,14 @@ export function ComboChart({
         className={c.plot}
         role="group"
         tabIndex={0}
-        aria-label={`${label}. Use left and right arrow keys to read each ${xLabel.toLowerCase()}; exact values are also in the table.`}
+        aria-label={`${label}. Use left and right arrow keys to read each ${xLabel.toLowerCase()}${onSelect ? '; press Enter to select it' : ''}; exact values are also in the table.`}
         onKeyDown={(event) => {
           if (!n) return;
+          if (onSelect && active != null && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            onSelect(active);
+            return;
+          }
           const last = n - 1;
           const next =
             event.key === 'ArrowRight'
@@ -723,6 +958,17 @@ export function ComboChart({
           onPointerLeave={(event) => {
             if (event.pointerType === 'mouse') setActive(null);
           }}
+          onClick={
+            onSelect
+              ? (event) => {
+                  const box = event.currentTarget.getBoundingClientRect();
+                  const x = ((event.clientX - box.left) / (box.width || 1)) * width;
+                  const i = Math.floor((x - m.left) / band);
+                  if (i >= 0 && i < n) onSelect(i);
+                }
+              : undefined
+          }
+          style={onSelect ? { cursor: 'pointer' } : undefined}
         >
           <title id={`${id}-title`}>{`${label} (${unit === 'USD' ? 'USD' : 'index'})`}</title>
           <defs>
@@ -848,11 +1094,23 @@ export function ComboChart({
               {axisTitle}
             </text>
           )}
-          {ticks.map((i) => (
-            <text key={i} className={c.xtick} x={cx(i)} y={h - 6} textAnchor="middle">
-              {xFormat(years[i])}
-            </text>
-          ))}
+          {ticks.map((i) => {
+            const text = xFormat(years[i]);
+            // Long edge labels ("Year 30") are anchored inside the chart, never clipped.
+            const half = text.length * (narrow ? 3.1 : 3.4);
+            const anchor = cx(i) + half > width ? 'end' : cx(i) - half < 0 ? 'start' : 'middle';
+            return (
+              <text
+                key={i}
+                className={c.xtick}
+                x={anchor === 'end' ? width - 1 : anchor === 'start' ? 1 : cx(i)}
+                y={h - 6}
+                textAnchor={anchor}
+              >
+                {text}
+              </text>
+            );
+          })}
           <g className={c.reveal} key={`series-${n}-${scale.min}-${scale.max}`}>
             {areas.map((a, k) =>
               segments(
@@ -870,7 +1128,8 @@ export function ComboChart({
                   <path
                     key={`${k}-${run.start}`}
                     d={`${monotonePath(top)}${back}Z`}
-                    fill={`url(#${id}-area-${k})`}
+                    fill={a.opacity == null ? `url(#${id}-area-${k})` : a.color}
+                    fillOpacity={a.opacity}
                   />
                 );
               }),
@@ -904,9 +1163,7 @@ export function ComboChart({
                         k === (v > 0 ? lastUp : lastDown) ? 4 : 0,
                         false,
                       )}
-                      fill={fill}
-                      fillOpacity={s.opacity}
-                      stroke={s.stroke ?? outline[fill]}
+                      {...paint(s, i, fill)}
                     />
                   );
                 });
@@ -927,9 +1184,7 @@ export function ComboChart({
                       4,
                       barRadius === 'all',
                     )}
-                    fill={fill}
-                    fillOpacity={s.opacity}
-                    stroke={s.stroke ?? outline[fill]}
+                    {...paint(s, i, fill)}
                   />
                 );
               }),
@@ -968,21 +1223,41 @@ export function ComboChart({
               </g>
             ))}
           </g>
+          {refLines.map((r) => (
+            <g key={`ref-${r.label}`} className={c.refLine} style={{ color: r.color }}>
+              <line
+                x1={m.left}
+                x2={width - m.right}
+                y1={y(r.value)}
+                y2={y(r.value)}
+                strokeDasharray={r.dash ?? '6 4'}
+              />
+              <text x={width - m.right - 4} y={y(r.value) - 6} textAnchor="end">
+                {r.label}
+              </text>
+            </g>
+          ))}
           {markers
             .filter((marker) => marker.index >= 0 && marker.index < n)
             .map((marker) => {
               const x = cx(marker.index);
               const flip = marker.align === 'end' ? x - m.left > 90 : x > width - m.right - 90;
               return (
-                <g key={marker.label} className={c.marker} style={{ color: marker.color }}>
+                <g
+                  key={`${marker.index}-${marker.label}`}
+                  className={c.marker}
+                  style={{ color: marker.color }}
+                >
                   <line x1={x} x2={x} y1={m.top} y2={m.top + innerH} />
-                  <text
-                    x={marker.align === 'center' ? x : x + (flip ? -5 : 5)}
-                    y={marker.align === 'center' ? m.top - 6 : m.top + 10}
-                    textAnchor={marker.align === 'center' ? 'middle' : flip ? 'end' : 'start'}
-                  >
-                    {marker.label}
-                  </text>
+                  {marker.label && (
+                    <text
+                      x={marker.align === 'center' ? x : x + (flip ? -5 : 5)}
+                      y={marker.align === 'center' ? m.top - 6 : m.top + 10}
+                      textAnchor={marker.align === 'center' ? 'middle' : flip ? 'end' : 'start'}
+                    >
+                      {marker.label}
+                    </text>
+                  )}
                   {marker.dot != null && Number.isFinite(marker.dot) && (
                     <circle
                       cx={x}
@@ -1037,6 +1312,7 @@ export function ComboChart({
                           : 'teal'
                         : row.tone
                     }
+                    style={row.color ? { color: row.color } : undefined}
                   >
                     {row.text ?? shown(row.value, row.money)}
                   </b>

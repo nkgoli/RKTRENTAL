@@ -83,7 +83,9 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState<WizardActionState>(idle);
-  const [pending, startTransition] = useTransition();
+  const [saving, startTransition] = useTransition();
+  const [exitRequested, setExitRequested] = useState(false);
+  const pending = saving || exitRequested;
   const [signState, signAction, signing] = useActionState(completeSigningAction, idle);
   const top = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -101,6 +103,13 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
   useEffect(() => {
     if (message) errorSummary.current?.focus();
   }, [message, errors]);
+
+  useEffect(() => {
+    // The action result can resolve before Next commits its router update. Navigating
+    // inside that save transition can discard the update and leave it pending forever.
+    // Wait for the save to settle; keep controls disabled until navigation unmounts us.
+    if (exitRequested && !saving) router.push(props.exitHref);
+  }, [exitRequested, saving, router, props.exitHref]);
 
   const update = (patch: Partial<WizardDraft>) => {
     draftRef.current = withResolvedEnd({ ...draftRef.current, ...patch });
@@ -168,7 +177,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
 
   function saveAndExit() {
     startTransition(async () => {
-      if (await save(step, step, false)) router.push(props.exitHref);
+      if (await save(step, step, false)) setExitRequested(true);
     });
   }
 

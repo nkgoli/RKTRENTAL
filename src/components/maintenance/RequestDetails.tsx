@@ -20,6 +20,7 @@ export function RequestDetails({
   returnTo = '/maintenance',
   expanded = false,
   hideEdit = false,
+  documentActions = false,
 }: {
   request: MaintenanceBoardRequest;
   vendors: { id: string; name: string }[];
@@ -27,6 +28,7 @@ export function RequestDetails({
   returnTo?: string;
   expanded?: boolean;
   hideEdit?: boolean;
+  documentActions?: boolean;
 }) {
   return (
     <details className={styles.details} open={expanded}>
@@ -44,7 +46,15 @@ export function RequestDetails({
         )}
         <p className={styles.description}>{request.description || 'No description provided.'}</p>
         <div className={styles.controlGrid}>
-          <RequestActionForm action={actions.assign} label={`Assign vendor for ${request.title}`}>
+          <RequestActionForm
+            action={actions.assign}
+            transport={
+              documentActions
+                ? { operation: 'assign', propertyId: request.propertyId, unitId: request.unit.id }
+                : undefined
+            }
+            label={`Assign vendor for ${request.title}`}
+          >
             <input type="hidden" name="requestId" value={request.id} />
             <label className="field">
               Assign vendor
@@ -71,7 +81,15 @@ export function RequestDetails({
               Assign
             </button>
           </RequestActionForm>
-          <RequestActionForm action={actions.status} label={`Change status for ${request.title}`}>
+          <RequestActionForm
+            action={actions.status}
+            transport={
+              documentActions
+                ? { operation: 'status', propertyId: request.propertyId, unitId: request.unit.id }
+                : undefined
+            }
+            label={`Change status for ${request.title}`}
+          >
             <input type="hidden" name="requestId" value={request.id} />
             <label className="field">
               Change status
@@ -106,7 +124,15 @@ export function RequestDetails({
           ) : (
             <p className="muted">No photos attached. Add one to help the vendor prepare.</p>
           )}
-          <RequestActionForm action={actions.photo} label={`Add photo to ${request.title}`}>
+          <RequestActionForm
+            action={actions.photo}
+            transport={
+              documentActions
+                ? { operation: 'photo', propertyId: request.propertyId, unitId: request.unit.id }
+                : undefined
+            }
+            label={`Add photo to ${request.title}`}
+          >
             <input type="hidden" name="requestId" value={request.id} />
             <FileUploader kind="photo" formField="photo" multiple={false} label="Add photo" />
             <button className="btn btn-secondary btn-sm" type="submit">
@@ -125,7 +151,15 @@ export function RequestDetails({
           ) : (
             <p className="muted">No comments yet.</p>
           )}
-          <RequestActionForm action={actions.comment} label={`Comment on ${request.title}`}>
+          <RequestActionForm
+            action={actions.comment}
+            transport={
+              documentActions
+                ? { operation: 'comment', propertyId: request.propertyId, unitId: request.unit.id }
+                : undefined
+            }
+            label={`Comment on ${request.title}`}
+          >
             <input type="hidden" name="requestId" value={request.id} />
             <label className="field">
               Comment

@@ -1,6 +1,14 @@
-.form {
+.page {
+  width: 100%;
   max-width: 880px;
-  margin: 24px auto;
+  min-width: 0;
+  margin: 0 auto;
+  overflow-wrap: anywhere;
+}
+.form {
+  width: 100%;
+  min-width: 0;
+  margin: 24px 0;
   padding-bottom: 32px;
 }
 .fields {

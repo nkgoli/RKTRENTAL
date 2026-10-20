@@ -1,44 +1,44 @@
 # Dedicated maintenance forms
 
-Add requests now opens `/maintenance/new`; editing issue details opens `/maintenance/[id]/edit`. The earlier inline/dialog creation flow is replaced by full-page sections for location, issue details and photos. Edit retains assignment/status, existing photos, comments and history through the existing services. Location is read-only on edit.
+Add requests opens `/maintenance/new`; issue editing opens `/maintenance/[id]/edit`. Both use a responsive page column capped at 880px. The form explicitly fills the column, and the edit activity section shares its width and left edge. Location is read-only on edit.
 
 ## Entry points and return context
 
-| Entry                                                   | Destination                                                                                                 |
-| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Global Maintenance header and empty state               | New page with current property/unit and list query in returnTo                                              |
-| Property or unit Maintenance Add / first-request action | New page with validated property/unit preselection and scoped return path                                   |
-| Global Manage request > Edit request                    | Edit page with request scope and current list query                                                         |
-| Property/unit Manage request > Edit request             | Edit page with request scope and scoped return path                                                         |
-| Back / Cancel                                           | Validated maintenance-only origin; no write                                                                 |
-| Created confirmation                                    | Origin plus created-request anchor; partial photo failure remains a successful creation with retry guidance |
+| Entry                                                 | Destination                                                                      |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Global Maintenance header and empty state             | New page with property/unit scope and current list query in returnTo             |
+| Property/unit Maintenance Add or first-request action | New page with validated preselection and scoped/filter return context            |
+| Global Manage request > Edit request                  | Edit page with request scope and list query                                      |
+| Property/unit Manage request > Edit request           | Edit page with request scope and scoped/filter return context                    |
+| Back / Cancel                                         | Validated maintenance-only origin, document navigation, no write                 |
+| Created confirmation                                  | Origin plus created-request anchor; partial photo failure retains retry guidance |
 
-Edit saves only title, description and priority with organization, request, property and unit constraints in the database mutation. It does not accept relocation/status/vendor fields. Manager authentication and service validation remain mandatory. Create excludes archived units, validates scope on the server, and retains existing photo failure handling. Assignment and status continue through their existing services and event semantics.
+Issue saves update only title, description and priority using organization/request/property/unit constraints. Location, vendor, status, events, photos and history are preserved. Manager authentication, scope validation and existing maintenance services remain mandatory.
 
-## Verification
+Production verification exposed unusable Flight responses for Cancel and edit actions. Back/Cancel/confirmation now use document navigation. Issue forms submit through `/maintenance/form`, which returns JSON from the existing authenticated services. Retained assignment/status/comment/photo actions on the edit page use this same handler and reload the document after success with a fixed success notice. Existing global/property action services and their access/status rules remain intact.
 
-- `npm run typecheck`: passed.
-- Scoped ESLint, excluding generated runtime files: passed.
-- `git diff --check`: passed.
-- `npm test -- tests/maintenance tests/workspace/operations --exclude **/.runtime/** --exclude **/.dev-runtime/**`: 22 tests passed across six files. Includes scoped updates, manager authorization, invalid issue fields, safe navigation, retained draft and error focus, and existing action regressions.
-- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3294 npx playwright test --project=maintenance`: two browser scenarios passed, desktop 1440 and phone 390. Tests cover global create cancellation; property/unit preselection; rejected create and draft correction; create with photo; edit/reload persistence; vendor/status/comment persistence; another issue edit preserving existing activity/photo/status; edit cancellation; and blocked foreign property/unavailable request forms.
-- Configured Playwright MCP additionally exercised global create/edit, edit validation and correction, photo upload after creation, assignment, status, comment, global and scoped cancellation, scoped photographed creation and phone edit. Error feedback receives focus. Final mobile form has no horizontal overflow; Save/Create is 44px high, reachable and focusable. Screenshots below are actual runtime captures.
+## Final review verification
 
-## Runtime and evidence
+- `node tests/maintenance/runtime.cjs build`: passed optimized production compilation, lint/type validation, static generation and route tracing, including new, edit and form-handler routes.
+- `node tests/maintenance/runtime.cjs start`: production runtime on port 3294 with the retained synthetic fixture and task-only storage/cache.
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3294 npx playwright test --project=maintenance`: two production scenarios passed at 1440 and 390. Both use long titles and descriptions. They assert desktop form width above 800px, phone width above 330px, matching edit/activity widths and left edges, no horizontal overflow, and focused Save/Create actions. They also cover global creation cancellation, scoped creation/photo/preselection, rejected save and draft correction, edit/reload persistence, vendor/status/comment persistence, subsequent issue editing preserving photo/activity/status, Cancel, and unavailable IDs.
+- Configured Playwright browser observations additionally measured a shared 880px desktop form/activity width and about 343-358px on phones, no overflow and 44px actions in the viewport. JSON edit save feedback was observed. The later browser session was reset by the MCP server; the final captures below come from the passing production Playwright scenarios on the corrected source.
+- Affected tests: `npm test -- tests/maintenance/form-route.test.ts tests/maintenance/issue-form.test.tsx tests/maintenance/actions.test.ts tests/maintenance/feedback.test.tsx`: 15 passed in four files. Existing unrelated service/isolation results (22 tests across the original six files) were reused rather than rerun.
+- Scoped ESLint and whitespace checks passed. Production build supplies the corrected source's typecheck.
 
-`node tests/maintenance/runtime.cjs seed` creates only the named synthetic QA organization, manager, property, unit and vendor in the local development database. It does not reseed/reset shared data. `node tests/maintenance/runtime.cjs` serves a task-owned source snapshot on 3294 with its own Next cache, auth secret and storage directory under `tests/maintenance/.runtime`. The fixture and uploaded files remain on disk. The server is stopped after verification. Exact candidate/source hashes, listener identity and release observations are in `tests/maintenance/evidence/runtime-identity.json`, submitted with the captures.
+## Final capture manifest
 
-| Flow                                     | Capture                                                                                                                                                                |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Desktop create with photo                | `tests/maintenance/evidence/create-desktop-final.png`                                                                                                                  |
-| Desktop rejected edit / retained draft   | `tests/maintenance/evidence/maintenance-validation-desktop.png`                                                                                                        |
-| Desktop persisted actions                | `tests/maintenance/evidence/maintenance-edit-actions-desktop.png`                                                                                                      |
-| Phone create action clearance            | `tests/maintenance/evidence/create-clearance-390.png`                                                                                                                  |
-| Phone rejected edit / retained draft     | `tests/maintenance/evidence/edit-validation-390.png`                                                                                                                   |
-| Phone scoped cancellation                | `tests/maintenance/evidence/cancel-property-390.png`                                                                                                                   |
-| Phone access isolation                   | `tests/maintenance/evidence/access-isolation-390.png`                                                                                                                  |
-| Automated create and edit at both widths | `tests/maintenance/evidence/automated-create-1440.png`, `automated-edit-1440.png`, `automated-create-390.png`, `automated-edit-390.png` in the same evidence directory |
+These actual production captures supersede the earlier narrow-form development captures. Each automated capture is taken during the named passing scenario with long content; edit captures include persisted vendor, status, activity and photo.
 
-## Limits
+| Flow                                                                      | Actual submitted path                                      |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Desktop create and validation correction                                  | `tests/maintenance/evidence/automated-create-1440.png`     |
+| Desktop persisted edit and aligned activity                               | `tests/maintenance/evidence/automated-edit-1440.png`       |
+| Phone create, photo and action clearance                                  | `tests/maintenance/evidence/automated-create-390.png`      |
+| Phone persisted edit and aligned activity                                 | `tests/maintenance/evidence/automated-edit-390.png`        |
+| Scoped filter return on Cancel (retained list capture; unaffected layout) | `tests/maintenance/evidence/cancel-scoped-filters-390.png` |
+| Foreign property protection (retained unavailable-page capture)           | `tests/maintenance/evidence/access-isolation-390.png`      |
 
-Verification uses a development Next runtime and synthetic data. Production build, native desktop browser and external notification delivery were not tested. Next streams its not-found UI after the shell with HTTP 200 in this runtime; isolation tests assert the unavailable page and absence of forms rather than a pre-stream HTTP status. No push, publication or target-branch integration is claimed.
+## Runtime identity and release
+
+`tests/maintenance/evidence/runtime-identity.json` records the candidate, exact source/snapshot hashes, production build ID, runtime health/listener and release observations. The runtime snapshot is under `tests/maintenance/.runtime`; no shared build output is used. The synthetic organization and uploaded storage files are retained on disk. Only this Task's server process is stopped after checks; no database reset or shared fixture reseed is performed. Native desktop browser and external notification delivery remain untested. No push, publication or target-branch integration is claimed.

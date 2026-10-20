@@ -38,8 +38,11 @@ for (const width of [1440, 390])
     await expect(page.getByLabel('Description', { exact: true })).toHaveValue(
       'Keep draft after validation',
     );
-    const title = `Synthetic repair ${width} ${Date.now()}`;
+    const title = `Synthetic repair ${width} ${Date.now()} ${'long issue title '.repeat(6)}`.trim();
     await page.getByLabel('Request title', { exact: true }).fill(title);
+    await page
+      .getByLabel('Description', { exact: true })
+      .fill('Long create issue details and access instructions. '.repeat(50));
     await page.getByLabel('Priority', { exact: true }).selectOption('HIGH');
     await page.getByLabel('Choose a file').setInputFiles(photo);
     await page
@@ -48,6 +51,10 @@ for (const width of [1440, 390])
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
+    const createBox = await form.boundingBox();
+    expect(createBox!.width).toBeGreaterThan(width === 1440 ? 800 : 330);
+    await page.getByRole('button', { name: 'Create request', exact: true }).focus();
+    await expect(page.getByRole('button', { name: 'Create request', exact: true })).toBeFocused();
     await page.screenshot({
       path: `tests/maintenance/evidence/automated-create-${width}.png`,
       fullPage: true,
@@ -62,7 +69,9 @@ for (const width of [1440, 390])
     await expect(page.getByLabel('Request title', { exact: true })).toHaveValue(title);
     const edit = page.url();
     await page.getByLabel('Request title', { exact: true }).fill(`${title} edited`);
-    await page.getByLabel('Description', { exact: true }).fill('Saved issue details');
+    await page
+      .getByLabel('Description', { exact: true })
+      .fill('Long issue details and access instructions. '.repeat(55));
     await page.getByLabel('Priority', { exact: true }).selectOption('URGENT');
     await page.getByRole('button', { name: 'Save changes' }).click();
     await expect(
@@ -71,7 +80,7 @@ for (const width of [1440, 390])
     await page.reload();
     await expect(page.getByLabel('Request title', { exact: true })).toHaveValue(`${title} edited`);
     await expect(page.getByLabel('Description', { exact: true })).toHaveValue(
-      'Saved issue details',
+      'Long issue details and access instructions. '.repeat(55).trim(),
     );
     await expect(page.getByLabel('Priority', { exact: true })).toHaveValue('URGENT');
     await expect(page.getByRole('link', { name: /Open photo/ })).toHaveCount(1);
@@ -90,7 +99,7 @@ for (const width of [1440, 390])
     await expect(page.getByText('Retained activity', { exact: true })).toBeVisible();
     await page
       .getByLabel('Description', { exact: true })
-      .fill('Issue updated with existing activity');
+      .fill('Long issue details with retained activity. '.repeat(55));
     await page.getByRole('button', { name: 'Save changes' }).click();
     await expect(
       page.getByRole('status').filter({ hasText: 'Repair request saved.' }),
@@ -99,6 +108,21 @@ for (const width of [1440, 390])
     await expect(page.getByText('Retained activity', { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: /Open photo/ })).toHaveCount(1);
     await expect(page.locator('select[name=status]')).toHaveValue('IN_PROGRESS');
+    const editForm = page.getByRole('form', { name: 'Edit repair request', exact: true });
+    const editBox = await editForm.boundingBox();
+    const activityBox = await page
+      .getByRole('heading', { name: 'Assignment, status & activity' })
+      .locator('..')
+      .boundingBox();
+    expect(editBox!.width).toBeGreaterThan(width === 1440 ? 800 : 330);
+    expect(Math.abs(editBox!.width - activityBox!.width)).toBeLessThan(2);
+    expect(Math.abs(editBox!.x - activityBox!.x)).toBeLessThan(2);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.getByRole('button', { name: 'Save changes' }).scrollIntoViewIfNeeded();
+    await page.getByRole('button', { name: 'Save changes' }).focus();
+    await expect(page.getByRole('button', { name: 'Save changes' })).toBeFocused();
     await page.screenshot({
       path: `tests/maintenance/evidence/automated-edit-${width}.png`,
       fullPage: true,

@@ -8,7 +8,12 @@ process.env.DATABASE_URL =
 process.env.ROCKETRENTAL_AUTH_SECRET = 'maintenance-synthetic-runtime-secret-2026-1019';
 process.env.ROCKETRENTAL_AUTH_COOKIE_SECURE = 'false';
 process.env.STORAGE_LOCAL_DIR = path.join(runtime, 'storage');
-process.env.NODE_ENV = 'development';
+const mode = process.argv.includes('build')
+  ? 'build'
+  : process.argv.includes('start')
+    ? 'start'
+    : 'dev';
+process.env.NODE_ENV = mode === 'dev' ? 'development' : 'production';
 if (process.argv.includes('seed')) {
   const { PrismaClient } = require('@prisma/client');
   const db = new PrismaClient();
@@ -89,11 +94,8 @@ if (process.argv.includes('seed')) {
   process.argv = [
     process.execPath,
     require.resolve('next/dist/bin/next'),
-    'dev',
-    '-H',
-    '127.0.0.1',
-    '-p',
-    '3294',
+    mode,
+    ...(mode === 'build' ? [] : ['-H', '127.0.0.1', '-p', '3294']),
   ];
   require('next/dist/bin/next');
 }

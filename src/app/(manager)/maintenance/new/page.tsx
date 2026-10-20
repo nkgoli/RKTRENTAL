@@ -1,10 +1,9 @@
-import Link from 'next/link';
+import styles from '@/components/maintenance/issue-form.module.css';
 import { notFound } from 'next/navigation';
 import { requireManagerRole } from '@/lib/auth/access';
 import { listMaintenanceOptions } from '@/lib/maintenance';
 import { maintenanceReturn } from '@/lib/maintenance/navigation';
 import { MaintenanceIssueForm } from '@/components/maintenance/MaintenanceIssueForm';
-import { createRequest } from '@/components/maintenance/request-actions';
 export default async function NewRequestPage({
   searchParams,
 }: {
@@ -21,26 +20,19 @@ export default async function NewRequestPage({
   );
   if (params.unitId && !units.some((u) => u.id === params.unitId)) notFound();
   const returnTo = maintenanceReturn(params.returnTo);
-  async function save(form: FormData) {
-    'use server';
-    const result = await createRequest(form, params.propertyId, params.unitId);
-    if (result.requestId)
-      result.requestHref = `${returnTo.split('#')[0]}#request-${result.requestId}`;
-    return result;
-  }
   return (
-    <>
-      <Link href={returnTo}>Back to repair requests</Link>
+    <div className={styles.page}>
+      <a href={returnTo}>Back to repair requests</a>
       <h1>New repair request</h1>
       <p className="muted">
         Choose a unit, set a priority and add photos to help the vendor prepare.
       </p>
       <MaintenanceIssueForm
-        action={save}
+        scope={{ propertyId: params.propertyId, unitId: params.unitId }}
         returnTo={returnTo}
         units={units.filter((u) => !params.unitId || u.id === params.unitId)}
         selectedUnitId={params.unitId}
       />
-    </>
+    </div>
   );
 }

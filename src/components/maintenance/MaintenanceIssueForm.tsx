@@ -1,24 +1,38 @@
 'use client';
-import Link from 'next/link';
 import { useActionState, useEffect, useRef, startTransition } from 'react';
 import { FileUploader } from '@/components/upload';
 import type { RequestActionResult, RequestAction } from './RequestActionForm';
 import styles from './issue-form.module.css';
 export function MaintenanceIssueForm({
   action,
+  scope,
   returnTo,
   units,
   selectedUnitId,
   request,
 }: {
-  action: RequestAction;
+  action?: RequestAction;
+  scope?: { requestId?: string; propertyId?: string; unitId?: string };
   returnTo: string;
   units: { id: string; number: string }[];
   selectedUnitId?: string;
   request?: { title: string; description: string | null; priority: string; location: string };
 }) {
   const [result, submit, pending] = useActionState(
-    async (_: RequestActionResult, data: FormData) => action(data),
+    async (_: RequestActionResult, data: FormData): Promise<RequestActionResult> => {
+      if (action) return action(data);
+      data.set('returnTo', returnTo);
+      if (scope?.requestId) data.set('requestId', scope.requestId);
+      if (scope?.propertyId) data.set('propertyId', scope.propertyId);
+      if (scope?.unitId) data.set('scopeUnitId', scope.unitId);
+      try {
+        const response = await fetch('/maintenance/form', { method: 'POST', body: data });
+        if (!response.ok) throw new Error('Save failed');
+        return await response.json();
+      } catch {
+        return { error: 'The request could not be saved. Your changes are still here. Try again.' };
+      }
+    },
     {},
   );
   const feedback = useRef<HTMLParagraphElement>(null);
@@ -44,8 +58,7 @@ export function MaintenanceIssueForm({
       )}
       {result.message && (
         <p ref={feedback} tabIndex={-1} role="status">
-          {result.message}{' '}
-          <Link href={result.requestHref ?? returnTo}>Back to repair requests</Link>
+          {result.message} <a href={result.requestHref ?? returnTo}>Back to repair requests</a>
         </p>
       )}
       {!result.requestId && (
@@ -123,9 +136,9 @@ export function MaintenanceIssueForm({
             </section>
           )}
           <div className={styles.actions}>
-            <Link className="btn btn-secondary" href={returnTo}>
+            <a className="btn btn-secondary" href={returnTo}>
               Cancel
-            </Link>
+            </a>
             <button
               type="submit"
               className="btn btn-primary"

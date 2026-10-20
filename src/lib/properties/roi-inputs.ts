@@ -14,7 +14,12 @@ export type PropertyRoiInputs = {
   options: Partial<z.infer<typeof OptionsSchema>>;
   /** Explicit unknowns also suppress automatic source fallbacks for a new analysis. */
   cleared?: string[];
+  /** Read-only: stored values that are still fictional demo assumptions. Never submitted. */
+  demo?: RoiDemoProvenance;
 };
+export type RoiDemoProvenance = { label: string; paths: string[] };
+/** A PropertyRoiProvenance row: the demo values a loader wrote, by financial input path. */
+export type RoiProvenanceRow = { label: string; values: unknown } | null | undefined;
 const Schema = z
   .object({
     version: z.literal(1),
@@ -126,6 +131,46 @@ function valueAt(object: unknown, path: string): unknown {
     );
 }
 
+export function demoValues(provenance: RoiProvenanceRow): Record<string, unknown> {
+  const values = provenance?.values;
+  if (!values || typeof values !== 'object' || Array.isArray(values)) return {};
+  return Object.fromEntries(
+    Object.entries(values).filter(([path]) => financialInputPaths.includes(path)),
+  );
+}
+
+const sameValue = (a: unknown, b: unknown) =>
+  typeof a === 'string' && typeof b === 'string' && !Number.isNaN(Date.parse(a))
+    ? Date.parse(a) === Date.parse(b)
+    : a === b;
+
+/**
+ * A stored input is a demo assumption only while it still equals the value the demo loader
+ * recorded and is not cleared; customized and genuinely entered values are never labeled.
+ */
+export function demoProvenance(
+  stored: PropertyRoiInputs | undefined,
+  provenance: RoiProvenanceRow,
+): RoiDemoProvenance | undefined {
+  const paths = Object.entries(demoValues(provenance))
+    .filter(
+      ([path, value]) =>
+        !stored?.cleared?.includes(path) && sameValue(valueAt(stored, path), value),
+    )
+    .map(([path]) => path)
+    .sort();
+  return provenance && paths.length ? { label: provenance.label, paths } : undefined;
+}
+
+/** Demo values left after a customer patch: any supplied or cleared path is the customer's. */
+export function demoValuesAfterPatch(provenance: RoiProvenanceRow, patch: PropertyRoiInputs) {
+  return Object.fromEntries(
+    Object.entries(demoValues(provenance)).filter(
+      ([path]) => valueAt(patch, path) === undefined && !patch.cleared?.includes(path),
+    ),
+  );
+}
+
 /** Only admitted leaf paths can be deleted; never traverse arbitrary object keys. */
 export function clearRoiPath(object: unknown, path: string) {
   if (!financialInputPaths.includes(path)) return;
@@ -162,9 +207,11 @@ export function readPropertyRoiInputs(row: {
   roiInputs?: unknown;
   purchasePrice: unknown;
   loanAmount: unknown;
+  roiProvenance?: RoiProvenanceRow;
 }): PropertyRoiInputs {
   const parsed = parseRoiInputs(row.roiInputs);
   const stored = parsed.success ? parsed.data : undefined;
+  const demo = demoProvenance(stored, row.roiProvenance);
   return {
     version: 1,
     input: {
@@ -180,5 +227,6 @@ export function readPropertyRoiInputs(row: {
     },
     options: stored?.options ?? {},
     ...(stored?.cleared?.length ? { cleared: stored.cleared } : {}),
+    ...(demo ? { demo } : {}),
   };
 }

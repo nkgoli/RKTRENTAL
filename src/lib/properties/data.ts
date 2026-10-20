@@ -1,6 +1,12 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
-import { readPropertyRoiInputs, roiStorage, type PropertyRoiInputs } from './roi-inputs';
+import {
+  demoValues,
+  demoValuesAfterPatch,
+  readPropertyRoiInputs,
+  roiStorage,
+  type PropertyRoiInputs,
+} from './roi-inputs';
 import {
   IMPLICIT_UNIT_NUMBER,
   checkTypeChange,
@@ -163,6 +169,7 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
           orderBy: { number: 'asc' },
           include: { leases: activeLeaseInclude },
         },
+        roiProvenance: { select: { label: true, values: true } },
       },
     });
     if (!property) return null;
@@ -401,6 +408,7 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
         where: { id, organizationId },
         data: { ...basics, ...roiStorage(current.roiInputs, roiInputs) },
       });
+      if (roiInputs) await releaseDemoValues(tx, id, roiInputs);
       if (current.type !== nextType) {
         if (nextType === 'MULTI_UNIT') {
           await tx.unit.updateMany({
@@ -437,7 +445,26 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
         where: { id, organizationId },
         data: roiStorage(current.roiInputs, patch),
       });
+      await releaseDemoValues(tx, id, patch);
       return { ok: true, id };
+    });
+  }
+
+  /** Values a customer supplies or clears are theirs, even if equal to a demo value. */
+  async function releaseDemoValues(
+    tx: Prisma.TransactionClient,
+    id: string,
+    patch: PropertyRoiInputs,
+  ) {
+    const provenance = await tx.propertyRoiProvenance.findFirst({
+      where: { propertyId: id, organizationId },
+    });
+    if (!provenance) return;
+    const values = demoValuesAfterPatch(provenance, patch);
+    if (Object.keys(values).length === Object.keys(demoValues(provenance)).length) return;
+    await tx.propertyRoiProvenance.updateMany({
+      where: { propertyId: id, organizationId },
+      data: { values: values as Prisma.InputJsonObject },
     });
   }
 

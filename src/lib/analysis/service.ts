@@ -1,7 +1,7 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import type { AuthSession } from '../auth/session';
 import { z } from 'zod';
-import { clearRoiPath, parseRoiInputs } from '../properties/roi-inputs';
+import { clearRoiPath, demoProvenance, parseRoiInputs } from '../properties/roi-inputs';
 import {
   ENGINE_ID,
   IdSchema,
@@ -138,6 +138,7 @@ export function analysisService(session: Manager, db: PrismaClient) {
           orderBy: [{ occurredOn: 'desc' }, { id: 'asc' }],
           take: 1001,
         },
+        roiProvenance: { select: { label: true, values: true } },
       },
     });
     if (!p) return fail('NOT_FOUND');
@@ -147,13 +148,17 @@ export function analysisService(session: Manager, db: PrismaClient) {
       sourceId: string,
       source: AssumptionEvidence['source'],
       message: string,
+      demo?: string,
     ) =>
       evidence.push({
         path,
         sourceId,
         source,
         observedAt: observedAt.toISOString(),
-        note: message,
+        note: demo
+          ? `Fictional demo assumption (${demo}); wholly synthetic sample data, not a recorded actual or customer entry.`
+          : message,
+        ...(demo ? { demo } : {}),
       });
     const purchasePrice = money(p.purchasePrice),
       loanAmount = money(p.loanAmount);
@@ -209,6 +214,8 @@ export function analysisService(session: Manager, db: PrismaClient) {
     };
     const stored = parseRoiInputs(p.roiInputs);
     if (stored.success && stored.data) {
+      const demo = demoProvenance(stored.data, p.roiProvenance);
+      const demoLabel = (path: string) => (demo?.paths.includes(path) ? demo.label : undefined);
       for (const key of [
         'purchase',
         'financing',
@@ -226,11 +233,18 @@ export function analysisService(session: Manager, db: PrismaClient) {
             p.id,
             'property',
             'Customer-supplied property forecast assumption; no market defaults inferred.',
+            demoLabel(`input.${key}.${field}`),
           );
       }
       payload.options = stored.data.options;
       for (const key of Object.keys(payload.options))
-        note(`options.${key}`, p.id, 'property', 'Customer-supplied projection option.');
+        note(
+          `options.${key}`,
+          p.id,
+          'property',
+          'Customer-supplied projection option.',
+          demoLabel(`options.${key}`),
+        );
       if (purchasePrice !== undefined) payload.input.purchase!.purchasePrice = purchasePrice;
       if (loanAmount !== undefined) payload.input.financing!.loanAmount = loanAmount;
       if (stored.data.input.income?.monthlyRent !== undefined)

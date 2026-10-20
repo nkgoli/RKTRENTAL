@@ -1,9 +1,11 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import {
+  demoProvenance,
   parseRoiInputs,
   roiStorage,
   type PropertyRoiInputs,
 } from '../src/lib/properties/roi-inputs';
+import { financialInputPaths } from '../src/lib/analysis/contract';
 import { demoOrganizationId } from './roi-examples';
 
 /**
@@ -95,9 +97,36 @@ export function seedRoiInputs(): {
   });
 }
 
+/** Every value this dataset writes, by financial input path (never price/debt). */
+export function seedDemoValues(inputs: PropertyRoiInputs): Record<string, unknown> {
+  const values: Record<string, unknown> = {};
+  for (const path of financialInputPaths) {
+    const value = path
+      .split('.')
+      .reduce<unknown>(
+        (v, key) => (v && typeof v === 'object' ? (v as Record<string, unknown>)[key] : undefined),
+        inputs,
+      );
+    if (value !== undefined) values[path] = value;
+  }
+  return values;
+}
+
 /**
- * Additive: fills ROI inputs only on confirmed, unedited seed properties.
- * Any existing roiInputs (customer edits or clears) and saved analyses are preserved.
+ * Provenance for an already-populated record: only values that still equal this dataset's
+ * value and are not cleared. Customized or cleared values are never labeled.
+ */
+export function backfillDemoValues(stored: PropertyRoiInputs, inputs: PropertyRoiInputs) {
+  const all = seedDemoValues(inputs);
+  const unchanged = demoProvenance(stored, { label: seedRoiInputsVersion, values: all });
+  return Object.fromEntries((unchanged?.paths ?? []).map((path) => [path, all[path]]));
+}
+
+/**
+ * Additive: fills ROI inputs only on confirmed, unedited seed properties and records which
+ * values are fictional demo assumptions in PropertyRoiProvenance. Existing inputs, customer
+ * edits, clears and saved analyses are never replaced; existing records only gain provenance
+ * for values still equal to this dataset.
  */
 export async function loadSeedRoiInputs(db: PrismaClient) {
   await db.organization.findUniqueOrThrow({ where: { id: demoOrganizationId } });
@@ -106,7 +135,10 @@ export async function loadSeedRoiInputs(db: PrismaClient) {
     const outcome = await db.$transaction(async (tx) => {
       // Same row lock as property edits, so a concurrent customer edit is never overwritten.
       await tx.$queryRaw`SELECT id FROM "Property" WHERE id = ${demo.id} FOR UPDATE`;
-      const row = await tx.property.findUnique({ where: { id: demo.id } });
+      const row = await tx.property.findUnique({
+        where: { id: demo.id },
+        include: { roiProvenance: true },
+      });
       if (!row) return 'absent';
       if (
         row.organizationId !== demoOrganizationId ||
@@ -115,16 +147,35 @@ export async function loadSeedRoiInputs(db: PrismaClient) {
         row.archivedAt
       )
         return 'skipped: not the unmodified seed record';
-      if (row.roiInputs != null) return 'preserved: existing ROI inputs';
-      await tx.property.updateMany({
-        where: {
-          id: demo.id,
+      if (row.roiProvenance) return 'preserved: existing ROI inputs and provenance';
+      let values = seedDemoValues(demo.inputs);
+      let outcome = `populated ${seedRoiInputsVersion}`;
+      if (row.roiInputs != null) {
+        const parsed = parseRoiInputs(row.roiInputs);
+        if (!parsed.success || !parsed.data) return 'preserved: unreadable ROI inputs';
+        values = backfillDemoValues(parsed.data, demo.inputs);
+        if (!Object.keys(values).length) return 'preserved: customized ROI inputs';
+        outcome = `provenance added for ${Object.keys(values).length} unchanged demo values`;
+      } else {
+        await tx.property.updateMany({
+          where: {
+            id: demo.id,
+            organizationId: demoOrganizationId,
+            roiInputs: { equals: Prisma.DbNull },
+          },
+          data: roiStorage(null, demo.inputs),
+        });
+      }
+      // Provenance only; stored inputs, clears and sibling fields are left exactly as they are.
+      await tx.propertyRoiProvenance.create({
+        data: {
+          propertyId: demo.id,
           organizationId: demoOrganizationId,
-          roiInputs: { equals: Prisma.DbNull },
+          label: seedRoiInputsVersion,
+          values: values as Prisma.InputJsonObject,
         },
-        data: roiStorage(null, demo.inputs),
       });
-      return `populated ${seedRoiInputsVersion}`;
+      return outcome;
     });
     outcomes.push({ propertyId: demo.id, outcome });
   }

@@ -443,9 +443,11 @@ export function RoiWorkspace({
         <small>
           {values[f.path] !== valuesFrom(payload!)[f.path]
             ? 'Manager assumption'
-            : evidence
-              ? `${evidence.source} source - review for forecast`
-              : 'Manager assumption'}
+            : evidence?.demo
+              ? 'Fictional demo value - not a recorded actual'
+              : evidence
+                ? `${evidence.source} source - review for forecast`
+                : 'Manager assumption'}
         </small>
         {error && (
           <small id={`${f.path}-error`} className={styles.error}>
@@ -456,6 +458,15 @@ export function RoiWorkspace({
     );
   }
   const metrics = result?.summaryMetrics;
+  // Fields whose latest evidence is a fictional demo value the manager has not replaced.
+  const demoFields = payload
+    ? allFields.flatMap((f) => {
+        const latest = payload.evidence.filter((e) => e.path === f.path).at(-1);
+        return latest?.demo && values[f.path] === valuesFrom(payload)[f.path]
+          ? [{ path: f.path, demo: latest.demo }]
+          : [];
+      })
+    : [];
   return (
     <div className={styles.workspace}>
       <div inert={pending !== null}>
@@ -536,6 +547,14 @@ export function RoiWorkspace({
                     ? 'Calculated automatically from your current assumptions.'
                     : 'Add the missing assumptions to calculate automatically. You can save a draft at any time.'}
                 </p>
+                {!!demoFields.length && (
+                  <p className={styles.notice} data-demo-assumptions={demoFields.length}>
+                    Sample data: {demoFields.length} assumption
+                    {demoFields.length === 1 ? ' is' : 's are'} fictional demo values (
+                    {demoFields[0].demo}), not recorded actuals. Replace any value with your own to
+                    use it.
+                  </p>
+                )}
                 {!!errors.length && (
                   <details className={styles.notice} open>
                     <summary>

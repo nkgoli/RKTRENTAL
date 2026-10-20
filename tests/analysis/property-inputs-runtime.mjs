@@ -90,6 +90,7 @@ try {
     'vitest.config.ts',
     'tests/analysis/property-inputs.test.ts',
     'tests/analysis/persistence.test.ts',
+    'tests/roi/demo-provenance-db.test.ts',
     'tests/analysis/contract.test.ts',
   ]);
 } finally {

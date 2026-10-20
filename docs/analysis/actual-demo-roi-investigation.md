@@ -85,6 +85,64 @@ Customer entry through the dedicated pages:
 Both test properties are left in the demo organization, clearly labeled, for review; archive them
 from the property page if not wanted. No demo analysis was saved, so no saved override was created.
 
+## Demo provenance (review follow-up)
+
+Review found the fictional values were labeled "property source - review for forecast" with no
+demo identification. The loader now records the values it writes in the additive
+`PropertyRoiProvenance` table (migration `20261023000000_property_roi_provenance`); the contract
+is in property-roi-inputs.md, "Fictional demo provenance".
+
+Why a separate table: the running 3100 build validates `Property.roiInputs` strictly. A
+provenance key inside that JSON would make that build ignore the stored inputs, and an edit there
+could drop them. The table is invisible to that build.
+
+How customized values are handled:
+
+- A value is labeled demo only while it equals the recorded value and is not cleared.
+- Supplying or clearing a value through property create/update or the ROI property patch removes
+  its provenance in the same transaction, so a re-entered identical number stays the customer's.
+- Records with existing inputs and no provenance get labels only for still-matching values. The
+  inputs themselves are never rewritten, and a record with no matching values gets no row.
+- Saved analyses keep their own evidence. Values the manager edits are recorded as manager
+  evidence, without `demo`.
+
+Live application, 2026-10-20 16:2x UTC, database localhost:5433/rocketrental:
+
+- `prisma migrate status` listed only `20261023000000_property_roi_provenance` as pending, and
+  `migrate deploy` applied just that migration.
+- `demo:roi -- --seed-inputs-only` reported `provenance added for 28 unchanged demo values` for
+  seed-property-maple, -harbor, -cedar and -elm; a rerun reported `preserved: existing ROI inputs
+  and provenance`.
+- Those four Property rows kept `updatedAt` 2026-10-20T16:05:42Z, price/debt and identical
+  `roiInputs`. The two TEST properties and maintenance-pages-property got no provenance row.
+  `RoiAnalysisState` stayed empty.
+
+Browser capture. The candidate was built from this checkout and served temporarily on
+localhost:3101 against the same database and the Jordan Mills account, because the user's 3100
+app runs the root checkout's existing build. That temporary server and the browser were stopped
+afterwards.
+
+- Maple ROI: "Sample data: 28 assumptions are fictional demo values (seed-roi-inputs-v1), not
+  recorded actuals" appears, and each demo field reads "Fictional demo value - not a recorded
+  actual". Purchase price and loan keep "property source - review for forecast". Still calculated
+  automatically, -$2,555 (live-maple-demo-provenance.png).
+- Customized, unsaved: rent 24000 changes that field to "Manager assumption", the count drops to
+  27 and the result recalculates to $6,733 (live-maple-customized-unsaved.png). Reload discarded
+  it and restored 28, rent 23000 and -$2,555.
+- Switching to Harbor View Lofts via Change property shows 28 and calculates
+  (live-harbor-demo-provenance-switch.png).
+- Non-demo TEST property `cmvgvmcno0001b9kw3fw52wgl`: no notice and no demo labels; its entered
+  values stay "property source", with 16 assumptions to review (live-test-property-no-demo-label.png).
+- Maple Edit page: notice plus 28 field labels. Editing rent removed only that field's label (27),
+  and vacancy kept its label (live-maple-edit-demo-labels.png). Left without saving.
+- The user's 3100 app still calculated Maple at -$2,555 after the migration. It shows the
+  designation once it runs a build that includes this change.
+
+Isolated database tests: `tests/roi/demo-provenance-db.test.ts`, run through
+`tests/analysis/property-inputs-runtime.mjs` on embedded PostgreSQL, covers populate, partial
+backfill around a customized value, skipping genuine and renamed records, idempotency, and release
+on edit/clear with matching property and draft output.
+
 ## Isolated check
 
 `tests/roi/seed-roi-inputs.test.ts` confirms the four input sets omit price/debt, combine with

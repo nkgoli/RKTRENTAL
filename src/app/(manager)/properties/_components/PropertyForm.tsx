@@ -245,6 +245,7 @@ export function PropertyForm({
         <PropertyRoiFields
           values={roiValues}
           original={originalRoi}
+          demo={initial?.roiInputs.demo}
           onChange={setRoiValues}
           errors={state.errors}
         />

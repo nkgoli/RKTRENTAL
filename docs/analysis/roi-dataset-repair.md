@@ -14,6 +14,9 @@ It pins `http://localhost:3100` to `localhost:5434/rocketrental` on every run,
 overriding stale port settings. The redacted effective connection is
 `postgresql://[redacted]@localhost:5434/rocketrental?schema=public`.
 Use `-StopExisting` for a deliberate restart and `-Rebuild` when needed.
+The logon task `RocketRentalLive3100` (`scripts/register-live-task.ps1`, default
+`-DbPort 5434`) serves the same dataset and survives restarts; see
+`realroi-chart-parity.md` §12.5 and §12.7.
 The root checkout's local `.env` also records the selected app/database ports.
 The older untracked `start-rocketrental.ps1` is a separate Preview launcher;
 use `scripts/start-live.ps1` for this dataset.
@@ -22,10 +25,10 @@ use `scripts/start-live.ps1` for this dataset.
 
 For November 1, 2025 through October 20, 2026, inclusive:
 
-| Dataset | Recorded operating income | Recorded operating expenses | Recorded NOI |
-| --- | ---: | ---: | ---: |
-| Screenshot dataset, port 5434 | $215,850 | $80,000 | $135,850 |
-| Separate dataset, port 5433 | $79,000 | $24,000 | $55,000 |
+| Dataset                       | Recorded operating income | Recorded operating expenses | Recorded NOI |
+| ----------------------------- | ------------------------: | --------------------------: | -----------: |
+| Screenshot dataset, port 5434 |                  $215,850 |                     $80,000 |     $135,850 |
+| Separate dataset, port 5433   |                   $79,000 |                     $24,000 |      $55,000 |
 
 These totals are observed records, not the fictional ROI forecast assumptions.
 “Partial” describes the records' coverage of that reporting period:

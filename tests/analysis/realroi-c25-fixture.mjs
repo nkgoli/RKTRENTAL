@@ -134,11 +134,6 @@ log.referenceTiles = await refCard.locator('.grid').first().innerText();
 await refCard.screenshot({
   path: path.join(outDir, 'ref-fixture-search-rental-distribution-1440.png'),
 });
-await rp.mouse.move(refBox.x + refBox.width * 0.62, refBox.y + refBox.height * 0.55);
-await rp.waitForTimeout(500);
-await refCard.screenshot({
-  path: path.join(outDir, 'ref-fixture-search-rental-distribution-tooltip-1440.png'),
-});
 
 // 2. RocketRental's C25 for the same comps, at the reference card's width.
 const pp = await browser.newPage({ viewport: { width: 1440, height: 900 } });

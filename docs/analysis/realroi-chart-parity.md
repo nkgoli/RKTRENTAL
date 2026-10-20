@@ -1303,7 +1303,6 @@ deterministic demo data, not market data:
 The fixture feeds both apps, and both cards are captured at 800 px:
 
 - `final/c25/ref-fixture-search-rental-distribution-1440.png`
-- `final/c25/ref-fixture-search-rental-distribution-tooltip-1440.png`
 - `final/c25/rr-fixture-rent-comps-rental-distribution-1440.png`
 
 Remaining C25 differences, all from the reference's source:
@@ -1401,3 +1400,40 @@ To make room in the repository:
   as card2, card1 and card1.
 - The superseded `roi-graphs/fix/` captures were re-encoded as palette PNGs
   (4.76 MB → 1.73 MB).
+- A reference C25 "tooltip" capture matched the plain capture byte for byte (Recharts
+  tooltips drop out of element screenshots, §1), so it was not kept.
+
+After this, the tracked tree is 64.9 MB, leaving about 2.2 MB under the 64 MiB limit.
+
+### 12.7 Live delivery (2026-10-20)
+
+- Root `main` was fast-forwarded to `a344afd`. Root's own local edits were left as they
+  were: `prisma/package-lock.json` and the untracked `start-rocketrental.ps1`.
+- `register-live-task.ps1 -Restart` re-registered `RocketRentalLive3100` with:
+  - Action: `start.ps1 -Port 3100 -DbPort 5434 -SkipInstall -StopExisting`
+  - Trigger: at logon
+  - Restart on failure: 3 × 1 min
+- The task took over the detached copy, rebuilt, and served build
+  `80LybE7yms0czS-GwZ-0s` (its `_buildManifest.js` returns 200).
+- Process chain: `svchost → powershell → node next start -p 3100`, with postgres on
+  `.data/postgres-5434`.
+- A second `-Restart` stopped the task and started it again. The app came back on new
+  process IDs at 15:52:24 with the same build, and `.demo-seeded` was untouched
+  (2026-10-20 11:57). The logon trigger itself was not exercised, because no sign-out
+  happened.
+- Live read-only checks after both starts. They opened Maple Court only and pressed no
+  Save or Reload:
+  - Actual vs projected still reads income $215,850 and expenses $80,000, with "Rent
+    coverage is partial". Maple is at revision 0.
+  - C6 now reads `$0k $550k $1100k $1650k $2200k`.
+  - JetBrains Mono loads.
+- **Data preservation in 5434:** 32 of the 33 tables have identical row hashes before
+  and after. The exception is the one `RoiAnalysisState` row:
+  - It is an 18 Elm Street DRAFT that already existed before this work (created
+    22:25:00 UTC). It was saved again as revision 2 at 22:51:19 UTC, 11 s after the
+    rebuilt app came up.
+  - The app has no autosave; drafts are written only by an explicit Save. This work's
+    scripts never opened Elm on 3100, and the isolated runtimes refuse port 3100.
+  - The row was left as it is.
+- `.data/postgres-5433` was not started or modified; it was last written at 12:31,
+  before this work. Nothing was reseeded, reset or switched.

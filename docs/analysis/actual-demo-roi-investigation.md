@@ -143,6 +143,44 @@ Isolated database tests: `tests/roi/demo-provenance-db.test.ts`, run through
 backfill around a customized value, skipping genuine and renamed records, idempotency, and release
 on edit/clear with matching property and draft output.
 
+## Recurrence 2026-10-20 12:13 PDT — app relaunched on a new, empty database
+
+Screenshot: Maple Court, Revision 0, 19 assumptions missing, recorded income $215,850 /
+expenses $80,000, no demo labels. Reproduced at http://localhost:3100 as Jordan Mills
+(live-5434-maple-before.png).
+
+Cause: at 11:57 PDT the app was relaunched from a Windows Terminal with
+`scripts\start.ps1 -Port 3100 -DbPort 5434` instead of the RocketRentalLive3100 task (5433;
+its last run ended at 11:29). start.ps1 keeps one data dir per port, so this initialised a new
+`.data\postgres-5434`, ran only `prisma/seed.ts`, and served that. The seed has never set
+`Property.roiInputs`; the demo inputs only existed in 5433 via a manual `demo:roi` run. 5434
+had null `roiInputs`, no provenance and no saved analysis, and nothing was written after
+seeding (latest row 18:57:30Z). Loading and precedence code behaved correctly. The earlier
+verification was right for 5433 but could not cover a database created later. The different
+actuals ($215,850 vs $79,000 on 5433) come from the two databases being seeded on different dates.
+
+Fix (scripts/start.ps1): when start.ps1 seeds a new data dir it now also runs
+`load-roi-examples.ts --seed-inputs-only` (sandbox only). It also warns which existing
+`.data\postgres-*` dirs a new -DbPort is not using.
+
+Data:
+
+- 5434: the loader reported `populated seed-roi-inputs-v1` for all four seed properties and
+  `preserved` on rerun. Price/loan unchanged, no saved analysis. The data dir is kept.
+- 5433: untouched. It still has 28 provenance values per seed property, the Elm saved draft and
+  both TEST properties.
+
+Live app: the terminal copy was stopped (its Postgres shut down cleanly). RocketRentalLive3100
+(3100 / 5433, build QzQCdwr0mLAaF-TF0TJpQ) was started. Then app and Postgres were stopped
+manually (`Stop-ScheduledTask` alone leaves them running) and the task restarted.
+
+- Maple: calculated automatically; 28 demo values labeled; -$2,555 / 5.7% / -0.3% / 8.4%.
+  The table agrees: 276,000 − 13,800 − 100,776 = 161,424 NOI, minus 13,800 reserves and
+  150,179 debt service = −2,555. Same after reload, after the restart, and at 390 px with no
+  overflow (live-5433-maple-after-desktop.png, live-5433-maple-after-390.png).
+- Harbor (switched with Change property): $21,911. Cedar: $11,499. Elm: −$15,723.
+- TEST properties: no demo labels, still 16 / 20 assumptions to review.
+
 ## Isolated check
 
 `tests/roi/seed-roi-inputs.test.ts` confirms the four input sets omit price/debt, combine with

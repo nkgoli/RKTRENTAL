@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import type { AuthSession } from '../auth/session';
 import { z } from 'zod';
+import { parseRoiInputs } from '../properties/roi-inputs';
 import {
   ENGINE_ID,
   IdSchema,
@@ -206,6 +207,37 @@ export function analysisService(session: Manager, db: PrismaClient) {
       scenarios: [],
       benchmarks: [],
     };
+    const stored = parseRoiInputs(p.roiInputs);
+    if (stored.success && stored.data) {
+      for (const key of [
+        'purchase',
+        'financing',
+        'income',
+        'expenses',
+        'appreciationExit',
+      ] as const) {
+        const supplied = stored.data.input[key];
+        if (!supplied) continue;
+        // Explicit property forecast inputs outrank lease defaults. Canonical price/debt win below.
+        Object.assign(payload.input, { [key]: { ...payload.input[key], ...supplied } });
+        for (const field of Object.keys(supplied))
+          note(
+            `input.${key}.${field}`,
+            p.id,
+            'property',
+            'Customer-supplied property forecast assumption; no market defaults inferred.',
+          );
+      }
+      payload.options = stored.data.options;
+      for (const key of Object.keys(payload.options))
+        note(`options.${key}`, p.id, 'property', 'Customer-supplied projection option.');
+      if (purchasePrice !== undefined) payload.input.purchase!.purchasePrice = purchasePrice;
+      if (loanAmount !== undefined) payload.input.financing!.loanAmount = loanAmount;
+      if (stored.data.input.income?.monthlyRent !== undefined)
+        payload.evidence = evidence.filter(
+          (e) => !(e.path === 'input.income.monthlyRent' && e.source === 'lease'),
+        );
+    }
     return {
       ok: true,
       data: {

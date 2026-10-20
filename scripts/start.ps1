@@ -8,7 +8,7 @@ stale, creates .env when missing, starts PostgreSQL, applies Prisma migrations,
 optionally seeds the demo data, then starts the app and prints its URL.
 
 Database: by default the embedded Postgres 16 used by `npm run db:local`
-(no Docker needed, data in prisma\.local-postgres). Use -Docker to start the
+(no Docker needed, data in .data\postgres-<port>). Use -Docker to start the
 `db` service of docker-compose.yml instead, or -SkipDatabase to use your own
 database from DATABASE_URL.
 
@@ -42,6 +42,10 @@ embedded database is created for the first time.
 
 .PARAMETER SkipInstall
 Do not run npm install/ci even if node_modules is missing or stale.
+
+.PARAMETER LogDirectory
+Optional log directory. Defaults to a separate temp folder for each app/database
+port pair, so isolated startup checks cannot overwrite the live app's logs.
 
 .PARAMETER Rebuild
 Force a production rebuild (ignored with -Dev).
@@ -87,12 +91,13 @@ param(
     [switch]$Rebuild,
     [switch]$Docker,
     [switch]$SkipDatabase,
-    [switch]$ResetDatabase
+    [switch]$ResetDatabase,
+    [string]$LogDirectory
 )
 
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
-$LogDir = Join-Path $env:TEMP 'rocketrental'
+$LogDir = $null
 $TaskName = 'RocketRentalPreview'
 
 function Info($m) { Write-Host "[start] $m" -ForegroundColor Cyan }
@@ -253,6 +258,8 @@ foreach ($n in 'NEXTAUTH_URL', 'AUTH_URL', 'APP_URL', 'NEXT_PUBLIC_APP_URL', 'NE
 }
 $env:PORT = "$Port"
 $env:ROCKETRENTAL_DB_PORT = "$DbPort"
+$LogDir = if ($LogDirectory) { [System.IO.Path]::GetFullPath($LogDirectory) }
+          else { Join-Path $env:TEMP "rocketrental\app-$Port-db-$DbPort" }
 
 # Session signing needs at least 32 characters (src/lib/auth/session.ts); older
 # .env templates shipped a 31-character placeholder, which makes sign-in fail.

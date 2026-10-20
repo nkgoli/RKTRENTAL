@@ -988,7 +988,7 @@ export function RoiWorkspace({
                     </p>
                     <fieldset disabled={saving}>
                       <button type="button" onClick={() => edit('input.financing.loanAmount', '0')}>
-                        Pay in cash · No loan
+                        Switch to cash purchase (set loan to $0)
                       </button>
                       <p>
                         A $0 loan means no debt payments or lender costs. Loan-only details are not

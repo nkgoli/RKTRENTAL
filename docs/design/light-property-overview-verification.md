@@ -2,7 +2,7 @@
 
 Current result: **25 configured-Playwright MCP captures**, including16 matching
 before/after images at1280x1000 and390x844, and the isolated flow observations
-below. **Native existing-Edge review remains pending a manager-coordinated
+below. **Native existing-Edge review was not performed; the question timed out without a
 window.** No native grant/control was acquired by this Task. No completion of
 all navigation/implicit-delete/document checks is claimed.
 
@@ -134,13 +134,13 @@ transport failure does not invalidate the saved captures/results.
 
 Guarded stops verified at00:22:33 and00:31:01UTC: all three owned processes
 stopped, both HTTP probes refused, postmaster.pid absent. These are historical
-release checks. **Runtime is currently restarted/running for the manager's
+release checks. **Runtime was restarted/running for the manager's
 planned native window**, preserving fixture/builds: status at00:33:20UTC
 confirmed HTTP200/source/build/identity guards, baselinePID43608/start
 00:32:55.6273161Z, candidatePID61628/start00:32:55.6341880Z, PG48680/start
 00:32:55.5953480Z. services.json retains executable identity. Get-NetTCPConnection
 returned no entries even while HTTP worked; rely also on process/HTTP/PID guards.
-No fresh grant/start notice has been received. Final release remains pending.
+No fresh grant/start notice was received. Final release is recorded below.
 
 See [runtime commands](../../tests/workspace/native-review/README.md) for hidden
 Start/Status/Stop and exact generated-file paths. fixture-review.cjs prepare
@@ -189,4 +189,41 @@ returned before=S1, after=S1, unchanged=true after filling CANCEL-ONLY-99,
 Cancel, Edit, reading the value and Cancel again. No Save or persistent
 fixture mutation was issued. This closes the earlier unit-cancel value gap.
 No completed implementation/flow check was repeated. Native question and
-file scope remain unchanged; runtime preserved for that window.
+file scope remain unchanged; runtime was preserved while that window was pending.
+
+## Final delivery and guarded release — 00:57UTC
+
+The manager reported that the existing native-window question timed out with
+No answer in10minutes; continue on your own judgement. This supplied **no new
+native Edge/file grant**. No new human question, desktop request, watchdog,
+native control or file approval bypass was attempted. Native/file gaps above
+remain limitations; no old directory/native evidence is relabelled as fresh.
+
+The requested final remaining configured navigation was attempted once and
+returned MCP_SESSION_NOT_FOUND. No further retry, uncertain mutation, captured
+navigation pass or occupied-scope pass is inferred from that transport error.
+Earlier successful occupied-route/guard/attribute observations remain valid;
+the exact-source final narrow soft-link findings remain recorded with their
+baseline/control and practical limits.
+
+Guarded overview-review.ps1 Stop completed server stopped. Status at
+2026-10-20T00:57:17.6493799Z verified baselineRunning=false,
+candidateRunning=false, postgresRunning=false, both sign-in HTTP connections
+refused, and postmaster.pid absent. PG_VERSION and syntheticA/B68byte files
+remain. Existing source/build assertions also passed during Status. Only the
+recorded task-owned identities were stopped; directory/sibling services and
+fixtures were not touched. Builds, initialized/seeded database, local storage,
+synthetic files and captures are retained for later authorized use.
+
+[Structured release evidence](../../tests/workspace/native-review/evidence/runtime-release.json)
+records commands/results/ownership. This final stopped state supersedes all
+earlier running/readiness statements. No native review is waiting on active
+services now; any future authorized review must use guarded Start/Status and
+preserve the fixture without reseeding/rebuilding.
+
+Delivered:25 captured files and manifest,16 matched before/after overview
+images at desktop/390, actual isolated affected-flow observations, exact source/
+build/fixture identities, inherited manager attribution, explicit unchecked/
+failed states and verified runtime release. These are the evidence deliverables,
+not a claim that every browser/native check passed. No push, deployment,
+implementation redo or manual root integration occurred.

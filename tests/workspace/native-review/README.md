@@ -47,11 +47,13 @@ then shuts down only these services. TCP inventory returned no entries even
 while HTTP worked: inspect process/HTTP/PID evidence too. Never replace an
 occupied port/mismatched process or restart directory3231/3232/55431.
 
-Services were restarted at00:32:55UTC for the planned native window; preserve
-them until manager coordinates final release. No actual grant/start notice
-has yet been received. On notice, pause all isolated fixture mutations until
-manager release; do not acquire desktop/file controls or bypass cancellation.
-
+Final guarded release at2026-10-20T00:57:17.6493799Z: all three owned services
+stopped, both HTTP probes refused, postmaster.pid absent; fixture/builds and
+synthetic files preserved. See evidence/runtime-release.json. The native
+question timed out without a grant; no new desktop/file request was made.
+Any future review requires authorization and guarded Start/Status; do not
+reseed/rebuild or infer a native pass. Native file scope had included only
+synth-a.png/b.png, notC/text. No native chooser was used.
 The inherited overview-review.spec.ts is an **unexecuted draft**, not a passing
 result or ready command. Incorrect seed IDs/email, Document.targetId, nested
 unit organizationId, numeric validation input, cover-adjacent reorder expectation,

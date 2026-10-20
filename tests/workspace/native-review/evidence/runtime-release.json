@@ -1,0 +1,54 @@
+{
+    "observedUtc":  "2026-10-20T00:57:17.6493799Z",
+    "action":  "Guarded overview-review.ps1 Stop followed by Status",
+    "baselineRunning":  false,
+    "candidateRunning":  false,
+    "postgresRunning":  false,
+    "http":  [
+                 {
+                     "error":  "Unable to connect to the remote server",
+                     "port":  3241
+                 },
+                 {
+                     "error":  "Unable to connect to the remote server",
+                     "port":  3242
+                 }
+             ],
+    "recordedIdentities":  {
+                               "baselineBuild":  "GPkMC-fReltH7INFyPztO",
+                               "baseline":  {
+                                                "pid":  43608,
+                                                "createdUtc":  "2026-10-20T00:32:55.6273161Z",
+                                                "executable":  "C:\\Program Files\\nodejs\\node.exe"
+                                            },
+                               "candidateBuild":  "EheygKX6UxTxKO1h1ktwh",
+                               "checkout":  "C:\\Users\\nkgol\\RocketRental\\.orchestra\\workspaces\\@592sxklx4b3exmjbrl1\\repository",
+                               "candidateCommit":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                               "postgres":  {
+                                                "pid":  48680,
+                                                "createdUtc":  "2026-10-20T00:32:55.5953480Z",
+                                                "executable":  "C:\\Users\\nkgol\\RocketRental\\.orchestra\\workspaces\\@592sxklx4b3exmjbrl1\\repository\\prisma\\node_modules\\@embedded-postgres\\windows-x64\\native\\bin\\postgres.exe"
+                                            },
+                               "candidate":  {
+                                                 "pid":  61628,
+                                                 "createdUtc":  "2026-10-20T00:32:55.6341880Z",
+                                                 "executable":  "C:\\Program Files\\nodejs\\node.exe"
+                                             },
+                               "launcherPid":  41156
+                           },
+    "postmasterPidExists":  false,
+    "fixturePgVersionPreserved":  true,
+    "syntheticFiles":  [
+                           {
+                               "Name":  "synth-a.png",
+                               "Length":  68
+                           },
+                           {
+                               "Name":  "synth-b.png",
+                               "Length":  68
+                           }
+                       ],
+    "nativeGrantObtained":  false,
+    "nativeQuestionOutcome":  "Timed out; no grant",
+    "browserFinalAttempt":  "MCP_SESSION_NOT_FOUND on navigation; no repeated attempt or mutation"
+}

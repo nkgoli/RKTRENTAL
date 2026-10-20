@@ -5,7 +5,7 @@ import next from 'next';
 import { execFileSync } from 'node:child_process';
 
 const [checkout, directory, build, source] = process.argv.slice(2);
-const baseline = path.join(checkout, 'tests/lease-builder/.runtime-db/baseline');
+const baseline = path.join(checkout, 'tests/lease-builder/.runtime-db/node_modules/baseline');
 if (![checkout, baseline].includes(directory)) throw new Error('Unowned directory');
 if (fs.readFileSync(path.join(directory, '.next/BUILD_ID'), 'utf8').trim() !== build)
   throw new Error('Build changed');

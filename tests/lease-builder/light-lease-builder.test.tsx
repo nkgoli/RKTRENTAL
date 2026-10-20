@@ -89,20 +89,23 @@ describe('light Term and Rent steps', () => {
       moveInFee: 'Enter a move-in fee greater than zero.',
       petDeposit: 'Enter a pet deposit greater than zero.',
       graceDays: 'Enter 0 to 31 days.',
+      lateFee: 'Enter a valid late fee.',
     };
     render(<RentStep draft={enabled} update={update} errors={errors} />);
     for (const [label, message] of [
       ['Move-in fee amount', errors.moveInFee],
       ['Pet deposit amount', errors.petDeposit],
       ['Late fee grace period (days)', errors.graceDays],
+      ['Late fee amount', errors.lateFee],
     ] as const) {
       const field = screen.getByLabelText((text) => text.startsWith(label));
       expect(field.getAttribute('aria-invalid')).toBe('true');
       const id = field.getAttribute('aria-describedby');
       expect(id).toBeTruthy();
       expect(document.getElementById(id as string)?.textContent).toContain(message);
+      fireEvent.click(field);
+      expect(update).not.toHaveBeenCalled();
     }
-    expect(screen.getByLabelText('Late fee amount')).toBeTruthy();
     fireEvent.click(screen.getByRole('checkbox', { name: /Move-in fee/ }));
     expect(update).toHaveBeenCalledWith({ moveInFeeEnabled: false });
   });

@@ -36,9 +36,16 @@ if ($Action -eq 'start') {
     if (!$pg.WaitForExit(15000) -or $pg.ExitCode -ne 0) { throw 'Database start failed' }
   }
   Database
-  $directory = if ($Variant -eq 'baseline') { Join-Path $binding 'baseline' } else { $checkout }
-  $source = if ($Variant -eq 'baseline') { '69c4bf7eb34266f067df3826b7a3b5928f915c64' } else { (& git -C $checkout rev-parse HEAD).Trim() }
+  $directory = if ($Variant -eq 'baseline') { Join-Path $binding 'node_modules/baseline' } else { $checkout }
+  $identities = Get-Content -LiteralPath (Join-Path $binding 'builds.json') -Raw | ConvertFrom-Json
+  $approved = $identities.$Variant
+  $source = $approved.source
   $build = Build $directory
+  if ($build -ne $approved.build) { throw 'Unmapped build; rebuild and record its source before review' }
+  if ($Variant -eq 'candidate') {
+    & git -C $checkout diff --quiet $source -- src public
+    if ($LASTEXITCODE) { throw 'Application source changed since the recorded build' }
+  }
   $env:DATABASE_URL = 'postgresql://rocketrental@127.0.0.1:55508/rocketrental?schema=public'
   $env:ROCKETRENTAL_AUTH_SECRET = 'light-builder-isolated-check-only-secret-2026'
   $env:ROCKETRENTAL_AUTH_COOKIE_SECURE = 'false'

@@ -42,7 +42,7 @@ or common `.next` was written.
 | Candidate production build | `.next/BUILD_ID` = `EheygKX6UxTxKO1h1ktwh`, same isolated setup (`storage-candidate`) |
 | Source snapshot hashes | 11 overview files, SHA-256, in `.runtime/review-config.json` and committed `tests/workspace/native-review/evidence/runtime-identity.json` |
 | Isolated fixture | `.runtime/postgres/`, fresh `initdb` (PG 16, `PG_VERSION` present, superuser `rocketrental`, trust auth), port **55441**; no migrations/seeds applied yet |
-| Ports | **3241** baseline, **3242** candidate, **55441** DB â€” all verified free (`Get-NetTCPConnection` shows zero listeners on all three) |
+| Ports | **3241** baseline, **3242** candidate, **55441** DB Ã¢â‚¬â€ all verified free (`Get-NetTCPConnection` shows zero listeners on all three) |
 | Browser | Playwright Chromium (`chromium-1248` + headless shell + ffmpeg) in `.runtime/browsers/` (`PLAYWRIGHT_BROWSERS_PATH`) |
 | Spec | `tests/workspace/native-review/overview-review.spec.ts` + `review.playwright.config.ts`; sign-in as `jordan.mills@rocketrental.example`, fixtures `seed-property-maple` (vacant `seed-unit-maple-7` = 3A, occupied `seed-unit-maple-11` = 4B), `seed-property-elm`; disposable `synth-ov-*` records created/removed by the spec |
 | Harness | `tests/workspace/native-review/overview-review.ps1` (`Start`/`Launch`/`Status`/`Stop`) with snapshot, fixture, free-port, and recorded-process ownership guards; `-Action Status` exercised and returns the expected `No services have been recorded` guard |
@@ -63,39 +63,39 @@ execute in this session; nothing was started and no result is invented.
 - Consequence: `prisma migrate deploy`, the demo seed, `next start`, and the
   `overview-review.spec.ts` run all require a bind-capable session. The spec,
   both production builds, the initialized fixture, and the Chromium binaries are
-  ready so that session can run: harness `Start` â†’ `Status` (both `/sign-in`
-  HTTP 200) â†’ migrate/seed with `SEED_DEMO_PASSWORDS=1` â†’ Playwright with
+  ready so that session can run: harness `Start` Ã¢â€ â€™ `Status` (both `/sign-in`
+  HTTP 200) Ã¢â€ â€™ migrate/seed with `SEED_DEMO_PASSWORDS=1` Ã¢â€ â€™ Playwright with
   `OVERVIEW_DATABASE_URL`/`OVERVIEW_BASELINE_URL=http://localhost:3241`/
   `OVERVIEW_CANDIDATE_URL=http://localhost:3242`/
-  `OVERVIEW_STORAGE_DIR=<.runtime/storage-candidate>` â†’
-  `... -Action Stop` â†’ `Status` (zero listeners, `postmaster.pid` absent).
-- Runtime release in this session: verified â€” zero listeners on 3241/3242/55441,
+  `OVERVIEW_STORAGE_DIR=<.runtime/storage-candidate>` Ã¢â€ â€™
+  `... -Action Stop` Ã¢â€ â€™ `Status` (zero listeners, `postmaster.pid` absent).
+- Runtime release in this session: verified Ã¢â‚¬â€ zero listeners on 3241/3242/55441,
   no `postmaster.pid` in `.runtime/postgres/`, no `services.json` recorded,
   no desktop acquisition, no human contact.
 
-## Remaining browser checklist (NOT RUN â€” no captures yet)
+## Remaining browser checklist (NOT RUN Ã¢â‚¬â€ no captures yet)
 
 | Flow / state | Desktop | 390px phone | Status |
 | --- | --- | --- | --- |
 | Property overview navigation, glance band, payments, timeline, units | captures missing | captures missing | spec ready, needs live run |
 | Occupied unit scope (`?unit=seed-unit-maple-11`), switcher, scoped tabs | not exercised | not exercised | spec ready |
 | Vacant unit scope (`?unit=seed-unit-maple-7`), keyboard switcher nav | not exercised | not exercised | spec ready |
-| Phone cards (â‰¤640px) vs desktop table, keyboard focus, no overflow | missing | missing | spec ready |
-| Inline edit cancel (seed 3A), validation, save (disposable `synth-ov-*`) | missing | â€” | spec ready |
-| Add-unit on disposable property (incl. `Unit number is required`) | missing | â€” | spec ready |
-| Guarded delete (dialog dismiss, no deletion) + implicit-unit guard | missing | â€” | spec ready |
-| Media upload/cover/reorder/remove + preview-failure recovery | missing | â€” | spec ready |
+| Phone cards (Ã¢â€°Â¤640px) vs desktop table, keyboard focus, no overflow | missing | missing | spec ready |
+| Inline edit cancel (seed 3A), validation, save (disposable `synth-ov-*`) | missing | Ã¢â‚¬â€ | spec ready |
+| Add-unit on disposable property (incl. `Unit number is required`) | missing | Ã¢â‚¬â€ | spec ready |
+| Guarded delete (dialog dismiss, no deletion) + implicit-unit guard | missing | Ã¢â‚¬â€ | spec ready |
+| Media upload/cover/reorder/remove + preview-failure recovery | missing | Ã¢â‚¬â€ | spec ready |
 | Baseline before-captures | missing | missing | spec ready |
 
 ## Partial manager native observations (distinct attribution, not builder results)
 
-From the directory handoff, manager-supplied window **2026-10-19 23:26:39â€“23:30:54 UTC**
-(existing Edge, desktop 1699Ã—888, phone 390Ã—844): created property's phone
+From the directory handoff, manager-supplied window **2026-10-19 23:26:39Ã¢â‚¬â€œ23:30:54 UTC**
+(existing Edge, desktop 1699Ãƒâ€”888, phone 390Ãƒâ€”844): created property's phone
 overview showed 0/2 occupancy with empty rent/media; `scrollWidth 375 <= 390`;
 Enter on Unit 1 opened `?unit=cmvfvy7ix000ab9gcreta4am2` with readable vacant
 "Create lease" and scoped tabs; editing number to 99 then cancelling kept Unit 1;
 Tab showed blue Status focus; delete opened a native confirmation but **no accept
-was issued** â€” inspection/dismissal timed out, outcome unverified; fallback
+was issued** Ã¢â‚¬â€ inspection/dismissal timed out, outcome unverified; fallback
 Windows-MCP App switch was user-cancelled; candidate viewport reset and tab
 cleanup unverified. Native existing-Edge and native file actions remain pending
 until the manager coordinates a fresh grant.
@@ -109,7 +109,7 @@ until the manager coordinates a fresh grant.
 - No push, deployment, Preview publication, or independent integration occurred.
   Sibling work, review fixtures, and prior passing checks are preserved.
 
-## Takeover observation â€” 2026-10-20 00:20â€“00:23 UTC
+## Takeover observation Ã¢â‚¬â€ 2026-10-20 00:20Ã¢â‚¬â€œ00:23 UTC
 
 This section supersedes the earlier environment-blocker/readiness statements;
 those statements describe the previous attempt, not current runtime readiness.
@@ -178,3 +178,101 @@ were left running for a native review. The listener query returned no entries,
 although it also returned none while HTTP was reachable, so process identity,
 HTTP refusal and absent PID file are the stronger release evidence here.
 No desktop acquired, file chooser used, push, deployment or integration.
+
+## Continued attempt â€” capture evidence and remaining access blocker
+
+The manager response supplied both completed Task contexts. Their exact
+committed handoffs were then read from admitted local Git history, without
+editing sibling checkouts. The prior missing-link request is resolved by that
+supplied context; no new related-work link is claimed.
+
+The stopped retained runtime was restarted without rebuilding or reseeding.
+At 00:25:40 UTC the same source/build guards passed and both sign-in URLs were
+HTTP200. Ownership: baselinePID34628, candidatePID50524, PostgreSQLPID51600,
+created00:25:03 UTC (exact start times/executables in local services.json).
+
+### Fresh configured Playwright evidence (not native Edge)
+
+An immediate navigation/code sequence restored the configured automation
+profile long enough to sign in and capture 12 full-page images. Each overview
+loaded its Lease timeline; measured document scrollWidth equalled viewport
+width at1280 and390. Both baseline and candidate use the same unchanged demo
+fixture at capture time. See [capture manifest](../../tests/workspace/native-review/evidence/capture-manifest.json)
+for every file's hash, source/build, viewport and timestamp.
+
+| View | Before1280 | After1280 | Before390 | After390 |
+| --- | --- | --- | --- | --- |
+| Maple Court | [image](../../tests/workspace/native-review/evidence/before-1280-property.png) | [image](../../tests/workspace/native-review/evidence/after-1280-property.png) | [image](../../tests/workspace/native-review/evidence/before-390-property.png) | [image](../../tests/workspace/native-review/evidence/after-390-property.png) |
+| Occupied4B | [image](../../tests/workspace/native-review/evidence/before-1280-unit-occupied.png) | [image](../../tests/workspace/native-review/evidence/after-1280-unit-occupied.png) | [image](../../tests/workspace/native-review/evidence/before-390-unit-occupied.png) | [image](../../tests/workspace/native-review/evidence/after-390-unit-occupied.png) |
+| Occupied3A | [image](../../tests/workspace/native-review/evidence/before-1280-unit-3a-occupied.png) | [image](../../tests/workspace/native-review/evidence/after-1280-unit-3a-occupied.png) | [image](../../tests/workspace/native-review/evidence/before-390-unit-3a-occupied.png) | [image](../../tests/workspace/native-review/evidence/after-390-unit-3a-occupied.png) |
+
+Visual inspection of candidate phone property and desktop4B images found
+readable ordered sections, phone unit cards, desktop fact/next-step columns,
+and media. This is a partial layout observation, not full interaction/design
+acceptance. 3A is **occupied**, so its initially misleading vacant filename
+was corrected; it supplies no vacancy result. Semantic inspection of3A found
+Occupied/current lease/View lease, switcher selection matching its ID, and all
+seven workspace links retaining `unit=demo-unit-maple-7`. Only attributes
+were inspected; actual tab/switcher navigation and keyboard behavior remain
+unchecked.
+
+### Disposable fixture and incomplete interaction attempts
+
+`fixture-review.cjs prepare` created property `synth-ov-prop-mvfy0u3z` and
+vacantS1 `synth-ov-unit-mvfy0u3z` at00:26:41 UTC, organization seed-rocket-rental,
+7 Synthetic Way, AustinTX78704, listedRent1500. Task-local PNGs a/b/c and text
+note are generated in `.runtime/synth/` (README lists exact paths). No other
+checkout/DB was written. The first prepare failed schema validation before
+creation; nested organizationId was removed. Subsequent inspect failed on
+obsolete Document.targetId; changed to propertyId/unitId OR and inspection
+then succeeded. No duplicate synthetic fixture was created.
+
+Vacant route loaded, but the attempted focus/capture check timed out waiting
+for Switch unit: the property had only one unit. No vacant screenshot or focus
+pass was produced. Synthetic property semantic inspection showed empty rent/
+media,0/1 occupancy and Add unit. Its header said Single-family while its facts
+said Multi-unit; this observed presentation discrepancy is not fixed here.
+Relevant source: src/components/workspace/WorkspaceHeader.tsx and its caller's
+propertyTypeLabel (bounded application correction would require owner scope).
+
+The inline property attempt lost its browser session; pending code was
+terminated. Direct isolated DB inspection afterwards showed Austin, unchanged
+S1 and zero documents. No edit-save/cancel/validation pass or side effect is
+claimed. A later close/reopen recovery succeeded at navigation but its next
+code call again returned MCP_SESSION_NOT_FOUND. No cancelled native file
+approval was retried; no native desktop grant/control was acquired.
+
+The inherited CLI spec remains unexecuted and contains fixture/schema/selector
+issues, explicitly listed in README. It is not reported as ready/passing.
+The new fixture helper passed `node --check`; its prepare/inspect DB operations
+were observed. Prior29-test/lint/typecheck/build results were reused only.
+
+### Current remaining checklist
+
+- Captures of real property + occupied units at desktop/390: saved above;
+  true vacant before/after and focused states: NOT RUN successfully.
+- Actual property/unit navigation, switcher/canonical scope and keyboard:
+  partial route/attribute observations only; interaction checks pending.
+- Inline save/cancel/validation, add-unit save/validation, protected delete
+  dismissal/implicit guard, archive/restore: NOT RUN successfully.
+- Media upload/cover/order/remove, document upload and preview recovery:
+  NOT RUN. Disposable files exist; no upload made.
+- Native existing-Edge overview/file review: PENDING manager grant. Earlier
+  directory manager review and partial overview observations retain their
+  original attribution/limitations above. No native captures on disk claimed.
+
+The former loopback blocker no longer applies. The current blocker is the
+configured browser's intermittent MCP_SESSION_NOT_FOUND plus absent native
+grant. Manager was supplied readiness and fixture/file identities through
+typed questions. Readiness is withdrawn after the guarded shutdown below;
+restart the retained runtime with README guards when browser access is ready.
+
+Final release at00:31:01 UTC: guarded Stop completed; Status verified all three
+recorded services stopped, both HTTP probes refused connection, and
+postmaster.pid absent. Listener query empty (subject to inventory limitation
+above). Retained fixture/builds/storage remain on disk. `node --check` on
+fixture-review.cjs passed. Workspace diff whitespace check passed after newline
+normalization. The header discrepancy's exact cause was confirmed in
+WorkspaceHeader.tsx: propertyTypeLabel treats activeUnitCount===1 as
+Single-family and hides the switcher, even for propertyType MULTI_UNIT; no
+application source was changed by this evidence Task.

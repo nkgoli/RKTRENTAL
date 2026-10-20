@@ -1,0 +1,154 @@
+{
+    "browser":  "Configured Playwright MCP automation profile; not native existing Edge",
+    "captures":  [
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-1280-property.png",
+                         "sha256":  "1222ADA25C9BDBE782A615A9F1FA6BBB134D4C6E7E2D7085B1E0E26AE83CEBC1",
+                         "phase":  "after",
+                         "width":  1280,
+                         "height":  1000,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "Task-local PG55441 demo seed42, organization seed-rocket-rental",
+                         "scrollWidth":  1280,
+                         "observedUtc":  "2026-10-20T00:25:25.5625757Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-1280-unit-3a-occupied.png",
+                         "sha256":  "674403DE456900767449EB6B8577D9FC7485C240B06DB8CD0A550B9513577584",
+                         "phase":  "after",
+                         "width":  1280,
+                         "height":  1000,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "Task-local PG55441 demo seed42, organization seed-rocket-rental",
+                         "scrollWidth":  1280,
+                         "observedUtc":  "2026-10-20T00:25:26.6166845Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-1280-unit-occupied.png",
+                         "sha256":  "A795601D7B6652828A2B940A7D9411816068C5F902E392BCB73F8E266DB4EFCD",
+                         "phase":  "after",
+                         "width":  1280,
+                         "height":  1000,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "Task-local PG55441 demo seed42, organization seed-rocket-rental",
+                         "scrollWidth":  1280,
+                         "observedUtc":  "2026-10-20T00:25:26.1053950Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-390-property.png",
+                         "sha256":  "0F6BE01A6C396039EDF0E69525FAC1C748B14E8992B88E5D0DB9D49F395E8E01",
+                         "phase":  "after",
+                         "width":  390,
+                         "height":  844,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "Task-local PG55441 demo seed42, organization seed-rocket-rental",
+                         "scrollWidth":  390,
+                         "observedUtc":  "2026-10-20T00:25:27.1454368Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-390-unit-3a-occupied.png",
+                         "sha256":  "E13D10DC318190D1F0840DDDFA1F45441B4595C926ED0C0242A795D8404C64F9",
+                         "phase":  "after",
+                         "width":  390,
+                         "height":  844,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "Task-local PG55441 demo seed42, organization seed-rocket-rental",
+                         "scrollWidth":  390,
+                         "observedUtc":  "2026-10-20T00:25:28.0939328Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-390-unit-occupied.png",
+                         "sha256":  "9FDFDD25DB0DEDFE00276F072091792730F59AD53F9084C36D6B9A44A5E59520",
+                         "phase":  "after",
+                         "width":  390,
+                         "height":  844,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "Task-local PG55441 demo seed42, organization seed-rocket-rental",
+                         "scrollWidth":  390,
+                         "observedUtc":  "2026-10-20T00:25:27.6398728Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/before-1280-property.png",
+                         "sha256":  "DBC909493831983F9E1B4FABD1754E55C59C69AE09D3460154FEEAA1A70465D3",
+                         "phase":  "before",
+                         "width":  1280,
+                         "height":  1000,
+                         "source":  "4adfb9649c4fdf65c1ed07a0152a3038775c581c",
+                         "build":  "GPkMC-fReltH7INFyPztO",
+                         "fixture":  "Task-local PG55441 demo seed42, organization seed-rocket-rental",
+                         "scrollWidth":  1280,
+                         "observedUtc":  "2026-10-20T00:25:46.8201729Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/before-1280-unit-3a-occupied.png",
+                         "sha256":  "28A72CD4207581E6BEA71A8502AD84506B3A05A8E188E1239C22C9B470222F4D",
+                         "phase":  "before",
+                         "width":  1280,
+                         "height":  1000,
+                         "source":  "4adfb9649c4fdf65c1ed07a0152a3038775c581c",
+                         "build":  "GPkMC-fReltH7INFyPztO",
+                         "fixture":  "Task-local PG55441 demo seed42, organization seed-rocket-rental",
+                         "scrollWidth":  1280,
+                         "observedUtc":  "2026-10-20T00:25:47.8602172Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/before-1280-unit-occupied.png",
+                         "sha256":  "2F6A9B14C5C081BA38419FE514EB2F943D2F00FCB8DD45354F7A07342AC02C0D",
+                         "phase":  "before",
+                         "width":  1280,
+                         "height":  1000,
+                         "source":  "4adfb9649c4fdf65c1ed07a0152a3038775c581c",
+                         "build":  "GPkMC-fReltH7INFyPztO",
+                         "fixture":  "Task-local PG55441 demo seed42, organization seed-rocket-rental",
+                         "scrollWidth":  1280,
+                         "observedUtc":  "2026-10-20T00:25:47.3655140Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/before-390-property.png",
+                         "sha256":  "68F1DEB64B06C2674AA1660DFEAD699F73736159D77DFAC25934A0DB9F1AB07C",
+                         "phase":  "before",
+                         "width":  390,
+                         "height":  844,
+                         "source":  "4adfb9649c4fdf65c1ed07a0152a3038775c581c",
+                         "build":  "GPkMC-fReltH7INFyPztO",
+                         "fixture":  "Task-local PG55441 demo seed42, organization seed-rocket-rental",
+                         "scrollWidth":  390,
+                         "observedUtc":  "2026-10-20T00:25:48.4697735Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/before-390-unit-3a-occupied.png",
+                         "sha256":  "F494DF6AE0A47BF7E36C7482DFF04EE33C4F69ED309A3FF12BF9F966E08F2819",
+                         "phase":  "before",
+                         "width":  390,
+                         "height":  844,
+                         "source":  "4adfb9649c4fdf65c1ed07a0152a3038775c581c",
+                         "build":  "GPkMC-fReltH7INFyPztO",
+                         "fixture":  "Task-local PG55441 demo seed42, organization seed-rocket-rental",
+                         "scrollWidth":  390,
+                         "observedUtc":  "2026-10-20T00:25:49.5064612Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/before-390-unit-occupied.png",
+                         "sha256":  "C96BD295C6A95080F64EC438029D28C8D733C891D97046929E28433A17B3AEA8",
+                         "phase":  "before",
+                         "width":  390,
+                         "height":  844,
+                         "source":  "4adfb9649c4fdf65c1ed07a0152a3038775c581c",
+                         "build":  "GPkMC-fReltH7INFyPztO",
+                         "fixture":  "Task-local PG55441 demo seed42, organization seed-rocket-rental",
+                         "scrollWidth":  390,
+                         "observedUtc":  "2026-10-20T00:25:49.0168489Z"
+                     }
+                 ],
+    "notes":  [
+                  "Maple Court 4B and 3A were both occupied; filenames say occupied accurately.",
+                  "Captured before synthetic fixture creation; same unchanged demo data in before/after.",
+                  "No true vacant captures or interaction passes are claimed."
+              ]
+}

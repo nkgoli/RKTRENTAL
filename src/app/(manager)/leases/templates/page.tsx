@@ -1,79 +1,133 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { Icon } from '@/components/shell/Icons';
 import { requireManagerRole } from '@/lib/auth/access';
 import { listTemplates } from '@/lib/lease-create/template-service';
-import styles from '../leases-ux.module.css';
+import styles from './templates.module.css';
+import { TemplateIcon } from './TemplateIcons';
 
 export const dynamic = 'force-dynamic';
 
 export default async function LeaseTemplatesPage() {
   const session = await requireManagerRole();
   const { templates, properties } = await listTemplates(session.organizationId);
+  const defaults = (id: string) =>
+    properties
+      .filter((p) => p.defaultLeaseTemplateId === id)
+      .map((p) => p.name)
+      .join(', ');
+  const editLink = (id: string) => (
+    <Link className={`btn ${styles['lt-edit-link']}`} href={`/leases/templates/${id}`}>
+      Edit template <TemplateIcon name="arrow" />
+    </Link>
+  );
   return (
-    <>
+    <div className={styles.page}>
       <PageHeader
-        eyebrow="Leases"
-        title="Lease templates"
+        eyebrow="Workspace / Leasing"
+        title="Lease templates ✳"
         actions={[
           { label: 'All leases', href: '/leases' },
           { label: 'Create template', href: '/leases/templates/new', primary: true },
         ]}
       />
-      <p className="muted">
+      <p className={styles['lt-intro']}>
         Start each lease with wording and fees suited to its property. Review templates with a local
         attorney before use.
       </p>
-      <div
-        className={`card flush ${styles.scroll}`}
-        role="region"
-        aria-label="Lease templates"
-        tabIndex={0}
-      >
-        <table className="table">
-          <caption className={styles.caption}>
-            Template changes apply to future drafts. Sent and signed wording stays with each lease.
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">Template</th>
-              <th scope="col">Version</th>
-              <th scope="col" className="num">
-                Used by
-              </th>
-              <th scope="col">Property defaults</th>
-              <th scope="col">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {!templates.length && (
-              <tr>
-                <td colSpan={5}>
-                  No templates yet. Create a template to reuse wording and fees across your
-                  properties.
-                </td>
-              </tr>
-            )}
+      <section className={styles['lt-band']} aria-label="How template updates work">
+        <span className={styles['lt-band-icon']}>
+          <Icon name="leases" />
+        </span>
+        <div>
+          <h2>Reusable rental agreement terms</h2>
+          <p>
+            Template changes apply to future drafts.
+            <br />
+            Sent and signed wording stays with each lease.
+          </p>
+        </div>
+        <span className={styles['lt-count']}>
+          {templates.length} {templates.length === 1 ? 'template' : 'templates'}
+        </span>
+      </section>
+      {!templates.length ? (
+        <section className={`${styles['lt-panel']} ${styles['lt-state-card']}`}>
+          <h2>No templates yet</h2>
+          <p>Create a template to reuse wording and fees across your properties.</p>
+          <Link className="btn btn-primary" href="/leases/templates/new">
+            Create template
+          </Link>
+        </section>
+      ) : (
+        <>
+          <section className={styles['lt-table-card']}>
+            <div className={styles['lt-table-title']}>
+              <h2>Your templates</h2>
+            </div>
+            <table>
+              <caption className={styles['lt-sr']}>
+                Lease templates, versions, usage and property defaults.
+              </caption>
+              <thead>
+                <tr>
+                  {['Template', 'Version', 'Used by', 'Property defaults', 'Actions'].map(
+                    (label) => (
+                      <th key={label} scope="col">
+                        {label}
+                      </th>
+                    ),
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {templates.map((template) => (
+                  <tr key={template.id}>
+                    <th scope="row">
+                      <div className={styles['lt-template-name']}>
+                        <span className={styles['lt-doc-icon']}>
+                          <Icon name="leases" />
+                        </span>
+                        <strong>{template.name}</strong>
+                      </div>
+                    </th>
+                    <td>
+                      <span className={styles['lt-badge']}>v{template.version}</span>
+                    </td>
+                    <td>{template.usageCount} leases</td>
+                    <td className={styles['lt-defaults']}>{defaults(template.id) || '—'}</td>
+                    <td>{editLink(template.id)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+          <section className={styles['lt-mobile-list']} aria-label="Lease templates">
             {templates.map((template) => (
-              <tr key={template.id}>
-                <td>
-                  <strong>{template.name}</strong>
-                </td>
-                <td>v{template.version}</td>
-                <td className="num">{template.usageCount} leases</td>
-                <td className="muted">
-                  {properties
-                    .filter((p) => p.defaultLeaseTemplateId === template.id)
-                    .map((p) => p.name)
-                    .join(', ') || '—'}
-                </td>
-                <td className="num">
-                  <Link href={`/leases/templates/${template.id}`}>Edit template</Link>
-                </td>
-              </tr>
+              <article key={template.id} className={styles['lt-library-card']}>
+                <div className={styles['lt-card-heading']}>
+                  <span className={styles['lt-doc-icon']}>
+                    <Icon name="leases" />
+                  </span>
+                  <h2>{template.name}</h2>
+                  <span className={styles['lt-badge']}>v{template.version}</span>
+                </div>
+                <dl>
+                  <div>
+                    <dt>Used by</dt>
+                    <dd>{template.usageCount} leases</dd>
+                  </div>
+                  <div>
+                    <dt>Property defaults</dt>
+                    <dd>{defaults(template.id) || 'None'}</dd>
+                  </div>
+                </dl>
+                {editLink(template.id)}
+              </article>
             ))}
-          </tbody>
-        </table>
-      </div>
-    </>
+          </section>
+        </>
+      )}
+    </div>
   );
 }

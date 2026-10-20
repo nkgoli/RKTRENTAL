@@ -34,6 +34,22 @@ function failure(error: unknown, formData: FormData): FormState {
   throw error;
 }
 
+/**
+ * Route-local document navigation that completes tenant action redirects in production.
+ * The result route returns a non-Flight response so the action router falls back to a
+ * normal document navigation instead of applying a redirected Flight tree.
+ */
+function resultHref(
+  tenantId: string,
+  returnTo: string,
+  options: { error?: string; note?: boolean } = {},
+) {
+  const query = new URLSearchParams({ tenantId, returnTo });
+  if (options.error) query.set('error', options.error);
+  if (options.note) query.set('note', '1');
+  return `/tenants/result?${query}`;
+}
+
 export async function addTenantAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const session = await requireRole('MANAGER');
   const parsed = parseNewTenantInput(formData);
@@ -46,7 +62,7 @@ export async function addTenantAction(_prev: FormState, formData: FormData): Pro
     return failure(error, formData);
   }
   revalidatePath('/tenants');
-  redirect(`/tenants/${tenantId}`);
+  redirect(resultHref(tenantId, tenantReturnHref(formData.get('returnTo'))));
 }
 
 export async function updateTenantAction(
@@ -64,9 +80,7 @@ export async function updateTenantAction(
     return failure(error, formData);
   }
   revalidatePath('/tenants');
-  redirect(
-    `/tenants/${tenantId}?${new URLSearchParams({ returnTo: tenantReturnHref(formData.get('returnTo')) })}`,
-  );
+  redirect(resultHref(tenantId, tenantReturnHref(formData.get('returnTo'))));
 }
 
 export async function addNoteAction(
@@ -83,7 +97,7 @@ export async function addNoteAction(
     return failure(error, formData);
   }
   revalidatePath(`/tenants/${tenantId}`);
-  return { errors: {}, message: 'Note added.' };
+  redirect(resultHref(tenantId, tenantReturnHref(formData.get('returnTo')), { note: true }));
 }
 
 async function leaseAction(
@@ -102,9 +116,7 @@ async function leaseAction(
   }
   revalidatePath('/tenants');
   revalidatePath(`/tenants/${tenantId}`);
-  redirect(
-    `/tenants/${tenantId}?${new URLSearchParams({ returnTo: tenantReturnHref(formData.get('returnTo')), ...(message ? { error: message } : {}) })}`,
-  );
+  redirect(resultHref(tenantId, tenantReturnHref(formData.get('returnTo')), { error: message }));
 }
 
 export async function moveInAction(tenantId: string, formData: FormData): Promise<void> {

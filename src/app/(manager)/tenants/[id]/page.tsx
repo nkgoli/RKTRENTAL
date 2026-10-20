@@ -1,37 +1,18 @@
 import Link from 'next/link';
-import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/shell/PageHeader';
-import {
-  Badge,
-  Button,
-  Card,
-  FileRow,
-  Pagination,
-  pageFrom,
-  paginate,
-  Table,
-  TableHead,
-} from '@/components/ui';
+import { Alert, Badge, Button, Card, cx, pageFrom, paginate } from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
 import { describePaymentReference } from '@/lib/ledger';
-import { formatBytes, formatDate, formatMoney } from '@/lib/tenants/format';
+import { formatBytes, formatDate, formatMoney, initials } from '@/lib/tenants/format';
 import { organizationTenants, type TenantDetail } from '@/lib/tenants/queries';
 import { STATUS_LABEL, STATUS_TONE } from '@/lib/tenants/status';
 import { addNoteAction, moveInAction, moveOutAction, updateTenantAction } from '../actions';
-import { AddNoteForm, EditTenantForm } from '../TenantForms';
+import { AddNoteForm, EditTenantForm, MoveOutDialog } from '../TenantForms';
 import { tenantReturnHref } from '../navigation';
+import { TenantPager } from '../Pager';
 import styles from '../tenants.module.css';
-
-function ProfileHeader({ title, action }: { title: string; action?: ReactNode }) {
-  return (
-    <div className="card-header">
-      <h2>{title}</h2>
-      {action}
-    </div>
-  );
-}
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -99,6 +80,57 @@ function history(detail: TenantDetail) {
   return events.sort((a, b) => b.at.getTime() - a.at.getTime()).slice(0, 12);
 }
 
+function ArrowRight() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M5 12h14M14 7l5 5-5 5" />
+    </svg>
+  );
+}
+
+function PropertyCourtIcon() {
+  return (
+    <svg
+      viewBox="0 0 40 40"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M5 35V11h10V5h10v6h10v24M3 35h34M11 17h4M25 17h4M11 24h4M25 24h4M18 35V23h4v12" />
+    </svg>
+  );
+}
+
+function DocumentIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M14 3H5v18h14V8zM14 3v5h5M9 13h6M9 17h4" />
+    </svg>
+  );
+}
+
 export default async function TenantDetailPage({
   params,
   searchParams,
@@ -117,6 +149,7 @@ export default async function TenantDetailPage({
   const returnTo = tenantReturnHref(raw.returnTo);
   const profileHref = `/tenants/${tenant.id}?${new URLSearchParams({ returnTo })}`;
   const error = typeof raw.error === 'string' ? raw.error : undefined;
+  const noteAdded = raw.note === '1';
   const allPayments = leases
     .flatMap((lease) => lease.payments.map((payment) => ({ payment, lease })))
     .sort((a, b) => b.payment.createdAt.getTime() - a.payment.createdAt.getTime());
@@ -132,6 +165,7 @@ export default async function TenantDetailPage({
     .map((l) => l.startDate)
     .sort((a, b) => a.getTime() - b.getTime())[0];
   const docLeases = leases.filter((l) => l.documents.length > 0);
+  const documentCount = docLeases.reduce((count, lease) => count + lease.documents.length, 0);
   const autopayOn = currentLease
     ? (await db.autopaySetting.count({
         where: {
@@ -142,14 +176,15 @@ export default async function TenantDetailPage({
         },
       })) > 0
     : false;
+  const events = history(detail);
 
   return (
-    <div className={styles.profile}>
+    <div className={styles.scope}>
       <Link className={styles.backLink} href={returnTo}>
         ← Back to tenants
       </Link>
       <PageHeader
-        eyebrow="Tenants"
+        eyebrow="People / Tenant"
         title={tenant.name}
         actions={[
           { label: 'Edit profile', href: `${profileHref}&edit=1#edit-profile` },
@@ -162,11 +197,7 @@ export default async function TenantDetailPage({
         ]}
       />
 
-      {error && (
-        <div className="alert warning" role="alert">
-          {error}
-        </div>
-      )}
+      {error && <Alert tone="error">{error}</Alert>}
 
       {editing && (
         <EditTenantForm
@@ -184,39 +215,52 @@ export default async function TenantDetailPage({
         />
       )}
 
-      <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-        <Badge tone={STATUS_TONE[detail.status]}>{STATUS_LABEL[detail.status]}</Badge>
-        {activeLease?.noticeGivenAt && <Badge tone="warning">Notice given</Badge>}
-        {autopayOn && <Badge tone="info">Autopay on</Badge>}
-        {detail.balanceCents > 0 && (
-          <Badge tone="danger">{formatMoney(detail.balanceCents / 100)} due</Badge>
-        )}
-        <span className={`muted ${styles.profileContext}`}>
-          {currentLease ? (
-            <>
-              <Link href={`/properties/${currentLease.unit.property.id}`}>
-                {currentLease.unit.property.name}
-              </Link>
-              {!currentLease.unit.isImplicit && (
-                <>
-                  {' '}
-                  ·{' '}
-                  <Link
-                    href={`/properties/${currentLease.unit.property.id}?unit=${encodeURIComponent(currentLease.unitId)}`}
-                  >
-                    Unit {currentLease.unit.number}
-                  </Link>
-                </>
-              )}
-              {firstMoveIn && <> · Tenant since {formatDate(firstMoveIn)}</>}
-            </>
-          ) : (
-            'Not assigned to a unit'
-          )}
-        </span>
-      </div>
+      <section className={styles.profileBand} aria-label="Tenant overview">
+        <span className={cx('avatar', styles.profileAvatar)}>{initials(tenant.name)}</span>
+        <div>
+          <div className={styles.actions}>
+            <Badge tone={STATUS_TONE[detail.status]}>{STATUS_LABEL[detail.status]}</Badge>
+            {activeLease?.noticeGivenAt && <Badge tone="warning">Notice given</Badge>}
+            {autopayOn && <Badge tone="info">Autopay on</Badge>}
+          </div>
+          <p>
+            {currentLease ? (
+              <>
+                <Link href={`/properties/${currentLease.unit.property.id}`}>
+                  {currentLease.unit.property.name}
+                </Link>
+                {!currentLease.unit.isImplicit && (
+                  <>
+                    {' '}
+                    ·{' '}
+                    <Link
+                      href={`/properties/${currentLease.unit.property.id}?unit=${encodeURIComponent(currentLease.unitId)}`}
+                    >
+                      Unit {currentLease.unit.number}
+                    </Link>
+                  </>
+                )}
+                {firstMoveIn && (
+                  <>
+                    <br />
+                    Tenant since {formatDate(firstMoveIn)}
+                  </>
+                )}
+              </>
+            ) : (
+              'Not assigned to a unit'
+            )}
+          </p>
+        </div>
+        <div className={styles.balance}>
+          <p className={styles.meta}>Outstanding balance</p>
+          <strong className={detail.balanceCents > 0 ? styles.dangerText : undefined}>
+            {formatMoney(detail.balanceCents / 100)}
+          </strong>
+        </div>
+      </section>
 
-      <nav className={styles.sectionLinks} aria-label="Tenant profile sections">
+      <nav className={styles.sectionNav} aria-label="Tenant profile sections">
         <a href="#contact">Contact</a>
         <a href="#lease-summary">Lease summary</a>
         <a href="#payment-history">Payments</a>
@@ -224,150 +268,156 @@ export default async function TenantDetailPage({
         <a href="#move-dates">Move-in / move-out</a>
         <a href="#tenant-history">Notes and history</a>
       </nav>
-      <div className={styles.profileLayout}>
-        <div className={styles.profileMain}>
-          <Card id="lease-summary">
-            <ProfileHeader
-              title="Lease summary"
-              action={
-                currentLease && (
-                  <Button href={`/leases/${currentLease.id}`} variant="ghost" size="sm">
-                    View lease
-                  </Button>
-                )
-              }
-            />
+
+      <div className={styles.detailGrid}>
+        <div className={styles.stack}>
+          <Card id="lease-summary" className={styles.pad}>
+            <div className={styles.sectionHead}>
+              <h2>Lease summary</h2>
+              {currentLease && (
+                <Link className={styles.link} href={`/leases/${currentLease.id}`}>
+                  View lease <ArrowRight />
+                </Link>
+              )}
+            </div>
             {currentLease ? (
-              <dl className="kv">
-                <dt>Lease</dt>
-                <dd>
-                  <Link href={`/leases/${currentLease.id}`}>
-                    {unitLabel(currentLease)} — {tenant.name}
-                  </Link>{' '}
+              <>
+                <div className={styles.actions} style={{ justifyContent: 'space-between' }}>
+                  <Link className={styles.person} href={`/leases/${currentLease.id}`}>
+                    <span className={styles.fileIcon}>
+                      <PropertyCourtIcon />
+                    </span>
+                    <span>
+                      <strong>{unitLabel(currentLease)}</strong>
+                      <small>
+                        {tenant.name} ·{' '}
+                        {currentLease.unit.property.type === 'MULTI_UNIT'
+                          ? 'Multi-unit'
+                          : 'Single-unit'}
+                      </small>
+                    </span>
+                  </Link>
                   <Badge tone={currentLease.status === 'ACTIVE' ? 'success' : 'neutral'}>
                     {LEASE_LABEL[currentLease.status]}
                   </Badge>
-                </dd>
-                <dt>Property</dt>
-                <dd>
-                  <Link href={`/properties/${currentLease.unit.property.id}`}>
-                    {currentLease.unit.property.name}
-                  </Link>{' '}
-                  <span className="muted">
-                    (
-                    {currentLease.unit.property.type === 'MULTI_UNIT'
-                      ? 'multi-unit'
-                      : 'single-unit'}
-                    )
-                  </span>
-                </dd>
-                {!currentLease.unit.isImplicit && (
-                  <>
-                    <dt>Unit</dt>
-                    <dd>
-                      <Link
-                        href={`/properties/${currentLease.unit.property.id}?unit=${encodeURIComponent(currentLease.unitId)}`}
-                      >
-                        Unit {currentLease.unit.number}
-                      </Link>
-                    </dd>
-                  </>
-                )}
-                <dt>Monthly rent</dt>
-                <dd>{formatMoney(currentLease.monthlyRent)}</dd>
-                <dt>Security deposit</dt>
-                <dd>{formatMoney(currentLease.deposit)}</dd>
-                <dt>Term</dt>
-                <dd>
-                  <Link href={`/leases/${currentLease.id}`}>
-                    {formatDate(currentLease.startDate)} – {formatDate(currentLease.endDate)}
-                  </Link>
-                </dd>
-                <dt>Occupants</dt>
-                <dd>{currentLease.occupants ?? '—'}</dd>
-                {currentLease.noticeGivenAt && (
-                  <>
-                    <dt>Notice</dt>
-                    <dd>
-                      <strong>Notice given</strong> {formatDate(currentLease.noticeGivenAt)}
-                      {currentLease.moveOutDate && (
-                        <> · move-out {formatDate(currentLease.moveOutDate)}</>
-                      )}
-                    </dd>
-                  </>
-                )}
-                <dt>Co-tenants</dt>
-                <dd>
-                  {currentLease.tenants.filter((t) => t.tenantId !== tenant.id).length
-                    ? currentLease.tenants
-                        .filter((t) => t.tenantId !== tenant.id)
-                        .map((t, index) => (
-                          <span key={t.tenantId}>
-                            {index > 0 && ', '}
-                            <Link
-                              href={`/tenants/${t.tenantId}?${new URLSearchParams({ returnTo })}`}
-                            >
-                              {t.tenant.name}
-                            </Link>
-                          </span>
-                        ))
-                    : 'None'}
-                </dd>
-              </dl>
+                </div>
+                <div className={styles.rent}>
+                  <div>
+                    <p className={styles.meta}>Monthly rent</p>
+                    <strong>{formatMoney(currentLease.monthlyRent)}</strong>
+                  </div>
+                  <div>
+                    <p className={styles.meta}>Security deposit</p>
+                    <strong>{formatMoney(currentLease.deposit)}</strong>
+                  </div>
+                </div>
+                <dl className={styles.kv}>
+                  <dt>Property</dt>
+                  <dd>
+                    <Link href={`/properties/${currentLease.unit.property.id}`}>
+                      {currentLease.unit.property.name}
+                    </Link>
+                  </dd>
+                  {!currentLease.unit.isImplicit && (
+                    <>
+                      <dt>Unit</dt>
+                      <dd>
+                        <Link
+                          href={`/properties/${currentLease.unit.property.id}?unit=${encodeURIComponent(currentLease.unitId)}`}
+                        >
+                          Unit {currentLease.unit.number}
+                        </Link>
+                      </dd>
+                    </>
+                  )}
+                  <dt>Term</dt>
+                  <dd>
+                    <Link href={`/leases/${currentLease.id}`}>
+                      {formatDate(currentLease.startDate)} – {formatDate(currentLease.endDate)}
+                    </Link>
+                  </dd>
+                  <dt>Occupants</dt>
+                  <dd>{currentLease.occupants ?? '—'}</dd>
+                  {currentLease.noticeGivenAt && (
+                    <>
+                      <dt>Notice</dt>
+                      <dd>
+                        <strong>Notice given</strong> {formatDate(currentLease.noticeGivenAt)}
+                        {currentLease.moveOutDate && (
+                          <> · move-out {formatDate(currentLease.moveOutDate)}</>
+                        )}
+                      </dd>
+                    </>
+                  )}
+                  <dt>Co-tenants</dt>
+                  <dd>
+                    {currentLease.tenants.filter((t) => t.tenantId !== tenant.id).length
+                      ? currentLease.tenants
+                          .filter((t) => t.tenantId !== tenant.id)
+                          .map((t, index) => (
+                            <span key={t.tenantId}>
+                              {index > 0 && ', '}
+                              <Link
+                                href={`/tenants/${t.tenantId}?${new URLSearchParams({ returnTo })}`}
+                              >
+                                {t.tenant.name}
+                              </Link>
+                            </span>
+                          ))
+                      : 'None'}
+                  </dd>
+                </dl>
+              </>
             ) : (
-              <p className="muted">
+              <p className={styles.muted}>
                 No lease yet. Create a lease to assign a unit and record the rental terms.
               </p>
             )}
           </Card>
 
-          <Card flush id="payment-history" className={styles.paymentCard}>
-            <ProfileHeader
-              title="Payment history"
-              action={
-                <Button
+          <Card flush id="payment-history" className={styles.tableCard}>
+            <div className={styles.pad}>
+              <div className={styles.sectionHead} style={{ marginBottom: 0 }}>
+                <h2>Payment history</h2>
+                <Link
+                  className={styles.link}
                   href={
                     currentLease
                       ? `/properties/${currentLease.unit.property.id}/payments?unit=${encodeURIComponent(currentLease.unitId)}`
                       : '/payments'
                   }
-                  variant="ghost"
-                  size="sm"
                 >
-                  Open ledger
-                </Button>
-              }
-            />
-            <Table>
-              <TableHead
-                columns={[
-                  'Date',
-                  'Lease',
-                  'Reference',
-                  <span key="a" className="num" style={{ display: 'block' }}>
-                    Amount
-                  </span>,
-                  'Status',
-                ]}
-              />
+                  Open ledger <ArrowRight />
+                </Link>
+              </div>
+            </div>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Lease / reference</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
               <tbody>
                 {payments.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="muted">
+                    <td colSpan={4} className={styles.muted}>
                       No payments recorded.
                     </td>
                   </tr>
                 )}
                 {payments.map(({ payment, lease }) => (
                   <tr key={payment.id}>
-                    <td data-label="Date">{formatDate(payment.paidAt ?? payment.createdAt)}</td>
-                    <td data-label="Lease">
-                      <Link href={`/leases/${lease.id}`}>{unitLabel(lease)}</Link>
+                    <th scope="row">{formatDate(payment.paidAt ?? payment.createdAt)}</th>
+                    <td data-label="Lease / reference">
+                      <span>
+                        <Link href={`/leases/${lease.id}`}>{unitLabel(lease)}</Link>
+                        <small>{describePaymentReference(payment.providerReference)}</small>
+                      </span>
                     </td>
-                    <td data-label="Reference" className="muted">
-                      {describePaymentReference(payment.providerReference)}
-                    </td>
-                    <td data-label="Amount" className="num">
+                    <td data-label="Amount" className={styles.num}>
                       {formatMoney(payment.amount)}
                     </td>
                     <td data-label="Status">
@@ -378,8 +428,8 @@ export default async function TenantDetailPage({
                   </tr>
                 ))}
               </tbody>
-            </Table>
-            <Pagination
+            </table>
+            <TenantPager
               page={payPage}
               total={allPayments.length}
               noun="payments"
@@ -387,65 +437,61 @@ export default async function TenantDetailPage({
             />
           </Card>
 
-          <Card id="tenant-documents">
-            <ProfileHeader title="Documents" />
+          <Card id="tenant-documents" className={cx(styles.pad, styles.stack)}>
+            <div className={styles.sectionHead}>
+              <h2>Documents</h2>
+              <span className={styles.meta}>
+                {documentCount} {documentCount === 1 ? 'file' : 'files'}
+              </span>
+            </div>
             {docLeases.length === 0 && (
-              <p className="muted">No documents on this tenant’s leases.</p>
+              <p className={styles.muted}>No documents on this tenant’s leases.</p>
             )}
             {docLeases.map((lease) => (
               <section key={lease.id} aria-label={`Documents for ${unitLabel(lease)}`}>
-                <p
-                  className="muted"
-                  style={{ fontSize: 12, fontWeight: 600, margin: '12px 0 4px' }}
-                >
-                  <Link href={`/leases/${lease.id}`}>
-                    Lease: {unitLabel(lease)} ({formatDate(lease.startDate)} –{' '}
-                    {formatDate(lease.endDate)})
-                  </Link>
-                </p>
+                <Link className={styles.meta} href={`/leases/${lease.id}`}>
+                  Lease: {unitLabel(lease)} ({formatDate(lease.startDate)} –{' '}
+                  {formatDate(lease.endDate)})
+                </Link>
                 {lease.documents.map((doc) => (
-                  <FileRow
-                    key={doc.id}
-                    kind={
-                      doc.mimeType === 'application/pdf'
-                        ? 'pdf'
-                        : doc.mimeType.startsWith('image/')
-                          ? 'img'
-                          : 'doc'
-                    }
-                    name={doc.name}
-                    meta={`${doc.kind.toLowerCase()} · ${formatDate(doc.createdAt)} · ${formatBytes(doc.sizeBytes)}`}
-                    action={
-                      <>
-                        <Button href={`/api/files/${doc.id}/preview`} variant="ghost" size="sm">
-                          Preview
-                        </Button>
-                        <Button
-                          href={`/api/files/${doc.id}/download`}
-                          variant="secondary"
-                          size="sm"
-                        >
-                          Download
-                        </Button>
-                      </>
-                    }
-                  />
+                  <div className={styles.file} key={doc.id}>
+                    <span className={styles.fileIcon}>
+                      <DocumentIcon />
+                    </span>
+                    <div>
+                      <strong>{doc.name}</strong>
+                      <small>
+                        {doc.kind.toLowerCase()} · {formatDate(doc.createdAt)} ·{' '}
+                        {formatBytes(doc.sizeBytes)}
+                      </small>
+                    </div>
+                    <div className={styles.actions}>
+                      <Button href={`/api/files/${doc.id}/preview`} variant="secondary" size="sm">
+                        Preview
+                      </Button>
+                      <Button href={`/api/files/${doc.id}/download`} variant="secondary" size="sm">
+                        Download
+                      </Button>
+                    </div>
+                  </div>
                 ))}
               </section>
             ))}
           </Card>
         </div>
 
-        <div className={styles.profileSide}>
-          <Card id="contact" className={styles.contactCard}>
-            <ProfileHeader title="Contact" />
-            <dl className="kv" style={{ gridTemplateColumns: '90px 1fr' }}>
+        <div className={styles.stack}>
+          <Card id="contact" className={cx(styles.pad, styles.contact)}>
+            <div className={styles.sectionHead}>
+              <h2>Contact</h2>
+            </div>
+            <dl className={styles.kv}>
               <dt>Email</dt>
               <dd>
                 {tenant.email ? (
                   <a href={`mailto:${tenant.email}`}>{tenant.email}</a>
                 ) : (
-                  <span className="muted">No email on file</span>
+                  <span className={styles.muted}>No email on file</span>
                 )}
               </dd>
               <dt>Phone</dt>
@@ -453,7 +499,7 @@ export default async function TenantDetailPage({
                 {tenant.phone ? (
                   <a href={`tel:${tenant.phone}`}>{tenant.phone}</a>
                 ) : (
-                  <span className="muted">No phone on file</span>
+                  <span className={styles.muted}>No phone on file</span>
                 )}
               </dd>
               <dt>Emergency</dt>
@@ -462,7 +508,7 @@ export default async function TenantDetailPage({
                   <>
                     {tenant.emergencyContactName}
                     {tenant.emergencyContactRelationship && (
-                      <span className="muted"> ({tenant.emergencyContactRelationship})</span>
+                      <span className={styles.muted}> ({tenant.emergencyContactRelationship})</span>
                     )}
                     {tenant.emergencyContactPhone && (
                       <>
@@ -480,62 +526,63 @@ export default async function TenantDetailPage({
             </dl>
           </Card>
 
-          <Card id="move-dates">
-            <ProfileHeader title="Move-in / move-out" />
-            <div className="stack">
-              {draftLease && (
-                <>
-                  <div className="alert">
-                    Lease for {unitLabel(draftLease)} is drafted for{' '}
-                    {formatDate(draftLease.startDate)}.
-                  </div>
-                  <form action={moveInAction.bind(null, tenant.id)}>
-                    <input type="hidden" name="leaseId" value={draftLease.id} />
-                    <input type="hidden" name="returnTo" value={returnTo} />
-                    <Button type="submit" variant="primary" block>
-                      Move in
-                    </Button>
-                  </form>
-                </>
-              )}
-              {activeLease && (
-                <>
-                  <div className="alert success">
-                    Moved in {formatDate(activeLease.startDate)} · {unitLabel(activeLease)}.
-                  </div>
-                  <form action={moveOutAction.bind(null, tenant.id)}>
-                    <input type="hidden" name="leaseId" value={activeLease.id} />
-                    <input type="hidden" name="returnTo" value={returnTo} />
-                    <Button type="submit" variant="danger" block>
-                      Move out
-                    </Button>
-                  </form>
-                </>
-              )}
-              {!draftLease && !activeLease && (
-                <p className="muted">
-                  {leases.length
-                    ? 'This tenant has moved out.'
-                    : 'Add a unit to this tenant to move them in.'}
-                </p>
-              )}
-            </div>
+          <Card id="move-dates" className={cx(styles.pad, styles.stack)}>
+            <h2>Move-in / move-out</h2>
+            {draftLease && (
+              <>
+                <Alert>
+                  Lease for {unitLabel(draftLease)} is drafted for{' '}
+                  {formatDate(draftLease.startDate)}.
+                </Alert>
+                <form action={moveInAction.bind(null, tenant.id)}>
+                  <input type="hidden" name="leaseId" value={draftLease.id} />
+                  <input type="hidden" name="returnTo" value={returnTo} />
+                  <Button type="submit" variant="primary" block>
+                    Move in
+                  </Button>
+                </form>
+              </>
+            )}
+            {activeLease && (
+              <>
+                <Alert tone="success">
+                  Moved in {formatDate(activeLease.startDate)} · {unitLabel(activeLease)}.
+                </Alert>
+                <MoveOutDialog
+                  tenantName={tenant.name}
+                  unitLabel={unitLabel(activeLease)}
+                  leaseId={activeLease.id}
+                  returnTo={returnTo}
+                  action={moveOutAction.bind(null, tenant.id)}
+                />
+              </>
+            )}
+            {!draftLease && !activeLease && (
+              <p className={styles.muted}>
+                {leases.length
+                  ? 'This tenant has moved out.'
+                  : 'Add a unit to this tenant to move them in.'}
+              </p>
+            )}
           </Card>
 
-          <Card id="tenant-history">
-            <ProfileHeader title="Notes and history" />
-            <AddNoteForm action={addNoteAction.bind(null, tenant.id)} />
-            {history(detail).map((event, i) => (
-              <div className="list-item" key={i}>
-                <div className="file-meta">
+          <Card id="tenant-history" className={styles.pad}>
+            <div className={styles.sectionHead}>
+              <h2>Notes and history</h2>
+            </div>
+            {noteAdded && <Alert tone="success">Note added.</Alert>}
+            <AddNoteForm action={addNoteAction.bind(null, tenant.id)} returnTo={returnTo} />
+            <ol className={styles.timeline}>
+              {events.map((event, i) => (
+                <li key={i}>
                   <strong>{event.title}</strong>
                   <small>
                     {formatDate(event.at)} · {event.meta}
                   </small>
-                </div>
-              </div>
-            ))}
-            {history(detail).length === 0 && <p className="muted">No activity yet.</p>}
+                </li>
+              ))}
+            </ol>
+            {events.length === 0 && <p className={styles.muted}>No activity yet.</p>}
           </Card>
         </div>
       </div>

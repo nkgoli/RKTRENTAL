@@ -39,7 +39,7 @@ test('manager lists, searches, adds and opens a tenant', async ({ page }) => {
   await form.getByLabel('Phone').fill('(555) 010-2030');
   await form.getByRole('button', { name: 'Save tenant' }).click();
 
-  await expect(page).toHaveURL(/\/tenants\/[^/?]+$/);
+  await expect(page).toHaveURL(/\/tenants\/[^/?]+(\?|$)/);
   await expect(page.getByRole('heading', { name: `Pat ${unique}`, level: 1 })).toBeVisible();
   await expect(page.getByText(`${unique}@example.com`)).toBeVisible();
   await expect(page.getByText('No lease', { exact: true })).toBeVisible();
@@ -52,7 +52,7 @@ test('tenant detail shows lease summary linking to the lease', async ({ page }) 
     .getByRole('link', { name: /Alex Rivera/ })
     .first()
     .click();
-  await expect(page).toHaveURL(/\/tenants\/seed-tenant-maple-11$/);
+  await expect(page).toHaveURL(/\/tenants\/seed-tenant-maple-11(\?|$)/);
   await expect(page.getByRole('heading', { name: 'Alex Rivera', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Lease summary' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Payment history' })).toBeVisible();
@@ -78,7 +78,15 @@ test('manager moves a new tenant in and out of a vacant unit', async ({ page }) 
   await expect(page.getByText(/Moved in Nov 1, 2026/)).toBeVisible();
   await expect(page.getByText('Current', { exact: true })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Move out' }).click();
+  await page.getByRole('button', { name: 'Move out', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Move out', exact: true })).toBeFocused();
+  await page.getByRole('button', { name: 'Move out', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Confirm move out' }).click();
   await expect(page.getByText('This tenant has moved out.')).toBeVisible();
   await expect(page.getByText('Past tenant')).toBeVisible();
 });

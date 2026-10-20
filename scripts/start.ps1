@@ -484,6 +484,14 @@ try {
         $env:ROCKETRENTAL_DB_RESET = if ($ResetDatabase) { '1' } else { '0' }
         if ($ResetDatabase) { Warn "-ResetDatabase: deleting $dbDir and re-initialising." }
         $seedMarker = Join-Path $dbDir '.demo-seeded'
+        if (-not (Test-Path $seedMarker)) {
+            # A new -DbPort means a new, separate database; data saved under other ports stays there.
+            $others = @(Get-ChildItem (Join-Path $Root '.data') -Directory -Filter 'postgres-*' -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -ne $dbDir -and (Test-Path (Join-Path $_.FullName '.demo-seeded')) })
+            foreach ($o in $others) {
+                Warn "Creating a NEW database for port $DbPort. Existing data in $($o.Name) is not used by this run; pass -DbPort $($o.Name -replace '^postgres-', '') to keep using it."
+            }
+        }
         New-Item -ItemType Directory -Force -Path $dbDir | Out-Null
         if (-not (Test-Path (Join-Path $Root 'prisma\node_modules\embedded-postgres'))) {
             Invoke-Step 'Installing embedded Postgres (npm install --prefix prisma)' 'npm install --prefix prisma'
@@ -523,6 +531,14 @@ try {
         # The tsx CLI starts a child that bypasses the os.userInfo preload on
         # restricted Windows hosts. Node's import hook runs the seed directly.
         Invoke-Step 'Seeding demo data (node --import tsx prisma/seed.ts)' 'node --env-file-if-exists=.env --import ./prisma/os-userinfo.mjs --import tsx prisma/seed.ts'
+        # Fictional, demo-labeled ROI assumptions for the seed properties (seed-roi-inputs-v1).
+        # Idempotent; fills only unedited seed records with no ROI inputs and records provenance.
+        $sandbox = Get-Configured 'ROCKETRENTAL_SANDBOX'
+        if ($sandbox -and $sandbox.Value -eq 'true') {
+            Invoke-Step 'Adding demo ROI assumptions (npm run demo:roi -- --seed-inputs-only)' 'node --env-file-if-exists=.env --import ./prisma/os-userinfo.mjs --import tsx prisma/load-roi-examples.ts --seed-inputs-only'
+        } else {
+            Warn 'ROCKETRENTAL_SANDBOX is not true; demo ROI assumptions were not added.'
+        }
         $env:NODE_ENV = $prevEnv
         if ($seedMarker) { Set-Content -Path $seedMarker -Value 'seeded' -Encoding Ascii }
     } else {

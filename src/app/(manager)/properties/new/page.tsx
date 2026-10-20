@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { requireManagerRole } from '@/lib/auth/access';
 import { propertiesDb } from '@/lib/properties/data';
@@ -19,9 +18,9 @@ export default async function NewPropertyPage({
       <PageHeader title="Add property" eyebrow="Portfolio / Properties" actions={[]} />
       <div className={styles.formPage}>
         <h1 className={styles.formTitle}>Add property</h1>
-        <Link href={cancelHref} className={styles.backLink}>
+        <a href={cancelHref} className={styles.backLink}>
           ← Back to properties
-        </Link>
+        </a>
         <PropertyForm owners={owners} cancelHref={cancelHref} />
       </div>
     </>

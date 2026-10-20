@@ -1,7 +1,6 @@
 ﻿'use client';
 
 import { useActionState, useEffect, useId, useRef, useState } from 'react';
-import Link from 'next/link';
 import { Alert, Button, Field, FormRow, Input, Select } from '@/components/ui';
 import {
   createPropertyAction,
@@ -261,9 +260,9 @@ export function PropertyForm({
               Cancel
             </Button>
           ) : (
-            <Link className="btn btn-ghost" href={cancelHref}>
+            <a className="btn btn-ghost" href={cancelHref}>
               Cancel
-            </Link>
+            </a>
           )}
         </div>
       </form>

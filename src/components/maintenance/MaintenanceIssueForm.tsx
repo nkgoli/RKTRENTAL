@@ -1,8 +1,9 @@
 'use client';
-import { useActionState, useEffect, useRef, startTransition } from 'react';
+import { useActionState, useEffect, useRef, useState, startTransition } from 'react';
 import { FileUploader } from '@/components/upload';
 import type { RequestActionResult, RequestAction } from './RequestActionForm';
 import styles from './issue-form.module.css';
+import { restoreIssueDraft } from './issue-draft';
 export function MaintenanceIssueForm({
   action,
   scope,
@@ -36,11 +37,30 @@ export function MaintenanceIssueForm({
     {},
   );
   const feedback = useRef<HTMLParagraphElement>(null);
+  const issueForm = useRef<HTMLFormElement>(null);
+  const [restoredDraft, setRestoredDraft] = useState(false);
+  useEffect(() => {
+    if (!issueForm.current || !scope?.requestId || !scope.propertyId || !scope.unitId) return;
+    try {
+      if (
+        restoreIssueDraft(issueForm.current, {
+          requestId: scope.requestId,
+          propertyId: scope.propertyId,
+          unitId: scope.unitId,
+        })
+      )
+        setRestoredDraft(true);
+    } catch {
+      /* Storage unavailable: activity navigation is prevented at its source. */
+    }
+  }, [scope?.requestId, scope?.propertyId, scope?.unitId]);
   useEffect(() => {
     if (result.error || result.message) feedback.current?.focus();
   }, [result]);
   return (
     <form
+      ref={issueForm}
+      data-maintenance-issue-id={scope?.requestId}
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -51,6 +71,9 @@ export function MaintenanceIssueForm({
       onReset={(e) => e.preventDefault()}
       className={styles.form}
     >
+      {restoredDraft && !result.message && (
+        <p role="status">Unsaved issue details restored. Save changes to apply them.</p>
+      )}
       {result.error && (
         <p ref={feedback} tabIndex={-1} role="alert" className={styles.error}>
           {result.error}

@@ -1,5 +1,15 @@
 # Dedicated maintenance forms
 
+## Activity draft preservation review
+
+Unsaved title, description and priority now survive the edit page's activity refresh. Immediately before a successful vendor/status/comment/photo action navigates, the current issue fields are captured into a request/property/unit-scoped, tab-local session-storage handoff. The next issue form restores those values, consumes the handoff once, and identifies them as unsaved. No core issue save is performed by an activity action. Explicit Cancel discards the restored draft; returning to edit shows persisted values. Storage failure or a concurrent issue save prevents navigation and keeps the current draft visible with guidance. Pending feedback uses plain `Saving...`.
+
+- Corrected production build passed compilation, lint/types, generation and route tracing.
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3294 npx playwright test tests/maintenance/draft-activity.spec.ts --project=maintenance`: **2 passed in 12.7s**, at 1440 and 390. Each changes all three issue fields without saving, performs all four activity actions, and checks restoration after every refresh. A separate browser tab confirms the core persisted values remain unchanged. Explicit Cancel discards only the draft; comment/vendor/status/photo changes remain.
+- `npm test -- tests/maintenance/issue-draft.test.ts tests/maintenance/issue-form.test.tsx tests/maintenance/feedback.test.tsx`: **7 passed in three files**, covering one-shot restoration, scope separation, pending-save protection and existing form/error behavior. Scoped lint and whitespace checks passed.
+- The previously successful layout, access/service and full production-flow evidence below is reused; those unrelated checks were not repeated.
+- Latest captures: `tests/maintenance/evidence/draft-activity-1440.png`, `tests/maintenance/evidence/draft-activity-390.png`, `tests/maintenance/evidence/draft-cancel-1440.png`, `tests/maintenance/evidence/draft-cancel-390.png`. The refreshed runtime identity records this candidate/build and guarded release.
+
 Add requests opens `/maintenance/new`; issue editing opens `/maintenance/[id]/edit`. Both use a responsive page column capped at 880px. The form explicitly fills the column, and the edit activity section shares its width and left edge. Location is read-only on edit.
 
 ## Entry points and return context

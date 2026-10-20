@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
+import { readPropertyRoiInputs, roiStorage } from './roi-inputs';
 import {
   IMPLICIT_UNIT_NUMBER,
   checkTypeChange,
@@ -93,7 +94,11 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
     const photos = ids.length
       ? await client.document.findMany({
           where: { organizationId, kind: 'PHOTO', propertyId: { in: ids } },
-          orderBy: [{ isCover: 'desc' }, { sortOrder: { sort: 'asc', nulls: 'last' } }, { createdAt: 'asc' }],
+          orderBy: [
+            { isCover: 'desc' },
+            { sortOrder: { sort: 'asc', nulls: 'last' } },
+            { createdAt: 'asc' },
+          ],
           select: { id: true, propertyId: true },
         })
       : [];
@@ -165,7 +170,11 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
     const [documents, leaseDocuments, repairs, expiring] = await Promise.all([
       client.document.findMany({
         where: { organizationId, propertyId: id },
-        orderBy: [{ isCover: 'desc' }, { sortOrder: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }],
+        orderBy: [
+          { isCover: 'desc' },
+          { sortOrder: { sort: 'asc', nulls: 'last' } },
+          { createdAt: 'desc' },
+        ],
       }),
       client.document.findMany({
         where: { organizationId, lease: { unit: { propertyId: id } } },
@@ -218,6 +227,7 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
       state: property.state,
       postalCode: property.postalCode,
       yearBuilt: property.yearBuilt,
+      roiInputs: readPropertyRoiInputs(property),
       archived: property.archivedAt != null,
       owner: property.owner,
       units,
@@ -256,7 +266,11 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
 
     const documents = await client.document.findMany({
       where: { organizationId, unitId },
-      orderBy: [{ isCover: 'desc' }, { sortOrder: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }],
+      orderBy: [
+        { isCover: 'desc' },
+        { sortOrder: { sort: 'asc', nulls: 'last' } },
+        { createdAt: 'desc' },
+      ],
     });
     const current = unit.leases.find((l) => l.status === 'ACTIVE') ?? null;
     const primary = (l: (typeof unit.leases)[number]) => l.tenants[0]?.tenant ?? null;
@@ -323,10 +337,10 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
     const ownerErr = await ownerError(input.ownerId);
     if (ownerErr) return { ok: false, errors: ownerErr };
 
-    const { unitCount, ...fields } = input;
+    const { unitCount, roiInputs, ...fields } = input;
     const created = await client.$transaction(async (tx) => {
       const property = await tx.property.create({
-        data: { ...fields, organizationId },
+        data: { ...fields, ...roiStorage(null, roiInputs), organizationId },
         select: { id: true },
       });
       if (input.type === 'SINGLE_UNIT') {
@@ -367,10 +381,17 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
     const ownerErr = await ownerError(input.ownerId);
     if (ownerErr) return { ok: false, errors: ownerErr };
 
-    const { unitCount: _unitCount, ...fields } = input;
+    const { unitCount: _unitCount, roiInputs, ...fields } = input;
     void _unitCount;
     await client.$transaction(async (tx) => {
-      await tx.property.updateMany({ where: { id, organizationId }, data: fields });
+      // Serialize financial patches on this tenant-owned row to avoid lost sibling fields.
+      await tx.$queryRaw`SELECT id FROM "Property" WHERE id = ${id} AND "organizationId" = ${organizationId} FOR UPDATE`;
+      const current = await tx.property.findFirst({ where: { id, organizationId } });
+      if (!current) throw new Error('Property not found');
+      await tx.property.updateMany({
+        where: { id, organizationId },
+        data: { ...fields, ...roiStorage(current.roiInputs, roiInputs) },
+      });
       if (existing.type !== input.type) {
         if (input.type === 'MULTI_UNIT') {
           await tx.unit.updateMany({

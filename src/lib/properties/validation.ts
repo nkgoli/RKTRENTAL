@@ -1,3 +1,4 @@
+import { parseRoiInputs, type PropertyRoiInputs } from './roi-inputs';
 export type FieldErrors = Record<string, string>;
 export type Parsed<T> = { ok: true; data: T } | { ok: false; errors: FieldErrors };
 
@@ -11,6 +12,7 @@ export const IMPLICIT_UNIT_NUMBER = 'Whole property';
 export const MAX_UNITS_ON_CREATE = 200;
 
 export type PropertyInput = {
+  roiInputs?: PropertyRoiInputs;
   name: string;
   type: PropertyTypeValue;
   street: string;
@@ -80,6 +82,8 @@ export function parsePropertyInput(
 ): Parsed<PropertyInput> {
   const raw = toRaw(source);
   const errors: FieldErrors = {};
+  const roi = parseRoiInputs(raw.roiInputs);
+  if (!roi.success) Object.assign(errors, roi.errors);
   const maxYear = (opts.now ?? new Date()).getFullYear() + 2;
 
   const name = text(raw, 'name');
@@ -117,7 +121,18 @@ export function parsePropertyInput(
   if (Object.keys(errors).length) return { ok: false, errors };
   return {
     ok: true,
-    data: { name, type, street, city, state, postalCode, yearBuilt, ownerId, unitCount },
+    data: {
+      name,
+      type,
+      street,
+      city,
+      state,
+      postalCode,
+      yearBuilt,
+      ownerId,
+      unitCount,
+      ...(roi.success && roi.data !== undefined ? { roiInputs: roi.data } : {}),
+    },
   };
 }
 

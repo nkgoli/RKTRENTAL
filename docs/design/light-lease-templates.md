@@ -103,3 +103,52 @@ Manager checklist:
 - Use Tab/Shift+Tab/Enter through links, expansion, ordering, fields and Save; scroll long wording and verify sticky actions remain reachable. Capture desktop/390px evidence and report existing-Edge results plus desktop release confirmation through the manager.
 
 Repository-runner comparisons, mutation flows, overflow and keyboard checks are observed as above. Native existing-Edge acceptance remains unverified and pending; no native completion claim is made.
+
+## Isolated runtime repair (new build and fixture, 2026-10-20)
+
+This repair uses the admitted checkout `@0i7995325yqvnc3z6rm`, branch `orchestra/work-2gcjdifqik3o7helc0b-4f9qeuj6rqf0avuhn6r`, starting at integrated source `b4cc8c3c68b8f90e2430f8bd484919b372827574`. The original retained checkout and historical evidence above were not accessed or altered. The scoped template routes, schema, package manifest/lock and Next config compare equal to historical build-source `80fcd26976020f828ca2d6f424d05831fed60db2` using `git diff` in this checkout. This is a new build, not reuse of the historical artifact.
+
+Initial observations: this admitted checkout contained neither node_modules nor a production build nor an isolated fixture; no listeners were present on 3147/5547. These observations do not establish why the historical runtime exited. A `git archive HEAD` snapshot was expanded under `.data/lease-template-review-runtime/source`; installation, generated client, build and seed writes stay within that snapshot or the owned fixture paths. No other checkout or listener was displaced. The snapshot is immutable application source at the recorded commit; this Task repairs the outer runtime script and handoff only.
+
+The runtime script now defaults to read-only service checks (`-Action status`; it updates only the health receipt). Explicit `-Action start -Initialize` initializes the separate database, applies migrations, seeds synthetic records and makes a new production build before starting the hidden app. Both ports are checked and temporarily bound together before startup; this is a preflight reservation, with a small unavoidable handoff interval. Subsequent readiness validates the actual listener PIDs. Failures retain partial ownership receipts and logs rather than claiming readiness. Receipt identity includes exact executable, command line, PID and creation time for the app, database launcher and PostgreSQL listener; status checks those identities, both listener owners, database readiness and HTTP 200 through localhost and IPv4 loopback. Stop validates recorded identities before graceful database shutdown and stops only the recorded application/launcher PIDs; it then verifies both ports are free. It refuses an existing receipt on start instead of silently overwriting ownership. A new start requires deliberately archiving the old receipt after release.
+
+Use Windows PowerShell with CIM/process access for lifecycle commands. The sandboxed attempt was denied CIM access and PostgreSQL initialization failed under its restricted token; the owned launcher exited and no successful fixture was claimed. An authorized unrestricted retry installed dependencies, initialized the new fixture, applied all 19 migrations and seeded four properties/45 units. Prisma download initially failed under network restriction and succeeded on the authorized retry. Neither failure proves the historical connection-refusal cause.
+
+Pending: record the new build ID/readiness, manager's actual desktop/390px Edge observations and captures, explicit remaining gaps and manager-authorized guarded release. Required native review is not satisfied by automated tests or HTTP readiness. Keep this runtime running until the manager returns observations and release instructions.
+
+New build ID: `ttYYITOFs0cC2ltHWA9ir`. Initial hidden launch began 05:11:32 UTC; app began 05:12:10 UTC. Current exact identities are in `.data/lease-template-review-runtime/runtime.json`; the post-test health observation is `.data/lease-template-review-runtime/status-after-tests.json`. The original startup polling call did not report success because its first script version mishandled singleton listener collections; further checks exposed an unavailable pg_isready binary and an absent JSON health property. Those checks were repaired (array normalization, read-only Prisma SELECT 1, explicit health-property creation); the corrected status operation passed with the same live processes, without rebuild/reseed/restart. Start now preflights CIM authority before launching processes. Source archive SHA256 and source commit are retained separately in `source-identity.json`, avoiding misidentification after a later handoff commit.
+
+New-runtime checks: production build passed including lint/type validation; scoped editor unit tests passed (3/3); the existing dedicated Playwright runner passed all 3 desktop/390px and actual-mutation tests in 9.2 seconds against this new fixture. This is automated Chromium evidence, not native Edge acceptance. Newly generated captures were copied to `.playwright-mcp/isolated-review/` with their existing `candidate-*.png` filenames; historical captures were not overwritten. Corrected lifecycle status passed again after browser mutations, including exact process/listener ownership, both HTTP hostnames and read-only database access. `git diff --check` and PowerShell parser checks pass after newline normalization. Guarded stop/release remains deliberately not run pending manager instructions.
+
+Review handoff sent through the typed Task question: library `http://localhost:3147/leases/templates`, editor `http://localhost:3147/leases/templates/cmvg87bam0000b9bw0x3quuad`, creation `http://localhost:3147/leases/templates/new`, sign-in `http://localhost:3147/sign-in`. Synthetic seeded credentials: `jordan.mills@rocketrental.example` / `JordanDemo#2026`. The browser tests also created a long-wording comparison fixture. No manager native observations have been received at this checkpoint. Runtime remains running; no final submission, commit, shutdown, push or deployment yet.
+
+### Manager native review and verified release
+
+The manager reported successful existing-Edge review of **this new build** `ttYYITOFs0cC2ltHWA9ir`, approximately 2026-10-20 05:13:40–05:16:30 UTC, on native Edge tab 712378562 at localhost:3147 with requested viewports 1280×900 and 390×844. This is manager-supplied native evidence, distinct from the owner's automated Chromium tests. Runtime stayed reachable during navigation, saves and reload; no connection refusal occurred. The manager reset the viewport override, closed the review tab and released the desktop before authorizing service shutdown.
+
+Observed native passes:
+
+- Desktop library table and phone cards, seeded editor and creation navigation, readable layout without horizontal overflow. Phone innerWidth was 390 and document scrollWidth 375, accounting for the scrollbar.
+- Keyboard Enter opened the seeded editor and expanded the Rent clause. Title, wording and Include when labels were visible, reorder/remove controls were separate, and Tab from wording reached Include when with visible focus. Expanded editor was captured at both widths.
+- Created synthetic `Native Edge review 2026-10-20` with one clause, rule and disclosure, monthly_rent placeholder, required clause and move-in fee125. Phone Enter on Save template created version1 at `/leases/templates/cmvg8c8nw000ab97oiydmhhv3`.
+- Desktop edit added longer clause wording and fee150. Save focused `Saved version 2.`, re-enabled controls and displayed version2. Reload preserved wording, items and fee150; the library listed v2, 0 leases and no property default.
+- Collapsed preview rendered monthly_rent as a blank with token name, clamped long text cleanly at both widths and separated condition/required metadata. Phone fee inputs had visible labels; sampled move-in field measured 16px font and 44px height. No error/warning console records were captured.
+
+Native capture provenance: manager response `927c04ab46b0fe9e9203cd35fae6a9262d2b557d1819ee49f68ccafb3972d1cb`, conversation trigger `4790115457cb5a40338713b1c0f23802c0801e5e100125db7bd39f31d7354a29`. Captures are images in that manager conversation, **not local files**. Exact tool titles:
+
+- `Read the loaded library and desktop layout`
+- `Capture phone template library`
+- `Check phone clause expansion and field labels`
+- `Check keyboard flow and desktop editor layout`
+- `Capture desktop creation form`
+- `Capture phone creation and save the synthetic template`
+- `Verify saved-template result and collapsed preview`
+- `Capture saved previews at both widths and reload for persistence` (2 images)
+- `Check phone fee fields and return to the saved library`
+- `Capture the persisted library entry and finish browser review`
+
+Native limits: duplicate/delete, assigning property defaults, actual reorder/remove mutations and failure injection were not exercised by the manager. Their separate automated evidence remains applicable and is not relabelled as native. The standard seeded template and its assignments were not saved or changed by manager review. Historical process-exit cause remains unproven. These limits do not negate the observed native library/editor/creation, keyboard, save/preview and persistence checks.
+
+After explicit manager release, the guarded stop verified all three original process identities, both dedicated listener owners, HTTP and database health before stopping anything. PostgreSQL was stopped gracefully through pg_ctl against the owned fixture directory, then only the recorded app and launcher PIDs were stopped. Release completed at `2026-10-20T05:17:58.3007756Z`; independent verification at 05:17:58.3564917 UTC found all three recorded PIDs absent and zero listeners on ports 3147/5547. `.data/lease-template-review-runtime/release-proof.json` records those results. Fixture PG_VERSION and the new build remained present; logs, source snapshot and captures were preserved. No unrelated services were stopped. The reviewed URLs are now intentionally offline following authorized release.
+
+Final scope: lifecycle script plus read-only database probe and this handoff; no application changes, other-checkout writes, push, deployment or independent integration. Native observations and verified release supersede the pending checkpoints above. This submission is a committed candidate for the recorded manager-review path, not an assertion of final acceptance or target integration.

@@ -1,7 +1,7 @@
 [CmdletBinding(SupportsShouldProcess)]
 param([ValidateSet('Start','Launch','Status','Stop')][string]$Action='Status')
 $ErrorActionPreference='Stop'
-$reviewRoot=(Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
+$reviewRoot=(Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
 $runtimeDir=Join-Path $PSScriptRoot '.runtime'
 $config=Get-Content (Join-Path $runtimeDir 'review-config.json') -Raw | ConvertFrom-Json
 $stateFile=Join-Path $runtimeDir 'services.json'
@@ -46,11 +46,8 @@ function Start-Next($directory,$port,$label){
 if($Action -eq 'Start'){
  Assert-Ready
  $powershellExe=(Get-Command powershell.exe).Source
- $startup=New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ShowWindow=[uint16]0}
- $commandLine='"'+$powershellExe+'" -NoProfile -NonInteractive -WindowStyle Hidden -File "'+$PSCommandPath+'" -Action Launch'
- $result=Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine=$commandLine;CurrentDirectory=$reviewRoot;ProcessStartupInformation=$startup}
- if($result.ReturnValue -ne 0){throw "Hidden launcher failed: $($result.ReturnValue)"}
- [pscustomobject]@{launcherPid=$result.ProcessId;stateFile=$stateFile;candidateCommit=$config.candidateCommit} | ConvertTo-Json
+ $launcher=Start-Process -FilePath $powershellExe -ArgumentList @('-NoProfile','-NonInteractive','-WindowStyle','Hidden','-ExecutionPolicy','Bypass','-File',('"'+$PSCommandPath+'"'),'-Action','Launch') -WorkingDirectory $reviewRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $runtimeDir 'launcher.stdout.log') -RedirectStandardError (Join-Path $runtimeDir 'launcher.stderr.log')
+ [pscustomobject]@{launcherPid=$launcher.Id;stateFile=$stateFile;candidateCommit=$config.candidateCommit} | ConvertTo-Json
  return
 }
 if($Action -eq 'Launch'){
@@ -66,7 +63,7 @@ if($Action -eq 'Launch'){
   try{$rng.GetBytes($secretBytes)}finally{$rng.Dispose()}
   $env:ROCKETRENTAL_AUTH_SECRET=[Convert]::ToBase64String($secretBytes)
   $env:ROCKETRENTAL_AUTH_COOKIE_SECURE='false'
-  $env:STORAGE_LOCAL_DIR=Join-Path $runtimeDir 'storage'
+  $env:STORAGE_LOCAL_DIR=Join-Path $runtimeDir 'storage-candidate'
   $state.baseline=Start-Next $baselineDir 3241 'baseline'
   $state | ConvertTo-Json -Depth 5 | Set-Content $stateFile -Encoding UTF8
   $state.candidate=Start-Next $candidateDir 3242 'candidate'

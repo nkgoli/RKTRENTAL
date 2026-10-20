@@ -61,6 +61,6 @@ Configured MCP, not that CLI spec, produced the submitted evidence.
 
 Remaining: native review/final release, implicit single-family delete guard,
 fully reliable canonical soft navigation/all-units and immediate media refresh,
-unit-cancel value assertion, and document upload. Direct routes and persisted
+and document upload. Direct routes and persisted
 results must not be substituted for successful soft-navigation/native results.
 No financial/provider action, push or integration is authorized here.

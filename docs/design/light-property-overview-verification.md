@@ -56,7 +56,7 @@ vacancy is inferred from the inherited spec's misleading3A constant.
 | Keyboard switcher | At390, focusedS1 then ArrowDown/Enter opened canonical ?unit=cmvfycjhc0001b9jwizb1xmie (S2). Focus screenshots below. |
 | Canonical links/scoped tabs | 3A's selected switcher ID and all seven tab hrefs retained its unit query. Leases clicks reached /leases?unit=demo-unit-maple-11 in initial attempts; return/all-units transitions did not complete reliably. Final narrow Open4B probe failed on both baseline/candidate; see finding below. |
 | Property inline facts | Cancel changed city back to Austin when reopened; empty Name produced required error/aria-invalid; CityGeorgetown saved and survived reload. DB inspection confirmed Georgetown. |
-| Unit inline facts | Cancel, required-number error and bedrooms3 save were executed; validation screenshot and DBbedrooms3 confirm validation/save. The run reached a confirm dialog before returning its cancel-value variable, so the unit cancellation value is not independently asserted. Manager's older native unit-number cancel remains separate evidence. |
+| Unit inline facts | Cancel, required-number error and bedrooms3 save were executed; validation screenshot and DBbedrooms3 confirm validation/save. The initial run reached a confirm dialog before returning its cancel variable; a later bounded cancellation-only check independently confirmed before=S1, after=S1 after typing CANCEL-ONLY-99 and cancelling. Manager's older native unit-number cancel remains separate evidence. |
 | Add unit | Empty submit showed Unit number is required. S2 was created with listedRent1600; direct DB inspection confirmed oneS2. Initial visible-link wait selected hidden phone markup; a subsequent visible-only link check found it. Label-based fill failed, so source-confirmed name selectors were used; associated-label behavior is not a pass. |
 | Delete dismissal | Fresh automation confirmation said Delete this empty unit? This cannot be undone. browser_handle_dialog(accept=false) succeeded in the same tool sequence; S1 remained and after-delete-dismissed.png was captured. An earlier separate dismissal call lost session; that attempt is not a pass. No accept/deletion occurred. |
 | Linked-record guard | Occupied4B Delete was disabled; occupied Status select also disabled. |
@@ -177,3 +177,16 @@ Latest DB-confirmed fixture remains Georgetown/S1bedrooms3/S2 and zero documents
 reflecting completed earlier isolated checks; no uncertain mutation was retried
 or fixture reverted. Preserve it and await manager start notice/exclusive access.
 Runtime remains ready/running; final native results/release are still pending.
+
+## Additional bounded result — unit cancellation
+
+After the latest continuation, configured browser inventory returned one
+about:blank tab. Navigation/snapshot then succeeded. Sign-in discarded the unit
+query in its next destination, so the first assertion wait stopped before any
+edit; no mutation was attempted in that first call. An authenticated direct
+navigation to the exact S1 query then succeeded. The cancellation-only check
+returned before=S1, after=S1, unchanged=true after filling CANCEL-ONLY-99,
+Cancel, Edit, reading the value and Cancel again. No Save or persistent
+fixture mutation was issued. This closes the earlier unit-cancel value gap.
+No completed implementation/flow check was repeated. Native question and
+file scope remain unchanged; runtime preserved for that window.

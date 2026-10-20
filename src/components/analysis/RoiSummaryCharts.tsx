@@ -50,8 +50,8 @@ export function NetCashFlowCard({ result }: { result: ProjectionResult }) {
             label: 'Net cash flow',
             kind: 'bar',
             values,
-            color: chartColors.teal,
-            negativeColor: chartColors.red,
+            color: chartColors.primary,
+            negativeColor: chartColors.bad,
           },
         ]}
         markers={
@@ -61,17 +61,17 @@ export function NetCashFlowCard({ result }: { result: ProjectionResult }) {
                 {
                   index: turn,
                   label: `Positive Y${visible[turn].year}`,
-                  color: chartColors.tealDark,
+                  color: chartColors.primaryDark,
                   align: 'center',
                 },
               ]
         }
         legend={[
           ...(values.some((v) => v >= 0)
-            ? [{ label: 'Positive Cash Flow', kind: 'bar' as const, color: chartColors.teal }]
+            ? [{ label: 'Positive Cash Flow', kind: 'bar' as const, color: chartColors.primary }]
             : []),
           ...(values.some((v) => v < 0)
-            ? [{ label: 'Negative Cash Flow', kind: 'bar' as const, color: chartColors.red }]
+            ? [{ label: 'Negative Cash Flow', kind: 'bar' as const, color: chartColors.bad }]
             : []),
         ]}
         tooltip={(i) => {
@@ -106,9 +106,9 @@ export function OutcomeCard({ result }: { result: ProjectionResult }) {
   const m = result.summaryMetrics;
   if (!w) return null;
   const parts = [
-    { label: 'Cash Flow', value: w.cashFlow, color: chartColors.teal },
-    { label: 'Principal', value: w.principal, color: chartColors.tealLight },
-    { label: 'Appreciation', value: w.appreciation, color: chartColors.tealPale },
+    { label: 'Cash Flow', value: w.cashFlow, color: chartColors.primary },
+    { label: 'Principal', value: w.principal, color: chartColors.primaryLight },
+    { label: 'Appreciation', value: w.appreciation, color: chartColors.primaryPale },
   ];
   const negative = parts.filter((p) => p.value < 0);
   // The public result reports undefined ratios (e.g. DSCR with no debt) as null.
@@ -226,7 +226,7 @@ export function ProjectionMilestones({ result }: { result: ProjectionResult }) {
     {
       id: 'income',
       title: 'Income Analysis',
-      tone: chartColors.teal,
+      tone: chartColors.primary,
       icon: glyph('M22 7 13.5 15.5 8.5 10.5 2 17M16 7h6v6'),
       lines: [
         { label: 'Scheduled rent', values: col((y) => at(y).grossRent) },
@@ -248,7 +248,7 @@ export function ProjectionMilestones({ result }: { result: ProjectionResult }) {
     {
       id: 'expenses',
       title: 'Operating Expenses',
-      tone: chartColors.slateMid,
+      tone: chartColors.mutedMid,
       icon: glyph('M22 17 13.5 8.5 8.5 13.5 2 7M16 17h6v-6'),
       lines: [
         { label: 'Operating expenses', values: col((y) => at(y).operatingExpenses) },
@@ -263,7 +263,7 @@ export function ProjectionMilestones({ result }: { result: ProjectionResult }) {
     {
       id: 'cash',
       title: 'Cash Flow',
-      tone: chartColors.tealDark,
+      tone: chartColors.primaryDark,
       icon: glyph('M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'),
       lines: [
         {
@@ -293,7 +293,7 @@ export function ProjectionMilestones({ result }: { result: ProjectionResult }) {
     {
       id: 'equity',
       title: 'Equity Analysis',
-      tone: chartColors.slateDark,
+      tone: chartColors.ink,
       icon: glyph('M3 10.5 12 3l9 7.5V21H3zM9 21v-6h6v6'),
       lines: [
         {

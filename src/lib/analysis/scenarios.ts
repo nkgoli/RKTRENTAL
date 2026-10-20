@@ -46,15 +46,18 @@ export const scenarioExamples: Pick<ScenarioDraft, 'name' | 'values'>[] = [
   },
 ];
 
-/** RealROI preset colours by case name; other cases cycle through distinct hues. */
+/**
+ * Preset colours by case name from the app palette (primary, accent, danger and their
+ * companions); other cases cycle through distinct hues. Each carries white chip text.
+ */
 const presetColors: Record<string, string> = {
-  'Base Case': '#3b82f6',
-  Optimistic: '#22c55e',
-  Conservative: '#f97316',
-  'Best Case': '#10b981',
-  'Worst Case': '#ef4444',
+  'Base Case': '#3159d9',
+  Optimistic: '#087c91',
+  Conservative: '#b04a1c',
+  'Best Case': '#4f7a2b',
+  'Worst Case': '#b4233e',
 };
-const extraColors = ['#8b5cf6', '#0ea5e9', '#ec4899', '#a16207', '#64748b', '#0d9488'];
+const extraColors = ['#9d174d', '#0b2545', '#946200', '#58687e', '#203fa8', '#06606f'];
 export function scenarioColors(names: string[]) {
   let next = 0;
   const used = new Set<string>();

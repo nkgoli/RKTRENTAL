@@ -1,17 +1,15 @@
-/* Summary cards modelled on RealROI's Outcome and Cash Flow & Equity Projections. */
-.outcome {
-  --chart-mono:
-    'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, Menlo, monospace;
-}
+/* Summary Outcome and Cash Flow & Equity Projections cards, in app KPI and table style. */
 .big {
   margin: 0 !important;
+  font-family: var(--design-heading-font);
   font-size: 30px !important;
   font-weight: 700;
+  letter-spacing: -0.03em;
   line-height: 1.2;
-  color: #0284c7 !important;
+  color: var(--design-text) !important;
 }
 .big[data-negative] {
-  color: #b91c1c !important;
+  color: var(--rr-bad) !important;
 }
 .outcomeRow {
   display: flex;
@@ -32,9 +30,9 @@
 }
 .qualityTitle {
   margin: 0;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--design-muted);
 }
 .quality > div {
   display: flex;
@@ -42,19 +40,19 @@
   gap: 12px;
 }
 .quality dt {
-  color: #334155;
+  color: var(--design-text);
 }
 .quality dd {
   margin: 0;
-  font-family: var(--chart-mono);
+  font-family: var(--design-font);
   font-weight: 700;
-  color: #0f172a;
+  color: var(--design-text);
 }
 .quality dd[data-tone='bad'] {
-  color: #dc2626;
+  color: var(--rr-bad);
 }
 .quality dd[data-tone='good'] {
-  color: #16a34a;
+  color: var(--rr-ok);
 }
 .parts {
   display: flex;
@@ -63,10 +61,10 @@
   list-style: none;
   margin: 0;
   padding: 12px 0;
-  border-top: 1px solid #f1f5f9;
-  border-bottom: 1px solid #f1f5f9;
+  border-top: 1px solid var(--rr-subtle);
+  border-bottom: 1px solid var(--rr-subtle);
   font-size: 13px;
-  color: #475569;
+  color: var(--design-muted);
 }
 .parts li {
   display: inline-flex;
@@ -79,17 +77,17 @@
   border-radius: 2px;
 }
 .parts b {
-  font-family: var(--chart-mono);
+  font-family: var(--design-font);
   font-weight: 600;
-  color: #0f172a;
+  color: var(--design-text);
 }
 .parts b[data-negative] {
-  color: #b91c1c;
+  color: var(--rr-bad);
 }
 .note {
   margin: 0 !important;
   font-size: 11px !important;
-  color: #64748b;
+  color: var(--design-muted);
 }
 .centered {
   display: flex;
@@ -105,26 +103,24 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 10px;
-  color: #64748b;
+  font-size: 12px;
+  color: var(--design-muted);
 }
 .key i {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #14b8a6;
+  background: var(--design-primary);
 }
 .key i[data-tone='loss'] {
   margin-left: 8px;
-  background: #ef4444;
+  background: var(--rr-bad);
 }
 .scroll {
   overflow-x: auto;
   margin: 0 -16px;
 }
 .table {
-  --chart-mono:
-    'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, Menlo, monospace;
   width: 100%;
   min-width: 600px;
   border-collapse: collapse;
@@ -132,63 +128,65 @@
 }
 .table thead th {
   padding: 10px 8px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--rr-border);
+  background: #f8fafc;
   text-align: right;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--design-text);
   white-space: nowrap;
 }
 .table thead th:first-child {
   padding-left: 16px;
   text-align: left;
-  font-size: 10px;
-  color: #64748b;
+  font-size: 12px;
+  color: var(--design-muted);
 }
 .table thead small {
   display: block;
-  font-family: var(--chart-mono);
-  font-size: 10px;
-  color: #94a3b8;
+  font-family: var(--design-font);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--design-muted);
 }
 .table tbody tr {
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--rr-subtle);
 }
 .table tbody th[scope='row'] {
   padding: 8px 8px 8px 16px;
   white-space: nowrap;
   text-align: left;
   font-weight: 400;
-  color: #334155;
+  color: var(--design-text);
 }
 .table td {
   padding: 8px;
   text-align: right;
-  font-family: var(--chart-mono);
-  color: #1e293b;
+  font-family: var(--design-font);
+  color: var(--design-text);
   white-space: nowrap;
 }
 .table td > span {
   margin-right: 8px;
 }
 .table td[data-tone='gain'] {
-  color: #15803d;
+  color: var(--rr-ok);
 }
 .table td[data-tone='loss'] {
-  color: #dc2626;
+  color: var(--rr-bad);
 }
 .table tr[data-strong] {
-  background: #f0fdfa;
+  background: var(--rr-ok-bg);
 }
 .table tr[data-strong] th,
 .table tr[data-strong] td {
   font-weight: 700;
-  color: #0f766e;
+  color: var(--rr-ok);
 }
 .table tr[data-strong] td[data-tone='loss'] {
-  color: #dc2626;
+  color: var(--rr-bad);
 }
 .section {
-  background: #f8fafc;
+  background: var(--design-background);
 }
 .section th {
   padding: 0 !important;
@@ -205,11 +203,11 @@
   background: transparent;
   font-size: 13px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--design-text);
   text-align: left;
 }
 .section button:hover {
-  background: #f1f5f9;
+  background: var(--rr-subtle);
 }
 .icon {
   display: inline-grid;
@@ -225,8 +223,8 @@
   margin-left: auto;
   width: 8px;
   height: 8px;
-  border-right: 2px solid #94a3b8;
-  border-bottom: 2px solid #94a3b8;
+  border-right: 2px solid var(--rr-border-strong);
+  border-bottom: 2px solid var(--rr-border-strong);
   transform: rotate(-45deg);
 }
 .section button[aria-expanded='true'] .chevron {
@@ -234,8 +232,8 @@
 }
 .foot {
   margin: 0 !important;
-  font-size: 10px !important;
-  color: #64748b;
+  font-size: 12px !important;
+  color: var(--design-muted);
 }
 .srOnly {
   position: absolute;

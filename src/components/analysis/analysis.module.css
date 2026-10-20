@@ -1,20 +1,10 @@
+/* The ROI workspace sits in the shell's .page (which sets width and gutters) and uses
+   the app tokens and components from globals.css: cards, secondary/primary buttons,
+   tabs and focus rings. */
 .workspace {
-  --design-primary: #1e3a8a;
-  --design-background: #ffffff;
-  --design-surface: #ffffff;
-  --design-text: #17142b;
-  --design-muted: #64748b;
-  --design-accent: #e0a283;
-  --design-danger: #dc2626;
-  --design-font: Inter;
-  --design-heading-font: 'Space Grotesk';
-  --design-radius: 8px;
   color: var(--design-text);
   min-width: 0;
   width: 100%;
-  max-width: 1440px;
-  margin: auto;
-  padding: 24px 32px;
   font-size: 14px;
 }
 .workspace [hidden] {
@@ -22,64 +12,85 @@
 }
 .workspace h1 {
   font-size: 24px;
-  margin: 4px 0;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin: 0 0 4px;
 }
 .workspace h2 {
-  font-size: 17px;
-  margin: 0 0 16px;
+  font-size: var(--rr-h3);
+  margin: 0 0 12px;
 }
 .workspace p {
   color: var(--design-muted);
   line-height: 1.6;
 }
 .eyebrow {
-  text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 0.1em;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  margin: 0 0 2px;
 }
 .heading {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 .card {
-  border: 1px solid #e2e8f0;
-  background: white;
-  border-radius: var(--design-radius);
-  padding: 20px;
+  border: var(--rr-card-border);
+  background: var(--design-surface);
+  border-radius: var(--rr-card-radius);
+  box-shadow: var(--rr-card-shadow);
+  padding: var(--rr-card-pad);
   min-width: 0;
 }
+/* Buttons default to the app's secondary button; .primary is the primary button. */
 .workspace button {
-  border: 1px solid #cbd5e1;
-  background: white;
-  border-radius: 6px;
-  padding: 9px 14px;
+  border: 1px solid var(--rr-border-strong);
+  background: var(--design-surface);
+  border-radius: 7px;
+  padding: 7px 14px;
   font: inherit;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  color: var(--design-primary);
+  color: var(--design-text);
+}
+.workspace button:hover:not(:disabled) {
+  background: var(--rr-hover);
 }
 .workspace button:disabled {
-  opacity: 0.5;
-  cursor: wait;
+  background: var(--design-background);
+  border-color: var(--rr-border);
+  color: var(--design-muted);
+  cursor: not-allowed;
 }
 .workspace button.primary {
   background: var(--design-primary);
-  color: white;
+  border-color: var(--design-primary);
+  color: #fff;
+  box-shadow: 0 3px 0 #203fa8;
 }
-.workspace :focus-visible {
-  outline: 3px solid #e0a283;
-  outline-offset: 3px;
+.workspace button.primary:hover:not(:disabled) {
+  background: var(--rr-primary-hover);
+}
+.workspace button.primary:disabled {
+  background: var(--design-background);
+  border-color: var(--rr-border);
+  color: var(--design-muted);
+  box-shadow: none;
 }
 .context {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
-  padding: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  padding: 12px var(--rr-card-pad);
+  background: var(--design-surface);
+  border: var(--rr-card-border);
+  border-radius: var(--rr-card-radius);
+  box-shadow: var(--rr-shadow);
 }
 .context span:last-child {
   margin-left: auto;
@@ -110,12 +121,12 @@
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr);
-  gap: 20px;
+  gap: var(--rr-gap);
   align-items: start;
 }
 .stack {
   display: grid;
-  gap: 20px;
+  gap: var(--rr-gap);
 }
 .metrics {
   display: grid;
@@ -124,9 +135,12 @@
 }
 .metrics strong {
   display: block;
-  font-size: 27px;
-  font-weight: 600;
-  margin-top: 8px;
+  font-family: var(--design-heading-font);
+  font-size: var(--rr-kpi);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-top: 4px;
 }
 .metrics small {
   color: var(--design-muted);
@@ -138,7 +152,7 @@
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--rr-subtle);
   padding: 10px 0;
 }
 .statement dd {
@@ -150,21 +164,27 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
 }
 .field input,
 .field select {
-  border: 1px solid #cbd5e1;
-  border-radius: 5px;
-  padding: 9px 10px;
+  border: 1px solid var(--rr-border-strong);
+  border-radius: 7px;
+  min-height: 36px;
+  padding: 8px 12px;
   width: 100%;
   min-width: 0;
   font: inherit;
-  background: white;
+  font-size: 14px;
+  font-weight: 400;
+  background: var(--design-surface);
   color: var(--design-text);
 }
 .field small {
-  font-size: 10px;
+  font-size: 12px;
+  font-weight: 400;
   color: var(--design-muted);
 }
 .fields {
@@ -177,7 +197,7 @@
   font-size: 12px;
 }
 .assumptions details {
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--rr-border);
   padding: 14px 0;
 }
 .workspace summary {
@@ -196,10 +216,12 @@
   align-items: center;
   margin: 14px 0;
 }
+/* Notices are the app's warning alert. */
 .notice {
-  padding: 14px;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
+  padding: 12px 14px;
+  background: var(--rr-warn-bg);
+  color: var(--rr-warn);
+  border: 1px solid var(--rr-warn);
   border-radius: 8px;
   margin: 16px 0;
 }
@@ -209,10 +231,10 @@
 }
 .error,
 .field small.error {
-  color: #dc2626;
+  color: var(--rr-bad);
 }
 .field [aria-invalid='true'] {
-  border-color: #dc2626;
+  border-color: var(--rr-bad);
 }
 .chart {
   height: 155px;
@@ -237,7 +259,7 @@
   border-radius: 3px 3px 0 0;
 }
 .chart small {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--design-muted);
 }
 .table {
@@ -252,8 +274,14 @@
 .table th,
 .table td {
   text-align: right;
-  padding: 8px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--rr-border);
+}
+.table thead th {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--design-muted);
+  background: #f8fafc;
 }
 .table th:first-child {
   text-align: left;
@@ -277,17 +305,11 @@
   .layout {
     grid-template-columns: 1fr;
   }
-  .workspace {
-    padding: 20px;
-  }
   .assumptions {
     order: 1;
   }
 }
 @media (max-width: 480px) {
-  .workspace {
-    padding: 16px;
-  }
   .heading {
     align-items: flex-start;
     flex-direction: column;

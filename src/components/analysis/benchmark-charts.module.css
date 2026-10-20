@@ -1,4 +1,4 @@
-/* RealROI Benchmarks and Compare: summary banner, asset chips, winner and asset cards. */
+/* Benchmarks and Compare in app style: summary alert, chip pickers, winner and asset cards. */
 .picker {
   display: flex;
   flex-wrap: wrap;
@@ -12,7 +12,7 @@
   width: 100%;
   margin-bottom: 8px;
   font-size: 12px;
-  color: #526174;
+  color: var(--design-muted);
 }
 .propertyChip,
 .assetChip,
@@ -21,13 +21,13 @@
   align-items: center;
   gap: 8px;
   min-height: 32px;
-  padding: 6px 12px;
+  padding: 5px 12px;
   border-radius: 999px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
 }
 .propertyChip {
-  background: #0d9488;
+  background: var(--rr-ok);
   color: white;
 }
 .propertyChip i {
@@ -38,17 +38,18 @@
 }
 .assetChip {
   position: relative;
-  border: 1px solid transparent;
-  background: #f1f5f9;
-  color: #475569;
+  border: 1px solid var(--rr-border-strong);
+  background: var(--design-surface);
+  color: var(--design-text);
   cursor: pointer;
 }
 .assetChip:hover {
-  background: #e2e8f0;
+  background: var(--rr-hover);
 }
 .assetChip[data-on] {
-  color: white;
-  text-shadow: 0 1px 1px #0f172a66;
+  border-color: transparent;
+  color: #fff;
+  text-shadow: 0 1px 1px rgb(23 36 59 / 0.4);
 }
 .assetChip input {
   position: absolute;
@@ -58,30 +59,28 @@
   cursor: pointer;
 }
 .assetChip:has(input:focus-visible) {
-  outline: 2px solid #0f172a;
+  outline: 3px solid var(--design-primary);
   outline-offset: 2px;
 }
 .addCustom.addCustom {
-  border: 1px dashed #94a3b8;
-  background: white;
-  color: #475569;
+  border: 1px dashed var(--rr-border-strong);
+  background: var(--design-surface);
+  color: var(--design-muted);
   font-size: 13px;
 }
 .banner {
-  --chart-mono:
-    'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, Menlo, monospace;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 16px;
-  padding: 24px;
+  padding: var(--rr-card-pad);
   border-radius: 8px;
-  border: 2px solid #f59e0b;
-  background: #fffbeb;
+  border: 1px solid var(--rr-warn);
+  background: var(--rr-warn-bg);
 }
 .banner[data-tone='good'] {
-  border-color: #22c55e;
-  background: #f0fdf4;
+  border-color: var(--rr-ok);
+  background: var(--rr-ok-bg);
 }
 .banner > div {
   flex: 1 1 300px;
@@ -92,15 +91,15 @@
   align-items: center;
   gap: 8px;
   margin: 0 0 8px !important;
-  font-size: 18px !important;
+  font-size: var(--rr-h3) !important;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--design-text);
 }
 .banner[data-tone='good'] h3 svg {
-  color: #16a34a;
+  color: var(--rr-ok);
 }
 .banner[data-tone='warn'] h3 svg {
-  color: #d97706;
+  color: var(--rr-warn);
 }
 .bannerRows {
   margin: 0;
@@ -116,33 +115,32 @@
 .bannerRows > div[data-total] {
   margin-top: 8px;
   padding-top: 4px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--rr-border);
 }
 .bannerRows dt {
-  color: #475569;
+  color: var(--design-muted);
 }
 .bannerRows dd {
   margin: 0;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-family: var(--chart-mono);
   font-weight: 700;
-  color: #0f172a;
+  color: var(--design-text);
 }
 .bannerRows dd[data-tone='good'] {
-  color: #15803d;
+  color: var(--rr-ok);
 }
 .bannerRows dd[data-tone='bad'] {
-  color: #dc2626;
+  color: var(--rr-bad);
 }
 .disclaimer {
   margin: 12px 0 0 !important;
   padding: 6px 8px;
-  border-radius: 4px;
-  background: #ffffff80;
-  font-size: 10px !important;
-  color: #526174 !important;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.6);
+  font-size: 12px !important;
+  color: var(--design-muted) !important;
 }
 .bannerKpis {
   flex: 0 1 256px;
@@ -155,29 +153,26 @@
 .bannerKpis > div {
   padding: 8px 12px;
   border-radius: 8px;
-  background: #ffffffb3;
+  background: var(--design-surface);
 }
 .bannerKpis dt {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
-  color: #0f766e;
-}
-.bannerKpis > div + div dt {
-  color: #475569;
+  color: var(--design-muted);
 }
 .bannerKpis dd {
   margin: 0;
-  font-family: var(--chart-mono);
+  font-family: var(--design-heading-font);
   font-size: 20px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--design-text);
 }
 .bannerKpis small {
-  font-size: 10px;
-  color: #526174;
+  font-size: 12px;
+  color: var(--design-muted);
 }
 .propertyRow {
-  background: #f0fdfa;
+  background: var(--rr-ok-bg);
 }
 .propertyRow th,
 .propertyRow td {
@@ -193,11 +188,9 @@
 }
 .trophy {
   margin-left: 6px;
-  color: #eab308;
+  color: var(--rr-warm);
 }
 .milestones {
-  --chart-mono:
-    'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, Menlo, monospace;
   overflow-x: auto;
 }
 .milestones table {
@@ -213,17 +206,17 @@
   font-weight: 500;
 }
 .milestones thead th {
-  color: #526174;
+  color: var(--design-muted);
 }
 .milestones th:first-child {
   text-align: left;
 }
 .milestones tbody tr {
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--rr-subtle);
 }
 .milestones td {
-  font-family: var(--chart-mono);
-  color: #1e293b;
+  font-family: var(--design-font);
+  color: var(--design-text);
 }
 .scatterKey {
   display: flex;
@@ -234,7 +227,7 @@
   margin: 0;
   padding: 0;
   font-size: 12px;
-  color: #475569;
+  color: var(--design-muted);
 }
 .scatterKey li {
   display: inline-flex;
@@ -250,12 +243,12 @@
   height: 0;
   width: 16px;
   border-radius: 0;
-  border-top: 2px dashed #0d9488;
+  border-top: 2px dashed var(--rr-ok);
   background: none !important;
 }
 .scatterKey b {
-  font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
-  color: #0f172a;
+  font-family: var(--design-font);
+  color: var(--design-text);
 }
 .cards {
   display: grid;
@@ -268,22 +261,23 @@
   align-content: start;
   min-width: 0;
   padding: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--rr-border);
   border-top: 4px solid;
   border-radius: 8px;
-  background: white;
-  color: #0f172a;
+  background: var(--design-surface);
+  font-weight: 400;
+  color: var(--design-text);
   text-align: left;
 }
 button.assetCard.assetCard {
   cursor: pointer;
 }
 button.assetCard.assetCard:hover {
-  box-shadow: 0 4px 6px -1px #0f172a1a;
+  box-shadow: var(--rr-shadow-lift);
 }
 .assetCard > small {
   font-size: 12px;
-  color: #526174;
+  color: var(--design-muted);
 }
 .assetCard dl {
   margin: 8px 0 0;
@@ -297,18 +291,17 @@ button.assetCard.assetCard:hover {
   gap: 8px;
 }
 .assetCard dt {
-  color: #475569;
+  color: var(--design-muted);
 }
 .assetCard dd {
   margin: 0;
-  font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
-  font-weight: 500;
+  font-weight: 600;
 }
 .assetCard dd[data-tone='good'] {
-  color: #15803d;
+  color: var(--rr-ok);
 }
 .assetCard dd[data-tone='bad'] {
-  color: #dc2626;
+  color: var(--rr-bad);
 }
 .footer {
   display: flex;
@@ -316,8 +309,8 @@ button.assetCard.assetCard:hover {
   gap: 4px 16px;
   margin: 0 !important;
   padding: 0 4px;
-  font-size: 10px !important;
-  color: #64748b !important;
+  font-size: 12px !important;
+  color: var(--design-muted) !important;
 }
 .footerRight {
   margin-left: auto;
@@ -328,49 +321,50 @@ button.assetCard.assetCard:hover {
   gap: 16px;
 }
 .winner {
-  padding: 16px 20px;
-  border: 2px solid #e2e8f0;
+  padding: 12px var(--rr-card-pad);
+  border: 1px solid var(--rr-border);
   border-radius: 8px;
-  background: white;
+  background: var(--design-surface);
 }
 .winner[data-property] {
-  border-color: #22c55e;
-  background: #f0fdf4;
+  border-color: var(--rr-ok);
+  background: var(--rr-ok-bg);
 }
 .winner p {
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0 !important;
-  font-size: 14px !important;
+  font-size: 13px !important;
   font-weight: 500;
-  color: #64748b !important;
+  color: var(--design-muted) !important;
 }
 .winner[data-property] p svg {
-  color: #16a34a;
+  color: var(--rr-ok);
 }
 .winner b {
   display: block;
-  margin-top: 8px;
+  margin-top: 6px;
+  font-family: var(--design-heading-font);
   font-size: 18px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--design-text);
 }
 .winner small {
-  font-size: 10px;
-  color: #64748b;
+  font-size: 12px;
+  color: var(--design-muted);
 }
 .groupTitle {
-  font-size: 10px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.15em;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #94a3b8 !important;
+  color: var(--design-muted) !important;
 }
 .impact {
   margin-left: 4px;
-  font-size: 10px;
-  color: #cbd5e1;
+  font-size: 12px;
+  color: var(--rr-border-strong);
 }
 .cell {
   display: inline-flex;
@@ -379,19 +373,18 @@ button.assetCard.assetCard:hover {
 }
 .badge {
   padding: 1px 6px;
-  border-radius: 4px;
-  font-family: var(--design-font), Inter, sans-serif;
-  font-size: 9px;
+  border-radius: 6px;
+  font-size: 11px;
   font-style: normal;
-  font-weight: 700;
+  font-weight: 600;
 }
 .badge[data-tone='best'] {
-  background: #f0fdf4;
-  color: #15803d;
+  background: var(--rr-ok-bg);
+  color: var(--rr-ok);
 }
 .badge[data-tone='worst'] {
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--rr-bad-bg);
+  color: var(--rr-bad);
 }
 .delta {
   display: flex;
@@ -401,10 +394,10 @@ button.assetCard.assetCard:hover {
   font-size: 12px;
 }
 .delta[data-tone='teal'] {
-  color: #15803d;
+  color: var(--rr-ok);
 }
 .delta[data-tone='red'] {
-  color: #dc2626;
+  color: var(--rr-bad);
 }
 .tableFoot {
   display: flex;
@@ -412,7 +405,7 @@ button.assetCard.assetCard:hover {
   gap: 8px 16px;
   margin: 0 !important;
   font-size: 12px !important;
-  color: #64748b !important;
+  color: var(--design-muted) !important;
 }
 .tableFoot span {
   display: inline-flex;
@@ -426,10 +419,10 @@ button.assetCard.assetCard:hover {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #22c55e;
+  background: var(--rr-ok);
 }
 .tableFoot i[data-tone='worst'] {
-  background: #ef4444;
+  background: var(--rr-bad);
 }
 @media (max-width: 640px) {
   .banner {

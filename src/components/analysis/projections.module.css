@@ -1,24 +1,28 @@
 .projections {
   min-width: 0;
 }
+/* Section tabs follow the app's .tabs: muted labels, primary underline when active. */
 .tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px;
-  border-bottom: 1px solid #e1e6ee;
+  gap: 4px;
+  border-bottom: 1px solid var(--rr-border);
   margin: 12px 0 16px;
 }
 .tabs button {
   border: 0;
   border-radius: 0;
   border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent !important;
+  box-shadow: none;
   color: var(--design-muted);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   min-height: 44px;
 }
 .tabs button[aria-selected='true'] {
-  background: #f7f9fc;
+  font-weight: 600;
   color: var(--design-primary);
   border-bottom-color: var(--design-primary);
 }
@@ -55,7 +59,7 @@
 .graph text {
   font-family: var(--design-font), Arial, sans-serif;
   font-size: 13px;
-  fill: #475569;
+  fill: var(--design-muted);
 }
 .legend {
   display: flex;
@@ -110,7 +114,7 @@
   height: 10px;
   border-radius: 3px;
   overflow: hidden;
-  background: #f1f5f9;
+  background: var(--rr-subtle);
   flex: 1;
   min-width: 24px;
 }
@@ -124,7 +128,7 @@
   height: 13px;
   top: -2px;
   width: 1px;
-  background: #64748b;
+  background: var(--design-muted);
 }
 .negative {
   color: var(--design-danger);
@@ -140,7 +144,7 @@
   white-space: normal;
 }
 .exact thead {
-  background: #f7f9fc;
+  background: var(--design-background);
 }
 .exact td {
   font-variant-numeric: tabular-nums;
@@ -153,22 +157,22 @@
   font-size: 11px;
 }
 .heat td {
-  background: #f0fdfa;
-  color: #134e4a;
+  background: var(--rr-ok-bg);
+  color: var(--rr-ok);
 }
 .heat td[data-negative='true'] {
-  background: #fef2f2;
-  color: #991b1b;
+  background: var(--rr-bad-bg);
+  color: var(--rr-bad);
 }
 .base {
-  outline: 2px solid #0f766e;
+  outline: 2px solid var(--rr-ok);
   outline-offset: -2px;
   font-weight: 700;
 }
 .disclosure {
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid #e1e6ee;
+  border-top: 1px solid var(--rr-border);
 }
 .disclosure > summary {
   margin-bottom: 12px;
@@ -217,8 +221,8 @@
 .footnote {
   margin: 0;
   text-align: center;
-  font-size: 10px !important;
-  color: #64748b;
+  font-size: 12px !important;
+  color: var(--design-muted);
 }
 .bandSwatch {
   display: inline-block;
@@ -226,13 +230,16 @@
   height: 12px;
   vertical-align: -2px;
   border-radius: 2px;
-  border: 1px solid #2dd4bf;
-  background: linear-gradient(#14b8a666, #14b8a61a);
+  border: 1px solid var(--design-primary);
+  background: linear-gradient(
+    color-mix(in srgb, var(--rr-ok) 40%, white),
+    color-mix(in srgb, var(--rr-ok) 10%, white)
+  );
 }
 .grew {
   font-weight: 500;
-  color: #0f766e;
+  color: var(--rr-ok);
 }
 .grew[data-negative] {
-  color: #b91c1c;
+  color: var(--rr-bad);
 }

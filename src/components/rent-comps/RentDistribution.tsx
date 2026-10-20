@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { fixedDomainScale } from '@/lib/analysis/chart-data';
 import { rentDistribution } from '@/lib/comps/distribution';
+import { chartColors } from '@/components/analysis/RoiChart';
 import c from '@/components/analysis/roi-chart.module.css';
 import s from './rent-distribution.module.css';
 
@@ -10,8 +11,8 @@ const usd = (v: number) => `$${Math.round(v).toLocaleString('en-US')}`;
 const k = (v: number) => `$${(v / 1000).toFixed(1)}k`;
 
 /**
- * RealROI "Rental Distribution" (C25): a normal curve fitted to the included
- * comps, comps as dots on the curve, the subject's rent as a teal line and dot,
+ * Rental Distribution (C25): a normal curve fitted to the included
+ * comps, comps as dots on the curve, the subject's rent as an accent line and dot,
  * a dashed average and the suggested range as a band. It summarises the spread;
  * it is not a probability claim about this home's rent.
  */
@@ -154,8 +155,8 @@ export function RentDistribution({
             </title>
             <defs>
               <linearGradient id={`${id}-g`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#14b8a6" stopOpacity={0.4} />
-                <stop offset="100%" stopColor="#14b8a6" stopOpacity={0.05} />
+                <stop offset="0%" stopColor={chartColors.primary} stopOpacity={0.4} />
+                <stop offset="100%" stopColor={chartColors.primary} stopOpacity={0.05} />
               </linearGradient>
             </defs>
             {band && (
@@ -164,17 +165,17 @@ export function RentDistribution({
                 width={Math.max(0, x(band.hi) - x(band.lo))}
                 y={m.top}
                 height={ih}
-                fill="#14b8a6"
+                fill={chartColors.primary}
                 fillOpacity={0.08}
-                stroke="#14b8a6"
+                stroke={chartColors.primary}
                 strokeOpacity={0.2}
                 strokeDasharray="3 3"
               />
             )}
-            <line x1={m.left} x2={m.left + iw} y1={y(0)} y2={y(0)} stroke="#e2e8f0" />
+            <line x1={m.left} x2={m.left + iw} y1={y(0)} y2={y(0)} stroke={chartColors.border} />
             {ticks.map((t) => (
               <g key={t}>
-                <line x1={x(t)} x2={x(t)} y1={y(0)} y2={y(0) + 5} stroke="#e2e8f0" />
+                <line x1={x(t)} x2={x(t)} y1={y(0)} y2={y(0) + 5} stroke={chartColors.border} />
                 <text x={x(t)} y={h - 6} textAnchor="middle" style={{ fontSize: 10 }}>
                   {k(t)}
                 </text>
@@ -182,14 +183,14 @@ export function RentDistribution({
             ))}
             <g className={c.reveal}>
               <path d={area} fill={`url(#${id}-g)`} />
-              <path d={line} fill="none" stroke="#14b8a6" strokeWidth={2.5} />
+              <path d={line} fill="none" stroke={chartColors.primary} strokeWidth={2.5} />
             </g>
             <line
               x1={x(d.mean)}
               x2={x(d.mean)}
               y1={m.top}
               y2={y(0)}
-              stroke="#64748b"
+              stroke={chartColors.muted}
               strokeDasharray="5 5"
             />
             {!close && (
@@ -197,7 +198,7 @@ export function RentDistribution({
                 x={x(d.mean) - 4}
                 y={y(0) - 6}
                 textAnchor="end"
-                style={{ fontSize: 9, fontWeight: 600, fill: '#64748b' }}
+                style={{ fontSize: 9, fontWeight: 600, fill: chartColors.muted }}
               >
                 Avg {k(d.mean)}
               </text>
@@ -209,14 +210,14 @@ export function RentDistribution({
                   x2={x(d.subject.rent)}
                   y1={m.top}
                   y2={y(0)}
-                  stroke="#0d9488"
+                  stroke={chartColors.accent}
                   strokeWidth={2.5}
                 />
                 <text
                   x={x(d.subject.rent) + (left ? 6 : -6)}
                   y={m.top + 10}
                   textAnchor={left ? 'start' : 'end'}
-                  style={{ fontSize: 10, fontWeight: 700, fill: '#0d9488' }}
+                  style={{ fontSize: 10, fontWeight: 700, fill: chartColors.accent }}
                 >
                   {`You ${k(d.subject.rent)}${close ? ' ≈ Avg' : ''}`}
                 </text>
@@ -228,8 +229,8 @@ export function RentDistribution({
                 cx={x(p.rent)}
                 cy={y(p.density)}
                 r={(p.you ? 7 : 5) + (active === i ? 2 : 0)}
-                fill={p.you ? '#0d9488' : '#94a3b8'}
-                stroke={p.you ? '#0f766e' : '#64748b'}
+                fill={p.you ? chartColors.accent : chartColors.mutedLight}
+                stroke={p.you ? chartColors.accentDark : chartColors.muted}
                 strokeWidth={p.you ? 2 : 1.5}
               />
             ))}

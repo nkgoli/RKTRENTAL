@@ -28,11 +28,11 @@ import d from './detail-charts.module.css';
 const pct = (v: number | null, digits = 2) =>
   v == null || !Number.isFinite(v) ? 'Unavailable' : `${(v * 100).toFixed(digits)}%`;
 const exitColors = {
-  proceeds: chartColors.emerald,
-  proceedsActive: chartColors.emeraldDark,
-  cash: chartColors.sky500,
-  cashActive: chartColors.sky600,
-  initial: chartColors.violet,
+  proceeds: chartColors.accent,
+  proceedsActive: chartColors.accentDark,
+  cash: chartColors.primary,
+  cashActive: chartColors.primaryDark,
+  initial: chartColors.plum,
 };
 /** Reference default: Year 10 is selected; otherwise the final compared year. */
 const defaultYear = (rows: { year: number }[] | null) =>
@@ -196,7 +196,7 @@ function Comparison({ data }: { data: ExitRow[] }) {
             values: data.map((r) => r.netProceeds),
             color: exitColors.proceeds,
             activeColor: exitColors.proceedsActive,
-            activeStroke: '#065f46',
+            activeStroke: '#044b57',
           },
           {
             label: 'Cash Flow',
@@ -205,7 +205,7 @@ function Comparison({ data }: { data: ExitRow[] }) {
             values: data.map((r) => r.cashFlow),
             color: exitColors.cash,
             activeColor: exitColors.cashActive,
-            activeStroke: '#075985',
+            activeStroke: chartColors.navy,
           },
         ]}
         refLines={[
@@ -233,14 +233,14 @@ function Comparison({ data }: { data: ExitRow[] }) {
             title: `Year ${r.year} Exit`,
             rows: [
               { label: 'Sale Price', value: r.salePrice },
-              { label: 'Selling Costs', op: '−', value: r.sellingCosts, color: '#ea580c' },
-              { label: 'Loan Payoff', op: '−', value: r.loanPayoff, color: '#dc2626' },
+              { label: 'Selling Costs', op: '−', value: r.sellingCosts, color: chartColors.warn },
+              { label: 'Loan Payoff', op: '−', value: r.loanPayoff, color: chartColors.bad },
               {
                 label: 'Net Proceeds',
                 op: '=',
                 value: r.netProceeds,
                 total: true,
-                color: '#059669',
+                color: chartColors.accentDark,
               },
               {
                 label: 'Cash Flow Received',
@@ -253,7 +253,7 @@ function Comparison({ data }: { data: ExitRow[] }) {
                 op: '=',
                 value: r.totalCashBack,
                 total: true,
-                color: '#7c3aed',
+                color: chartColors.plum,
               },
               { label: 'Initial Cash Invested', op: '−', value: r.invested, tone: 'muted' },
               { label: 'Profit', op: '=', value: r.profit, total: true, tone: 'auto' },

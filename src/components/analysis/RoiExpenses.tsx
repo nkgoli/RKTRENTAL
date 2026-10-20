@@ -385,12 +385,12 @@ export function Expenses({ result, onEdit }: { result: ProjectionResult; onEdit:
             {
               label: 'Operating expenses',
               values: visible.map((r) => r.operatingExpenses),
-              color: chartColors.slate,
+              color: chartColors.muted,
             },
             {
               label: 'Capital reserves',
               values: visible.map((r) => r.reserves),
-              color: chartColors.teal,
+              color: chartColors.primary,
               dashed: true,
             },
           ]}

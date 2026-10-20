@@ -217,9 +217,9 @@ describe('RealROI chart adapters', () => {
     expect(marks.breakeven?.year).toBe(10);
     expect(exitLandmarks(exitRows([fake(5, null, 1)])).bestIrr).toBe(null);
     // Heat scale and contour.
-    expect(heatColor(-1, 1, -1, heatPalette)).toBe('#ef4444');
-    expect(heatColor(-1, 1, 0, heatPalette)).toBe('#fbbf24');
-    expect(heatColor(-1, 1, 1, heatPalette)).toBe('#22c55e');
+    expect(heatColor(-1, 1, -1, heatPalette)).toBe(heatPalette.low);
+    expect(heatColor(-1, 1, 0, heatPalette)).toBe(heatPalette.mid);
+    expect(heatColor(-1, 1, 1, heatPalette)).toBe(heatPalette.high);
     expect(
       breakevenContour([
         [-2, -1, 1],

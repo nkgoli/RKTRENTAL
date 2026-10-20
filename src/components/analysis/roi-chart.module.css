@@ -1,14 +1,14 @@
-/* ROI chart system matching the rendered RealROI cards: slate-100 header strip,
-   14 px title over a 10 px basis line, teal-500 pill controls, mono figures,
-   dashed grids both ways. Below 480 px controls stack and tiles use 2 columns. */
+/* ROI chart system in the app's own style (globals.css tokens): the flush card with a
+   bordered header, Space Grotesk headings, Inter tabular figures, chip-style range
+   controls and the dashboard chart's solid grid. Below 640 px controls stack under the
+   title and tiles use 2 columns. */
 .card {
-  --chart-mono:
-    'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, Menlo, monospace;
   padding: 0 !important;
   overflow: hidden;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: white;
+  border: var(--rr-card-border);
+  border-radius: var(--rr-card-radius);
+  background: var(--design-surface);
+  box-shadow: var(--rr-card-shadow);
 }
 .head {
   display: flex;
@@ -16,20 +16,16 @@
   align-items: center;
   gap: 10px 16px;
   flex-wrap: wrap;
-  background: #f1f5f9;
-  border-bottom: 1px solid #e2e8f0;
-  padding: 12px 16px;
-}
-/* Card headings use Inter like the reference, not the app's Space Grotesk heading face. */
-.card :is(h2, h3, h4) {
-  font-family: var(--design-font), Inter, system-ui, sans-serif;
+  border-bottom: 1px solid var(--rr-border);
+  padding: 12px var(--rr-card-pad);
 }
 .head h2 {
   margin: 0 !important;
-  font-size: 14px !important;
+  font-family: var(--design-heading-font);
+  font-size: var(--rr-h3) !important;
   font-weight: 600;
-  line-height: 1.4;
-  color: #1e293b;
+  line-height: 1.35;
+  color: var(--design-text);
 }
 .head > div:first-child {
   flex: 1 1 260px;
@@ -37,10 +33,9 @@
 }
 .head p {
   margin: 2px 0 0;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.4 !important;
-  /* slate-500 darkened slightly so 10 px text keeps 4.5:1 on slate-100. */
-  color: #526174 !important;
+  color: var(--design-muted) !important;
 }
 .controls {
   flex: none;
@@ -57,48 +52,41 @@
   justify-content: flex-end;
 }
 .body {
-  padding: 16px;
+  padding: var(--rr-card-pad);
   display: grid;
   gap: 16px;
   min-width: 0;
 }
 .body > p {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
 }
+/* Range and view toggles use the app's chip row (dashboard "6M 12M 2Y 5Y"). */
 .segmented {
   display: inline-flex !important;
   flex-wrap: wrap;
-  gap: 0 !important;
-  padding: 2px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  gap: 6px !important;
 }
 .segmented button[aria-pressed] {
-  border: 0;
-  border-radius: 6px;
-  padding: 4px 10px;
-  min-height: 26px;
-  font-size: 10px;
+  min-height: 30px;
+  padding: 3px 12px;
+  border: 1px solid var(--rr-border-strong);
+  border-radius: 999px;
+  background: var(--design-surface);
+  font: inherit;
+  font-size: 13px;
   font-weight: 500;
-  color: #475569;
-  background: transparent;
-}
-.segmented[data-size='md'] button[aria-pressed] {
-  font-size: 12px;
-  padding: 4px 8px;
+  color: var(--design-text);
+  cursor: pointer;
 }
 .segmented button[aria-pressed]:hover {
-  color: #0f172a;
-  background: #f8fafc;
+  background: var(--rr-hover);
 }
 .segmented button[aria-pressed='true'],
 .segmented button[aria-pressed='true']:hover {
-  background: #14b8a6;
-  color: white;
-  /* White on teal-500 is 2.5:1; a darker inset keeps the pressed state visible. */
-  box-shadow: inset 0 0 0 1px #0d9488;
+  background: var(--design-primary);
+  border-color: var(--design-primary);
+  color: #fff;
 }
 .horizon {
   display: inline-flex;
@@ -111,29 +99,28 @@
   gap: 8px;
 }
 .slider input {
-  width: 80px;
-  accent-color: #14b8a6;
+  width: 88px;
+  accent-color: var(--design-primary);
 }
 .slider output {
   min-width: 2rem;
-  font-family: var(--chart-mono);
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  color: var(--design-text);
 }
 .check {
   display: inline-flex !important;
   align-items: center;
   gap: 8px;
-  font-size: 10px !important;
-  font-weight: 400 !important;
-  color: #475569 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--design-text) !important;
   cursor: pointer;
 }
 .check input {
-  accent-color: #14b8a6;
-  width: 14px;
-  height: 14px;
+  accent-color: var(--design-primary);
+  width: 16px;
+  height: 16px;
 }
 .info {
   position: relative;
@@ -145,13 +132,13 @@
   padding: 0 2px;
   min-height: 0;
   background: transparent;
-  color: #94a3b8;
+  color: var(--rr-border-strong);
   line-height: 0;
   cursor: help;
 }
 .info button:hover,
 .info button:focus-visible {
-  color: #475569;
+  color: var(--design-text);
 }
 .info [role='tooltip'] {
   position: absolute;
@@ -163,11 +150,12 @@
   max-width: 220px;
   padding: 6px 10px;
   border-radius: 8px;
-  background: #0f172a;
-  color: white;
+  background: var(--design-text);
+  color: #fff;
   font-size: 12px;
   font-weight: 400;
   line-height: 1.4;
+  letter-spacing: 0;
   text-transform: none;
   white-space: normal;
   /* display (not visibility) so a closed tip near the edge never widens the page;
@@ -179,6 +167,7 @@
 .info button:focus-visible + [role='tooltip'] {
   display: block;
 }
+/* Metric tiles follow the app KPI card: muted 12 px label over a Space Grotesk value. */
 .tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -189,107 +178,76 @@
   gap: 8px;
 }
 .tiles > div {
+  border: 1px solid var(--rr-border);
   border-radius: 8px;
   padding: 10px 12px;
-  background: #f0fdfa;
+  background: var(--design-surface);
   min-width: 0;
 }
 .tiles[data-size='sm'] > div {
   padding: 8px 12px;
 }
-.tiles > div[data-tone='tealSoft'] {
-  background: #f0fdfa80;
-}
-.tiles > div[data-tone='slate'] {
-  background: #f1f5f9;
+.tiles > div:is([data-tone='slate'], [data-tone='muted']) {
+  background: var(--design-background);
 }
 .tiles > div[data-tone='red'] {
-  background: #fef2f2;
+  background: var(--rr-bad-bg);
+  border-color: color-mix(in srgb, var(--rr-bad) 25%, white);
 }
 .tiles > div[data-tone='amber'] {
-  background: #fffbeb;
+  background: var(--rr-warn-bg);
+  border-color: color-mix(in srgb, var(--rr-warn) 25%, white);
+}
+.tiles > div[data-tone='blue'] {
+  background: var(--rr-primary-tint);
+  border-color: color-mix(in srgb, var(--design-primary) 20%, white);
 }
 .tiles dt {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
+  font-size: var(--rr-label);
   font-weight: 600;
-  color: #0f766e;
+  color: var(--design-muted);
 }
-.tiles > div[data-tone='slate'] dt {
-  color: #475569;
-}
-.tiles > div[data-tone='red'] dt {
-  color: #b91c1c;
-}
-.tiles > div[data-tone='amber'] dt {
-  color: #92400e;
+.tiles > div[data-tone='card'] dt {
+  gap: 8px;
 }
 .tiles dd {
   margin: 2px 0 0;
 }
+.tiles strong,
+.tooltip b,
+.figure,
+.donutTip b,
+.slider output {
+  font-variant-numeric: tabular-nums;
+}
 .tiles strong {
   display: block;
-  font-family: var(--chart-mono);
-  font-size: 18px;
+  font-family: var(--design-heading-font);
+  font-size: 20px;
   font-weight: 700;
-  color: #0f766e;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--design-text);
   overflow-wrap: anywhere;
 }
 .tiles[data-size='sm'] strong {
-  font-size: 14px;
-}
-.tiles > div[data-tone='slate'] strong {
-  color: #334155;
+  font-size: 15px;
 }
 .tiles > div[data-tone='red'] strong,
 .tiles strong[data-tone='red'] {
-  color: #b91c1c;
+  color: var(--rr-bad);
 }
-.tiles strong[data-tone='teal'] {
-  color: #0f766e;
-}
-.tiles strong[data-tone='green'] {
-  color: #15803d;
+.tiles strong:is([data-tone='teal'], [data-tone='green']) {
+  color: var(--rr-ok);
 }
 .tiles strong[data-tone='amber'] {
-  color: #b45309;
+  color: var(--rr-warn);
 }
 .tiles strong[data-tone='slate'] {
-  color: #0f172a;
-}
-.tiles > div[data-tone='blue'] {
-  background: #eff6ff;
-}
-.tiles > div[data-tone='blue'] dt {
-  color: #1d4ed8;
-}
-.tiles > div[data-tone='muted'] {
-  background: #f8fafc;
-}
-.tiles > div[data-tone='muted'] dt {
-  color: #475569;
-}
-.tiles > div[data-tone='muted'] strong {
-  color: #0f172a;
-}
-.tiles > div[data-tone='card'] {
-  background: white;
-  border: 1px solid #e2e8f0;
-  padding: 12px;
-}
-.tiles > div[data-tone='card'] dt {
-  gap: 8px;
-  color: #475569;
-}
-.tiles > div[data-tone='card'] strong {
-  color: #0f172a;
-}
-.tiles
-  > div:is([data-tone='blue'], [data-tone='muted'], [data-tone='card'], [data-tone='amber'])
-  small {
-  color: #526174;
+  color: var(--design-text);
 }
 .iconChip {
   display: inline-flex;
@@ -298,17 +256,17 @@
   width: 20px;
   height: 20px;
   flex: none;
-  border-radius: 4px;
-  background: #f1f5f9;
-  color: #475569;
+  border-radius: 6px;
+  background: var(--rr-subtle);
+  color: var(--design-muted);
 }
 .iconChip[data-tone='teal'] {
-  background: #f0fdfa;
-  color: #0d9488;
+  background: var(--rr-ok-bg);
+  color: var(--rr-ok);
 }
 .iconChip[data-tone='amber'] {
-  background: #fffbeb;
-  color: #d97706;
+  background: var(--rr-warn-bg);
+  color: var(--rr-warn);
 }
 .icon {
   flex: none;
@@ -316,14 +274,11 @@
 .tiles small {
   display: block;
   margin-top: 2px;
-  font-size: 10px;
-  color: #0f766e;
+  font-size: 12px;
+  color: var(--design-muted);
   line-height: 1.4;
 }
-.tiles > div[data-tone='slate'] small,
-.tiles > div[data-tone='red'] small {
-  color: #526174;
-}
+/* Landmark chips are the app badge: 6 px radius, dot or icon, semantic tints. */
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -336,107 +291,76 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border-radius: 999px;
-  padding: 4px 12px;
+  border-radius: 6px;
+  padding: 2px 8px;
   font-size: 12px;
   font-weight: 500;
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--rr-subtle);
+  color: #475569;
 }
 .chips li:not([data-icon])::before {
   content: '';
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #64748b;
+  background: currentColor;
+  opacity: 0.8;
 }
-.chips li[data-icon] {
-  padding: 6px 12px;
-}
-.chips li[data-tone='teal'] {
-  background: #ccfbf1;
-  color: #0f766e;
-}
-.chips li[data-tone='teal']::before {
-  background: #14b8a6;
-}
-.chips li[data-tone='tealSoft'] {
-  background: #f0fdfa;
-  color: #0f766e;
-}
-.chips li[data-tone='tealSoft']::before {
-  background: #2dd4bf;
+.chips li:is([data-tone='teal'], [data-tone='tealSoft']) {
+  background: var(--rr-ok-bg);
+  color: var(--rr-ok);
 }
 .chips li[data-tone='red'] {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-.chips li[data-tone='red']::before {
-  background: #ef4444;
+  background: var(--rr-bad-bg);
+  color: var(--rr-bad);
 }
 .chips li[data-tone='amber'] {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--rr-warn-bg);
+  color: var(--rr-warn);
+}
+.chips li[data-tone='blue'] {
+  background: var(--rr-primary-tint);
+  color: var(--design-primary);
 }
 .chips[data-size='sm'] li {
-  padding: 4px 10px;
-  font-size: 10px;
-  border: 1px solid #e2e8f0;
+  padding: 2px 8px;
 }
-.chips[data-size='sm'] li[data-tone='tealSoft'] {
-  border-color: #99f6e4;
-}
-.chips[data-size='sm'] li[data-tone='amber'] {
-  background: #fffbeb;
-  color: #b45309;
-  border-color: #fde68a;
-}
-/* Toggle chips (Exit "Best IRR" etc.): the chip is the button. */
+/* Toggle chips (Exit "Best IRR" etc.) are the app's chip buttons. */
 .chips li[data-button] {
   padding: 0;
   background: none;
+}
+.chips li[data-button]::before {
+  content: none;
 }
 .chips li[data-button] button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   min-height: 32px;
-  padding: 6px 12px;
+  padding: 5px 12px;
   border-radius: 999px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--rr-border-strong);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--design-surface);
+  color: var(--design-text);
   cursor: pointer;
 }
 .chips li[data-button][data-tone='teal'] button {
-  background: #f0fdfa;
-  border-color: #99f6e4;
-  color: #0f766e;
+  color: var(--rr-ok);
 }
 .chips li[data-button][data-tone='amber'] button {
-  background: #fffbeb;
-  border-color: #fde68a;
-  color: #b45309;
+  color: var(--rr-warn);
 }
 .chips li[data-button] button:hover {
-  filter: brightness(0.97);
+  background: var(--rr-hover);
 }
 .chips li[data-button] button[aria-pressed='true'] {
-  background: #334155;
-  border-color: #334155;
-  color: white;
-  box-shadow: 0 4px 6px -1px #0f172a1a;
-}
-.chips li[data-button][data-tone='teal'] button[aria-pressed='true'] {
-  background: #0d9488;
-  border-color: #0d9488;
-}
-.chips li[data-button][data-tone='amber'] button[aria-pressed='true'] {
-  background: #b45309;
-  border-color: #b45309;
+  background: var(--design-primary);
+  border-color: var(--design-primary);
+  color: #fff;
 }
 .refLine line {
   stroke: currentColor;
@@ -444,16 +368,15 @@
 }
 .refLine text {
   fill: currentColor !important;
-  font-size: 10px !important;
+  font-size: 11px !important;
   font-weight: 600;
 }
 .figure {
-  font-family: var(--chart-mono);
   font-weight: 600;
-  color: #0f766e;
+  color: var(--rr-ok);
 }
 .figure[data-tone='red'] {
-  color: #b91c1c;
+  color: var(--rr-bad);
 }
 .chart {
   min-width: 0;
@@ -468,39 +391,40 @@
   overflow: visible;
 }
 .plot text {
-  font-family: var(--design-font), Inter, Arial, sans-serif;
+  font-family: var(--design-font);
   font-size: 11px;
-  fill: #64748b;
+  fill: var(--design-muted);
   font-variant-numeric: tabular-nums;
 }
-.grid line,
-.vgrid {
-  stroke: #e2e8f0;
+/* Horizontal-only solid grid like the dashboard collection chart; zero stays darker. */
+.grid line {
+  stroke: #e8edf4;
+  stroke-dasharray: none;
 }
 .vgrid {
-  stroke-dasharray: 3 3;
+  display: none;
 }
 .grid line[data-zero] {
-  stroke: #94a3b8;
+  stroke: var(--rr-border-strong);
   stroke-width: 1;
 }
 .axis {
-  stroke: #94a3b8;
+  stroke: var(--rr-border-strong);
 }
 .xtick {
   font-size: 12px !important;
-  fill: #64748b !important;
+  fill: var(--design-muted) !important;
 }
 .xtitle {
   font-weight: 600;
-  fill: #94a3b8 !important;
+  fill: var(--design-muted) !important;
 }
 .ytitle {
   font-size: 11px !important;
 }
 .hover {
-  fill: #94a3b8;
-  opacity: 0.12;
+  fill: var(--design-primary);
+  opacity: 0.08;
 }
 .marker line {
   stroke: currentColor;
@@ -508,11 +432,11 @@
   stroke-width: 1.5;
 }
 .marker {
-  color: #0d9488;
+  color: var(--rr-ok);
 }
 .marker text {
   fill: currentColor !important;
-  font-size: 10px !important;
+  font-size: 11px !important;
   font-weight: 600;
 }
 .bar {
@@ -529,12 +453,10 @@
   display: grid;
   gap: 6px;
   padding: 12px;
-  background: white;
-  border: 1px solid #e2e8f0;
+  background: var(--design-surface);
+  border: 1px solid var(--rr-border);
   border-radius: 8px;
-  box-shadow:
-    0 10px 15px -3px #0f172a1a,
-    0 4px 6px -4px #0f172a1a;
+  box-shadow: var(--rr-shadow-lift);
   font-size: 13px;
   pointer-events: none;
 }
@@ -546,7 +468,8 @@
   max-width: none;
 }
 .tooltip > strong {
-  color: #0f172a;
+  font-family: var(--design-heading-font);
+  color: var(--design-text);
   font-weight: 600;
   margin-bottom: 4px;
 }
@@ -560,47 +483,47 @@
   grid-template-columns: minmax(0, 1fr) auto;
 }
 .tooltip span[data-total] {
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--rr-border);
   padding-top: 6px;
   font-weight: 600;
 }
 .tooltip span[data-total] em {
-  color: #0f172a;
+  color: var(--design-text);
 }
 .tooltip em {
   font-style: normal;
-  color: #475569;
+  color: var(--design-muted);
 }
 .tooltip b {
-  font-family: var(--chart-mono);
-  font-weight: 500;
-  color: #0f172a;
+  font-weight: 600;
+  color: var(--design-text);
   text-align: right;
   white-space: nowrap;
 }
 .tooltip b[data-tone='teal'] {
-  color: #0d9488;
-  font-weight: 600;
+  color: var(--rr-ok);
 }
 .tooltip b[data-tone='red'] {
-  color: #dc2626;
-  font-weight: 600;
+  color: var(--rr-bad);
 }
 .tooltip b[data-tone='muted'] {
-  color: #64748b;
+  color: var(--design-muted);
+  font-weight: 500;
 }
 .tooltip small {
-  color: #64748b;
+  color: var(--design-muted);
   font-size: 12px;
 }
 .tipSection {
   margin-top: 4px;
   padding-top: 8px;
-  border-top: 1px solid #e2e8f0;
-  font-size: 10px;
+  border-top: 1px solid var(--rr-border);
+  font-size: 11px;
   font-weight: 600;
   font-style: normal;
-  color: #64748b;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--design-muted);
 }
 .legend {
   display: flex;
@@ -611,7 +534,7 @@
   margin: 8px 0 0;
   padding: 0;
   font-size: 12px;
-  color: #475569;
+  color: var(--design-muted);
 }
 .legend li {
   display: inline-flex;
@@ -621,10 +544,6 @@
 .legend i,
 .tooltip i {
   display: inline-block;
-  width: 12px;
-  height: 12px;
-}
-.tooltip i {
   width: 10px;
   height: 10px;
 }
@@ -635,14 +554,14 @@
 }
 .legend i[data-kind='line'],
 .tooltip i[data-kind='line'] {
-  width: 16px;
+  width: 14px;
   height: 0;
   border-top: 2px solid currentColor;
   border-radius: 2px;
 }
 .legend i[data-kind='dashed'] {
   height: 0;
-  width: 16px;
+  width: 14px;
   border-top: 2px dashed currentColor;
 }
 .legend i[data-kind='band'] {
@@ -652,10 +571,13 @@
 }
 .legend i[data-kind='area'] {
   border-radius: 2px;
-  border: 1px solid #2dd4bf;
-  background: linear-gradient(#14b8a666, #14b8a61a);
+  border: 1px solid currentColor;
+  background: linear-gradient(
+    color-mix(in srgb, currentColor 40%, white),
+    color-mix(in srgb, currentColor 10%, white)
+  );
 }
-/* Recharts default legend icon: a line through a hollow dot. */
+/* Line through a hollow dot (series drawn with points). */
 .legend i[data-kind='dotLine'] {
   position: relative;
   width: 14px;
@@ -671,32 +593,34 @@
   height: 4px;
   border: 2px solid currentColor;
   border-radius: 50%;
-  background: white;
+  background: var(--design-surface);
 }
 .legend i[data-kind='gap'] {
   height: 0;
-  width: 16px;
-  border-top: 2px dotted #94a3b8;
+  width: 14px;
+  border-top: 2px dotted var(--rr-border-strong);
 }
+/* Plain-language reading, set like the app's info alert. */
 .insight {
   margin: 0;
-  padding: 10px 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--rr-border);
   border-radius: 8px;
-  background: #f8fafc;
-  font-size: 12px;
+  background: var(--design-background);
+  font-size: 13px;
   line-height: 1.6;
-  color: #475569 !important;
+  color: var(--design-muted) !important;
 }
 .insight > strong {
-  font-weight: 500;
-  color: #0f172a;
+  font-weight: 600;
+  color: var(--design-text);
 }
 .mini {
   display: inline-block;
   width: 48px;
   height: 6px;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: var(--rr-border);
   overflow: hidden;
   vertical-align: middle;
 }
@@ -722,17 +646,16 @@
   z-index: 3;
   width: max-content;
   padding: 6px 10px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--rr-border);
   border-radius: 8px;
-  background: white;
-  box-shadow: 0 8px 16px #0f172a1a;
+  background: var(--design-surface);
+  box-shadow: var(--rr-shadow-lift);
   font-size: 12px;
-  color: #475569;
+  color: var(--design-muted);
   pointer-events: none;
 }
 .donutTip b {
-  font-family: var(--chart-mono);
-  color: #0f172a;
+  color: var(--design-text);
 }
 .srOnly {
   position: absolute;
@@ -747,10 +670,10 @@
 }
 @media (prefers-reduced-motion: no-preference) {
   .reveal {
-    animation: reveal 900ms cubic-bezier(0.22, 1, 0.36, 1);
+    animation: reveal 600ms ease-out;
   }
   .tooltip {
-    transition: transform 300ms ease-out;
+    transition: transform 200ms ease-out;
   }
   .bar,
   .hover,
@@ -771,6 +694,12 @@
   }
   to {
     clip-path: inset(0 0 0 0);
+  }
+}
+@media (pointer: coarse) {
+  .segmented button[aria-pressed],
+  .chips li[data-button] button {
+    min-height: 40px;
   }
 }
 @media (max-width: 640px) {
@@ -799,12 +728,12 @@
     padding: 8px 10px;
   }
   .tiles strong {
-    font-size: 15px;
+    font-size: 16px;
   }
   .plot text {
     font-size: 10px;
   }
   .xtick {
-    font-size: 10.5px !important;
+    font-size: 11px !important;
   }
 }

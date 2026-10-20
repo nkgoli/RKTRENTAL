@@ -12,14 +12,6 @@
   font-weight: 300 700;
   font-display: swap;
 }
-/* Chart figures, as in the RealROI reference: the same Google Fonts file and its 400-500 range. */
-@font-face {
-  font-family: 'JetBrains Mono';
-  src: url('/fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2');
-  font-style: normal;
-  font-weight: 400 500;
-  font-display: swap;
-}
 /* Design tokens and component styles from Designs/rocketrental-app (layout system: one card, one grid). */
 * {
   box-sizing: border-box;

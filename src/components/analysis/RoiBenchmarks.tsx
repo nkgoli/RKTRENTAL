@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { Fragment, useMemo, useState } from 'react';
 import { getAllBenchmarks, type BenchmarkData } from '@/lib/roi';
 import {
@@ -20,6 +20,7 @@ import { dollars, rate } from '@/lib/analysis/projections';
 import { wholeDollars } from '@/lib/analysis/chart-data';
 import {
   ChartCard,
+  chartColors,
   ComboChart,
   ExactTable,
   Figure,
@@ -35,7 +36,17 @@ import s from './scenario-charts.module.css';
 import b from './benchmark-charts.module.css';
 
 const presets = getAllBenchmarks();
-const PROPERTY_COLOR = '#14b8a6';
+const PROPERTY_COLOR = chartColors.accent;
+/** Reference assets drawn in app-palette hues (each 4.5:1 on white, so labels stay legible). */
+const ASSET_COLORS: Record<string, string> = {
+  sp500: chartColors.primary,
+  nasdaq100: chartColors.plum,
+  bonds: '#4f7a2b',
+  reits: '#b04a1c',
+  savings: chartColors.muted,
+  custom: '#8a4526',
+};
+const assetColor = (type: string, fallback: string) => ASSET_COLORS[type] ?? fallback;
 const markets = MARKET_TYPES.map((t) => presets.find((p) => p.type === t)!).filter(Boolean);
 const pct = (v: number | null | undefined, d = 2) =>
   v == null || !Number.isFinite(v) ? 'Unavailable' : `${v.toFixed(d)}%`;
@@ -74,7 +85,7 @@ function assetsOf(
     return {
       ...a,
       name: ref?.name ?? a.id,
-      color: ref?.color ?? '#64748b',
+      color: assetColor(a.id, ref?.color ?? chartColors.muted),
       description: ref?.description ?? '',
       volatility: ref && Number.isFinite(ref.volatility) ? ref.volatility : null,
       yield: ref && Number.isFinite(ref.averageYield) ? ref.averageYield : null,
@@ -106,7 +117,9 @@ function GrowthChart({
       xFormat={(y) => `Y${y}`}
       xTicks={milestones.length ? milestones : undefined}
       refLines={
-        indexed ? [{ value: 100, label: '100 = start', color: '#94a3b8', dash: '3 3' }] : []
+        indexed
+          ? [{ value: 100, label: '100 = start', color: chartColors.mutedLight, dash: '3 3' }]
+          : []
       }
       format={indexed ? (v) => v.toFixed(4) : undefined}
       series={assets.map((a) => ({
@@ -212,7 +225,14 @@ export function RoiBenchmarks({
             className={b.assetChip}
             key={x.type}
             data-on={on || undefined}
-            style={on ? { background: x.color, borderColor: x.color } : undefined}
+            style={
+              on
+                ? {
+                    background: assetColor(x.type, x.color),
+                    borderColor: assetColor(x.type, x.color),
+                  }
+                : undefined
+            }
           >
             <input
               type="checkbox"
@@ -258,7 +278,7 @@ export function RoiBenchmarks({
                 averageYield: 0,
                 volatility: 0,
                 source: 'Manager-entered; period required',
-                color: '#a4603d',
+                color: '#8a4526',
               },
             ]);
           }}
@@ -653,7 +673,10 @@ function BenchmarksView({
             <tbody>
               {assets.map((a) => (
                 <tr key={a.id}>
-                  <th scope="row" style={{ color: a.id === 'property' ? '#0d9488' : a.color }}>
+                  <th
+                    scope="row"
+                    style={{ color: a.id === 'property' ? chartColors.accent : a.color }}
+                  >
                     {a.name}
                   </th>
                   {milestones.map((y) => {
@@ -697,7 +720,7 @@ function BenchmarksView({
                   {
                     value: property.annualizedReturn,
                     label: `${propertyName} ${property.annualizedReturn.toFixed(2)}% · volatility not measured`,
-                    color: '#0d9488',
+                    color: chartColors.accent,
                   },
                 ]
           }
@@ -960,7 +983,7 @@ function CompareView({
                   <th
                     scope="col"
                     key={a.id}
-                    style={{ color: a.id === 'property' ? '#0d9488' : a.color }}
+                    style={{ color: a.id === 'property' ? chartColors.accent : a.color }}
                   >
                     <span className={b.dot} style={{ background: a.color }} />
                     {a.name}

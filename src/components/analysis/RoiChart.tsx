@@ -82,48 +82,43 @@ export function Statement({ rows }: { rows: [string, ReactNode][] }) {
   );
 }
 
-/** RealROI palette (Tailwind teal/slate/red). Bars get a darker outline for 3:1 edges. */
+/**
+ * Series colours from the app tokens in `src/styles/globals.css` (primary, accent/ok,
+ * danger, coral, navy, muted). SVG attributes cannot read CSS variables, so the
+ * values are repeated here. Bars get a darker outline for 3:1 edges.
+ */
 export const chartColors = {
-  teal: '#14b8a6',
-  tealDark: '#0d9488',
-  tealDeep: '#0f766e',
-  tealMid: '#2dd4bf',
-  tealLight: '#5eead4',
-  tealPale: '#99f6e4',
-  slate: '#475569',
-  slateMid: '#64748b',
-  slateDark: '#334155',
-  slateLight: '#94a3b8',
-  slatePale: '#e2e8f0',
-  red: '#ef4444',
-  green: '#16a34a',
-  emerald: '#10b981',
-  sky: '#0284c7',
-  amber: '#b45309',
-  violet: '#7c3aed',
-  violetMid: '#8b5cf6',
-  orange: '#f97316',
-  amberMid: '#f59e0b',
-  amberBright: '#fbbf24',
-  green500: '#22c55e',
-  blue: '#3b82f6',
-  sky500: '#0ea5e9',
-  sky600: '#0284c7',
-  emeraldDark: '#059669',
+  primary: '#3159d9', // --design-primary
+  primaryDark: '#203fa8', // --rr-primary-active
+  primaryMid: '#6383e6',
+  primaryLight: '#a7b9f0',
+  primaryPale: '#dbe4ff',
+  navy: '#0b2545', // --rr-navy
+  accent: '#087c91', // --design-accent, --rr-ok
+  accentDark: '#06606f',
+  ink: '#17243b', // --design-text
+  muted: '#58687e', // --design-muted
+  mutedMid: '#7e8b9e', // --rr-border-strong
+  mutedLight: '#a3aebf',
+  border: '#dce3ed', // --rr-border
+  bad: '#b4233e', // --design-danger, --rr-bad
+  warn: '#8a4b09', // --rr-warn
+  warm: '#cf8a68', // --rr-warm
+  plum: '#9d174d',
 } as const;
 /** Line colours for multi-series charts; each passes 3:1 against white. */
 export const seriesPalette = [
-  chartColors.tealDark,
-  chartColors.slate,
-  chartColors.amber,
-  chartColors.violet,
+  chartColors.primaryDark,
+  chartColors.muted,
+  chartColors.warn,
+  chartColors.plum,
 ];
 
 const outline: Record<string, string> = {
-  [chartColors.teal]: chartColors.tealDark,
-  [chartColors.red]: '#dc2626',
-  [chartColors.tealLight]: chartColors.tealMid,
-  [chartColors.slatePale]: '#cbd5e1',
+  [chartColors.primary]: chartColors.primaryDark,
+  [chartColors.bad]: '#8f1c31',
+  [chartColors.primaryLight]: chartColors.primaryMid,
+  [chartColors.border]: '#c5cfdc',
 };
 
 export type ChartSeries = {
@@ -196,7 +191,7 @@ export type TipRow =
   | { note: string };
 export type ChartTip = { title: string; rows: TipRow[] };
 
-/** Card with the reference header strip: title, 10 px basis line and right-aligned controls. */
+/** App card with a bordered header: title, basis line and right-aligned controls. */
 export function ChartCard({
   title,
   subtitle,
@@ -277,9 +272,11 @@ export function InfoTip({ label, children }: { label: string; children: ReactNod
   );
 }
 
+/** Semantic tones: 	eal = positive/ok, 
+ed = negative, mber = caution (app tokens). */
 type Tone = 'teal' | 'tealSoft' | 'slate' | 'red' | 'amber' | 'blue' | 'muted' | 'card';
 
-/** Pale metric tiles; values use the mono numeric face like the reference. */
+/** Metric tiles in the app KPI style: muted label over a Space Grotesk value. */
 export function Tiles({
   items,
   size = 'lg',
@@ -293,7 +290,7 @@ export function Tiles({
     info?: ReactNode;
     /** Value colour when it differs from the tone (e.g. a red loss on a teal tile). */
     valueTone?: 'teal' | 'red' | 'slate' | 'green' | 'amber';
-    /** Small icon chip before the label (reference KPI cards). */
+    /** Small icon chip before the label. */
     icon?: { name: IconName; tone?: 'slate' | 'teal' | 'amber' };
   }[];
   size?: 'lg' | 'sm';
@@ -321,7 +318,7 @@ export function Tiles({
   );
 }
 
-/** Reference header checkbox ("Include down payment"). */
+/** Header checkbox ("Include down payment"). */
 export function Check({
   label,
   checked,
@@ -339,7 +336,7 @@ export function Check({
   );
 }
 
-/** Mono figure inside prose (Insight rows), teal or red like the reference. */
+/** Figure inside prose (Insight rows), in the ok or bad tone. */
 export function Figure({
   children,
   tone = 'teal',
@@ -416,7 +413,7 @@ export function useHorizon(length: number, label: string, preferred = 30) {
   return [shown, control] as const;
 }
 
-/** Lucide icon outlines used by the reference cards. */
+/** Lucide icon outlines used on the chart cards. */
 const iconPaths = {
   target: (
     <>
@@ -575,14 +572,14 @@ export function Chips({
   );
 }
 
-/** 48 px reference bar for a rate cell: |rate| × 500%, teal or red. */
+/** 48 px bar for a rate cell: |rate| × 500%, primary or bad when negative. */
 export function MiniBar({ value }: { value: number | null }) {
   return (
     <span className={c.mini} aria-hidden="true">
       <i
         style={{
           width: `${miniBarWidth(value)}%`,
-          background: value != null && value < 0 ? chartColors.red : chartColors.teal,
+          background: value != null && value < 0 ? chartColors.bad : chartColors.primary,
         }}
       />
     </span>
@@ -639,7 +636,7 @@ export function Donut({
           <circle
             r={(inner + outer) / 2}
             fill="none"
-            stroke={chartColors.slatePale}
+            stroke={chartColors.border}
             strokeWidth={outer - inner}
           />
         )}
@@ -693,9 +690,8 @@ const kindOf = (s: ChartSeries): LegendItem['kind'] =>
   s.kind === 'bar' ? 'bar' : s.dashed ? 'dashed' : 'line';
 
 /**
- * Bars, lines, bands and areas on one shared zero baseline, drawn in the
- * reference style (dashed grid both ways, monotone lines, rounded bar ends,
- * equation tooltips). Hover, touch or arrow keys read a year; the live region
+ * Bars, lines, bands and areas on one shared zero baseline, in the app chart style
+ * (horizontal grid, monotone lines, rounded bar ends, equation tooltips). Hover, touch or arrow keys read a year; the live region
  * reads exact values, and `null` values leave a gap that reads "Unavailable".
  */
 export function ComboChart({
@@ -928,11 +924,11 @@ export function ComboChart({
         color: s.color,
       })),
     ...(hasNegativeBar
-      ? [{ label: 'Negative year', kind: 'bar' as const, color: chartColors.red }]
+      ? [{ label: 'Negative year', kind: 'bar' as const, color: chartColors.bad }]
       : []),
   ];
-  const leftColor = axes?.leftColor ?? chartColors.slateLight;
-  const rightColor = axes?.rightColor ?? chartColors.slateLight;
+  const leftColor = axes?.leftColor ?? chartColors.mutedLight;
+  const rightColor = axes?.rightColor ?? chartColors.mutedLight;
 
   return (
     <div className={c.chart}>

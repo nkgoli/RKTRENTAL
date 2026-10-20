@@ -26,9 +26,9 @@ import d from './detail-charts.module.css';
 const share = (v: number | null) =>
   v == null || !Number.isFinite(v) ? 'Unavailable' : `${(v * 100).toFixed(0)}%`;
 const loanColors = {
-  balance: chartColors.red,
-  principal: chartColors.green500,
-  interest: chartColors.orange,
+  balance: chartColors.bad,
+  principal: chartColors.accent,
+  interest: chartColors.warm,
 };
 
 /** C11 · Principal vs Interest Over Time (reference LoanAmortizationChart, annual). */
@@ -110,13 +110,13 @@ function PrincipalVsInterest({ result }: { result: ProjectionResult }) {
             {
               label: 'Principal Paid:',
               value: rows[i].cumulativePrincipal,
-              color: '#16a34a',
+              color: chartColors.accentDark,
               swatch: { color: loanColors.principal },
             },
             {
               label: 'Interest Paid:',
               value: rows[i].cumulativeInterest,
-              color: '#ea580c',
+              color: chartColors.warn,
               swatch: { color: loanColors.interest },
             },
           ],
@@ -204,11 +204,11 @@ function Schedule({ result }: { result: ProjectionResult }) {
       controls={
         <div className={d.dotKey} aria-hidden="true">
           <span>
-            <i style={{ background: chartColors.teal }} />
+            <i style={{ background: chartColors.primary }} />
             Principal
           </span>
           <span>
-            <i style={{ background: chartColors.amberMid }} />
+            <i style={{ background: chartColors.warm }} />
             Interest
           </span>
         </div>
@@ -257,12 +257,14 @@ function Schedule({ result }: { result: ProjectionResult }) {
           role="img"
           aria-label={`Principal ${share(principalShare)}, interest ${share(interestShare)} of total paid`}
         >
-          <i style={{ width: `${(principalShare ?? 0) * 100}%`, background: chartColors.teal }} />
+          <i
+            style={{ width: `${(principalShare ?? 0) * 100}%`, background: chartColors.primary }}
+          />
           <i
             style={{
               left: `${(principalShare ?? 0) * 100}%`,
               width: `${(interestShare ?? 0) * 100}%`,
-              background: chartColors.amberMid,
+              background: chartColors.warm,
             }}
           />
           <span aria-hidden="true">
@@ -271,11 +273,11 @@ function Schedule({ result }: { result: ProjectionResult }) {
         </div>
         <div className={d.payoffKey}>
           <span>
-            <i style={{ background: chartColors.teal }} />
+            <i style={{ background: chartColors.primary }} />
             Principal ({wholeDollars(loan)})
           </span>
           <span>
-            <i style={{ background: chartColors.amberMid }} />
+            <i style={{ background: chartColors.warm }} />
             Interest ({wholeDollars(totalInterest)})
           </span>
         </div>

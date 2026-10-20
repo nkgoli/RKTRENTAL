@@ -1,38 +1,36 @@
-/* RealROI Rental Distribution card: slate-100 header strip, three stat tiles, bell curve. */
+/* Rental Distribution as an app card: bordered header, three stat tiles, bell curve. */
 .card {
-  --chart-mono:
-    'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, Menlo, monospace;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: white;
+  border: var(--rr-card-border);
+  border-radius: var(--rr-card-radius);
+  box-shadow: var(--rr-card-shadow);
+  background: var(--design-surface);
   overflow: hidden;
   min-width: 0;
 }
 .head {
-  padding: 12px 16px;
-  background: #f1f5f9;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 12px var(--rr-card-pad);
+  border-bottom: 1px solid var(--rr-border);
 }
 .head h2 {
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-family: var(--design-font), Inter, system-ui, sans-serif;
-  font-size: 14px;
+  font-family: var(--design-heading-font);
+  font-size: var(--rr-h3);
   font-weight: 600;
-  color: #1e293b;
+  color: var(--design-text);
 }
 .head h2 svg {
-  color: #475569;
+  color: var(--design-muted);
 }
 .head p {
   margin: 2px 0 0;
-  font-size: 10px;
-  color: #526174;
+  font-size: 12px;
+  color: var(--design-muted);
 }
 .body {
-  padding: 16px;
+  padding: var(--rr-card-pad);
   display: grid;
   gap: 12px;
 }
@@ -44,53 +42,55 @@
 }
 .stats > div {
   padding: 8px;
+  border: 1px solid var(--rr-border);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--design-background);
   text-align: center;
 }
 .stats > div[data-tone='teal'] {
-  background: #f0fdfa;
+  background: var(--rr-ok-bg);
 }
 .stats dt {
-  font-size: 10px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #526174;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--design-muted);
 }
 .stats > div[data-tone='teal'] dt {
-  color: #0f766e;
+  color: var(--rr-ok);
 }
 .stats dd {
   margin: 0;
-  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--design-heading-font);
+  font-size: 16px;
   font-weight: 700;
-  color: #334155;
+  color: var(--design-text);
 }
 .stats > div[data-tone='teal'] dd {
-  color: #0f766e;
+  color: var(--rr-ok);
 }
 .you,
 .comp {
   border-radius: 50%;
 }
 .you {
-  background: #0d9488 !important;
-  border: 2px solid #0f766e;
+  background: var(--rr-ok) !important;
+  border: 2px solid var(--rr-ok);
 }
 .comp {
   width: 10px !important;
   height: 10px !important;
-  background: #94a3b8 !important;
-  border: 1px solid #64748b;
+  background: #a3aebf !important;
+  border: 1px solid var(--design-muted);
 }
 .band {
   width: 16px !important;
   height: 8px !important;
-  background: #14b8a626 !important;
-  border: 1px dashed #14b8a640;
+  background: color-mix(in srgb, var(--design-primary) 15%, white) !important;
+  border: 1px dashed color-mix(in srgb, var(--design-primary) 35%, white);
 }
 .note {
   margin: 0;
-  font-size: 10px;
-  color: #64748b;
+  font-size: 12px;
+  color: var(--design-muted);
 }

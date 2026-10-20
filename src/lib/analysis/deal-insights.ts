@@ -173,12 +173,18 @@ export function riskScore(factors: RiskFactor[]) {
   return weight ? scored.reduce((a, f) => a + (f.score as number) * f.weight, 0) / weight : null;
 }
 
+/**
+ * Five-step risk scale, worst to best: app danger, a burnt orange, an ochre, an olive
+ * and the app's ok teal. Each passes 4.5:1 on white, so it can colour the score text.
+ */
+export const riskScale = ['#b4233e', '#b04a1c', '#946200', '#4f7a2b', '#087c91'] as const;
+
 export function riskLevel(score: number) {
-  if (score <= 30) return { level: 'Low Risk', color: '#14b8a6', tone: 'teal' } as const;
-  if (score <= 50) return { level: 'Moderate', color: '#65a30d', tone: 'lime' } as const;
-  if (score <= 70) return { level: 'Elevated', color: '#ca8a04', tone: 'amber' } as const;
-  if (score <= 85) return { level: 'High Risk', color: '#ea580c', tone: 'orange' } as const;
-  return { level: 'Very High', color: '#dc2626', tone: 'red' } as const;
+  if (score <= 30) return { level: 'Low Risk', color: riskScale[4], tone: 'teal' } as const;
+  if (score <= 50) return { level: 'Moderate', color: riskScale[3], tone: 'lime' } as const;
+  if (score <= 70) return { level: 'Elevated', color: riskScale[2], tone: 'amber' } as const;
+  if (score <= 85) return { level: 'High Risk', color: riskScale[1], tone: 'orange' } as const;
+  return { level: 'Very High', color: riskScale[0], tone: 'red' } as const;
 }
 
 /** Worst first, by weighted score; unavailable factors last. */
@@ -190,15 +196,7 @@ export function sortFactors(factors: RiskFactor[]) {
 
 /** Pill colour on the five-segment bar (position 0 worst … 100 best). */
 export function segmentColor(position: number) {
-  return position >= 80
-    ? '#10b981'
-    : position >= 60
-      ? '#84cc16'
-      : position >= 40
-        ? '#eab308'
-        : position >= 20
-          ? '#f97316'
-          : '#ef4444';
+  return riskScale[Math.min(4, Math.floor(Math.max(0, position) / 20))];
 }
 
 // ---------------------------------------------------------------- what-ifs

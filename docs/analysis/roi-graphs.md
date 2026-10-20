@@ -1,5 +1,10 @@
 # ROI graphs — RealROI visual reference
 
+> **Superseded visuals (2026-10-20).** The charts keep the functions mapped below but now
+> use the RocketRental app style ([
+> oi-app-style.md](roi-app-style.md)). Colours such as
+> teal/slate below describe the earlier build, not the current target.
+
 The ROI graph surfaces (Summary cash-flow chart, Charts tab panels, Scenarios
 and Benchmarks charts) now share one chart system,
 `src/components/analysis/RoiChart.tsx`, modelled on the RealROI charts. The

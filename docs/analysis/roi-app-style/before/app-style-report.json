@@ -1,0 +1,603 @@
+{
+  "base": "http://127.0.0.1:3191",
+  "propertyId": "seed-property-maple",
+  "at": "2026-10-20T23:07:31.004Z",
+  "widths": {
+    "390": {
+      "cards": {
+        "summary-net-cashflow": {
+          "ids": "C1",
+          "title": "Net Cash Flow by Year",
+          "found": true
+        },
+        "summary-outcome": {
+          "ids": "C2",
+          "title": "Outcome",
+          "found": true
+        },
+        "summary-deal-snapshot": {
+          "ids": "C3",
+          "title": "Deal Snapshot",
+          "found": true
+        },
+        "summary-fix-my-deal": {
+          "ids": "C4",
+          "title": "Fix My Deal",
+          "found": true
+        },
+        "summary-projections": {
+          "ids": "C5",
+          "title": "Cash Flow & Equity Projections",
+          "found": true
+        },
+        "equity-composition": {
+          "ids": "C6",
+          "title": "Equity Composition vs Debt Paydown",
+          "found": true
+        },
+        "equity-value-mortgage": {
+          "ids": "C7",
+          "title": "Value vs Mortgage Balance",
+          "found": true
+        },
+        "cashflow-cumulative": {
+          "ids": "C8",
+          "title": "Cash Flow & Cumulative",
+          "found": true
+        },
+        "cashflow-bridge": {
+          "ids": "C9",
+          "title": "Income to Cash Flow Bridge",
+          "found": true
+        },
+        "expenses": {
+          "ids": "C10",
+          "title": "Operating Expenses",
+          "found": true
+        },
+        "amortization-area": {
+          "ids": "C11",
+          "title": "Principal vs Interest Over Time",
+          "found": true
+        },
+        "amortization-schedule": {
+          "ids": "C12-C13,C17",
+          "title": "Loan Amortization Schedule",
+          "found": true
+        },
+        "exit": {
+          "ids": "C14",
+          "title": "Exit Analysis & Comparison",
+          "found": true
+        },
+        "sensitivity": {
+          "ids": "C15-C16",
+          "title": "Sensitivity",
+          "found": true
+        },
+        "scenarios": {
+          "ids": "C18",
+          "title": "Equity Growth by Scenario",
+          "found": true
+        },
+        "benchmarks-growth": {
+          "ids": "C19",
+          "title": "Investment Growth Over Time",
+          "found": true
+        },
+        "benchmarks-risk": {
+          "ids": "C20",
+          "title": "Risk vs Return",
+          "found": true
+        },
+        "compare-growth": {
+          "ids": "C21",
+          "title": "Investment Growth Over Time",
+          "found": true
+        },
+        "compare-bars": {
+          "ids": "C22",
+          "title": "Annualized Returns Comparison",
+          "found": true
+        },
+        "compare-radar": {
+          "ids": "C23",
+          "title": "Multi-Dimensional Comparison",
+          "found": true
+        },
+        "compare-table": {
+          "ids": "C24",
+          "title": "Side-by-Side Comparison",
+          "found": true
+        },
+        "rental-distribution": {
+          "ids": "C25",
+          "title": "Rental Distribution",
+          "found": true
+        }
+      },
+      "overflow": {
+        "Summary": {
+          "scrollWidth": 390,
+          "clientWidth": 390
+        },
+        "Charts/Equity": {
+          "scrollWidth": 390,
+          "clientWidth": 390
+        },
+        "Charts/Cash Flow": {
+          "scrollWidth": 390,
+          "clientWidth": 390
+        },
+        "Charts/Expenses": {
+          "scrollWidth": 390,
+          "clientWidth": 390
+        },
+        "Charts/Amortization": {
+          "scrollWidth": 390,
+          "clientWidth": 390
+        },
+        "Charts/Exit Analysis": {
+          "scrollWidth": 390,
+          "clientWidth": 390
+        },
+        "Charts/Sensitivity": {
+          "scrollWidth": 390,
+          "clientWidth": 390
+        },
+        "Scenarios": {
+          "scrollWidth": 390,
+          "clientWidth": 390
+        },
+        "Benchmarks": {
+          "scrollWidth": 390,
+          "clientWidth": 390
+        },
+        "Compare": {
+          "scrollWidth": 390,
+          "clientWidth": 390
+        },
+        "Listing": {
+          "scrollWidth": 390,
+          "clientWidth": 390
+        }
+      },
+      "tokens": {
+        "app": {
+          "card": {
+            "fontFamily": "Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "14px",
+            "fontWeight": "400",
+            "color": "rgb(23, 36, 59)",
+            "background": "rgb(255, 255, 255)",
+            "border": "1px solid rgb(220, 227, 237)",
+            "radius": "12px",
+            "shadow": "rgba(23, 36, 59, 0.08) 0px 2px 3px 0px"
+          },
+          "cardHeading": {
+            "fontFamily": "\"Space Grotesk\", Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "color": "rgb(23, 36, 59)",
+            "background": "rgba(0, 0, 0, 0)",
+            "border": "0px none rgb(23, 36, 59)",
+            "radius": "0px",
+            "shadow": "none"
+          },
+          "body": {
+            "fontFamily": "Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "14px",
+            "fontWeight": "400",
+            "color": "rgb(23, 36, 59)",
+            "background": "rgb(247, 249, 252)",
+            "border": "0px none rgb(23, 36, 59)",
+            "radius": "0px",
+            "shadow": "none"
+          },
+          "chipActive": null,
+          "button": {
+            "fontFamily": "Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "13px",
+            "fontWeight": "600",
+            "color": "rgb(23, 36, 59)",
+            "background": "rgba(0, 0, 0, 0)",
+            "border": "1px solid rgba(0, 0, 0, 0)",
+            "radius": "7px",
+            "shadow": "none"
+          }
+        },
+        "roi": {
+          "chartCard": {
+            "fontFamily": "Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "14px",
+            "fontWeight": "400",
+            "color": "rgb(23, 20, 43)",
+            "background": "rgb(255, 255, 255)",
+            "border": "1px solid rgb(226, 232, 240)",
+            "radius": "8px",
+            "shadow": "none"
+          },
+          "chartTitle": {
+            "fontFamily": "Inter, Inter, system-ui, sans-serif",
+            "fontSize": "14px",
+            "fontWeight": "600",
+            "color": "rgb(30, 41, 59)",
+            "background": "rgba(0, 0, 0, 0)",
+            "border": "0px none rgb(30, 41, 59)",
+            "radius": "0px",
+            "shadow": "none"
+          },
+          "chartSubtitle": {
+            "fontFamily": "Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "10px",
+            "fontWeight": "400",
+            "color": "rgb(82, 97, 116)",
+            "background": "rgba(0, 0, 0, 0)",
+            "border": "0px none rgb(82, 97, 116)",
+            "radius": "0px",
+            "shadow": "none"
+          },
+          "pressedToggle": {
+            "fontFamily": "Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "14px",
+            "fontWeight": "400",
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "border": "1px solid rgb(30, 58, 138)",
+            "radius": "6px",
+            "shadow": "none"
+          },
+          "tileValue": {
+            "fontFamily": "\"JetBrains Mono\", ui-monospace, SFMono-Regular, \"Cascadia Mono\", Consolas, Menlo, monospace",
+            "fontSize": "14px",
+            "fontWeight": "700",
+            "color": "rgb(15, 118, 110)",
+            "background": "rgba(0, 0, 0, 0)",
+            "border": "0px none rgb(15, 118, 110)",
+            "radius": "0px",
+            "shadow": "none"
+          },
+          "tileLabel": {
+            "fontFamily": "Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "14px",
+            "fontWeight": "400",
+            "color": "rgb(100, 116, 139)",
+            "background": "rgba(0, 0, 0, 0)",
+            "border": "0px none rgb(100, 116, 139)",
+            "radius": "0px",
+            "shadow": "none"
+          },
+          "axisText": {
+            "fontFamily": "Inter, Inter, Arial, sans-serif",
+            "fontSize": "10px",
+            "fontWeight": "400",
+            "color": "rgb(23, 20, 43)",
+            "background": "rgba(0, 0, 0, 0)",
+            "border": "0px none rgb(23, 20, 43)",
+            "radius": "0px",
+            "shadow": "none"
+          },
+          "insight": {
+            "fontFamily": "Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "12px",
+            "fontWeight": "700",
+            "color": "rgb(100, 116, 139)",
+            "background": "rgba(0, 0, 0, 0)",
+            "border": "0px none rgb(100, 116, 139)",
+            "radius": "0px",
+            "shadow": "none"
+          },
+          "fonts": [
+            "Inter 100 900",
+            "Space Grotesk 300 700",
+            "JetBrains Mono 400 500"
+          ],
+          "jetbrainsLoaded": true
+        }
+      },
+      "interactions": {
+        "pointerTooltip": "Year 3 Effective income $272,793 − Operating costs $105,878 = NOI $166,915 − Debt service $150,179 − Capital reserves $14,499 = Cash Flow $2,237",
+        "keyboardLive": "Year 2: Effective income $267,444.00; − Operating costs $103,295.40; = NOI $164,148.60; − Debt service $150,179.40; − Capital reserves $14,145.00; = Cash Flow -$175.80"
+      },
+      "consoleErrors": []
+    },
+    "1440": {
+      "cards": {
+        "summary-net-cashflow": {
+          "ids": "C1",
+          "title": "Net Cash Flow by Year",
+          "found": true
+        },
+        "summary-outcome": {
+          "ids": "C2",
+          "title": "Outcome",
+          "found": true
+        },
+        "summary-deal-snapshot": {
+          "ids": "C3",
+          "title": "Deal Snapshot",
+          "found": true
+        },
+        "summary-fix-my-deal": {
+          "ids": "C4",
+          "title": "Fix My Deal",
+          "found": true
+        },
+        "summary-projections": {
+          "ids": "C5",
+          "title": "Cash Flow & Equity Projections",
+          "found": true
+        },
+        "equity-composition": {
+          "ids": "C6",
+          "title": "Equity Composition vs Debt Paydown",
+          "found": true
+        },
+        "equity-value-mortgage": {
+          "ids": "C7",
+          "title": "Value vs Mortgage Balance",
+          "found": true
+        },
+        "cashflow-cumulative": {
+          "ids": "C8",
+          "title": "Cash Flow & Cumulative",
+          "found": true
+        },
+        "cashflow-bridge": {
+          "ids": "C9",
+          "title": "Income to Cash Flow Bridge",
+          "found": true
+        },
+        "expenses": {
+          "ids": "C10",
+          "title": "Operating Expenses",
+          "found": true
+        },
+        "amortization-area": {
+          "ids": "C11",
+          "title": "Principal vs Interest Over Time",
+          "found": true
+        },
+        "amortization-schedule": {
+          "ids": "C12-C13,C17",
+          "title": "Loan Amortization Schedule",
+          "found": true
+        },
+        "exit": {
+          "ids": "C14",
+          "title": "Exit Analysis & Comparison",
+          "found": true
+        },
+        "sensitivity": {
+          "ids": "C15-C16",
+          "title": "Sensitivity",
+          "found": true
+        },
+        "scenarios": {
+          "ids": "C18",
+          "title": "Equity Growth by Scenario",
+          "found": true
+        },
+        "benchmarks-growth": {
+          "ids": "C19",
+          "title": "Investment Growth Over Time",
+          "found": true
+        },
+        "benchmarks-risk": {
+          "ids": "C20",
+          "title": "Risk vs Return",
+          "found": true
+        },
+        "compare-growth": {
+          "ids": "C21",
+          "title": "Investment Growth Over Time",
+          "found": true
+        },
+        "compare-bars": {
+          "ids": "C22",
+          "title": "Annualized Returns Comparison",
+          "found": true
+        },
+        "compare-radar": {
+          "ids": "C23",
+          "title": "Multi-Dimensional Comparison",
+          "found": true
+        },
+        "compare-table": {
+          "ids": "C24",
+          "title": "Side-by-Side Comparison",
+          "found": true
+        },
+        "rental-distribution": {
+          "ids": "C25",
+          "title": "Rental Distribution",
+          "found": true
+        }
+      },
+      "overflow": {
+        "Summary": {
+          "scrollWidth": 1440,
+          "clientWidth": 1440
+        },
+        "Charts/Equity": {
+          "scrollWidth": 1440,
+          "clientWidth": 1440
+        },
+        "Charts/Cash Flow": {
+          "scrollWidth": 1440,
+          "clientWidth": 1440
+        },
+        "Charts/Expenses": {
+          "scrollWidth": 1440,
+          "clientWidth": 1440
+        },
+        "Charts/Amortization": {
+          "scrollWidth": 1440,
+          "clientWidth": 1440
+        },
+        "Charts/Exit Analysis": {
+          "scrollWidth": 1440,
+          "clientWidth": 1440
+        },
+        "Charts/Sensitivity": {
+          "scrollWidth": 1440,
+          "clientWidth": 1440
+        },
+        "Scenarios": {
+          "scrollWidth": 1440,
+          "clientWidth": 1440
+        },
+        "Benchmarks": {
+          "scrollWidth": 1440,
+          "clientWidth": 1440
+        },
+        "Compare": {
+          "scrollWidth": 1440,
+          "clientWidth": 1440
+        },
+        "Listing": {
+          "scrollWidth": 1440,
+          "clientWidth": 1440
+        }
+      },
+      "tokens": {
+        "app": {
+          "card": {
+            "fontFamily": "Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "14px",
+            "fontWeight": "400",
+            "color": "rgb(23, 36, 59)",
+            "background": "rgb(255, 255, 255)",
+            "border": "1px solid rgb(220, 227, 237)",
+            "radius": "12px",
+            "shadow": "rgba(23, 36, 59, 0.08) 0px 2px 3px 0px"
+          },
+          "cardHeading": {
+            "fontFamily": "\"Space Grotesk\", Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "color": "rgb(23, 36, 59)",
+            "background": "rgba(0, 0, 0, 0)",
+            "border": "0px none rgb(23, 36, 59)",
+            "radius": "0px",
+            "shadow": "none"
+          },
+          "body": {
+            "fontFamily": "Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "14px",
+            "fontWeight": "400",
+            "color": "rgb(23, 36, 59)",
+            "background": "rgb(247, 249, 252)",
+            "border": "0px none rgb(23, 36, 59)",
+            "radius": "0px",
+            "shadow": "none"
+          },
+          "chipActive": null,
+          "button": {
+            "fontFamily": "Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "13px",
+            "fontWeight": "600",
+            "color": "rgb(23, 36, 59)",
+            "background": "rgba(0, 0, 0, 0)",
+            "border": "1px solid rgba(0, 0, 0, 0)",
+            "radius": "7px",
+            "shadow": "none"
+          }
+        },
+        "roi": {
+          "chartCard": {
+            "fontFamily": "Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "14px",
+            "fontWeight": "400",
+            "color": "rgb(23, 20, 43)",
+            "background": "rgb(255, 255, 255)",
+            "border": "1px solid rgb(226, 232, 240)",
+            "radius": "8px",
+            "shadow": "none"
+          },
+          "chartTitle": {
+            "fontFamily": "Inter, Inter, system-ui, sans-serif",
+            "fontSize": "14px",
+            "fontWeight": "600",
+            "color": "rgb(30, 41, 59)",
+            "background": "rgba(0, 0, 0, 0)",
+            "border": "0px none rgb(30, 41, 59)",
+            "radius": "0px",
+            "shadow": "none"
+          },
+          "chartSubtitle": {
+            "fontFamily": "Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "10px",
+            "fontWeight": "400",
+            "color": "rgb(82, 97, 116)",
+            "background": "rgba(0, 0, 0, 0)",
+            "border": "0px none rgb(82, 97, 116)",
+            "radius": "0px",
+            "shadow": "none"
+          },
+          "pressedToggle": {
+            "fontFamily": "Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "14px",
+            "fontWeight": "400",
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "border": "1px solid rgb(30, 58, 138)",
+            "radius": "6px",
+            "shadow": "none"
+          },
+          "tileValue": {
+            "fontFamily": "\"JetBrains Mono\", ui-monospace, SFMono-Regular, \"Cascadia Mono\", Consolas, Menlo, monospace",
+            "fontSize": "14px",
+            "fontWeight": "700",
+            "color": "rgb(15, 118, 110)",
+            "background": "rgba(0, 0, 0, 0)",
+            "border": "0px none rgb(15, 118, 110)",
+            "radius": "0px",
+            "shadow": "none"
+          },
+          "tileLabel": {
+            "fontFamily": "Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "14px",
+            "fontWeight": "400",
+            "color": "rgb(100, 116, 139)",
+            "background": "rgba(0, 0, 0, 0)",
+            "border": "0px none rgb(100, 116, 139)",
+            "radius": "0px",
+            "shadow": "none"
+          },
+          "axisText": {
+            "fontFamily": "Inter, Inter, Arial, sans-serif",
+            "fontSize": "11px",
+            "fontWeight": "400",
+            "color": "rgb(23, 20, 43)",
+            "background": "rgba(0, 0, 0, 0)",
+            "border": "0px none rgb(23, 20, 43)",
+            "radius": "0px",
+            "shadow": "none"
+          },
+          "insight": {
+            "fontFamily": "Inter, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+            "fontSize": "12px",
+            "fontWeight": "700",
+            "color": "rgb(100, 116, 139)",
+            "background": "rgba(0, 0, 0, 0)",
+            "border": "0px none rgb(100, 116, 139)",
+            "radius": "0px",
+            "shadow": "none"
+          },
+          "fonts": [
+            "Inter 100 900",
+            "Space Grotesk 300 700",
+            "JetBrains Mono 400 500"
+          ],
+          "jetbrainsLoaded": true
+        }
+      },
+      "interactions": {
+        "pointerTooltip": "Year 3 Effective income $272,793 − Operating costs $105,878 = NOI $166,915 − Debt service $150,179 − Capital reserves $14,499 = Cash Flow $2,237",
+        "keyboardLive": "Year 2: Effective income $267,444.00; − Operating costs $103,295.40; = NOI $164,148.60; − Debt service $150,179.40; − Capital reserves $14,145.00; = Cash Flow -$175.80"
+      },
+      "consoleErrors": []
+    }
+  }
+}

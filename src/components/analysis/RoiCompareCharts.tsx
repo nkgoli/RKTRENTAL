@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { referenceScale } from '@/lib/analysis/chart-data';
+import { chartColors } from './RoiChart';
 import c from './roi-chart.module.css';
 
 function useWidth(initial = 660) {
@@ -285,7 +286,7 @@ export function RadarChart({
               key={ring}
               points={axes.map((_, i) => pt(i, ring).join(',')).join(' ')}
               fill="none"
-              stroke="#e2e8f0"
+              stroke={chartColors.border}
             />
           ))}
           {axes.map((axis, i) => {
@@ -293,13 +294,13 @@ export function RadarChart({
             const [lx, ly] = pt(i, 118);
             return (
               <g key={axis}>
-                <line x1={cx} y1={cy} x2={ex} y2={ey} stroke="#e2e8f0" />
+                <line x1={cx} y1={cy} x2={ex} y2={ey} stroke={chartColors.border} />
                 <text
                   className={c.xtick}
                   x={lx}
                   y={ly + 4}
                   textAnchor={Math.abs(lx - cx) < 4 ? 'middle' : lx > cx ? 'start' : 'end'}
-                  style={active === i ? { fontWeight: 600, fill: '#0f172a' } : undefined}
+                  style={active === i ? { fontWeight: 600, fill: chartColors.ink } : undefined}
                 >
                   {axis}
                 </text>

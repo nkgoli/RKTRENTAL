@@ -99,7 +99,7 @@ function Bars({ rows }: { rows: [string, number][] }) {
                 style={{
                   left: `${value < 0 ? ((value - min) / span) * 100 : zero}%`,
                   width: `${(Math.abs(value) / span) * 100}%`,
-                  background: value < 0 ? chartColors.red : chartColors.teal,
+                  background: value < 0 ? chartColors.bad : chartColors.primary,
                 }}
               />
               <b style={{ left: `${zero}%` }} />
@@ -181,23 +181,23 @@ function CashFlowCumulative({ rows, result }: { rows: Row[]; result: ProjectionR
             label: 'Annual Cash Flow',
             kind: 'bar',
             values: visible.map((r) => r.cashFlow),
-            color: chartColors.teal,
-            negativeColor: chartColors.red,
+            color: chartColors.primary,
+            negativeColor: chartColors.bad,
           },
           {
             label: 'Cumulative',
             values: visible.map((r) => r.cumulativeCashFlow),
-            color: chartColors.slate,
+            color: chartColors.muted,
             width: 3,
             dot: 3,
           },
         ]}
         bands={
           beIndex == null
-            ? [{ from: 0, to: visible.length - 1, color: chartColors.red }]
+            ? [{ from: 0, to: visible.length - 1, color: chartColors.bad }]
             : [
-                { from: 0, to: beIndex - 0.5, color: chartColors.red },
-                { from: beIndex + 0.5, to: visible.length - 1, color: chartColors.emerald },
+                { from: 0, to: beIndex - 0.5, color: chartColors.bad },
+                { from: beIndex + 0.5, to: visible.length - 1, color: chartColors.accent },
               ]
         }
         markers={
@@ -207,20 +207,20 @@ function CashFlowCumulative({ rows, result }: { rows: Row[]; result: ProjectionR
                 {
                   index: beIndex,
                   label: 'Breakeven',
-                  color: chartColors.green,
+                  color: chartColors.accent,
                   dot: visible[beIndex].cumulativeCashFlow,
                   align: 'end',
                 },
               ]
         }
         legend={[
-          { label: 'Cash Flow', kind: 'bar', color: chartColors.teal },
+          { label: 'Cash Flow', kind: 'bar', color: chartColors.primary },
           ...(visible.some((r) => r.cashFlow < 0)
-            ? [{ label: 'Negative year', kind: 'bar' as const, color: chartColors.red }]
+            ? [{ label: 'Negative year', kind: 'bar' as const, color: chartColors.bad }]
             : []),
-          { label: 'Cumulative', kind: 'line', color: chartColors.slate },
-          { label: 'Pre-breakeven', kind: 'band', color: chartColors.red },
-          { label: 'Post-breakeven', kind: 'band', color: chartColors.emerald },
+          { label: 'Cumulative', kind: 'line', color: chartColors.muted },
+          { label: 'Pre-breakeven', kind: 'band', color: chartColors.bad },
+          { label: 'Post-breakeven', kind: 'band', color: chartColors.accent },
         ]}
         tooltip={(i) => ({
           title: `Year ${visible[i].year}`,
@@ -229,13 +229,13 @@ function CashFlowCumulative({ rows, result }: { rows: Row[]; result: ProjectionR
               label: 'Annual Cash Flow',
               value: visible[i].cashFlow,
               tone: 'auto',
-              swatch: { color: chartColors.teal },
+              swatch: { color: chartColors.primary },
             },
             {
               label: 'Cumulative',
               value: visible[i].cumulativeCashFlow,
               tone: 'auto',
-              swatch: { color: chartColors.slate, kind: 'line' },
+              swatch: { color: chartColors.muted, kind: 'line' },
             },
           ],
         })}
@@ -357,21 +357,21 @@ function IncomeBridge({ rows }: { rows: Row[] }) {
           {
             label: 'Gross Income (GOI)',
             values: visible.map((r) => r.effectiveGrossIncome),
-            color: chartColors.tealMid,
+            color: chartColors.primaryMid,
             width: 2,
             dot: 2,
           },
           {
             label: 'NOI (GOI − OpEx)',
             values: visible.map((r) => r.noi),
-            color: chartColors.tealDark,
+            color: chartColors.primaryDark,
             width: 2,
             dot: 2,
           },
           {
             label: 'Debt Service (annual)',
             values: visible.map((r) => r.debtService),
-            color: chartColors.slateLight,
+            color: chartColors.mutedLight,
             width: 2,
             dot: 2,
             dash: '5 5',
@@ -381,17 +381,17 @@ function IncomeBridge({ rows }: { rows: Row[] }) {
             label: 'Cash Flow (NOI − Debt − Reserves)',
             kind: 'bar',
             values: visible.map((r) => r.cashFlow),
-            color: chartColors.teal,
-            negativeColor: chartColors.red,
+            color: chartColors.primary,
+            negativeColor: chartColors.bad,
           },
         ]}
         legend={[
-          { label: 'Gross Income (GOI)', kind: 'line', color: chartColors.tealMid },
-          { label: 'NOI (GOI − OpEx)', kind: 'line', color: chartColors.tealDark },
-          { label: 'Debt Service (annual)', kind: 'dashed', color: chartColors.slateLight },
-          { label: 'Cash Flow (NOI − Debt − Reserves)', kind: 'bar', color: chartColors.teal },
+          { label: 'Gross Income (GOI)', kind: 'line', color: chartColors.primaryMid },
+          { label: 'NOI (GOI − OpEx)', kind: 'line', color: chartColors.primaryDark },
+          { label: 'Debt Service (annual)', kind: 'dashed', color: chartColors.mutedLight },
+          { label: 'Cash Flow (NOI − Debt − Reserves)', kind: 'bar', color: chartColors.primary },
           ...(visible.some((r) => r.cashFlow < 0)
-            ? [{ label: 'Negative year', kind: 'bar' as const, color: chartColors.red }]
+            ? [{ label: 'Negative year', kind: 'bar' as const, color: chartColors.bad }]
             : []),
         ]}
         tooltip={(i) => {
@@ -610,8 +610,8 @@ function EquityComposition({ all, result }: { all: EquityYear[]; result: Project
         axes={{
           left: indexed ? 'Index' : withPurchase ? 'Equity' : 'Equity Growth',
           right: financed ? (indexed ? 'Index' : 'Debt') : undefined,
-          leftColor: chartColors.tealDeep,
-          rightColor: chartColors.slateMid,
+          leftColor: chartColors.navy,
+          rightColor: chartColors.mutedMid,
         }}
         series={[
           ...(withPurchase
@@ -621,9 +621,9 @@ function EquityComposition({ all, result }: { all: EquityYear[]; result: Project
                   kind: 'bar' as const,
                   stack: true,
                   values: scaled(rows.map((r) => r.initialEquity)),
-                  color: chartColors.slatePale,
+                  color: chartColors.border,
                   opacity: 0.5,
-                  stroke: '#cbd5e1',
+                  stroke: '#c5cfdc',
                 },
               ]
             : []),
@@ -632,15 +632,15 @@ function EquityComposition({ all, result }: { all: EquityYear[]; result: Project
             kind: 'bar',
             stack: true,
             values: scaled(rows.map((r) => r.principalEquity)),
-            color: chartColors.teal,
+            color: chartColors.primary,
           },
           {
             label: 'Appreciation & repair value change',
             kind: 'bar',
             stack: true,
             values: scaled(rows.map((r) => r.appreciationEquity)),
-            color: chartColors.tealLight,
-            negativeColor: chartColors.red,
+            color: chartColors.primaryLight,
+            negativeColor: chartColors.bad,
           },
           ...(financed
             ? [
@@ -650,7 +650,7 @@ function EquityComposition({ all, result }: { all: EquityYear[]; result: Project
                     rows.map((r) => r.loanBalance),
                     rows[0].loanBalance,
                   ),
-                  color: chartColors.slateMid,
+                  color: chartColors.mutedMid,
                   width: 3,
                   dot: 2,
                 },
@@ -659,7 +659,7 @@ function EquityComposition({ all, result }: { all: EquityYear[]; result: Project
         ]}
         bands={
           !indexed && ci != null
-            ? [{ from: ci - 0.5, to: rows.length - 1, color: chartColors.teal, opacity: 0.08 }]
+            ? [{ from: ci - 0.5, to: rows.length - 1, color: chartColors.primary, opacity: 0.08 }]
             : []
         }
         markers={
@@ -668,7 +668,7 @@ function EquityComposition({ all, result }: { all: EquityYear[]; result: Project
                 {
                   index: ci,
                   label: withPurchase ? 'Equity > Debt' : 'Gain > Debt',
-                  color: chartColors.tealDark,
+                  color: chartColors.primaryDark,
                   dot: rows[ci].loanBalance,
                   align: 'end',
                 },
@@ -677,15 +677,15 @@ function EquityComposition({ all, result }: { all: EquityYear[]; result: Project
         }
         legend={[
           ...(financed
-            ? [{ label: 'Mortgage Balance', kind: 'line' as const, color: chartColors.slateMid }]
+            ? [{ label: 'Mortgage Balance', kind: 'line' as const, color: chartColors.mutedMid }]
             : []),
-          { label: 'Appreciation', kind: 'bar', color: chartColors.tealLight },
-          { label: 'Principal Paid', kind: 'bar', color: chartColors.teal },
+          { label: 'Appreciation', kind: 'bar', color: chartColors.primaryLight },
+          { label: 'Principal Paid', kind: 'bar', color: chartColors.primary },
           ...(withPurchase
-            ? [{ label: 'Down Payment', kind: 'bar' as const, color: '#cbd5e1' }]
+            ? [{ label: 'Down Payment', kind: 'bar' as const, color: '#c5cfdc' }]
             : []),
           ...(rows.some((r) => r.appreciationEquity < 0)
-            ? [{ label: 'Value decline', kind: 'bar' as const, color: chartColors.red }]
+            ? [{ label: 'Value decline', kind: 'bar' as const, color: chartColors.bad }]
             : []),
         ]}
         tooltip={(i) => {
@@ -710,7 +710,7 @@ function EquityComposition({ all, result }: { all: EquityYear[]; result: Project
                       label: 'Down payment',
                       value: r.initialEquity,
                       money: true,
-                      swatch: { color: chartColors.slatePale },
+                      swatch: { color: chartColors.border },
                     },
                   ]
                 : []),
@@ -718,14 +718,14 @@ function EquityComposition({ all, result }: { all: EquityYear[]; result: Project
                 label: 'Principal paid',
                 value: r.principalEquity,
                 money: true,
-                swatch: { color: chartColors.teal },
+                swatch: { color: chartColors.primary },
               },
               {
                 label: 'Appreciation',
                 value: r.appreciationEquity,
                 money: true,
                 swatch: {
-                  color: r.appreciationEquity < 0 ? chartColors.red : chartColors.tealLight,
+                  color: r.appreciationEquity < 0 ? chartColors.bad : chartColors.primaryLight,
                 },
               },
               ...(indexed
@@ -811,13 +811,13 @@ function ValueVsMortgage({
           {
             label: 'Property Value',
             values: points.map((p) => p.propertyValue),
-            color: chartColors.slateDark,
+            color: chartColors.ink,
             dot: 3,
           },
           {
             label: 'Mortgage Balance',
             values: points.map((p) => p.loanBalance),
-            color: chartColors.slateLight,
+            color: chartColors.mutedLight,
             dot: 3,
           },
         ]}
@@ -825,13 +825,13 @@ function ValueVsMortgage({
           {
             upper: points.map((p) => p.propertyValue),
             lower: points.map((p) => p.loanBalance),
-            color: chartColors.teal,
+            color: chartColors.primary,
           },
         ]}
         legend={[
-          { label: 'Property Value', kind: 'line', color: chartColors.slateDark },
-          { label: 'Mortgage Balance', kind: 'line', color: chartColors.slateLight },
-          { label: 'Equity (shaded area)', kind: 'area', color: chartColors.teal },
+          { label: 'Property Value', kind: 'line', color: chartColors.ink },
+          { label: 'Mortgage Balance', kind: 'line', color: chartColors.mutedLight },
+          { label: 'Equity (shaded area)', kind: 'area', color: chartColors.primary },
         ]}
         tooltip={(i) => {
           const p = points[i];

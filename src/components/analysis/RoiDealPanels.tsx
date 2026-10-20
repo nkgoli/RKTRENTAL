@@ -18,6 +18,7 @@ import {
   levers as leverRows,
   riskFactors,
   riskLevel,
+  riskScale,
   riskScore,
   runInput,
   segmentColor,
@@ -114,11 +115,9 @@ function SegmentBar({ position, size = 12 }: { position: number; size?: number }
   return (
     <span className={d.segments} aria-hidden="true">
       <span className={d.track}>
-        <i style={{ background: '#f87171' }} />
-        <i style={{ background: '#fb923c' }} />
-        <i style={{ background: '#facc15' }} />
-        <i style={{ background: '#a3e635' }} />
-        <i style={{ background: '#10b981' }} />
+        {riskScale.map((color) => (
+          <i key={color} style={{ background: color }} />
+        ))}
       </span>
       <span
         className={d.pill}
@@ -174,21 +173,27 @@ function Gauge({ score, color }: { score: number; color: string }) {
       <path
         d={arc(-180, 0)}
         fill="none"
-        stroke="rgba(255,255,255,0.1)"
+        stroke="var(--rr-subtle)"
         strokeWidth="12"
         strokeLinecap="round"
       />
       <path
         d={arc(-180, -144)}
         fill="none"
-        stroke="#14b8a6"
+        stroke={riskScale[4]}
         strokeWidth="10"
         strokeLinecap="round"
       />
-      <path d={arc(-144, -108)} fill="none" stroke="#65a30d" strokeWidth="10" />
-      <path d={arc(-108, -72)} fill="none" stroke="#eab308" strokeWidth="10" />
-      <path d={arc(-72, -36)} fill="none" stroke="#f97316" strokeWidth="10" />
-      <path d={arc(-36, 0)} fill="none" stroke="#ef4444" strokeWidth="10" strokeLinecap="round" />
+      <path d={arc(-144, -108)} fill="none" stroke={riskScale[3]} strokeWidth="10" />
+      <path d={arc(-108, -72)} fill="none" stroke={riskScale[2]} strokeWidth="10" />
+      <path d={arc(-72, -36)} fill="none" stroke={riskScale[1]} strokeWidth="10" />
+      <path
+        d={arc(-36, 0)}
+        fill="none"
+        stroke={riskScale[0]}
+        strokeWidth="10"
+        strokeLinecap="round"
+      />
       <line
         x1={cx}
         y1={cy}
@@ -205,7 +210,7 @@ function Gauge({ score, color }: { score: number; color: string }) {
 }
 
 /**
- * C3 Deal Snapshot: dark Year-1 band with KPI popovers and the compact risk
+ * C3 Deal Snapshot: Year-1 card with KPI popovers and the compact risk
  * meter. The risk score is one number with one meaning (higher = riskier) on
  * both the ring and the gauge, unlike the reference's 27 "Deal Score" vs 73.
  */
@@ -459,7 +464,7 @@ export function DealSnapshot({
                     cy="22"
                     r="18"
                     fill="none"
-                    stroke="rgba(255,255,255,0.1)"
+                    stroke="var(--rr-subtle)"
                     strokeWidth="4"
                   />
                   {score != null && (

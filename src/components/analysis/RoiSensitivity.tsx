@@ -17,7 +17,7 @@ import {
   heatPalette,
   type ChartValue,
 } from '@/lib/analysis/chart-data';
-import { ChartCard, Check, Icon } from './RoiChart';
+import { ChartCard, chartColors, Check, Icon } from './RoiChart';
 import styles from './analysis.module.css';
 import chartStyles from './projections.module.css';
 import d from './detail-charts.module.css';
@@ -51,7 +51,7 @@ function ink(hex: string) {
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
   });
   const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return (l + 0.05) / 0.05 > 1.05 / (l + 0.05) ? '#0f172a' : '#ffffff';
+  return (l + 0.05) / 0.05 > 1.05 / (l + 0.05) ? chartColors.ink : '#ffffff';
 }
 
 /**
@@ -178,7 +178,7 @@ function Heatmap({
                       height={cellH}
                       rx={2}
                       fill={fill}
-                      stroke={base ? '#1e40af' : isActive ? '#0f172a' : '#ffffff'}
+                      stroke={base ? chartColors.primary : isActive ? chartColors.ink : '#ffffff'}
                       strokeWidth={base ? 3 : isActive ? 2 : 1}
                       className={d.cell}
                     />
@@ -186,7 +186,7 @@ function Heatmap({
                       <g aria-hidden="true">
                         <polygon
                           points={`${x(c)},${y(r)} ${x(c) + 12},${y(r)} ${x(c)},${y(r) + 12}`}
-                          fill="#1e40af"
+                          fill={chartColors.primary}
                         />
                         <text x={x(c) + 1.5} y={y(r) + 7.5} className={d.star}>
                           ★
@@ -198,7 +198,7 @@ function Heatmap({
                         x={x(c) + cellW / 2}
                         y={y(r) + cellH / 2}
                         className={d.cellValue}
-                        fill={v == null ? '#64748b' : ink(fill)}
+                        fill={v == null ? chartColors.muted : ink(fill)}
                         fontSize={cellW > 60 ? 11 : 9}
                         textAnchor="middle"
                         dominantBaseline="middle"

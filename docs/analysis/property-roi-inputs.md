@@ -116,6 +116,13 @@ tests plus existing analysis persistence and contract tests. Database data stays
 under `.data/`; the server is stopped in `finally`. On Windows, PostgreSQL may
 need execution outside a restricted sandbox token to initialize.
 
-The dependent UI task owns form controls, serialization and browser flows. This
-change supplies the persisted contract and action plumbing; it does not publish
-a Preview or add financial controls.
+The property forms expose these inputs in optional, collapsed groups. Later edits
+use `updatePropertyRoiAction` and `propertiesDb.updateRoiInputs`, a tenant-scoped
+transactional patch that leaves basic property details untouched. The editor
+submits only changed, nonblank financial values, preserving unrelated fields.
+
+ROI selection uses the saved analysis first, then the property draft. Its
+projection recalculates synchronously when the inputs change; insufficient or
+invalid inputs remove the previous results. Missing sections expand into friendly
+field labels with keyboard focus links. See [the UI verification report](property-roi-ux.md)
+for the Add Property through save/reload browser evidence.

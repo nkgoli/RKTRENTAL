@@ -2,10 +2,19 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  amortizationTicks,
+  breakevenContour,
   breakevenYear,
   equityLandmarks,
   equityYears,
+  exitLandmarks,
+  exitRows,
+  expenseYear,
   firstPositiveAfterNegative,
+  heatColor,
+  heatPalette,
+  loanMilestones,
+  loanSummaries,
   indexAgainst,
   milestoneYears,
   miniBarWidth,
@@ -17,7 +26,16 @@ import {
   wholeDollars,
 } from '@/lib/analysis/chart-data';
 import { calculatePayload } from '@/lib/analysis/contract';
-import { dollars, projectionRows } from '@/lib/analysis/projections';
+import {
+  calculateExits,
+  calculateSensitivity,
+  dollars,
+  exitControls,
+  loanYears,
+  projectionRows,
+  rate,
+  sensitivityControls,
+} from '@/lib/analysis/projections';
 import { RoiProjections } from '@/components/analysis/RoiProjections';
 import {
   NetCashFlowCard,
@@ -124,6 +142,68 @@ describe('RealROI chart adapters', () => {
     expect(miniBarWidth(0.5)).toBe(100);
     expect(miniBarWidth(null)).toBe(0);
   });
+
+  it('builds expense, loan, exit and heatmap adapters without inventing values', () => {
+    const r = sample();
+    const rows = projectionRows(r);
+    const y1 = expenseYear(r.expenseBreakdown, rows, 1)!;
+    expect(y1.categories.reduce((s, c) => s + c.value, 0)).toBeCloseTo(
+      rows[0].operatingExpenses,
+      6,
+    );
+    // Zero categories (HOA, utilities) are left out, as in the reference.
+    expect(y1.categories.map((c) => c.key)).not.toContain('hoa');
+    expect(expenseYear(r.expenseBreakdown, rows, 31)).toBe(null);
+    const years = Array.from({ length: 30 }, (_, i) => i + 1);
+    expect(amortizationTicks(years).map((i) => years[i])).toEqual([
+      1, 3, 5, 7, 9, 12, 15, 18, 21, 24, 27, 30,
+    ]);
+    const loan = loanSummaries(loanYears(r), r.summaryMetrics.loanAmount);
+    expect(loan[0].beginning).toBe(r.summaryMetrics.loanAmount);
+    expect(loan[1].beginning).toBe(loan[0].balance);
+    expect(loanMilestones(loan).principalBeatsInterest).toBe(
+      loan.find((y) => y.principal > y.interest)!.year,
+    );
+    // Exits: a missing IRR is never "best".
+    const fake = (year: number, irr: number | null, totalReturn: number) => ({
+      year,
+      result: {
+        saleProceeds: { grossSalePrice: 1, sellingCosts: 0, loanPayoff: 0, netProceeds: 1 },
+        summaryMetrics: {
+          totalReturn,
+          totalCashRequired: 10,
+          totalReturnPercent: 0,
+          irrLeveraged: irr,
+        },
+        annualCashflows: [{ cumulativeCashFlow: 0 }],
+      },
+    });
+    const marks = exitLandmarks(
+      exitRows([fake(5, null, -5), fake(10, 0.05, 3), fake(15, 0.04, 9)]),
+    );
+    expect(marks.bestIrr?.year).toBe(10);
+    expect(marks.bestProfit?.year).toBe(15);
+    expect(marks.breakeven?.year).toBe(10);
+    expect(exitLandmarks(exitRows([fake(5, null, 1)])).bestIrr).toBe(null);
+    // Heat scale and contour.
+    expect(heatColor(-1, 1, -1, heatPalette)).toBe('#ef4444');
+    expect(heatColor(-1, 1, 0, heatPalette)).toBe('#fbbf24');
+    expect(heatColor(-1, 1, 1, heatPalette)).toBe('#22c55e');
+    expect(
+      breakevenContour([
+        [-2, -1, 1],
+        [-1, 1, 2],
+        [1, 2, 3],
+        [-1, 1, 2],
+      ]),
+    ).toEqual([
+      [
+        { row: 0, column: 1.5 },
+        { row: 1, column: 0.5 },
+      ],
+      [{ row: 3, column: 0.5 }],
+    ]);
+  });
 });
 
 describe('RealROI cash-flow and equity charts', () => {
@@ -199,28 +279,29 @@ describe('RealROI cash-flow and equity charts', () => {
   it('defaults cash flow to Y10 with breakeven shading, chips and the reference insight', () => {
     const r = sample();
     const rows = projectionRows(r);
-    charts();
+    const { container } = charts();
     fireEvent.click(screen.getByRole('tab', { name: 'Cash Flow' }));
-    expect(screen.getByText('Breakeven: Year 5')).toBeTruthy();
-    expect(screen.getByText(`Worst: ${wholeDollars(rows[0].cashFlow)} (Year 1)`)).toBeTruthy();
-    expect(screen.getByText(`Best: ${wholeDollars(rows[9].cashFlow)} (Year 10)`)).toBeTruthy();
+    const panel = within(container.querySelector<HTMLElement>('#roi-chart-panel-cash-flow')!);
+    expect(panel.getByText('Breakeven: Year 5')).toBeTruthy();
+    expect(panel.getByText(`Worst: ${wholeDollars(rows[0].cashFlow)} (Year 1)`)).toBeTruthy();
+    expect(panel.getByText(`Best: ${wholeDollars(rows[9].cashFlow)} (Year 10)`)).toBeTruthy();
     expect(
-      screen.getByText(`Cumulative at Year 10: ${wholeDollars(rows[9].cumulativeCashFlow)}`),
+      panel.getByText(`Cumulative at Year 10: ${wholeDollars(rows[9].cumulativeCashFlow)}`),
     ).toBeTruthy();
     const plot = screen.getByRole('group', { name: /Annual and cumulative operating cash flow/ });
     expect(plot.textContent).toContain('Breakeven');
     // Pre- and post-breakeven bands.
     expect(plot.querySelectorAll('svg > rect')).toHaveLength(2);
-    expect(screen.getByText('24.5%')).toBeTruthy();
+    expect(panel.getByText('24.5%')).toBeTruthy();
     // Custom horizon down to Y4: never breaks even, so the whole range is pre-breakeven.
     const horizon = screen.getByRole('group', { name: 'Cash flow chart horizon' });
     fireEvent.click(within(horizon).getByRole('button', { name: 'Custom' }));
     fireEvent.change(screen.getByLabelText('Cash flow chart horizon: custom years'), {
       target: { value: '4' },
     });
-    expect(screen.getByText('No breakeven by Year 4')).toBeTruthy();
+    expect(panel.getByText('No breakeven by Year 4')).toBeTruthy();
     expect(plot.querySelectorAll('svg > rect')).toHaveLength(1);
-    expect(screen.getByText(/none of your initial investment/)).toBeTruthy();
+    expect(panel.getByText(/none of your initial investment/)).toBeTruthy();
   });
 
   it('reconciles the income bridge to cash flow, including reserves below NOI', () => {
@@ -237,6 +318,190 @@ describe('RealROI cash-flow and equity charts', () => {
     expect(screen.getByText('GOI (Y1)')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'About OpEx Ratio' })).toBeTruthy();
     expect(screen.getByText(/NOI exceeds Debt Service by/)).toBeTruthy();
+  });
+});
+
+describe('RealROI expense, amortization, exit and sensitivity charts', () => {
+  const panel = (container: HTMLElement, id: string) =>
+    within(container.querySelector<HTMLElement>(`#roi-chart-panel-${id}`)!);
+
+  it('ranks Year-1 operating expenses, scales categories by year and simulates tax without saving', () => {
+    const r = sample();
+    const rows = projectionRows(r);
+    const { container } = charts();
+    fireEvent.click(screen.getByRole('tab', { name: 'Expenses' }));
+    const p = panel(container, 'expenses');
+    const horizon = p.getByRole('group', { name: 'Operating expenses year' });
+    expect(within(horizon).getByRole('button', { name: 'Y1' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    const e = r.expenseBreakdown;
+    const names = within(p.getByRole('region', { name: 'Expense Breakdown' }))
+      .getAllByRole('button', { name: /^About / })
+      .map((b) => b.getAttribute('aria-label')!.replace('About ', ''));
+    // Reference order by amount; CapEx is listed last, below NOI.
+    expect(names.slice(0, 3)).toEqual(['Property Tax', 'Management', 'Insurance']);
+    expect(names.at(-1)).toBe('CapEx');
+    expect(p.getByText(wholeDollars(rows[0].operatingExpenses))).toBeTruthy();
+    expect(p.getByText('Below NOI')).toBeTruthy();
+    // Exact category table: categories add up to the projection's operating expenses.
+    const table = p.getByRole('table', { name: /Expense categories · year 1/ });
+    expect(within(table).getByText(dollars(rows[0].operatingExpenses))).toBeTruthy();
+    expect(within(table).getByText(dollars(rows[0].reserves))).toBeTruthy();
+    // Y10 scales every category by the engine's own operating-expense growth.
+    fireEvent.click(within(horizon).getByRole('button', { name: 'Y10' }));
+    const growth = rows[9].operatingExpenses / rows[0].operatingExpenses;
+    const y10 = p.getByRole('table', { name: /Expense categories · year 10/ });
+    expect(
+      within(y10).getByText(dollars(e.propertyTax * (rows[9].operatingExpenses / e.total))),
+    ).toBeTruthy();
+    expect(p.getByText(`(+${((growth - 1) * 100).toFixed(0)}% vs Y1)`)).toBeTruthy();
+    // Sort menu: Biggest Δ shows change chips.
+    fireEvent.click(p.getByRole('button', { name: /Sort: Amount/ }));
+    fireEvent.click(p.getByRole('menuitemradio', { name: 'Biggest Δ vs Y1' }));
+    expect(p.getByRole('button', { name: /Sort: Biggest Δ/ })).toBeTruthy();
+    const taxChange =
+      e.propertyTax * (rows[9].operatingExpenses / e.total - rows[0].operatingExpenses / e.total);
+    expect(p.getAllByText(`+${wholeDollars(taxChange)}`).length).toBeGreaterThan(0);
+    // What-if: −10% tax lowers the total in the tile only.
+    fireEvent.click(within(horizon).getByRole('button', { name: 'Y1' }));
+    fireEvent.click(p.getByRole('button', { name: 'Simulate −10% Tax' }));
+    const cut = e.propertyTax * (rows[0].operatingExpenses / e.total) * 0.1;
+    expect(p.getByText(wholeDollars(rows[0].operatingExpenses - cut))).toBeTruthy();
+    expect(p.getByText(/Simulating 10% tax reduction/)).toBeTruthy();
+    expect(p.getByText(/saved assumptions are unchanged/)).toBeTruthy();
+    fireEvent.click(p.getByRole('button', { name: 'Reset' }));
+    expect(p.queryByText(/Simulating 10% tax reduction/)).toBeNull();
+  });
+
+  it('draws principal vs interest areas and the schedule visuals from the loan schedule', () => {
+    const r = sample();
+    const loan = r.summaryMetrics.loanAmount;
+    const { container } = charts();
+    fireEvent.click(screen.getByRole('tab', { name: 'Amortization' }));
+    const p = panel(container, 'amortization');
+    const plot = p.getByRole('group', { name: /Loan balance and cumulative principal/ });
+    expect(plot.querySelectorAll('path[fill-opacity="0.6"]')).toHaveLength(3);
+    expect(plot.textContent).toContain('Year 1');
+    expect(plot.textContent).toContain('Year 3');
+    const years = loanYears(r);
+    fireEvent.keyDown(plot, { key: 'Home' });
+    for (let i = 0; i < 8; i++) fireEvent.keyDown(plot, { key: 'ArrowRight' });
+    const y9 = years[8];
+    expect(live(plot)).toBe(
+      `Year 9: Remaining Balance: ${dollars(y9.balance)}; Principal Paid: ${dollars(y9.cumulativePrincipal)}; Interest Paid: ${dollars(y9.cumulativeInterest)}`,
+    );
+    const total = years.at(-1)!.cumulativeInterest;
+    expect(loan).toBe(262500);
+    expect(p.getByText(`${((total / loan) * 100).toFixed(0)}% of principal`)).toBeTruthy();
+    const principalShare = ((loan / (loan + total)) * 100).toFixed(0);
+    expect(
+      p.getByText(
+        `Principal: ${principalShare}% | Interest: ${(100 - Number(principalShare)).toFixed(0)}%`,
+        { exact: false },
+      ),
+    ).toBeTruthy();
+    const marks = loanMilestones(loanSummaries(years, loan));
+    expect(p.getByText(`50% paid off by Y${marks.half}`)).toBeTruthy();
+    expect(p.getByText(`Principal > Interest from Y${marks.principalBeatsInterest}`)).toBeTruthy();
+    // Detailed view expands monthly rows.
+    const schedule = p.getByRole('region', { name: 'Loan schedule by year' });
+    expect(within(schedule).queryByText('Month 1')).toBeNull();
+    fireEvent.click(p.getByRole('button', { name: 'Detailed' }));
+    fireEvent.click(p.getByRole('button', { name: 'Year 1 monthly payments' }));
+    expect(within(schedule).getByText('Month 1')).toBeTruthy();
+    expect(within(schedule).getByText('Month 12')).toBeTruthy();
+    fireEvent.click(p.getByRole('button', { name: 'Collapse All' }));
+    expect(within(schedule).queryByText('Month 1')).toBeNull();
+    // Insight cards follow their selects.
+    const first5 = years.slice(0, 5).reduce((s, y) => s + y.interest, 0);
+    expect(p.getByText(wholeDollars(first5))).toBeTruthy();
+    fireEvent.change(p.getByLabelText('Interest period'), { target: { value: '10' } });
+    expect(p.getByText('Interest (First 10y)')).toBeTruthy();
+    fireEvent.change(p.getByLabelText('Balance year'), { target: { value: '20' } });
+    const card = within(p.getByText('Balance at Y20').closest('div')!);
+    expect(card.getByText(wholeDollars(years[19].balance))).toBeTruthy();
+    expect(card.getByText(wholeDollars(total - years[19].cumulativeInterest))).toBeTruthy();
+    // Exact schedule stays.
+    expect(p.getByRole('table', { name: /Annual loan payments/ })).toBeTruthy();
+  });
+
+  it('compares exits with Year 10 selected, a reconciled waterfall and true IRR', () => {
+    const p0 = realRoiSample();
+    const { container } = charts(p0);
+    fireEvent.click(screen.getByRole('tab', { name: 'Exit Analysis' }));
+    const p = panel(container, 'exit');
+    const rows = exitRows(calculateExits(p0, exitControls(p0)));
+    expect(rows.map((r) => r.year)).toEqual([5, 10, 15, 20, 25, 30]);
+    expect(p.getByText('Year 10 Exit Summary')).toBeTruthy();
+    const marks = exitLandmarks(rows);
+    const best = p.getByRole('button', { name: /^Best IRR: Year/ });
+    expect(best.textContent).toContain(`${((marks.bestIrr!.irr ?? 0) * 100).toFixed(2)}%`);
+    const y10 = rows[1];
+    // IRR is the engine's leveraged IRR for that exit year.
+    expect(y10.irr).toBe(
+      calculateExits(p0, { ...exitControls(p0), years: '10' }).at(-1)!.result.summaryMetrics
+        .irrLeveraged,
+    );
+    expect(y10.netProceeds + y10.cashFlow).toBeCloseTo(y10.totalCashBack, 0);
+    const plot = p.getByRole('group', { name: /Total cash back by exit year/ });
+    expect(plot.textContent).toContain(`Initial: ${wholeDollars(y10.invested)}`);
+    // Hover/keyboard tooltip still works while a year is selected (reference defect fixed).
+    fireEvent.keyDown(plot, { key: 'End' });
+    const y30 = rows.at(-1)!;
+    expect(live(plot)).toContain(`Year 30 Exit: Sale Price ${dollars(y30.salePrice)}`);
+    expect(live(plot)).toContain(`= Net Proceeds ${dollars(y30.netProceeds)}`);
+    expect(live(plot)).toContain(`= Profit ${dollars(y30.profit)}`);
+    fireEvent.keyDown(plot, { key: 'Enter' });
+    expect(p.getByText('Year 30 Exit Summary')).toBeTruthy();
+    fireEvent.click(p.getByRole('button', { name: 'Clear' }));
+    expect(p.queryByText(/Exit Summary/)).toBeNull();
+    fireEvent.click(p.getByRole('button', { name: '15y' }));
+    expect(p.getByText('Year 15 Exit Summary')).toBeTruthy();
+    fireEvent.click(p.getByRole('button', { name: 'Total Cash Back' }));
+    expect(p.getAllByText(wholeDollars(rows[2].totalCashBack)).length).toBeGreaterThan(1);
+    // Exact horizon table keeps cents.
+    expect(p.getByRole('table', { name: /Exit horizon comparison/ })).toBeTruthy();
+  });
+
+  it('builds the sensitivity heatmap from engine cells with the base inserted', () => {
+    const p0 = realRoiSample();
+    const { container } = charts(p0);
+    fireEvent.click(screen.getByRole('tab', { name: 'Sensitivity' }));
+    const p = panel(container, 'sensitivity');
+    const grid = calculateSensitivity(p0, sensitivityControls(p0));
+    expect(grid.rents).toEqual([1960, 2380, 2800, 3220, 3640]);
+    expect(grid.vacancies).toEqual([0, 3, 5, 6, 9, 12, 15]);
+    const base = grid.cells[2][2];
+    const engine = calculatePayload(p0).base;
+    expect(base.cashOnCash).toBe(engine.summaryMetrics.cashOnCash);
+    expect(base.stabilized).toBeCloseTo(
+      engine.annualCashflows[2].cashFlow / engine.summaryMetrics.totalCashRequired,
+      10,
+    );
+    const map = p.getByRole('group', { name: /Cash-on-Cash by monthly rent and vacancy/ });
+    const cells = map.querySelectorAll('rect');
+    expect(cells).toHaveLength(35);
+    expect(map.querySelector('polygon')).toBeTruthy();
+    expect(map.querySelector('polyline')).toBeTruthy();
+    // Keyboard starts on the base cell.
+    fireEvent.keyDown(map, { key: 'ArrowRight' });
+    const spoken = map.parentElement!.querySelector('[aria-live]')!.textContent!;
+    expect(spoken).toBe(
+      `Monthly rent ${dollars(2800)}, vacancy 5%: Cash-on-Cash ${rate(base.cashOnCash)} (your assumptions)`,
+    );
+    expect(p.getByText('0% Break-even')).toBeTruthy();
+    const before = cells[0].getAttribute('fill');
+    fireEvent.click(p.getByLabelText('Colorblind-safe'));
+    expect(map.querySelectorAll('rect')[0].getAttribute('fill')).not.toBe(before);
+    expect(map.textContent).not.toContain('%-');
+    fireEvent.click(p.getByLabelText('Show values'));
+    expect(map.textContent).toContain(`${((base.cashOnCash ?? 0) * 100).toFixed(1)}%`);
+    fireEvent.click(p.getByRole('button', { name: 'Year 5' }));
+    expect(p.getByRole('table', { name: /Year 5 cash-on-cash/ })).toBeTruthy();
+    fireEvent.change(p.getByLabelText('Sensitivity metric'), { target: { value: 'irr' } });
+    expect(p.getByRole('button', { name: 'Year 1' }).hasAttribute('disabled')).toBe(true);
+    expect(p.getByRole('table', { name: /Hold-period leveraged IRR/ })).toBeTruthy();
   });
 });
 

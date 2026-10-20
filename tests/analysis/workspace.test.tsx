@@ -599,6 +599,11 @@ describe('ROI projection interactions', () => {
     await open();
     tab('Charts');
     tab('Sensitivity');
+    // Reference layout: the range form sits behind "Customize Ranges".
+    expect(screen.queryByRole('button', { name: 'Update sensitivity' })).toBeNull();
+    const customize = screen.getByRole('button', { name: 'Customize Ranges' });
+    fireEvent.click(customize);
+    expect(customize.getAttribute('aria-expanded')).toBe('true');
     change('Minimum rent ($ / month)', 'bad');
     fireEvent.click(screen.getByRole('button', { name: 'Update sensitivity' }));
     expect(screen.getByRole('alert').textContent).toMatch(/Minimum rent/);
@@ -614,7 +619,8 @@ describe('ROI projection interactions', () => {
     expect(screen.getByRole('table', { name: /Year 1 cash-on-cash/ })).toBeTruthy();
     change('Sensitivity metric', 'irr');
     expect(screen.getByRole('table', { name: /Hold-period leveraged IRR/ })).toBeTruthy();
-    change('Sensitivity display', 'values');
+    fireEvent.click(screen.getByLabelText('Show values'));
+    expect((screen.getByLabelText('Show values') as HTMLInputElement).checked).toBe(true);
     tab('Exit Analysis');
     change('Probe exit year', '2.5');
     fireEvent.click(screen.getByRole('button', { name: 'Update exit comparison' }));

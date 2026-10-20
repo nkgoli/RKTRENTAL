@@ -102,14 +102,17 @@ one transaction; property updates and ROI patches also share one transaction.
    service never become inferred forecast assumptions. No market rates, growth,
    vacancies, fees, dates or projection defaults are invented.
 
-The existing engine gives fixed maintenance/capex/management amounts precedence
-over their percentages, including fixed zero. **Open review finding:** its public
-schema still requires overridden percentages and loan-only terms for an explicit
-zero loan. Do not fabricate these inputs to work around the engine. The exact
-engine paths needed for conditional validation are awaiting scope admission.
-Partial no-debt inputs can be persisted unchanged. Cross-field calculation limits
-remain enforced by `missingData` and the public engine when calculating/saving
-READY; partial property data does not need to be a calculable deal.
+Fixed maintenance/capex/management amounts take precedence over their percentages,
+including fixed zero. Only one basis is required per cost. Clearing the fixed
+amount activates its saved percentage; if neither is known, calculation waits.
+Explicit loan amount 0 (or 100% down payment with no loan override) means no debt,
+so rate, term, loan type, points and lender fees may remain absent. No-debt
+calculations have no loan payments or lender costs. Previously saved loan details
+remain stored, and explicit loan amounts override down-payment percentages.
+Financed purchases require their applicable loan details, plus either the loan
+amount or down-payment percentage. The public facade and core pipeline share
+these sufficiency rules; `missingData`, calculation and READY saves use the same
+contract. Partial property data does not need to be a calculable deal.
 
 ## Verification
 

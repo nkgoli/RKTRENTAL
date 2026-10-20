@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { AnalysisPayload } from '@/lib/analysis/contract';
 import {
   calculateExits,
@@ -15,6 +15,17 @@ import {
   type ExitControls,
   type SensitivityControls,
 } from '@/lib/analysis/projections';
+import { cashFlowLandmarks } from '@/lib/analysis/chart-data';
+import {
+  ChartCard,
+  Chips,
+  ComboChart,
+  Insight,
+  Segmented,
+  Tiles,
+  chartColors,
+  useHorizon,
+} from './RoiChart';
 import styles from './analysis.module.css';
 import chartStyles from './projections.module.css';
 
@@ -114,100 +125,6 @@ function ExactTable({
   );
 }
 
-type Series = { label: string; values: number[]; color: string; dashed?: boolean };
-const blue = '#1e3a8a';
-const warm = '#a4603d';
-const slate = '#64748b';
-const compact = (value: number) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(value);
-
-/** Shared zero baseline, including negative data; exact values live in the tables. */
-export function LineChart({
-  label,
-  years,
-  series,
-  unit = 'USD',
-}: {
-  label: string;
-  years: number[];
-  series: Series[];
-  unit?: string;
-}) {
-  const graphic = useRef<SVGSVGElement>(null);
-  const [width, setWidth] = useState(660);
-  useEffect(() => {
-    if (!graphic.current || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry.contentRect.width > 0) setWidth(entry.contentRect.width);
-    });
-    observer.observe(graphic.current);
-    return () => observer.disconnect();
-  }, []);
-  const values = series.flatMap((s) => s.values);
-  const min = Math.min(0, ...values);
-  const max = Math.max(0, ...values);
-  const span = max - min || 1;
-  const x = (index: number) =>
-    74 + (index / Math.max(1, years.length - 1)) * Math.max(1, width - 104);
-  const y = (value: number) => 220 - ((value - min) / span) * 192;
-  const labels = [...new Set([0, Math.floor((years.length - 1) / 2), years.length - 1])];
-  return (
-    <>
-      <svg
-        ref={graphic}
-        className={chartStyles.graph}
-        viewBox={`0 0 ${width} 264`}
-        role="img"
-        aria-label={`${label}. ${unit}; exact values in the table.`}
-      >
-        <title>{label}</title>
-        {[min, min + span / 2, min + span].map((tick, index) => (
-          <g key={index}>
-            <path d={`M74 ${y(tick)}H${width - 30}`} stroke="#e1e6ee" />
-            <text x="64" y={y(tick) + 4} textAnchor="end">
-              {unit === 'USD' ? compact(tick) : tick.toFixed(1)}
-            </text>
-          </g>
-        ))}
-        <path d={`M74 ${y(0)}H${width - 30}`} stroke="#64748b" strokeDasharray="2 3" />
-        {series.map((s) => (
-          <g key={s.label}>
-            <polyline
-              points={s.values.map((v, i) => `${x(i)},${y(v)}`).join(' ')}
-              fill="none"
-              stroke={s.color}
-              strokeWidth="3"
-              strokeDasharray={s.dashed ? '6 5' : undefined}
-            />
-            {s.values.map((v, i) => (
-              <circle key={i} cx={x(i)} cy={y(v)} r={years.length > 20 ? 2 : 3} fill={s.color} />
-            ))}
-          </g>
-        ))}
-        {labels.map((i) => (
-          <text key={i} x={x(i)} y="250" textAnchor="middle">
-            Year {years[i]}
-          </text>
-        ))}
-      </svg>
-      <div className={chartStyles.legend}>
-        {series.map((s) => (
-          <span key={s.label}>
-            <i style={{ background: s.color }} />
-            {s.label}
-            {s.dashed ? ' (dashed)' : ''}
-          </span>
-        ))}
-      </div>
-    </>
-  );
-}
-
 function Bars({ rows }: { rows: [string, number][] }) {
   const min = Math.min(0, ...rows.map((r) => r[1]));
   const max = Math.max(0, ...rows.map((r) => r[1]));
@@ -224,7 +141,7 @@ function Bars({ rows }: { rows: [string, number][] }) {
                 style={{
                   left: `${value < 0 ? ((value - min) / span) * 100 : zero}%`,
                   width: `${(Math.abs(value) / span) * 100}%`,
-                  background: value < 0 ? '#dc2626' : blue,
+                  background: value < 0 ? chartColors.red : chartColors.teal,
                 }}
               />
               <b style={{ left: `${zero}%` }} />
@@ -252,60 +169,116 @@ function Statement({ rows }: { rows: [string, ReactNode][] }) {
 
 function CashFlow({ result }: { result: ProjectionResult }) {
   const rows = projectionRows(result);
-  const final = rows.at(-1)!;
+  const [shown, horizon] = useHorizon(rows.length, 'Cash flow chart horizon');
+  const visible = rows.slice(0, shown);
+  const marks = cashFlowLandmarks(visible);
+  const at = visible.at(-1)!;
   const first = rows[0];
   const metrics = result.summaryMetrics;
+  const recovered =
+    metrics.totalCashRequired > 0 ? at.cumulativeCashFlow / metrics.totalCashRequired : null;
   return (
     <div className={chartStyles.stack}>
-      <div className={chartStyles.split}>
-        <section className={styles.card}>
-          <h2>Cash flow &amp; cumulative return</h2>
-          <p>After operating costs, debt and reserves · before tax. Sale proceeds excluded.</p>
-          <LineChart
-            label="Annual and cumulative operating cash flow"
-            years={rows.map((r) => r.year)}
-            series={[
-              { label: 'Annual cash flow', values: rows.map((r) => r.cashFlow), color: blue },
-              {
-                label: 'Cumulative cash flow',
-                values: rows.map((r) => r.cumulativeCashFlow),
-                color: warm,
-                dashed: true,
-              },
-            ]}
-          />
-        </section>
-        <section className={styles.card}>
-          <p className={styles.eyebrow}>Through year {final.year}</p>
-          <h3>Cumulative cash flow</h3>
-          <p className={chartStyles.big}>{dollars(final.cumulativeCashFlow)}</p>
-          <Statement
-            rows={[
-              ['Initial cash required', dollars(metrics.totalCashRequired)],
-              [
-                'Cash recovered / initial cash',
-                rate(
-                  metrics.totalCashRequired > 0
-                    ? final.cumulativeCashFlow / metrics.totalCashRequired
-                    : null,
-                ),
-              ],
-              [
-                'Cash-only payback',
+      <ChartCard
+        title="Cash flow & cumulative return"
+        subtitle="Projected · after operating costs, debt and reserves · before tax · sale proceeds excluded"
+        controls={horizon}
+      >
+        <Tiles
+          items={[
+            {
+              label: `Cumulative cash flow · year ${at.year}`,
+              value: dollars(at.cumulativeCashFlow),
+              note: 'Operating cash only; not profit',
+              tone: at.cumulativeCashFlow < 0 ? 'red' : 'teal',
+            },
+            {
+              label: 'Initial cash required',
+              value: dollars(metrics.totalCashRequired),
+              note: 'Cash invested at purchase',
+              tone: 'slate',
+            },
+            {
+              label: 'Cash recovered / initial cash',
+              value: rate(recovered),
+              note: `Through year ${at.year}`,
+              tone: 'slate',
+            },
+            {
+              label: 'Cash-only payback',
+              value:
                 metrics.paybackPeriodYears == null
                   ? 'Not recovered within hold'
                   : `${metrics.paybackPeriodYears.toFixed(2)} years`,
-              ],
-            ]}
-          />
-          <p>
-            Cash recovery is before a sale; it is not profit. Open Exit for cash returned at sale.
-          </p>
-        </section>
-      </div>
-      <section className={styles.card}>
-        <h2>From income to cash flow</h2>
-        <p>Year 1 · USD per year</p>
+              note: `Across the ${rows.length}-year hold`,
+              tone: 'slate',
+            },
+          ]}
+        />
+        <Chips
+          items={[
+            ...(marks.turnsPositive != null
+              ? [
+                  {
+                    text: `Cumulative turns positive · year ${marks.turnsPositive}`,
+                    tone: 'teal' as const,
+                  },
+                ]
+              : []),
+            ...(marks.worst && marks.worst.cashFlow < 0
+              ? [
+                  {
+                    text: `Lowest: ${dollars(marks.worst.cashFlow)} · year ${marks.worst.year}`,
+                    tone: 'red' as const,
+                  },
+                ]
+              : []),
+            ...(marks.best && visible.length > 1
+              ? [
+                  {
+                    text: `Highest: ${dollars(marks.best.cashFlow)} · year ${marks.best.year}`,
+                    tone: 'teal' as const,
+                  },
+                ]
+              : []),
+          ]}
+        />
+        <ComboChart
+          label="Annual and cumulative operating cash flow"
+          years={visible.map((r) => r.year)}
+          series={[
+            {
+              label: 'Annual cash flow',
+              kind: 'bar',
+              values: visible.map((r) => r.cashFlow),
+              color: chartColors.teal,
+              negativeColor: chartColors.red,
+            },
+            {
+              label: 'Cumulative cash flow',
+              values: visible.map((r) => r.cumulativeCashFlow),
+              color: chartColors.slate,
+            },
+          ]}
+          markers={
+            marks.turnsPositive != null
+              ? [{ index: marks.turnsPositive - visible[0].year, label: 'Cumulative > $0' }]
+              : []
+          }
+        />
+        <Insight>
+          <strong>Reading:</strong> at year {at.year}, cumulative operating cash flow is{' '}
+          <strong>{dollars(at.cumulativeCashFlow)}</strong>
+          {recovered != null && (
+            <>
+              {' '}
+              ({rate(recovered)} of {dollars(metrics.totalCashRequired)} initial cash)
+            </>
+          )}
+          . Cash recovery is before a sale; it is not profit. Open Exit for cash returned at sale.
+        </Insight>
+      </ChartCard>
+      <ChartCard title="From income to cash flow" subtitle="Year 1 · projected · USD per year">
         <Bars
           rows={[
             ['Scheduled rent', first.grossRent],
@@ -319,7 +292,7 @@ function CashFlow({ result }: { result: ProjectionResult }) {
             ['Cash flow', first.cashFlow],
           ]}
         />
-      </section>
+      </ChartCard>
       <section className={styles.card}>
         <ExactTable
           caption="Projection amounts · USD · reserves below NOI"
@@ -352,31 +325,127 @@ function CashFlow({ result }: { result: ProjectionResult }) {
 }
 
 function Equity({ result }: { result: ProjectionResult }) {
-  const rows = result.equityTimeline.filter((row) => row.month % 12 === 0);
+  const all = result.equityTimeline.filter((row) => row.month % 12 === 0);
+  const [shown, horizon] = useHorizon(all.length, 'Equity chart horizon');
+  const [withPurchase, setWithPurchase] = useState(false);
+  const rows = all.slice(0, shown);
   const final = rows.at(-1)!;
+  const financed = result.summaryMetrics.loanAmount > 0;
+  const paidOff = financed ? rows.find((r) => r.loanBalance < 0.005) : undefined;
+  const cumulative = result.annualCashflows.find((y) => y.year === final.year)?.cumulativeCashFlow;
+  // A crossover only counts when equity started below the loan balance.
+  const crossover =
+    rows.length && rows[0].equity <= rows[0].loanBalance
+      ? rows.find((r) => r.equity > r.loanBalance)
+      : undefined;
   return (
     <div className={chartStyles.stack}>
-      <section className={styles.card}>
-        <h2>Property value, equity &amp; debt</h2>
-        <p>Projected balances at year end · before selling costs and taxes</p>
-        <LineChart
-          label="Property value, equity and debt"
-          years={rows.map((r) => r.year)}
-          series={[
+      <ChartCard
+        title="Equity composition vs debt paydown"
+        subtitle={
+          withPurchase
+            ? 'Projected year-end balances · bars = equity, line = loan balance · before selling costs and taxes'
+            : 'Projected year-end balances · bars = equity gained from principal and value change, line = loan balance'
+        }
+        controls={
+          <>
+            {horizon}
+            <Segmented
+              label="Equity bars"
+              options={[
+                { value: 'gain', label: 'Equity gain' },
+                { value: 'total', label: 'Incl. purchase equity' },
+              ]}
+              value={withPurchase ? 'total' : 'gain'}
+              onChange={(value) => setWithPurchase(value === 'total')}
+            />
+          </>
+        }
+      >
+        <Tiles
+          items={[
             {
-              label: 'Property value',
-              values: rows.map((r) => r.propertyValue),
-              color: slate,
-              dashed: true,
+              label: `Equity · year ${final.year}`,
+              value: dollars(final.equity),
+              note: 'Property value − loan balance',
             },
-            { label: 'Equity', values: rows.map((r) => r.equity), color: blue },
-            { label: 'Loan balance', values: rows.map((r) => r.loanBalance), color: warm },
+            {
+              label: 'Equity gain',
+              value: dollars(final.principalEquity + final.appreciationEquity),
+              note: 'Principal paid + appreciation & repair value change',
+            },
+            {
+              label: `Loan balance · year ${final.year}`,
+              value: dollars(final.loanBalance),
+              note: financed
+                ? paidOff
+                  ? 'Loan paid off'
+                  : 'Remaining balance'
+                : 'All-cash purchase',
+              tone: 'slate',
+            },
           ]}
         />
-      </section>
+        <Chips
+          items={[
+            ...(crossover
+              ? [
+                  {
+                    text: `Equity exceeds loan balance · year ${crossover.year}`,
+                    tone: 'teal' as const,
+                  },
+                ]
+              : []),
+            ...(paidOff ? [{ text: `Loan paid off · year ${paidOff.year}` }] : []),
+          ]}
+        />
+        <ComboChart
+          label="Equity composition and loan balance"
+          years={rows.map((r) => r.year)}
+          series={[
+            ...(withPurchase
+              ? [
+                  {
+                    label: 'Purchase equity',
+                    kind: 'bar' as const,
+                    stack: true,
+                    values: rows.map((r) => r.initialEquity),
+                    color: chartColors.slateLight,
+                  },
+                ]
+              : []),
+            {
+              label: 'Principal paid',
+              kind: 'bar',
+              stack: true,
+              values: rows.map((r) => r.principalEquity),
+              color: chartColors.teal,
+            },
+            {
+              label: 'Appreciation & repair value change',
+              kind: 'bar',
+              stack: true,
+              values: rows.map((r) => r.appreciationEquity),
+              color: chartColors.tealLight,
+              negativeColor: chartColors.red,
+            },
+            {
+              label: 'Loan balance',
+              values: rows.map((r) => r.loanBalance),
+              color: chartColors.slate,
+            },
+          ]}
+          markers={
+            crossover ? [{ index: crossover.year - rows[0].year, label: 'Equity > loan' }] : []
+          }
+          details={(i) => [
+            ['Property value', dollars(rows[i].propertyValue)],
+            ['= Equity (value − loan)', dollars(rows[i].equity)],
+          ]}
+        />
+      </ChartCard>
       <div className={chartStyles.grid}>
-        <section className={styles.card}>
-          <h2>Equity growth at year {final.year}</h2>
+        <ChartCard title={`Equity growth at year ${final.year}`} subtitle="Projected · USD">
           <Bars
             rows={[
               ['Purchase equity', final.initialEquity],
@@ -388,17 +457,14 @@ function Equity({ result }: { result: ProjectionResult }) {
             Equity excludes transaction costs. Initial cash required also includes closing,
             financing and improvement costs.
           </p>
-        </section>
-        <section className={styles.card}>
-          <h2>Equity &amp; cash flow</h2>
-          <p className={chartStyles.big}>
-            {dollars(final.equity + result.annualCashflows.at(-1)!.cumulativeCashFlow)}
-          </p>
+        </ChartCard>
+        <ChartCard title="Equity & cash flow" subtitle={`Projected · year ${final.year}`}>
+          <p className={chartStyles.big}>{dollars(final.equity + (cumulative ?? NaN))}</p>
           <p>
             Year {final.year} equity plus accumulated operating cash flow. This is not net cash
             after a sale.
           </p>
-        </section>
+        </ChartCard>
       </div>
       <section className={styles.card}>
         <ExactTable
@@ -412,7 +478,7 @@ function Equity({ result }: { result: ProjectionResult }) {
             'Principal paid',
             'Appreciation & repair value change',
           ]}
-          rows={rows.map((r) => [
+          rows={all.map((r) => [
             r.year,
             ...[
               r.propertyValue,
@@ -431,13 +497,13 @@ function Equity({ result }: { result: ProjectionResult }) {
 
 function Expenses({ result, onEdit }: { result: ProjectionResult; onEdit: () => void }) {
   const rows = projectionRows(result);
+  const [shown, horizon] = useHorizon(rows.length, 'Expense chart horizon');
+  const visible = rows.slice(0, shown);
   const e = result.expenseBreakdown;
   return (
     <div className={chartStyles.stack}>
       <div className={chartStyles.grid}>
-        <section className={styles.card}>
-          <h2>Expense breakdown</h2>
-          <p>Year 1 · USD per year</p>
+        <ChartCard title="Expense breakdown" subtitle="Year 1 · projected · USD per year">
           <Bars
             rows={[
               ['Property tax', e.propertyTax],
@@ -451,26 +517,35 @@ function Expenses({ result, onEdit }: { result: ProjectionResult; onEdit: () => 
               ['Capital reserves (below NOI)', e.capex],
             ]}
           />
-          <p>
-            {dollars(result.summaryMetrics.totalOperatingExpenses)} operating / year ·{' '}
-            {rate(result.summaryMetrics.oer)} of effective income
-          </p>
-        </section>
-        <section className={styles.card}>
-          <h2>Expense growth</h2>
-          <LineChart
+          <Tiles
+            items={[
+              {
+                label: 'Operating expenses / year',
+                value: dollars(result.summaryMetrics.totalOperatingExpenses),
+                tone: 'slate',
+              },
+              {
+                label: 'Share of effective income',
+                value: rate(result.summaryMetrics.oer),
+                tone: 'slate',
+              },
+            ]}
+          />
+        </ChartCard>
+        <ChartCard title="Expense growth" subtitle="Projected · USD per year" controls={horizon}>
+          <ComboChart
             label="Operating expenses and capital reserves"
-            years={rows.map((r) => r.year)}
+            years={visible.map((r) => r.year)}
             series={[
               {
                 label: 'Operating expenses',
-                values: rows.map((r) => r.operatingExpenses),
-                color: warm,
+                values: visible.map((r) => r.operatingExpenses),
+                color: chartColors.slate,
               },
               {
                 label: 'Capital reserves',
-                values: rows.map((r) => r.reserves),
-                color: blue,
+                values: visible.map((r) => r.reserves),
+                color: chartColors.teal,
                 dashed: true,
               },
             ]}
@@ -480,8 +555,10 @@ function Expenses({ result, onEdit }: { result: ProjectionResult; onEdit: () => 
             grow at the expense-growth assumption; they are not recalculated from later rent.
           </p>
           <p>NOI excludes capital reserves. Reserves reduce spendable cash after debt service.</p>
-          <button onClick={onEdit}>Edit expense assumptions</button>
-        </section>
+          <div>
+            <button onClick={onEdit}>Edit expense assumptions</button>
+          </div>
+        </ChartCard>
       </div>
       <section className={styles.card}>
         <ExactTable
@@ -503,42 +580,65 @@ function Amortization({ result }: { result: ProjectionResult }) {
   const last = result.amortizationSchedule.at(-1);
   // The engine includes the maturity payoff in the actual final payment.
   const balloon = last && last.payment > result.summaryMetrics.monthlyDebtService + 1;
+  const final = rows.at(-1);
   return (
     <div className={chartStyles.stack}>
-      <section className={styles.card}>
-        <h2>Principal vs interest over time</h2>
-        {result.summaryMetrics.loanAmount === 0 ? (
+      <ChartCard
+        title="Principal vs interest over time"
+        subtitle="Scheduled loan · full term, including years beyond the holding period"
+      >
+        {result.summaryMetrics.loanAmount === 0 || !final ? (
           <p>
             All-cash purchase · debt service $0.00. Debt coverage is not applicable; no loan
             schedule is needed.
           </p>
         ) : (
           <>
-            <p>
-              Scheduled payment {dollars(result.summaryMetrics.monthlyDebtService)} / month. Final
-              payment may differ.
-            </p>
-            <LineChart
+            <Tiles
+              items={[
+                { label: 'Loan amount', value: dollars(result.summaryMetrics.loanAmount) },
+                {
+                  label: 'Scheduled payment',
+                  value: dollars(result.summaryMetrics.monthlyDebtService),
+                  note: 'Per month; final payment may differ',
+                  tone: 'slate',
+                },
+                {
+                  label: 'Interest over the term',
+                  value: dollars(final.cumulativeInterest),
+                  note: `Through loan year ${final.year}`,
+                  tone: 'amber',
+                },
+              ]}
+            />
+            <ComboChart
               label="Loan balance and cumulative principal and interest"
+              xLabel="Loan year"
+              axisTitle="Loan yr"
               years={rows.map((r) => r.year)}
               series={[
-                { label: 'Loan balance', values: rows.map((r) => r.balance), color: blue },
+                {
+                  label: 'Loan balance',
+                  values: rows.map((r) => r.balance),
+                  color: chartColors.slate,
+                },
                 {
                   label: 'Cumulative principal',
                   values: rows.map((r) => r.cumulativePrincipal),
-                  color: warm,
+                  color: chartColors.teal,
                 },
                 {
                   label: 'Cumulative interest',
                   values: rows.map((r) => r.cumulativeInterest),
-                  color: slate,
+                  color: chartColors.amber,
                   dashed: true,
                 },
               ]}
             />
             <p>
-              The full loan schedule is shown, including payments beyond the analysis holding
-              period.
+              Scheduled payment {dollars(result.summaryMetrics.monthlyDebtService)} / month. Final
+              payment may differ. The full loan schedule is shown, including payments beyond the
+              analysis holding period.
             </p>
             {balloon && (
               <p className={styles.notice}>
@@ -550,7 +650,7 @@ function Amortization({ result }: { result: ProjectionResult }) {
             )}
           </>
         )}
-      </section>
+      </ChartCard>
       {!!rows.length && (
         <section className={styles.card}>
           <h2>Amortization schedule</h2>
@@ -632,11 +732,30 @@ function Exit({
   return (
     <div className={chartStyles.stack}>
       <div className={chartStyles.split}>
-        <section className={styles.card}>
-          <h2>Exit Analysis</h2>
+        <ChartCard
+          title="Exit Analysis"
+          subtitle={
+            result && sale
+              ? `Estimated sale at the end of year ${selected.year} · projected · before tax`
+              : 'Projected sale · before tax'
+          }
+        >
           {result && sale ? (
             <>
-              <p>Estimated sale at the end of year {selected.year} · before tax</p>
+              <Tiles
+                items={[
+                  {
+                    label: 'Total profit',
+                    value: dollars(result.summaryMetrics.totalReturn),
+                    tone: result.summaryMetrics.totalReturn < 0 ? 'red' : 'teal',
+                  },
+                  {
+                    label: 'Total ROI',
+                    value: rate(result.summaryMetrics.totalReturnPercent),
+                    tone: 'slate',
+                  },
+                ]}
+              />
               <Statement
                 rows={[
                   ['Projected sale price', dollars(sale.grossSalePrice)],
@@ -670,13 +789,11 @@ function Exit({
                 : 'Update exit comparison to see results for these controls.'}
             </p>
           )}
-        </section>
-        <section className={styles.card}>
-          <h2>Holding period comparison</h2>
-          <p>
-            Temporary probes leave saved base assumptions unchanged. All figures are before tax,
-            even when optional tax estimates are enabled.
-          </p>
+        </ChartCard>
+        <ChartCard
+          title="Holding period comparison"
+          subtitle="Temporary probes leave saved base assumptions unchanged. All figures are before tax, even when optional tax estimates are enabled."
+        >
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -718,15 +835,41 @@ function Exit({
               again.
             </p>
           )}
-          <button className={chartStyles.edit} onClick={onEdit}>
-            Edit saved exit assumptions
-          </button>
-        </section>
+          <div>
+            <button onClick={onEdit}>Edit saved exit assumptions</button>
+          </div>
+        </ChartCard>
       </div>
       {rows && (
-        <section className={styles.card}>
-          <Bars
-            rows={rows.map((r) => [`Year ${r.year} profit`, r.result.summaryMetrics.totalReturn])}
+        <ChartCard
+          title="Profit by exit year"
+          subtitle="Each horizon recalculated · projected · USD · before tax"
+        >
+          <ComboChart
+            label="Cash returned and profit by exit year"
+            xLabel="Sell at end of year"
+            axisTitle="Exit yr"
+            years={rows.map((r) => r.year)}
+            series={[
+              {
+                label: 'Cash returned',
+                kind: 'bar',
+                values: rows.map(
+                  (r) =>
+                    r.result.summaryMetrics.totalReturn + r.result.summaryMetrics.totalCashRequired,
+                ),
+                color: chartColors.slateLight,
+                negativeColor: chartColors.red,
+              },
+              {
+                label: 'Profit',
+                kind: 'bar',
+                values: rows.map((r) => r.result.summaryMetrics.totalReturn),
+                color: chartColors.teal,
+                negativeColor: chartColors.red,
+              },
+            ]}
+            details={(i) => [['Total ROI', rate(rows[i].result.summaryMetrics.totalReturnPercent)]]}
           />
           <ExactTable
             caption="Exit horizon comparison · USD · before tax"
@@ -749,7 +892,7 @@ function Exit({
             Each horizon is recalculated with the public model. Cash returned includes operating
             cash flow and net sale proceeds; profit also deducts initial cash.
           </p>
-        </section>
+        </ChartCard>
       )}
     </div>
   );
@@ -789,21 +932,17 @@ function Sensitivity({
     ['vacancySteps', 'Vacancy steps'],
   ];
   return (
-    <section className={styles.card}>
-      <h2>
-        Sensitivity ·{' '}
-        {metric === 'cashOnCash' ? 'cash-on-cash return' : 'hold-period leveraged IRR'}
-      </h2>
-      <p>
-        Monthly rent assumptions × vacancy rate ·{' '}
-        {metric === 'cashOnCash'
+    <ChartCard
+      title={`Sensitivity · ${metric === 'cashOnCash' ? 'cash-on-cash return' : 'hold-period leveraged IRR'}`}
+      subtitle={`Monthly rent assumptions × vacancy rate · ${
+        metric === 'cashOnCash'
           ? 'Year 1'
-          : `${payload.input.appreciationExit?.holdingPeriodYears}-year hold`}
-        . Temporary probes leave saved base assumptions unchanged.
-      </p>
+          : `${payload.input.appreciationExit?.holdingPeriodYears}-year hold`
+      } · projected. Temporary probes leave saved base assumptions unchanged.`}
+    >
       <p>
-        Outlined cells match the base. Warm cells have a negative return. Values are always visible.
-        Missing metrics remain unavailable.
+        Outlined cells match the base. Red-tinted cells have a negative return. Values are always
+        visible. Missing metrics remain unavailable.
       </p>
       <div className={styles.fields}>
         <label className={styles.field}>
@@ -931,7 +1070,7 @@ function Sensitivity({
         Sensitivity is a model. It does not establish market rent. Review comparable rentals before
         changing a rent assumption.
       </p>
-    </section>
+    </ChartCard>
   );
 }
 

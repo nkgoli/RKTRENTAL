@@ -4,7 +4,8 @@ import { calculatePayload, type AnalysisPayload, type ValidationIssue } from '@/
 import { scenarioExamples, type ScenarioDraft } from '@/lib/analysis/scenarios';
 import { dollars, rate } from '@/lib/analysis/projections';
 import { groups, readPath, taxFields } from './fields';
-import { LineChart } from './RoiProjections';
+import { scenarioSeries } from '@/lib/analysis/chart-data';
+import { ChartCard, ComboChart, seriesPalette } from './RoiChart';
 import styles from './analysis.module.css';
 import scenarioStyles from './scenarios.module.css';
 
@@ -374,9 +375,12 @@ export function RoiScenarios({
             </table>
           </div>
           {(['equity', 'cashFlow'] as const).map((metric) => (
-            <section key={metric}>
-              <h3>{metric === 'equity' ? 'Equity growth by scenario' : 'Cash flow by scenario'}</h3>
-              <LineChart
+            <ChartCard
+              key={metric}
+              title={metric === 'equity' ? 'Equity growth by scenario' : 'Cash flow by scenario'}
+              subtitle={`Projected · years 1–${years} · USD · before tax`}
+            >
+              <ComboChart
                 label={
                   metric === 'equity'
                     ? 'Year-end equity before selling costs'
@@ -385,12 +389,10 @@ export function RoiScenarios({
                 years={Array.from({ length: years }, (_, i) => i + 1)}
                 series={cases.map((c, i) => ({
                   label: c.name,
-                  color: ['#1e3a8a', '#a4603d', '#64748b'][i % 3],
-                  values: Array.from({ length: years }, (_, j) =>
-                    metric === 'equity'
-                      ? (c.result.equityTimeline.find((r) => r.month === (j + 1) * 12)?.equity ?? 0)
-                      : (c.result.annualCashflows[j]?.cashFlow ?? 0),
-                  ),
+                  color: seriesPalette[i % seriesPalette.length],
+                  // Alternate dashes keep identical scenarios visible on top of each other.
+                  dashed: i % 2 === 1,
+                  values: scenarioSeries(c, years, metric),
                 }))}
               />
               <div
@@ -431,7 +433,7 @@ export function RoiScenarios({
                   </tbody>
                 </table>
               </div>
-            </section>
+            </ChartCard>
           ))}
         </>
       )}

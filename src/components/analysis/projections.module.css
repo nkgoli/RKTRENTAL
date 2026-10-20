@@ -107,7 +107,9 @@
 .track {
   position: relative;
   display: block;
-  height: 9px;
+  height: 10px;
+  border-radius: 3px;
+  overflow: hidden;
   background: #f1f5f9;
   flex: 1;
   min-width: 24px;
@@ -151,14 +153,15 @@
   font-size: 11px;
 }
 .heat td {
-  background: #edf2fc;
+  background: #f0fdfa;
+  color: #134e4a;
 }
 .heat td[data-negative='true'] {
-  background: #fbf3ee;
-  color: #8a4526;
+  background: #fef2f2;
+  color: #991b1b;
 }
 .base {
-  outline: 2px solid var(--design-primary);
+  outline: 2px solid #0f766e;
   outline-offset: -2px;
   font-weight: 700;
 }

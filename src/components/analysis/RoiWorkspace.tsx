@@ -47,6 +47,7 @@ import {
   type FieldSpec,
   type Values,
 } from './fields';
+import { ComboChart, chartColors } from './RoiChart';
 import styles from './analysis.module.css';
 
 type Result = ReturnType<typeof calculatePayload>['base'];
@@ -873,23 +874,27 @@ export function RoiWorkspace({
                       <p>Annual operating cash flow, before sale proceeds and tax.</p>
                       {result ? (
                         <>
-                          <div
-                            className={styles.chart}
-                            role="img"
-                            aria-label={`Annual cash flow over ${result.annualCashflows.length} years. Exact values follow.`}
-                          >
-                            {result.annualCashflows.map((y) => (
-                              <div key={y.year} title={`Year ${y.year}: ${money(y.cashFlow)}`}>
-                                <i
-                                  style={{
-                                    height: `${Math.max(2, (Math.abs(y.cashFlow) / Math.max(1, ...result.annualCashflows.map((y) => Math.abs(y.cashFlow)))) * 110)}px`,
-                                    background: y.cashFlow < 0 ? '#dc2626' : '#1e3a8a',
-                                  }}
-                                />
-                                <small>{y.year}</small>
-                              </div>
-                            ))}
-                          </div>
+                          <ComboChart
+                            label={`Annual cash flow over ${result.annualCashflows.length} years`}
+                            height={200}
+                            format={money}
+                            years={result.annualCashflows.map((y) => y.year)}
+                            series={[
+                              {
+                                label: 'Annual cash flow',
+                                kind: 'bar',
+                                values: result.annualCashflows.map((y) => y.cashFlow),
+                                color: chartColors.teal,
+                                negativeColor: chartColors.red,
+                              },
+                            ]}
+                            details={(i) => [
+                              [
+                                'Cumulative cash flow',
+                                money(result.annualCashflows[i].cumulativeCashFlow),
+                              ],
+                            ]}
+                          />
                           <details>
                             <summary>Exact annual cash flow</summary>
                             <div

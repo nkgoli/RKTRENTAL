@@ -12,7 +12,7 @@ import {
   benchmarkComparison,
 } from '@/lib/analysis/benchmarks';
 import { dollars, rate } from '@/lib/analysis/projections';
-import { LineChart } from './RoiProjections';
+import { ComboChart, seriesPalette } from './RoiChart';
 import styles from './analysis.module.css';
 
 const presets = getAllBenchmarks();
@@ -289,13 +289,13 @@ export function RoiBenchmarks({
           <section className={styles.card}>
             <h2>Investment growth over time</h2>{' '}
             {!compare && (
-              <LineChart
+              <ComboChart
                 label="Reference investment growth indexed to 100 at start"
                 unit="Index"
-                years={[0, ...assets[0].projections.map((p) => p.year)]}
+                years={['Start', ...assets[0].projections.map((p) => p.year)]}
                 series={assets.slice(1).map((a, i) => ({
                   label: name(a.id),
-                  color: ['#a4603d', '#64748b'][i],
+                  color: seriesPalette[i + 1],
                   values: [
                     100,
                     ...a.projections.map((p) => (100 * p.value) / comparison.initialInvestment),
@@ -303,13 +303,13 @@ export function RoiBenchmarks({
                 }))}
               />
             )}
-            <LineChart
+            <ComboChart
               label="Interim equity + cash; final net liquidation + cash"
               years={assets[0].projections.map((p) => p.year)}
               series={assets.map((a, i) => ({
                 label: name(a.id),
                 values: a.projections.map((p) => p.value),
-                color: ['#1e3a8a', '#a4603d', '#64748b'][i],
+                color: seriesPalette[i],
                 dashed: i === 2,
               }))}
             />
@@ -400,7 +400,22 @@ export function RoiBenchmarks({
           role="img"
           aria-label="Reference risk and return: horizontal volatility percent, vertical annual return percent. Exact values in provenance table."
         >
-          <path d="M60 20V230H680" fill="none" stroke="#64748b" />
+          {[0, 0.25, 0.5, 0.75, 1].map((f) => (
+            <g key={f} fontSize="11" fill="#64748b">
+              <path
+                d={`M60 ${riskY(minReturn + f * (maxReturn - minReturn))}H680`}
+                stroke="#e2e8f0"
+                strokeDasharray="3 3"
+              />
+              <text x="52" y={riskY(minReturn + f * (maxReturn - minReturn)) + 4} textAnchor="end">
+                {(minReturn + f * (maxReturn - minReturn)).toFixed(0)}%
+              </text>
+              <text x={riskX(f * maxVolatility)} y="246" textAnchor="middle">
+                {(f * maxVolatility).toFixed(0)}%
+              </text>
+            </g>
+          ))}
+          <path d="M60 20V230H680" fill="none" stroke="#94a3b8" />
           <text x="60" y="265">
             Volatility reference (%)
           </text>

@@ -3,9 +3,14 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import {
   horizonChoices,
+  miniBarWidth,
+  monotonePath,
   niceScale,
+  referenceTickIndexes,
   segments,
   stackExtents,
+  thousands,
+  wholeDollars,
   xTickIndexes,
   type ChartValue,
 } from '@/lib/analysis/chart-data';
@@ -13,22 +18,40 @@ import { dollars } from '@/lib/analysis/projections';
 import styles from './analysis.module.css';
 import c from './roi-chart.module.css';
 
-/** Teal/slate series in the RealROI style; each passes 3:1 against white. */
+/** RealROI palette (Tailwind teal/slate/red). Bars get a darker outline for 3:1 edges. */
 export const chartColors = {
-  teal: '#0d9488',
+  teal: '#14b8a6',
+  tealDark: '#0d9488',
+  tealDeep: '#0f766e',
+  tealMid: '#2dd4bf',
   tealLight: '#5eead4',
+  tealPale: '#99f6e4',
   slate: '#475569',
+  slateMid: '#64748b',
+  slateDark: '#334155',
   slateLight: '#94a3b8',
-  red: '#dc2626',
+  slatePale: '#e2e8f0',
+  red: '#ef4444',
+  green: '#16a34a',
+  emerald: '#10b981',
+  sky: '#0284c7',
   amber: '#b45309',
   violet: '#7c3aed',
 } as const;
+/** Line colours for multi-series charts; each passes 3:1 against white. */
 export const seriesPalette = [
-  chartColors.teal,
+  chartColors.tealDark,
   chartColors.slate,
   chartColors.amber,
   chartColors.violet,
 ];
+
+const outline: Record<string, string> = {
+  [chartColors.teal]: chartColors.tealDark,
+  [chartColors.red]: '#dc2626',
+  [chartColors.tealLight]: chartColors.tealMid,
+  [chartColors.slatePale]: '#cbd5e1',
+};
 
 export type ChartSeries = {
   label: string;
@@ -40,32 +63,67 @@ export type ChartSeries = {
   stack?: boolean;
   /** Bar colour for negative values; the legend then names negative years. */
   negativeColor?: string;
+  /** Bar outline; defaults to a darker shade of known palette colours. */
+  stroke?: string;
+  opacity?: number;
+  /** Line width (default 2.5) and dot radius (default 2.5; 0 hides dots). */
+  width?: number;
+  dot?: number;
+  dash?: string;
+  /** Leave the series out of the legend (a custom legend names it). */
+  hideLegend?: boolean;
 };
 
-export type ChartMarker = { index: number; label: string; color?: string };
+export type ChartMarker = {
+  index: number;
+  label: string;
+  color?: string;
+  /** Draw a 6 px reference dot at this value on the marker line. */
+  dot?: number;
+  /** `end` puts the label left of the line (Recharts `insideTopRight`); `center` above it. */
+  align?: 'start' | 'end' | 'center';
+};
+export type ChartBand = { from: number; to: number; color: string; opacity?: number };
+export type ChartArea = { upper: ChartValue[]; lower: ChartValue[]; color: string };
+export type LegendItem = {
+  label: string;
+  kind: 'bar' | 'line' | 'dashed' | 'band' | 'area';
+  color: string;
+};
+type Sign = '−' | '+' | '=';
+export type TipRow =
+  | {
+      label: string;
+      value?: ChartValue;
+      /** Text shown instead of a formatted value (e.g. "Paid off"). */
+      text?: string;
+      op?: Sign;
+      /** A dollar amount on an indexed chart. */
+      money?: boolean;
+      tone?: 'auto' | 'teal' | 'red' | 'muted';
+      total?: boolean;
+      swatch?: { color: string; kind?: 'bar' | 'line' };
+    }
+  | { section: string }
+  | { note: string };
+export type ChartTip = { title: string; rows: TipRow[] };
 
-const compactUsd = (value: number) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(value);
-
-/** Card with the reference header strip: title, one-line basis and right-aligned controls. */
+/** Card with the reference header strip: title, 10 px basis line and right-aligned controls. */
 export function ChartCard({
   title,
   subtitle,
   controls,
   children,
+  className,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
   controls?: ReactNode;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <section className={`${styles.card} ${c.card}`}>
+    <section className={`${styles.card} ${c.card} ${className ?? ''}`}>
       <header className={c.head}>
         <div>
           <h2>{title}</h2>
@@ -84,14 +142,16 @@ export function Segmented<T extends string | number>({
   options,
   value,
   onChange,
+  size,
 }: {
   label: string;
   options: readonly { value: T; label: string }[];
   value: T;
   onChange: (value: T) => void;
+  size?: 'sm' | 'md';
 }) {
   return (
-    <div className={c.segmented} role="group" aria-label={label}>
+    <div className={c.segmented} data-size={size ?? 'sm'} role="group" aria-label={label}>
       {options.map((option) => (
         <button
           key={String(option.value)}
@@ -106,21 +166,57 @@ export function Segmented<T extends string | number>({
   );
 }
 
-type Tone = 'teal' | 'slate' | 'red' | 'amber';
+/** ⓘ with a hover/focus explanation that screen readers get as a description. */
+export function InfoTip({ label, children }: { label: string; children: ReactNode }) {
+  const id = useId();
+  return (
+    <span className={c.info}>
+      <button type="button" aria-label={`About ${label}`} aria-describedby={id}>
+        <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path
+            d="M12 16v-4M12 8h.01"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
+      </button>
+      <span role="tooltip" id={id}>
+        {children}
+      </span>
+    </span>
+  );
+}
 
-/** Pale metric tiles with large values. */
+type Tone = 'teal' | 'tealSoft' | 'slate' | 'red' | 'amber';
+
+/** Pale metric tiles; values use the mono numeric face like the reference. */
 export function Tiles({
   items,
+  size = 'lg',
 }: {
-  items: { label: string; value: ReactNode; note?: ReactNode; tone?: Tone }[];
+  items: {
+    label: string;
+    value: ReactNode;
+    note?: ReactNode;
+    tone?: Tone;
+    info?: ReactNode;
+    /** Value colour when it differs from the tone (e.g. a red loss on a teal tile). */
+    valueTone?: 'teal' | 'red' | 'slate';
+  }[];
+  size?: 'lg' | 'sm';
 }) {
   return (
-    <dl className={c.tiles}>
+    <dl className={c.tiles} data-size={size}>
       {items.map((item) => (
         <div key={item.label} data-tone={item.tone ?? 'teal'}>
-          <dt>{item.label}</dt>
+          <dt>
+            {item.label}
+            {item.info && <InfoTip label={item.label}>{item.info}</InfoTip>}
+          </dt>
           <dd>
-            <strong>{item.value}</strong>
+            <strong data-tone={item.valueTone}>{item.value}</strong>
             {item.note && <small>{item.note}</small>}
           </dd>
         </div>
@@ -129,44 +225,278 @@ export function Tiles({
   );
 }
 
-/** Plain-language reading of the chart below it. */
-export function Insight({ children }: { children: ReactNode }) {
-  return <p className={c.insight}>{children}</p>;
+/** Reference header checkbox ("Include down payment"). */
+export function Check({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className={c.check}>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      {label}
+    </label>
+  );
 }
 
-/** Horizon state for a chart; `null` follows the full hold when it changes. */
-export function useHorizon(length: number, label: string) {
-  const [years, setYears] = useState<number | null>(null);
-  const shown = years == null || years >= length ? length : years;
+/** Mono figure inside prose (Insight rows), teal or red like the reference. */
+export function Figure({
+  children,
+  tone = 'teal',
+}: {
+  children: ReactNode;
+  tone?: 'teal' | 'red';
+}) {
+  return (
+    <b className={c.figure} data-tone={tone}>
+      {children}
+    </b>
+  );
+}
+
+/** Plain-language reading of the chart, led by "Insight:". */
+export function Insight({ children }: { children: ReactNode }) {
+  return (
+    <p className={c.insight}>
+      <strong>Insight:</strong> {children}
+    </p>
+  );
+}
+
+type HorizonValue = number | 'custom';
+
+/**
+ * Horizon state and its Y1/Y5/Y10/Y30/Custom control. `preferred` is the chart's
+ * reference default; a shorter hold clamps it and shows as a custom range.
+ */
+export function useHorizon(length: number, label: string, preferred = 30) {
+  const [mode, setMode] = useState<HorizonValue>(preferred);
+  const [custom, setCustom] = useState(7);
+  const presets = horizonChoices(length);
+  const clamp = (v: number) => Math.max(1, Math.min(length, v));
+  let shown = mode === 'custom' ? clamp(custom) : clamp(mode);
+  // A preset the hold cannot reach reads as the custom range it actually shows.
+  const pressed: HorizonValue =
+    mode !== 'custom' && presets.some((p) => p.years === shown) ? shown : 'custom';
+  if (length < 1) shown = 0;
+  const canCustom = length >= 2;
   const control =
     length > 1 ? (
-      <Segmented
-        label={label}
-        options={horizonChoices(length).map((h) => ({ value: h.years, label: h.label }))}
-        value={shown}
-        onChange={(value) => setYears(value >= length ? null : value)}
-      />
+      <div className={c.horizon}>
+        <Segmented<HorizonValue>
+          label={label}
+          options={[
+            ...presets.map((h) => ({ value: h.years as HorizonValue, label: h.label })),
+            ...(canCustom ? [{ value: 'custom' as HorizonValue, label: 'Custom' }] : []),
+          ]}
+          value={pressed}
+          onChange={(value) => {
+            if (value === 'custom') setCustom((v) => Math.max(2, Math.min(length, v)));
+            setMode(value);
+          }}
+        />
+        {pressed === 'custom' && canCustom && (
+          <label className={c.slider}>
+            <span className={c.srOnly}>{label}: custom years</span>
+            <input
+              type="range"
+              min={2}
+              max={length}
+              value={Math.max(2, shown)}
+              onChange={(event) => {
+                setCustom(Number(event.target.value));
+                setMode('custom');
+              }}
+            />
+            <output aria-hidden="true">Y{shown}</output>
+          </label>
+        )}
+      </div>
     ) : null;
   return [shown, control] as const;
 }
 
-/** Landmark chips summarising the chart in words. */
-export function Chips({ items }: { items: { text: ReactNode; tone?: Tone }[] }) {
+type ChipIcon = 'target' | 'down' | 'up';
+const chipIcons: Record<ChipIcon, ReactNode> = {
+  target: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </>
+  ),
+  down: (
+    <>
+      <path d="M22 17 13.5 8.5 8.5 13.5 2 7" />
+      <path d="M16 17h6v-6" />
+    </>
+  ),
+  up: (
+    <>
+      <path d="M22 7 13.5 15.5 8.5 10.5 2 17" />
+      <path d="M16 7h6v6" />
+    </>
+  ),
+};
+
+/** Landmark chips summarising the chart in words, with a lucide-style icon or a dot. */
+export function Chips({
+  items,
+}: {
+  items: { text: ReactNode; tone?: Tone; icon?: ChipIcon; info?: ReactNode; infoLabel?: string }[];
+}) {
   if (!items.length) return null;
   return (
     <ul className={c.chips}>
       {items.map((item, index) => (
-        <li key={index} data-tone={item.tone ?? 'slate'}>
+        <li key={index} data-tone={item.tone ?? 'slate'} data-icon={item.icon ? true : undefined}>
+          {item.icon && (
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+              <g
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                {chipIcons[item.icon]}
+              </g>
+            </svg>
+          )}
           {item.text}
+          {item.info && <InfoTip label={item.infoLabel ?? 'this landmark'}>{item.info}</InfoTip>}
         </li>
       ))}
     </ul>
   );
 }
 
+/** 48 px reference bar for a rate cell: |rate| × 500%, teal or red. */
+export function MiniBar({ value }: { value: number | null }) {
+  return (
+    <span className={c.mini} aria-hidden="true">
+      <i
+        style={{
+          width: `${miniBarWidth(value)}%`,
+          background: value != null && value < 0 ? chartColors.red : chartColors.teal,
+        }}
+      />
+    </span>
+  );
+}
+
+function arc(r0: number, r1: number, a0: number, a1: number) {
+  const p = (r: number, a: number) => `${r * Math.sin(a)},${-r * Math.cos(a)}`;
+  const large = a1 - a0 > Math.PI ? 1 : 0;
+  return `M${p(r1, a0)}A${r1},${r1} 0 ${large} 1 ${p(r1, a1)}L${p(r0, a1)}A${r0},${r0} 0 ${large} 0 ${p(r0, a0)}Z`;
+}
+
 /**
- * Bars and lines on one shared zero baseline. Hover, touch or arrow keys read the
- * exact values for a year; `null` values leave a gap and read as "Unavailable".
+ * Donut with 2° padding between segments. Negative parts cannot be drawn as a
+ * slice, so they are left out of the ring and must be stated next to it.
+ */
+export function Donut({
+  label,
+  parts,
+  size = 112,
+  inner = 30,
+  outer = 50,
+}: {
+  label: string;
+  parts: { label: string; value: number; color: string }[];
+  size?: number;
+  inner?: number;
+  outer?: number;
+}) {
+  const [hover, setHover] = useState<number | null>(null);
+  const drawn = parts.map((p) => Math.max(0, Number.isFinite(p.value) ? p.value : 0));
+  const total = drawn.reduce((a, b) => a + b, 0);
+  const count = drawn.filter((v) => v > 0).length;
+  const pad = count > 1 ? (2 * Math.PI) / 180 : 0;
+  const free = 2 * Math.PI - pad * count;
+  let angle = 0;
+  const shapes = drawn.map((v, i) => {
+    if (v <= 0 || total <= 0) return null;
+    const a0 = angle + pad / 2;
+    const a1 = a0 + (v / total) * free;
+    angle = a1 + pad / 2;
+    return { i, d: count === 1 ? null : arc(inner, outer, a0, a1) };
+  });
+  return (
+    <div className={c.donut} style={{ width: size, height: size }}>
+      <svg
+        viewBox={`${-size / 2} ${-size / 2} ${size} ${size}`}
+        width={size}
+        height={size}
+        role="img"
+      >
+        <title>{`${label}: ${parts.map((p) => `${p.label} ${wholeDollars(p.value)}`).join(', ')}`}</title>
+        {total <= 0 && (
+          <circle
+            r={(inner + outer) / 2}
+            fill="none"
+            stroke={chartColors.slatePale}
+            strokeWidth={outer - inner}
+          />
+        )}
+        {shapes.map((s) =>
+          s == null ? null : s.d == null ? (
+            <circle
+              key={s.i}
+              r={(inner + outer) / 2}
+              fill="none"
+              stroke={parts[s.i].color}
+              strokeWidth={outer - inner}
+              onPointerEnter={() => setHover(s.i)}
+              onPointerLeave={() => setHover(null)}
+            />
+          ) : (
+            <path
+              key={s.i}
+              d={s.d}
+              fill={parts[s.i].color}
+              className={c.slice}
+              onPointerEnter={() => setHover(s.i)}
+              onPointerLeave={() => setHover(null)}
+            />
+          ),
+        )}
+      </svg>
+      {hover != null && (
+        <div className={c.donutTip} aria-hidden="true">
+          {parts[hover].label}: <b>{wholeDollars(parts[hover].value)}</b>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** A bar from `base` to `end` with the far end rounded (both ends with `both`). */
+function barPath(x: number, w: number, base: number, end: number, r: number, both: boolean) {
+  const top = Math.min(base, end);
+  const bottom = Math.max(top + 1, Math.max(base, end));
+  const rr = Math.max(0, Math.min(r, w / 2, (bottom - top) / (both ? 2 : 1)));
+  const upward = end <= base;
+  const t = upward || both ? rr : 0;
+  const b = !upward || both ? rr : 0;
+  return (
+    `M${x},${top + t}Q${x},${top} ${x + t},${top}H${x + w - t}Q${x + w},${top} ${x + w},${top + t}` +
+    `V${bottom - b}Q${x + w},${bottom} ${x + w - b},${bottom}H${x + b}Q${x},${bottom} ${x},${bottom - b}Z`
+  );
+}
+
+const kindOf = (s: ChartSeries): LegendItem['kind'] =>
+  s.kind === 'bar' ? 'bar' : s.dashed ? 'dashed' : 'line';
+
+/**
+ * Bars, lines, bands and areas on one shared zero baseline, drawn in the
+ * reference style (dashed grid both ways, monotone lines, rounded bar ends,
+ * equation tooltips). Hover, touch or arrow keys read a year; the live region
+ * reads exact values, and `null` values leave a gap that reads "Unavailable".
  */
 export function ComboChart({
   label,
@@ -175,9 +505,16 @@ export function ComboChart({
   unit = 'USD',
   height,
   markers = [],
+  bands = [],
+  areas = [],
   details,
+  tooltip,
+  legend,
   xLabel = 'Year',
-  axisTitle = 'Year',
+  axisTitle,
+  axes,
+  xFormat = String,
+  barRadius = 'top',
   format,
 }: {
   label: string;
@@ -186,17 +523,30 @@ export function ComboChart({
   unit?: 'USD' | 'Index';
   height?: number;
   markers?: ChartMarker[];
+  /** Shaded x ranges (inclusive indexes), such as pre- and post-breakeven. */
+  bands?: ChartBand[];
+  /** Gradient fill between two series (e.g. value over loan = equity). */
+  areas?: ChartArea[];
   /** Extra tooltip rows for the active index, such as an equity equation. */
   details?: (index: number) => [string, string][];
+  /** Full reference-style tooltip for an index; replaces the series rows. */
+  tooltip?: (index: number) => ChartTip;
+  /** Legend override in the reference order. */
+  legend?: LegendItem[];
   xLabel?: string;
-  /** Short x-axis title drawn beside the year labels. */
+  /** Optional x-axis title beside the year labels (the reference has none). */
   axisTitle?: string;
-  /** Tooltip formatter matching the adjacent table; defaults to cents or 4-dp index. */
+  /** Rotated y-axis titles; `right` mirrors the shared domain on a right axis. */
+  axes?: { left?: string; right?: string; leftColor?: string; rightColor?: string };
+  xFormat?: (year: number | string) => string;
+  barRadius?: 'top' | 'all';
+  /** Exact formatter matching the adjacent table; defaults to cents or 4-dp index. */
   format?: (value: number) => string;
 }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(660);
   const [selected, setActive] = useState<number | null>(null);
+  const [pointerY, setPointerY] = useState<number | null>(null);
   const id = useId();
   const n = years.length;
   // A selection from a longer horizon, property or scenario never reaches the
@@ -215,13 +565,7 @@ export function ComboChart({
   }, []);
 
   const narrow = width < 480;
-  const h = height ?? (narrow ? 220 : 280);
-  const m = { top: 18, right: 12, bottom: 30, left: narrow ? 52 : 64 };
-  const innerW = Math.max(1, width - m.left - m.right);
-  const innerH = h - m.top - m.bottom;
-  const band = innerW / Math.max(1, n);
-  const cx = (i: number) => m.left + band * (i + 0.5);
-
+  const h = height ?? (narrow ? 240 : 320);
   const stacked = series.filter((s) => s.kind === 'bar' && s.stack);
   const loose = series.filter((s) => s.kind === 'bar' && !s.stack);
   const lines = series.filter((s) => s.kind !== 'bar');
@@ -230,17 +574,34 @@ export function ComboChart({
     [
       ...lines.flatMap((s) => s.values),
       ...loose.flatMap((s) => s.values),
+      ...areas.flatMap((a) => [...a.upper, ...a.lower]),
       ...extents.top,
       ...extents.bottom,
     ],
     narrow ? 4 : 5,
   );
+  const step = scale.ticks.length > 1 ? scale.ticks[1] - scale.ticks[0] : 1;
+  const axis = (v: number) => (unit === 'USD' ? thousands(v, step) : v.toFixed(0));
+  // Margins fit the widest tick label so rotated axis titles never overlap it.
+  const labelW = Math.max(...scale.ticks.map((t) => axis(t).length)) * (narrow ? 6 : 6.6) + 10;
+  const m = {
+    top: 20,
+    right: axes?.right ? labelW + 22 : narrow ? 8 : 16,
+    bottom: 26,
+    left: labelW + (axes?.left ? 18 : 0),
+  };
+  const innerW = Math.max(1, width - m.left - m.right);
+  const innerH = h - m.top - m.bottom;
+  const band = innerW / Math.max(1, n);
+  const cx = (i: number) => m.left + band * (i + 0.5);
   const y = (v: number) => m.top + innerH - ((v - scale.min) / (scale.max - scale.min)) * innerH;
   const groups = (stacked.length ? 1 : 0) + loose.length;
-  const barW = Math.max(2, Math.min(34, (band * 0.72) / Math.max(1, groups)));
+  const barW = Math.max(
+    2,
+    Math.min(n <= 5 ? 110 : 48, (band * (n <= 5 ? 0.8 : 0.78)) / Math.max(1, groups)),
+  );
   const groupX = (i: number, g: number) => cx(i) - (barW * groups) / 2 + g * barW;
-  const axis = (v: number) => (unit === 'USD' ? compactUsd(v) : v.toFixed(0));
-  const exact = (v: ChartValue) =>
+  const exact = (v: ChartValue | undefined) =>
     v == null || !Number.isFinite(v)
       ? 'Unavailable'
       : format
@@ -248,28 +609,78 @@ export function ComboChart({
         : unit === 'USD'
           ? dollars(v)
           : v.toFixed(4);
-  const ticks = xTickIndexes(n, innerW, narrow ? 40 : 48);
+  const shown = (v: ChartValue | undefined, money?: boolean) =>
+    unit === 'USD' || money
+      ? wholeDollars(v)
+      : v == null || !Number.isFinite(v)
+        ? 'Unavailable'
+        : v.toFixed(1);
+  const spokenValue = (r: Extract<TipRow, { label: string }>) =>
+    r.value === undefined
+      ? (r.text ?? '')
+      : r.money && unit !== 'USD'
+        ? dollars(r.value)
+        : exact(r.value);
+  const reference = referenceTickIndexes(years);
+  const fit = xTickIndexes(n, innerW, narrow ? 34 : 40);
+  const ticks = reference.length <= fit.length ? reference : fit;
   const hasGap = series.some((s) => s.values.slice(0, n).some((v) => v == null));
   const hasNegativeBar = series.some(
     (s) => s.kind === 'bar' && s.negativeColor && s.values.some((v) => v != null && v < 0),
   );
 
-  function pick(clientX: number) {
+  function pick(clientX: number, clientY: number) {
     const box = wrap.current?.querySelector('svg')?.getBoundingClientRect();
     if (!box || !box.width || !n) return;
     const x = ((clientX - box.left) / box.width) * width;
+    setPointerY(clientY - box.top);
     setActive(Math.min(n - 1, Math.max(0, Math.floor((x - m.left) / band))));
   }
 
-  const rows =
+  const tip: ChartTip | null =
     active == null
-      ? []
-      : [
-          ...series.map((s) => [s.label, exact(s.values[active] ?? null)] as [string, string]),
-          ...(details?.(active) ?? []),
-        ];
-  const heading = active == null ? '' : `${xLabel} ${years[active]}`;
-  const tipLeft = active != null && cx(active) > width / 2;
+      ? null
+      : tooltip
+        ? tooltip(active)
+        : {
+            title: `${xLabel} ${years[active]}`,
+            rows: [
+              ...series.map((s): TipRow => ({
+                label: s.label,
+                value: s.values[active] ?? null,
+                swatch: { color: s.color, kind: s.kind === 'bar' ? 'bar' : 'line' },
+              })),
+              ...(details?.(active) ?? []).map(([k, v]): TipRow => ({ label: k, text: v })),
+            ],
+          };
+  const spoken =
+    tip == null
+      ? ''
+      : `${tip.title}: ${tip.rows
+          .flatMap((r) =>
+            'section' in r
+              ? []
+              : 'note' in r
+                ? [r.note]
+                : [`${r.op ? `${r.op} ` : ''}${r.label} ${spokenValue(r)}`],
+          )
+          .join('; ')}`;
+  const tipLeft = active != null && cx(active) > m.left + innerW / 2;
+  const tipY = Math.max(4, Math.min((pointerY ?? m.top) - 24, h * 0.35));
+  const legendItems: LegendItem[] = legend ?? [
+    ...series
+      .filter((s) => !s.hideLegend)
+      .map((s) => ({
+        label: s.label + (s.dashed ? ' (dashed)' : ''),
+        kind: kindOf(s),
+        color: s.color,
+      })),
+    ...(hasNegativeBar
+      ? [{ label: 'Negative year', kind: 'bar' as const, color: chartColors.red }]
+      : []),
+  ];
+  const leftColor = axes?.leftColor ?? chartColors.slateLight;
+  const rightColor = axes?.rightColor ?? chartColors.slateLight;
 
   return (
     <div className={c.chart}>
@@ -296,6 +707,7 @@ export function ComboChart({
                       : undefined;
           if (next === undefined) return;
           event.preventDefault();
+          setPointerY(null);
           setActive(next);
         }}
         onBlur={() => setActive(null)}
@@ -306,13 +718,37 @@ export function ComboChart({
           height={h}
           role="img"
           aria-labelledby={`${id}-title`}
-          onPointerMove={(event) => pick(event.clientX)}
-          onPointerDown={(event) => pick(event.clientX)}
+          onPointerMove={(event) => pick(event.clientX, event.clientY)}
+          onPointerDown={(event) => pick(event.clientX, event.clientY)}
           onPointerLeave={(event) => {
             if (event.pointerType === 'mouse') setActive(null);
           }}
         >
           <title id={`${id}-title`}>{`${label} (${unit === 'USD' ? 'USD' : 'index'})`}</title>
+          <defs>
+            {areas.map((a, k) => (
+              <linearGradient key={k} id={`${id}-area-${k}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={a.color} stopOpacity={0.4} />
+                <stop offset="100%" stopColor={a.color} stopOpacity={0.1} />
+              </linearGradient>
+            ))}
+          </defs>
+          {bands.map((b, k) => {
+            const from = Math.max(0, b.from);
+            const to = Math.min(n - 1, b.to);
+            if (to < from) return null;
+            return (
+              <rect
+                key={`band-${k}`}
+                x={m.left + band * from}
+                width={band * (to - from + 1)}
+                y={m.top}
+                height={innerH}
+                fill={b.color}
+                opacity={b.opacity ?? 0.06}
+              />
+            );
+          })}
           {active != null && (
             <rect
               className={c.hover}
@@ -322,6 +758,16 @@ export function ComboChart({
               height={innerH}
             />
           )}
+          {ticks.map((i) => (
+            <line
+              key={`v-${i}`}
+              className={c.vgrid}
+              x1={cx(i)}
+              x2={cx(i)}
+              y1={m.top}
+              y2={m.top + innerH}
+            />
+          ))}
           {scale.ticks.map((tick) => (
             <g key={tick} className={c.grid}>
               <line
@@ -332,159 +778,284 @@ export function ComboChart({
                 strokeDasharray={tick === 0 ? undefined : '3 3'}
                 data-zero={tick === 0 || undefined}
               />
-              <text x={m.left - 8} y={y(tick) + 4} textAnchor="end">
+              <text
+                x={m.left - 8}
+                y={y(tick) + 4}
+                textAnchor="end"
+                style={{ fill: axes?.leftColor }}
+              >
                 {axis(tick)}
               </text>
+              {axes?.right && (
+                <text
+                  x={width - m.right + 8}
+                  y={y(tick) + 4}
+                  textAnchor="start"
+                  style={{ fill: rightColor }}
+                >
+                  {axis(tick)}
+                </text>
+              )}
             </g>
           ))}
-          <text className={c.xtitle} x={m.left - 8} y={h - 8} textAnchor="end">
-            {axisTitle}
-          </text>
+          <line
+            className={c.axis}
+            x1={m.left}
+            x2={m.left}
+            y1={m.top}
+            y2={m.top + innerH}
+            style={{ stroke: leftColor }}
+          />
+          {axes?.right && (
+            <line
+              className={c.axis}
+              x1={width - m.right}
+              x2={width - m.right}
+              y1={m.top}
+              y2={m.top + innerH}
+              style={{ stroke: rightColor }}
+            />
+          )}
+          <line
+            className={c.axis}
+            x1={m.left}
+            x2={width - m.right}
+            y1={m.top + innerH}
+            y2={m.top + innerH}
+          />
+          {axes?.left && (
+            <text
+              className={c.ytitle}
+              transform={`translate(12 ${m.top + innerH / 2}) rotate(-90)`}
+              textAnchor="middle"
+              style={{ fill: leftColor }}
+            >
+              {axes.left}
+            </text>
+          )}
+          {axes?.right && (
+            <text
+              className={c.ytitle}
+              transform={`translate(${width - 12} ${m.top + innerH / 2}) rotate(90)`}
+              textAnchor="middle"
+              style={{ fill: rightColor }}
+            >
+              {axes.right}
+            </text>
+          )}
+          {axisTitle && (
+            <text className={c.xtitle} x={m.left - 8} y={h - 6} textAnchor="end">
+              {axisTitle}
+            </text>
+          )}
           {ticks.map((i) => (
-            <text key={i} className={c.xtick} x={cx(i)} y={h - 8} textAnchor="middle">
-              {years[i]}
+            <text key={i} className={c.xtick} x={cx(i)} y={h - 6} textAnchor="middle">
+              {xFormat(years[i])}
             </text>
           ))}
-          {markers
-            .filter((marker) => marker.index >= 0 && marker.index < n)
-            .map((marker) => (
-              <g key={marker.label} className={c.marker} style={{ color: marker.color }}>
-                <line x1={cx(marker.index)} x2={cx(marker.index)} y1={m.top} y2={m.top + innerH} />
-                <text
-                  x={cx(marker.index) + (cx(marker.index) > width - 120 ? -6 : 6)}
-                  y={m.top + 10}
-                  textAnchor={cx(marker.index) > width - 120 ? 'end' : 'start'}
-                >
-                  {marker.label}
-                </text>
-              </g>
-            ))}
-          {stacked.length > 0 &&
-            years.map((_, i) => {
-              let up = 0;
-              let down = 0;
-              return stacked.map((s) => {
-                const v = s.values[i];
-                if (v == null || !Number.isFinite(v) || v === 0) return null;
-                const from = v >= 0 ? up : down;
-                const to = from + v;
-                if (v >= 0) up = to;
-                else down = to;
+          <g className={c.reveal} key={`series-${n}-${scale.min}-${scale.max}`}>
+            {areas.map((a, k) =>
+              segments(
+                a.upper.slice(0, n).map((v, i) => (v == null || a.lower[i] == null ? null : v)),
+              ).map((run) => {
+                const top = run.values.map((v, j): [number, number] => [cx(run.start + j), y(v)]);
+                const bottom = run.values
+                  .map((_, j): [number, number] => [
+                    cx(run.start + j),
+                    y(a.lower[run.start + j] as number),
+                  ])
+                  .reverse();
+                const back = monotonePath(bottom).replace(/^M/, 'L');
                 return (
-                  <rect
-                    key={`${s.label}-${i}`}
-                    className={c.bar}
-                    x={groupX(i, 0)}
-                    width={barW}
-                    y={y(Math.max(from, to))}
-                    height={Math.max(1, Math.abs(y(from) - y(to)))}
-                    fill={v < 0 && s.negativeColor ? s.negativeColor : s.color}
+                  <path
+                    key={`${k}-${run.start}`}
+                    d={`${monotonePath(top)}${back}Z`}
+                    fill={`url(#${id}-area-${k})`}
                   />
                 );
-              });
-            })}
-          {loose.map((s, g) =>
-            s.values
-              .slice(0, n)
-              .map((v, i) =>
-                v == null || !Number.isFinite(v) ? null : (
-                  <rect
+              }),
+            )}
+            {stacked.length > 0 &&
+              years.map((_, i) => {
+                let up = 0;
+                let down = 0;
+                const parts = stacked.map((s) => s.values[i]);
+                const lastUp = parts.findLastIndex((v) => v != null && Number.isFinite(v) && v > 0);
+                const lastDown = parts.findLastIndex(
+                  (v) => v != null && Number.isFinite(v) && v < 0,
+                );
+                return stacked.map((s, k) => {
+                  const v = s.values[i];
+                  if (v == null || !Number.isFinite(v) || v === 0) return null;
+                  const from = v >= 0 ? up : down;
+                  const to = from + v;
+                  if (v >= 0) up = to;
+                  else down = to;
+                  const fill = v < 0 && s.negativeColor ? s.negativeColor : s.color;
+                  return (
+                    <path
+                      key={`${s.label}-${i}`}
+                      className={c.bar}
+                      d={barPath(
+                        groupX(i, 0),
+                        barW,
+                        y(from),
+                        y(to),
+                        k === (v > 0 ? lastUp : lastDown) ? 4 : 0,
+                        false,
+                      )}
+                      fill={fill}
+                      fillOpacity={s.opacity}
+                      stroke={s.stroke ?? outline[fill]}
+                    />
+                  );
+                });
+              })}
+            {loose.map((s, g) =>
+              s.values.slice(0, n).map((v, i) => {
+                if (v == null || !Number.isFinite(v)) return null;
+                const fill = v < 0 && s.negativeColor ? s.negativeColor : s.color;
+                return (
+                  <path
                     key={`${s.label}-${i}`}
                     className={c.bar}
-                    x={groupX(i, g + (stacked.length ? 1 : 0))}
-                    width={barW}
-                    y={y(Math.max(0, v))}
-                    height={Math.max(1, Math.abs(y(0) - y(v)))}
-                    rx={Math.min(3, barW / 4)}
-                    fill={v < 0 && s.negativeColor ? s.negativeColor : s.color}
+                    d={barPath(
+                      groupX(i, g + (stacked.length ? 1 : 0)),
+                      barW,
+                      y(0),
+                      y(v),
+                      4,
+                      barRadius === 'all',
+                    )}
+                    fill={fill}
+                    fillOpacity={s.opacity}
+                    stroke={s.stroke ?? outline[fill]}
                   />
-                ),
-              ),
-          )}
-          {lines.map((s) => (
-            <g key={s.label}>
-              {segments(s.values.slice(0, n)).map((run) => (
-                <polyline
-                  key={run.start}
-                  points={run.values.map((v, k) => `${cx(run.start + k)},${y(v)}`).join(' ')}
-                  fill="none"
-                  stroke={s.color}
-                  strokeWidth={2.5}
-                  strokeLinejoin="round"
-                  strokeDasharray={s.dashed ? '6 4' : undefined}
-                />
-              ))}
-              {s.values
-                .slice(0, n)
-                .map((v, i) =>
-                  v == null || !Number.isFinite(v) ? null : (
+                );
+              }),
+            )}
+            {lines.map((s) => (
+              <g key={s.label}>
+                {segments(s.values.slice(0, n)).map((run) => (
+                  <path
+                    key={run.start}
+                    d={monotonePath(
+                      run.values.map((v, k): [number, number] => [cx(run.start + k), y(v)]),
+                    )}
+                    fill="none"
+                    stroke={s.color}
+                    strokeWidth={s.width ?? 2.5}
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                    strokeDasharray={s.dash ?? (s.dashed ? '6 4' : undefined)}
+                  />
+                ))}
+                {s.values
+                  .slice(0, n)
+                  .map((v, i) =>
+                    v == null || !Number.isFinite(v) || (!(s.dot ?? 2.5) && active !== i) ? null : (
+                      <circle
+                        key={i}
+                        cx={cx(i)}
+                        cy={y(v)}
+                        r={active === i ? 6 : (s.dot ?? 2.5)}
+                        fill={s.color}
+                        stroke={active === i ? 'white' : undefined}
+                        strokeWidth={active === i ? 2 : undefined}
+                      />
+                    ),
+                  )}
+              </g>
+            ))}
+          </g>
+          {markers
+            .filter((marker) => marker.index >= 0 && marker.index < n)
+            .map((marker) => {
+              const x = cx(marker.index);
+              const flip = marker.align === 'end' ? x - m.left > 90 : x > width - m.right - 90;
+              return (
+                <g key={marker.label} className={c.marker} style={{ color: marker.color }}>
+                  <line x1={x} x2={x} y1={m.top} y2={m.top + innerH} />
+                  <text
+                    x={marker.align === 'center' ? x : x + (flip ? -5 : 5)}
+                    y={marker.align === 'center' ? m.top - 6 : m.top + 10}
+                    textAnchor={marker.align === 'center' ? 'middle' : flip ? 'end' : 'start'}
+                  >
+                    {marker.label}
+                  </text>
+                  {marker.dot != null && Number.isFinite(marker.dot) && (
                     <circle
-                      key={i}
-                      cx={cx(i)}
-                      cy={y(v)}
-                      r={active === i ? 5 : n > 20 ? 1.5 : 2.5}
-                      fill={s.color}
-                      stroke={active === i ? 'white' : undefined}
-                      strokeWidth={active === i ? 2 : undefined}
+                      cx={x}
+                      cy={y(marker.dot)}
+                      r={6}
+                      fill="currentColor"
+                      stroke="white"
+                      strokeWidth={2}
                     />
-                  ),
-                )}
-            </g>
-          ))}
+                  )}
+                </g>
+              );
+            })}
         </svg>
-        {active != null && (
+        {tip && (
           <div
             className={c.tooltip}
             aria-hidden="true"
+            data-static={narrow || undefined}
             style={
               narrow
-                ? { position: 'static', marginTop: 8, width: 'auto', maxWidth: 'none' }
-                : tipLeft
-                  ? { right: Math.max(4, width - cx(active) + 12) }
-                  : { left: Math.min(cx(active) + 12, Math.max(4, width - 200)) }
+                ? undefined
+                : {
+                    transform: tipLeft
+                      ? `translate(calc(${cx(active!) - 16}px - 100%), ${tipY}px)`
+                      : `translate(${cx(active!) + 16}px, ${tipY}px)`,
+                  }
             }
           >
-            <strong>{heading}</strong>
-            {rows.map(([name, value], index) => {
-              const s = series[index];
-              return (
-                <span key={name}>
-                  {s ? (
-                    <i
-                      data-kind={s.kind === 'bar' ? 'bar' : s.dashed ? 'dashed' : 'line'}
-                      style={{ color: s.color }}
-                    />
-                  ) : (
-                    <i data-kind="none" />
-                  )}
-                  <em>{name}</em>
-                  <b>{value}</b>
+            <strong>{tip.title}</strong>
+            {tip.rows.map((row, index) =>
+              'section' in row ? (
+                <em key={index} className={c.tipSection}>
+                  {row.section}
+                </em>
+              ) : 'note' in row ? (
+                <small key={index}>{row.note}</small>
+              ) : (
+                <span key={index} data-total={row.total || undefined}>
+                  {row.swatch ? (
+                    <i data-kind={row.swatch.kind ?? 'bar'} style={{ color: row.swatch.color }} />
+                  ) : null}
+                  <em>
+                    {row.op ? `${row.op} ` : ''}
+                    {row.label}
+                  </em>
+                  <b
+                    data-tone={
+                      row.tone === 'auto'
+                        ? row.value != null && row.value < 0
+                          ? 'red'
+                          : 'teal'
+                        : row.tone
+                    }
+                  >
+                    {row.text ?? shown(row.value, row.money)}
+                  </b>
                 </span>
-              );
-            })}
+              ),
+            )}
           </div>
         )}
       </div>
       <p className={c.srOnly} aria-live="polite">
-        {active == null ? '' : `${heading}: ${rows.map(([k, v]) => `${k} ${v}`).join('; ')}`}
+        {spoken}
       </p>
       <ul className={c.legend} aria-label={`${label} legend`}>
-        {series.map((s) => (
-          <li key={s.label}>
-            <i
-              data-kind={s.kind === 'bar' ? 'bar' : s.dashed ? 'dashed' : 'line'}
-              style={{ color: s.color }}
-            />
-            {s.label}
-            {s.dashed ? ' (dashed)' : ''}
+        {legendItems.map((item) => (
+          <li key={item.label}>
+            <i data-kind={item.kind} style={{ color: item.color }} />
+            {item.label}
           </li>
         ))}
-        {hasNegativeBar && (
-          <li>
-            <i data-kind="bar" style={{ color: chartColors.red }} />
-            Negative year
-          </li>
-        )}
         {hasGap && (
           <li>
             <i data-kind="gap" />

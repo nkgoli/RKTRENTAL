@@ -105,7 +105,8 @@ sub-tab is component state.
   Scenarios, Benchmarks, Compare.
 
 Keep RocketRental's tab set: there is no Search tab, and Actual vs projected
-stays. Reorder the Charts sub-tabs to match the reference (owner: TASK-8C409E13).
+stays. **Done (TASK-8C409E13):** the Charts sub-tabs follow the reference order and
+open on Equity; Exit is labelled "Exit Analysis".
 
 ## 3. Ownership
 
@@ -121,15 +122,15 @@ stays. Reorder the Charts sub-tabs to match the reference (owner: TASK-8C409E13)
 
 | # | Reference chart (route → tab) | Type | Ref shots | RocketRental now | Gap |
 | --- | --- | --- | --- | --- | --- |
-| C1 | Net Cash Flow by Year (Summary) | Bar, positive/negative cells | summary-net-cashflow-{y1,y5,y30,custom,y30-tooltip,y5-tooltip-negative}-1440; mobile-390-viewport-summary-net-cashflow | Summary "Cash flow over time" ComboChart (`RoiWorkspace.tsx:872-930`) | Major |
-| C2 | Outcome: Wealth Created donut (Summary) | Pie / donut | summary-outcome-donut-{y1,y30,y30-tooltip}-1440, summary-outcome-custom-1440, summary-outcome-after-best-fix-1440 | **None** | Missing |
+| C1 | Net Cash Flow by Year (Summary) | Bar, positive/negative cells | summary-net-cashflow-{y1,y5,y30,custom,y30-tooltip,y5-tooltip-negative}-1440; mobile-390-viewport-summary-net-cashflow | `NetCashFlowCard` (`RoiSummaryCharts.tsx`) | **Delivered** (§9.3) |
+| C2 | Outcome: Wealth Created donut (Summary) | Pie / donut | summary-outcome-donut-{y1,y30,y30-tooltip}-1440, summary-outcome-custom-1440, summary-outcome-after-best-fix-1440 | `OutcomeCard` (`RoiSummaryCharts.tsx`) | **Delivered** (§9.3); after-best-fix belongs to C4 |
 | C3 | Deal Snapshot risk ring, gauge and factor bars (Summary) | SVG ring + semicircle gauge + segmented bars | summary-deal-snapshot{,-monthly,-cashflow-popover}-1440, summary-risk-meter-expanded-gauge-1440, mobile-390-viewport-summary-deal-snapshot | **None** (Summary "Year 1 at a glance" text metrics) | Missing |
 | C4 | Fix My Deal lever bars (Summary) | Segmented gradient bars + pills | summary-fix-my-deal{,-expanded,-best-fix-applied}-1440 | **None** | Missing |
-| C5 | Cash Flow & Equity Projections mini bars (Summary) | Table + inline % bars | summary-projection-table-{keyrows,full}-1440 | Summary "Exact annual cash flow" table, no bars | Partial |
-| C6 | Equity Composition vs Debt Paydown (Charts → Equity) | Stacked bars + line, dual axis, overlays | charts-equity-composition-{y1,y5,y30,custom,incl-down,indexed,y30-tooltip,indexed-tooltip}-1440; mobile-390-viewport-equity-{composition,tap-tooltip} | `Equity` C1 ComboChart (`RoiProjections.tsx:327-496`) | Major |
-| C7 | Value vs Mortgage Balance (Charts → Equity) | Area band + 2 lines | charts-value-vs-mortgage-{y10,y30-tooltip}-1440; charts-full-1440 | **None** (closest: "Equity growth at year N" CSS bars) | Missing |
-| C8 | Cash Flow & Cumulative (Charts → Cash Flow) | Bars + line + pre/post shading | charts-cashflow-cumulative-{y10-default,y1,y30,custom,custom-y20,y10-tooltip}-1440 | `CashFlow` B1 ComboChart (`RoiProjections.tsx:170-280`) | Moderate |
-| C9 | Income to Cash Flow Bridge (Charts → Cash Flow) | 3 lines + bars | charts-cashflow-bridge-{y10-default,y1,y30,y10-tooltip}-1440 | `CashFlow` B2 "From income to cash flow" Year-1 CSS bar list | Major |
+| C5 | Cash Flow & Equity Projections mini bars (Summary) | Table + inline % bars | summary-projection-table-{keyrows,full}-1440 | `ProjectionMilestones` (`RoiSummaryCharts.tsx`); exact table kept | **Delivered** (§9.3) |
+| C6 | Equity Composition vs Debt Paydown (Charts → Equity) | Stacked bars + line, dual axis, overlays | charts-equity-composition-{y1,y5,y30,custom,incl-down,indexed,y30-tooltip,indexed-tooltip}-1440; mobile-390-viewport-equity-{composition,tap-tooltip} | `EquityComposition` (`RoiProjections.tsx`) | **Delivered** (§9.3) |
+| C7 | Value vs Mortgage Balance (Charts → Equity) | Area band + 2 lines | charts-value-vs-mortgage-{y10,y30-tooltip}-1440; charts-full-1440 | `ValueVsMortgage` (`RoiProjections.tsx`) | **Delivered** (§9.3) |
+| C8 | Cash Flow & Cumulative (Charts → Cash Flow) | Bars + line + pre/post shading | charts-cashflow-cumulative-{y10-default,y1,y30,custom,custom-y20,y10-tooltip}-1440 | `CashFlowCumulative` (`RoiProjections.tsx`) | **Delivered** (§9.3) |
+| C9 | Income to Cash Flow Bridge (Charts → Cash Flow) | 3 lines + bars | charts-cashflow-bridge-{y10-default,y1,y30,y10-tooltip}-1440 | `IncomeBridge` (`RoiProjections.tsx`); Year-1 list kept | **Delivered** (§9.3) |
 | C10 | Operating Expenses ranked bars (Charts → Expenses) | CSS horizontal bars | charts-expenses-{y1,y10,y30,custom,y30-sort-delta,simulate-tax,info-tooltip}-1440 | `Expenses` D1 bar list (all teal) + D2 growth lines | Moderate |
 | C11 | Principal vs Interest Over Time (Charts → Amortization) | Overlapping areas | charts-amortization-area-{default,tooltip}-1440 | `Amortization` E1 ComboChart, lines only | Moderate |
 | C12 | Loan Payoff Breakdown bar (Charts → Amortization) | Two-segment progress bar | charts-amortization-schedule-summary-1440 | **None** | Missing |
@@ -159,6 +160,9 @@ Pricing have no charts.
 **Mobile reference** (whole tab): `ref-mobile-390-{summary,charts-equity,charts-cashflow,charts-expenses,charts-amortization,charts-exit,charts-sensitivity,scenarios,benchmarks,compare}.png`.
 
 ## 5. Shared chart system (owner: TASK-8C409E13; consumed by all)
+
+**Status: delivered.** The table below is the original audit. §9.2 lists what was
+built and the deliberate deviations.
 
 The reference uses Recharts with Tailwind. RocketRental can keep its SVG
 `ComboChart` but must reproduce these rendered conventions.
@@ -604,3 +608,243 @@ This inspection did not start, stop or reseed the app, and did not touch any
 preserved dataset; the scheduled task still targets 5433. Restore it with
 `start-live.ps1` before TASK-DFDAA085's live verification. The reference stays
 on 3300 or another free port.
+
+## 9. TASK-8C409E13 delivery: cash-flow and equity charts
+
+Charts C1, C2, C5, C6, C7, C8 and C9, the shared chart primitives and the
+sub-tab order are built. Each chart was checked in a browser against the running
+reference at 1440×900 and 390×844 on 2026-10-20.
+
+### 9.1 Runtime used (reproducible)
+
+| App | How it ran | Data |
+| --- | --- | --- |
+| Reference | `scripts/start-realroi-reference.ps1 -SkipInstall` → `http://127.0.0.1:3300/demo` | locked `sampleDealInput` |
+| RocketRental live (`main`) | root checkout `scripts/start-live.ps1 -SkipInstall` → `http://localhost:3100` | preserved `.data/postgres-5434`. The seed step reported "up to date"; nothing was reseeded or reset |
+| RocketRental, this branch | `npx next dev -p 3110` in the task checkout. The environment comes from the root `.env`, with `ROCKETRENTAL_AUTH_SECRET` set to `start.ps1`'s built-in local-dev secret, because the `.env` value is under 32 characters | the same 5434 database, read only |
+
+- §8's note is out of date: the live app on 3100 was restored with
+  `start-live.ps1` during this Task.
+- **Matched data without touching the live dataset.** Maple Court was opened on
+  3110 and the reference inputs were typed into its assumptions form. Recalculate
+  ran, the screenshots were taken, and "Reload saved analysis" discarded the
+  edits. Nothing was saved: after the reload the purchase price was $2,830,000
+  and the table read Y1 −$2,555.40 and Y2 −$175.80 / −$2,731.20, as before.
+- For tests, the same inputs live in the isolated fixture
+  `tests/analysis/realroi-sample.ts`.
+- With these inputs RocketRental's engine reproduces the reference headline
+  figures:
+  - Y1 cash flow −$1,133
+  - Breakeven in year 5
+  - Cumulative $24,997 at Y10
+  - Y30 equity ≈ $922,360
+  - $102,000 cash in
+
+### 9.2 Shared primitives (for TASK-2F1D1EFB and TASK-DFDAA085)
+
+All exported from `src/components/analysis/RoiChart.tsx`, with helpers in
+`src/lib/analysis/chart-data.ts`.
+
+| Primitive | Use |
+| --- | --- |
+| `chartColors` | Reference palette: `teal` #14b8a6, `tealDark` #0d9488, `tealLight` #5eead4, `tealPale` #99f6e4, `slateMid` #64748b, `red` #ef4444, `green` #16a34a, `emerald` #10b981, `sky` #0284c7. `seriesPalette` keeps 3:1 line colours for multi-series charts |
+| `ChartCard` | Slate-100 header strip, 14 px title, 10 px subtitle, right-aligned control column (pass several `<div>` rows for C6-style two-row controls). It stacks below 640 px |
+| `useHorizon(length, label, preferred)` | `Y1 Y5 Y10 Y30` within the hold, `All Ny` only above 30, and **Custom** with a 2…N slider and a mono `Y{n}` label (default 7). A preset the hold cannot reach shows as Custom at the hold length |
+| `Segmented`, `Check` | Teal-500 pill group (`size="md"` for `$ Value / Indexed`) and the header checkbox |
+| `Tiles` | Mono 18 px values (`size="sm"` gives 14 px), 10 px labels, tones `teal`, `tealSoft`, `slate`, `red`, `amber`, plus `info` (ⓘ) and `valueTone` |
+| `Chips` | Pill chips with a dot or a lucide-style `icon` (`target`, `down`, `up`) and an optional `info` tip |
+| `InfoTip`, `Insight`, `Figure`, `MiniBar`, `Donut` | ⓘ hover/focus tip (`aria-describedby`); "Insight:" row with mono teal/red figures; 48 px rate bar (\|v\|×500%); 2°-padded donut with hover tip |
+| `ComboChart` | Dashed grid both ways and a solid zero line. Monotone lines (`width`, `dot`, `dash`). Bars rounded at the far end (`barRadius="all"` for C1). Stacks with darker outlines and `opacity`. `bands` (fractional index edges), `areas` (gradient between two series), `markers` (`dot`, `align: start\|end\|center`), `axes` (rotated left/right titles, mirrored right ticks), `xFormat`, `legend` override, and `tooltip(i) → {title, rows}` with `op` (−/+/=), `total`, `tone: auto`, `section`, `note` and `money` rows |
+| Helpers | `thousands` (`$950k`, exact decimals so a $2,500 step reads `$2.5k`), `wholeDollars`, `monotonePath`, `referenceTickIndexes` (all years ≤10, else 1, 5, 10, …), `horizonChoices`, `breakevenYear`, `firstPositiveAfterNegative`, `equityYears`, `equityLandmarks`, `indexAgainst`, `wealthAt`, `milestoneYears`, `calendarYear`, `miniBarWidth`, `PAID_OFF_BELOW` |
+
+**Rules that hold for every chart:**
+
+- Hover, tap and keyboard (arrows, Home, End, Escape) all drive the same readout.
+- The visual tooltip shows whole dollars and follows the pointer. Below 480 px it
+  sits under the plot instead.
+- The polite live region reads the exact cents from the adjacent table.
+- `null` values leave a gap, and the legend says "Gap = unavailable, not $0".
+- The entry clip-reveal and the tooltip slide only run with
+  `prefers-reduced-motion: no-preference`.
+
+**Inherited by other owners' charts (Scenarios, Benchmarks, Exit, Expenses,
+Amortization):**
+
+- New grid, ticks, monotone lines and teal-500 bars.
+- No "Year" axis title, unless they pass `axisTitle` (Amortization and Exit
+  still do).
+- Whole-dollar visual tooltips.
+
+Their composition is still theirs to change.
+
+### 9.3 Chart results
+
+**C6 Equity Composition vs Debt Paydown.**
+
+- Resolved:
+  - Y30 default.
+  - Y1/Y5/Y10/Y30/Custom, the "Include down payment" checkbox and the `$ Value / Indexed` row.
+  - Reference tiles and wording, including "Mortgage paid off — 100% equity".
+  - Gain/Total crossover, payoff and momentum chips (the reference's 1.2×/1.5× rule).
+  - Dual axes on one domain.
+  - Stacked principal and appreciation with darker outlines, a 50% down-payment segment and a w3 monotone mortgage line.
+  - Crossover shading at 0.08, the dashed "Gain > Debt" / "Equity > Debt" marker and a 6 px dot.
+  - Indexed mode (Y1 = 100, the reference formula) with its footer.
+  - Equation tooltip with an "Equity Composition" block.
+- Deliberate:
+  - The down-payment row appears only when included (reference defect 7).
+  - "Paid off" only below $0.50, not $100.
+  - "Loan fully repaid" instead of "Congratulations!".
+  - A red "Value decline" bar and legend item if appreciation is ever negative.
+  - Indexed tooltips keep dollar rows plus the index values.
+
+**C7 Value vs Mortgage Balance.**
+
+- Resolved:
+  - New card under C6 with its own Y30 selector.
+  - Subtitle with "Equity grew +$…(…%)".
+  - Three mini tiles.
+  - A 288 px chart from a `0` (Start) point, with property value #334155, mortgage #94a3b8 and r3 dots.
+  - A 0.4 → 0.1 teal gradient band between the lines.
+  - "End of Year N" / "Start" equation tooltip with "Equity is N% of property value".
+  - The band footer.
+- Start uses the after-repair value (or purchase price) and the original loan,
+  which the footnote states.
+
+**C8 Cash Flow & Cumulative.**
+
+- Resolved:
+  - Y10 default.
+  - Chips with icons: "Breakeven: Year 5 ⓘ", "Worst: −$1,133 (Year 1)", "Best: $6,464 (Year 10)", "Cumulative at Year 10: $24,997".
+  - Bars at radius 4 and a w3 monotone cumulative line.
+  - Red pre-breakeven and green post-breakeven bands.
+  - A green dashed "Breakeven" line with a 6 px dot.
+  - The four-item legend.
+  - "Year N | Annual Cash Flow | Cumulative" tooltip.
+  - The reference insight wording at <100% and ≥100%.
+- Deliberate:
+  - "No breakeven by Year N" and an all-red band when cumulative cash never turns positive.
+  - A negative-cumulative insight.
+  - The cash-only caveat.
+  - The four RocketRental tiles kept under the chart (allowed in §6).
+
+**C9 Income to Cash Flow Bridge.**
+
+- Resolved:
+  - Y10 default.
+  - GOI/NOI/OpEx Ratio/NOI Margin tiles with ⓘ.
+  - GOI #2dd4bf, NOI #0d9488 and dashed (`5 5`) debt service #94a3b8 lines, plus cash-flow bars.
+  - Waterfall tooltip with OpEx Ratio and NOI Margin.
+  - The insight.
+- Deliberate:
+  - A "− Capital Reserves" row so "= Cash Flow" reconciles (RocketRental deducts reserves below NOI).
+  - The insight names the reserves.
+  - The Year-1 exact list stays below as "From income to cash flow".
+
+**C1 Net Cash Flow by Year.**
+
+- Resolved:
+  - Y5 default with Custom.
+  - 256 px bars at radius 4 on every corner.
+  - `Y1…Yn` labels (all years ≤10, then every fifth).
+  - The "Positive Y3" marker centred above a dashed line.
+  - An external legend showing only the signs present.
+- Deliberate:
+  - The tooltip reconciles: Effective income − Operating costs = NOI − Debt service − Capital reserves = Cash Flow (§7 item 3).
+
+**C2 Outcome.**
+
+- Resolved:
+  - "Wealth Created (Year N)".
+  - 30 px #0284c7 total.
+  - 112 px donut (inner radius 30, outer radius 50, 2° padding, three teal tones).
+  - Deal Quality: DSCR red below 1.00 and green from 1.25; GRM; Rent/Price; Profit Index green from 1.00.
+  - Mono legend values.
+  - Centred Y1 selector.
+  - "Cash Flow: $x" hover tip.
+- Deliberate:
+  - The included/excluded popover is an ⓘ tip.
+  - A negative part is stated in text and left out of the ring.
+  - The hover tip sits below the ring, so it never covers the total or Deal Quality (reference defect).
+  - "No debt" replaces DSCR for all-cash deals.
+
+**C5 Cash Flow & Equity Projections.**
+
+- Resolved:
+  - Key Rows / Full Table toggle.
+  - Positive/Negative key.
+  - Milestone columns Year 1/5/10/20/30 (plus the final year of shorter holds) with calendar years.
+  - Coloured section icons and collapsible sections.
+  - Highlighted Annual Cash Flow and Total Equity rows.
+  - Signed, coloured appreciation and mortgage rows.
+  - 48 px mini bars on Cash on Cash and Equity %.
+  - The footer.
+- Deliberate:
+  - Whole dollars, with the exact-cents table kept below as "Exact annual cash flow".
+  - Income Analysis and Operating Expenses sections include RocketRental's rows (Effective income, NOI, Capital reserves).
+  - In the Summary column (≈640 px at 1440 because of the assumptions form) the table compacts below a 760 px container width: 24 px bars and tighter cells. All five columns fit without scrolling.
+
+### 9.4 Paired screenshots (`docs/analysis/realroi-chart-parity/`)
+
+The `ref-*` files are the reference captures from §4. The `rr-*` files come from
+the task build, taken with the matched sample inputs at 1440×900 (element shots;
+`*-tooltip-*` are viewport shots), except `rr-live-maple-*`, which use the live
+saved dataset. `ref-live-*` are fresh captures from the running reference on
+3300, taken at the same time.
+
+| Chart | Reference | RocketRental |
+| --- | --- | --- |
+| C1 default / negative tooltip / Y30 / Y30 tooltip / custom | `ref-summary-net-cashflow-y5-1440`, `-y5-tooltip-negative-1440`, `-y30-1440`, `-y30-tooltip-1440`, `-custom-1440`, `ref-live-summary-net-cashflow-1440` | `rr-summary-net-cashflow-y5-1440`, `-y5-tooltip-negative-1440`, `-y30-1440`, `-y30-tooltip-1440`, `-custom-1440`, `rr-live-maple-summary-net-cashflow-1440` |
+| C1 390 | `ref-mobile-390-viewport-summary-net-cashflow`, `ref-live-summary-net-cashflow-390` | `rr-mobile-390-summary-net-cashflow`, `rr-mobile-390-summary-net-cashflow-tap` |
+| C2 Y1 / Y30 / tooltip / custom | `ref-summary-outcome-donut-y1-1440`, `-y30-1440`, `-y30-tooltip-1440`, `ref-summary-outcome-custom-1440` | `rr-summary-outcome-donut-y1-1440`, `-y30-1440`, `-y30-tooltip-1440`, `rr-summary-outcome-custom-1440`, `rr-mobile-390-summary-outcome` |
+| C5 key rows / full | `ref-summary-projection-table-keyrows-1440`, `-full-1440` | `rr-summary-projection-table-keyrows-1440`, `-full-1440`, `rr-mobile-390-summary-projection-table`, `rr-live-maple-summary-projection-table-1440` |
+| C6 Y30 / tooltip / incl. down / indexed / indexed tooltip / Y5 / custom | `ref-charts-equity-composition-y30-1440`, `-y30-tooltip-1440`, `-incl-down-1440`, `-indexed-1440`, `-indexed-tooltip-1440`, `-y5-1440`, `-custom-1440`, `ref-live-charts-equity-1440` | `rr-charts-equity-composition-y30-1440`, `-y30-tooltip-1440`, `-incl-down-1440`, `-indexed-1440`, `-indexed-tooltip-1440`, `-y5-1440`, `-custom-1440`, `rr-live-maple-equity-composition-1440` |
+| C6 390 / tap | `ref-mobile-390-viewport-equity-composition`, `ref-mobile-390-viewport-equity-tap-tooltip`, `ref-live-charts-equity-390` | `rr-mobile-390-equity-composition`, `rr-mobile-390-equity-tap-tooltip` |
+| C7 Y30 / tooltip / Y10 | `ref-charts-value-vs-mortgage-y30-tooltip-1440`, `-y10-1440` | `rr-charts-value-vs-mortgage-y30-1440`, `-y30-tooltip-1440`, `-y10-1440`, `rr-mobile-390-value-vs-mortgage`, `rr-mobile-390-value-vs-mortgage-tap`, `rr-live-maple-value-vs-mortgage-1440` |
+| C8 Y10 / tooltip / Y1 / Y30 / custom Y20 | `ref-charts-cashflow-cumulative-y10-default-1440`, `-y10-tooltip-1440`, `-y1-1440`, `-y30-1440`, `-custom-y20-1440`, `ref-live-charts-cashflow-1440` | `rr-charts-cashflow-cumulative-y10-default-1440`, `-y10-tooltip-1440`, `-y1-1440`, `-y30-1440`, `-custom-y20-1440`, `rr-live-maple-cashflow-cumulative-1440` |
+| C8 390 | `ref-mobile-390-charts-cashflow`, `ref-live-charts-cashflow-390` | `rr-mobile-390-cashflow-cumulative`, `rr-mobile-390-cashflow-cumulative-tap` |
+| C9 Y10 / tooltip / Y30 / Y1 | `ref-charts-cashflow-bridge-y10-default-1440`, `-y10-tooltip-1440`, `-y30-1440`, `-y1-1440` | `rr-charts-cashflow-bridge-y10-default-1440`, `-y10-tooltip-1440`, `-y30-1440`, `-y1-1440`, `rr-mobile-390-cashflow-bridge`, `rr-mobile-390-cashflow-bridge-tap`, `rr-live-maple-cashflow-bridge-1440` |
+
+At 390 px RocketRental's `scrollWidth` equals its `clientWidth` (390) on
+Summary, Charts → Equity and Charts → Cash Flow. The reference's is 583.
+
+### 9.5 Remaining differences (known, not defects)
+
+1. **Engine definitions.** RocketRental puts capital reserves below NOI, so with
+   the same inputs:
+
+   | Metric | Reference | RocketRental |
+   | --- | --- | --- |
+   | NOI | $20,355 | $22,035 |
+   | DSCR | 0.95 | 1.03 |
+   | OpEx ratio | 38.4% | 33.3% |
+   | Cap rate | 5.82% | 6.3% |
+
+   Appreciation is measured from the purchase price, so the after-repair uplift
+   counts:
+
+   | Metric | Reference | RocketRental |
+   | --- | --- | --- |
+   | Equity growth | $829,856 | $834,860 |
+   | Y1 wealth | $37,807 | $42,807 |
+   | C7 "Equity grew" | +$820,356 (804%) | +$804,860 (685%) |
+
+   C7 starts from after-repair value minus the original loan. Every RocketRental
+   figure comes from its own projection rows.
+2. **Axes.** Nice 1/2/2.5/5 steps rather than Recharts auto domains (C6 tops out
+   at $1000k, not $950k). Negative ticks read `-$9k`, not `$-9k`, matching the
+   tables.
+3. **Fonts.** Numbers use a `JetBrains Mono, ui-monospace, Cascadia Mono,
+   Consolas` stack. JetBrains Mono is not bundled (no font download was added),
+   so Windows shows Cascadia Mono or Consolas. Titles use the app's design font,
+   not Inter.
+4. **Contrast.**
+   - Header subtitles are #526174, not #64748b, so 10 px text keeps 4.5:1.
+   - Pressed teal-500 pills get a #0d9488 inset.
+   - Axis titles are teal-700 and slate-500.
+5. **Motion.** One clip-reveal entry animation, not Recharts' per-series growth.
+6. **Narrow screens.** Below 480 px the readout sits under the plot rather than
+   floating.
+7. **Not checked live.** The live dataset has no incomplete-ROI property (all
+   four listed properties have complete inputs). The "Complete your assumptions"
+   and Summary fallbacks are covered by `tests/analysis/workspace.test.tsx`.

@@ -214,3 +214,25 @@
     padding: 10px;
   }
 }
+.footnote {
+  margin: 0;
+  text-align: center;
+  font-size: 10px !important;
+  color: #64748b;
+}
+.bandSwatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  vertical-align: -2px;
+  border-radius: 2px;
+  border: 1px solid #2dd4bf;
+  background: linear-gradient(#14b8a666, #14b8a61a);
+}
+.grew {
+  font-weight: 500;
+  color: #0f766e;
+}
+.grew[data-negative] {
+  color: #b91c1c;
+}

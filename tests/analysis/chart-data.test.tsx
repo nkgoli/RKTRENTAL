@@ -47,9 +47,11 @@ describe('chart data adapters', () => {
 
   it('offers reference-style horizons bounded by the hold', () => {
     expect(horizonChoices(1)).toEqual([{ years: 1, label: 'Y1' }]);
-    expect(horizonChoices(10).map((h) => h.label)).toEqual(['Y5', 'All 10y']);
-    expect(horizonChoices(30).map((h) => h.years)).toEqual([5, 10, 30]);
-    expect(horizonChoices(50).map((h) => h.years)).toEqual([5, 10, 30, 50]);
+    expect(horizonChoices(10).map((h) => h.label)).toEqual(['Y1', 'Y5', 'Y10']);
+    expect(horizonChoices(12).map((h) => h.label)).toEqual(['Y1', 'Y5', 'Y10']);
+    expect(horizonChoices(30).map((h) => h.years)).toEqual([1, 5, 10, 30]);
+    // "All" only appears when the hold is longer than 30 years.
+    expect(horizonChoices(50).map((h) => h.label)).toEqual(['Y1', 'Y5', 'Y10', 'Y30', 'All 50y']);
   });
 
   it('splits lines at missing values and stacks signed parts separately', () => {
@@ -103,7 +105,7 @@ describe('ROI combo chart', () => {
         series={[{ label: 'Cash', values: [-1250.5, null, 0], color: '#0d9488' }]}
       />,
     );
-    expect(container.querySelectorAll('polyline')).toHaveLength(2);
+    expect(container.querySelectorAll('svg path')).toHaveLength(2);
     expect(screen.getByText(/Gap = unavailable, not \$0/)).toBeTruthy();
     const plot = screen.getByRole('group', { name: /Test cash/ });
     fireEvent.keyDown(plot, { key: 'Home' });
@@ -118,14 +120,22 @@ describe('ROI combo chart', () => {
 
   it('drops a selected last point when the data shrinks or empties instead of reading past it', () => {
     const data = (count: number) =>
-      Array.from({ length: count }, (_, i) => ({ year: i + 1, cumulativeCashFlow: -100 * (i + 1) }));
+      Array.from({ length: count }, (_, i) => ({
+        year: i + 1,
+        cumulativeCashFlow: -100 * (i + 1),
+      }));
     // Mirrors the Summary and Equity callbacks, which index their own rows directly.
     const chart = (rows: ReturnType<typeof data>) => (
       <ComboChart
         label="Shrinking cash"
         years={rows.map((r) => r.year)}
         series={[
-          { label: 'Cash', kind: 'bar', values: rows.map((r) => r.cumulativeCashFlow), color: '#0d9488' },
+          {
+            label: 'Cash',
+            kind: 'bar',
+            values: rows.map((r) => r.cumulativeCashFlow),
+            color: '#0d9488',
+          },
         ]}
         details={(i) => [['Cumulative', dollars(rows[i].cumulativeCashFlow)]]}
       />
@@ -144,7 +154,8 @@ describe('ROI combo chart', () => {
     expect(live()).toBe('');
     expect(container.textContent).not.toContain('undefined');
     // Five bars and no highlight band.
-    expect(container.querySelectorAll('svg rect')).toHaveLength(5);
+    expect(container.querySelectorAll('svg path')).toHaveLength(5);
+    expect(container.querySelectorAll('svg rect')).toHaveLength(0);
     fireEvent.keyDown(plot, { key: 'ArrowLeft' });
     expect(live()).toContain('Year 5: Cash -$500.00');
 
@@ -153,7 +164,7 @@ describe('ROI combo chart', () => {
     expect(live()).toContain('Year 5:');
     rerender(chart([]));
     expect(live()).toBe('');
-    expect(container.querySelectorAll('circle, svg rect')).toHaveLength(0);
+    expect(container.querySelectorAll('circle, svg rect, svg path')).toHaveLength(0);
     rerender(chart(data(3)));
     expect(live()).toBe('');
     expect(container.textContent).not.toContain('undefined');
@@ -179,13 +190,19 @@ describe('ROI combo chart', () => {
       onEdit: () => {},
     });
     const { container, rerender } = render(<RoiProjections {...props(long)} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Cash Flow' }));
     const cash = screen.getByRole('group', { name: /Annual and cumulative operating cash flow/ });
-    const liveOf = (plot: HTMLElement) => plot.parentElement!.querySelector('[aria-live]')!.textContent;
+    const liveOf = (plot: HTMLElement) =>
+      plot.parentElement!.querySelector('[aria-live]')!.textContent;
 
-    // Horizon: year 12 selected, then Y5.
+    // Horizon: Custom to year 12, final year selected, then Y5.
+    const horizon = screen.getByRole('group', { name: 'Cash flow chart horizon' });
+    fireEvent.click(within(horizon).getByRole('button', { name: 'Custom' }));
+    fireEvent.change(screen.getByLabelText('Cash flow chart horizon: custom years'), {
+      target: { value: '12' },
+    });
     fireEvent.keyDown(cash, { key: 'End' });
     expect(liveOf(cash)).toContain('Year 12:');
-    const horizon = screen.getByRole('group', { name: 'Cash flow chart horizon' });
     fireEvent.click(within(horizon).getByRole('button', { name: 'Y5' }));
     expect(liveOf(cash)).toBe('');
 
@@ -200,7 +217,7 @@ describe('ROI combo chart', () => {
     fireEvent.keyDown(equity, { key: 'End' });
     const rows = projectionRows(calculatePayload(short).base);
     expect(liveOf(equity)).toContain(`Year 4:`);
-    expect(liveOf(equity)).toContain(`Property value ${dollars(rows[3].propertyValue)}`);
+    expect(liveOf(equity)).toContain(`Property Value ${dollars(rows[3].propertyValue)}`);
   });
 
   it('matches the exact projection table for the final year and follows the horizon', () => {
@@ -217,12 +234,14 @@ describe('ROI combo chart', () => {
         onEdit={() => {}}
       />,
     );
+    fireEvent.click(screen.getByRole('tab', { name: 'Cash Flow' }));
     const plot = screen.getByRole('group', { name: /Annual and cumulative operating cash flow/ });
     fireEvent.keyDown(plot, { key: 'End' });
-    const last = rows.at(-1)!;
+    // The reference default horizon is Y10.
+    const last = rows[9];
     const live = plot.parentElement!.querySelector('[aria-live]')!.textContent!;
-    expect(live).toContain(`Year ${last.year}: Annual cash flow ${dollars(last.cashFlow)}`);
-    expect(live).toContain(`Cumulative cash flow ${dollars(last.cumulativeCashFlow)}`);
+    expect(live).toContain(`Year 10: Annual Cash Flow ${dollars(last.cashFlow)}`);
+    expect(live).toContain(`Cumulative ${dollars(last.cumulativeCashFlow)}`);
     const table = screen.getByRole('table', { name: /Projection amounts/ });
     expect(within(table).getAllByText(dollars(last.cumulativeCashFlow)).length).toBeGreaterThan(0);
 
@@ -233,7 +252,7 @@ describe('ROI combo chart', () => {
     );
     fireEvent.keyDown(plot, { key: 'End' });
     expect(plot.parentElement!.querySelector('[aria-live]')!.textContent).toContain(
-      `Year 5: Annual cash flow ${dollars(rows[4].cashFlow)}`,
+      `Year 5: Annual Cash Flow ${dollars(rows[4].cashFlow)}`,
     );
     expect(screen.getByText(`Cumulative cash flow · year 5`)).toBeTruthy();
     // The exact table keeps every projected year regardless of the chart horizon.

@@ -100,7 +100,9 @@ describe('property autofill and calculation sufficiency', () => {
     fireEvent.change(field('input.financing.loanAmount'), { target: { value: '50000' } });
     expect(summary().queryByText('$10,800')).toBeNull();
     expect(screen.getByRole('link', { name: /Interest rate.*financed purchase/ })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Switch to cash purchase (set loan to $0)' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Switch to cash purchase (set loan to $0)' }),
+    );
     expect(summary().getByText('$10,800')).toBeTruthy();
     expect(field('input.financing.downPaymentPercent').value).toBe('');
     expect(field('input.financing.loanTermYears').value).toBe('');
@@ -118,7 +120,9 @@ describe('property autofill and calculation sufficiency', () => {
       data: { payload: p, missing: [], facts },
     });
     await open();
-    fireEvent.click(screen.getByRole('button', { name: 'Switch to cash purchase (set loan to $0)' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Switch to cash purchase (set loan to $0)' }),
+    );
     expect(
       within(screen.getByRole('region', { name: 'Year 1 at a glance' })).getByText('$10,800'),
     ).toBeTruthy();
@@ -541,16 +545,20 @@ describe('ROI projection interactions', () => {
   it('supports arrow/Home/End navigation across six working views and exact tables', async () => {
     await open();
     tab('Charts');
-    const cash = screen.getByRole('tab', { name: 'Cash Flow' });
-    cash.focus();
-    const expected = ['Equity', 'Expenses', 'Amortization', 'Exit', 'Sensitivity'];
+    // Reference sub-tab order: Equity is first and selected by default.
+    const equity = screen.getByRole('tab', { name: 'Equity' });
+    expect(equity.getAttribute('aria-selected')).toBe('true');
+    equity.focus();
+    const expected = ['Cash Flow', 'Expenses', 'Amortization', 'Exit Analysis', 'Sensitivity'];
     for (const name of expected) {
       fireEvent.keyDown(document.activeElement!, { key: 'ArrowRight' });
       expect(document.activeElement).toBe(screen.getByRole('tab', { name }));
       expect(document.activeElement?.getAttribute('aria-selected')).toBe('true');
     }
     fireEvent.keyDown(document.activeElement!, { key: 'Home' });
-    expect(document.activeElement).toBe(cash);
+    expect(document.activeElement).toBe(equity);
+    tab('Cash Flow');
+    const cash = screen.getByRole('tab', { name: 'Cash Flow' });
     const annual = screen.getByRole('table', { name: /Projection amounts/ });
     expect(within(annual).getAllByRole('row')).toHaveLength(2);
     expect(within(annual).getAllByText('$10,800.00')).toHaveLength(3);
@@ -607,7 +615,7 @@ describe('ROI projection interactions', () => {
     change('Sensitivity metric', 'irr');
     expect(screen.getByRole('table', { name: /Hold-period leveraged IRR/ })).toBeTruthy();
     change('Sensitivity display', 'values');
-    tab('Exit');
+    tab('Exit Analysis');
     change('Probe exit year', '2.5');
     fireEvent.click(screen.getByRole('button', { name: 'Update exit comparison' }));
     expect(screen.getByRole('alert').textContent).toMatch(/whole number/);
@@ -630,7 +638,9 @@ describe('ROI projection interactions', () => {
         make().input.income,
       );
     }
-    expect(screen.getByRole('tab', { name: 'Exit' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Exit Analysis' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Reload saved analysis' }));
     await screen.findByText(/New analysis/);
     expect(screen.getByRole('tab', { name: 'Charts' }).getAttribute('aria-selected')).toBe('true');
@@ -648,7 +658,7 @@ describe('ROI projection interactions', () => {
     });
     await open();
     tab('Charts');
-    tab('Exit');
+    tab('Exit Analysis');
     expect(
       screen.getByRole('heading', { name: 'Complete your assumptions to see charts' }),
     ).toBeTruthy();
@@ -672,7 +682,7 @@ describe('ROI projection interactions', () => {
     fireEvent.change(hold, { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
     tab('Charts');
-    tab('Exit');
+    tab('Exit Analysis');
     expect(screen.getByRole('table', { name: /Exit horizon comparison/ })).toBeTruthy();
   });
 
@@ -695,9 +705,8 @@ describe('ROI projection interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: /Property b/ }));
     await screen.findByRole('button', { name: 'Save draft' });
     tab('Charts');
-    expect(screen.getByRole('tab', { name: 'Cash Flow' }).getAttribute('aria-selected')).toBe(
-      'true',
-    );
+    expect(screen.getByRole('tab', { name: 'Equity' }).getAttribute('aria-selected')).toBe('true');
+    tab('Cash Flow');
     const table = screen.getByRole('table', { name: /Projection amounts/ });
     expect(within(table).getAllByText('$10,800.00')).toHaveLength(3);
   });

@@ -76,7 +76,7 @@ export default async function PropertyOverviewPage({
         <Link className="btn btn-secondary" href={`/properties/${property.id}/edit`}>
           Edit property & ROI details
         </Link>
-        <Link className="btn btn-secondary" href={`/roi-analysis?propertyId=${property.id}`}>
+        <Link className="btn btn-secondary" href={`/roi-analysis?property=${property.id}`}>
           Open ROI Analysis
         </Link>
       </section>

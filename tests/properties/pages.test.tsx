@@ -11,9 +11,6 @@ const mocks = vi.hoisted(() => ({
     throw Error(url);
   }),
 }));
-vi.mock('@/components/shell/PageHeader', () => ({
-  PageHeader: ({ title }: { title: string }) => <h1>{title}</h1>,
-}));
 vi.mock('@/lib/auth/access', () => ({
   requireManagerRole: async () => ({ organizationId: 'own' }),
 }));

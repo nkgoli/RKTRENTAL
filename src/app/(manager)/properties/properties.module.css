@@ -333,6 +333,10 @@
   width: 100%;
   min-width: 0;
 }
+.formTitle {
+  font-size: 26px;
+  margin-bottom: 8px;
+}
 .backLink {
   display: inline-flex;
   align-items: center;

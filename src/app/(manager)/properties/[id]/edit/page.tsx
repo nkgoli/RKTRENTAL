@@ -16,6 +16,7 @@ export default async function EditPropertyPage({ params }: { params: Promise<{ i
     <>
       <PageHeader title="Edit property" eyebrow={`Portfolio / ${property.name}`} actions={[]} />
       <div className={styles.formPage}>
+        <h1 className={styles.formTitle}>Edit property</h1>
         <Link href={cancelHref} className={styles.backLink}>
           ← Back to {property.name}
         </Link>

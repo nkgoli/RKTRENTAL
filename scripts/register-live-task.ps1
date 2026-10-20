@@ -29,12 +29,15 @@ param(
     [int]$Port = 3100,
     [int]$DbPort = 5433,
     [string]$TaskName = '',
+    # Checkout to run; defaults to the one holding this script.
+    [string]$Root = '',
     [switch]$Restart,
     [switch]$Remove
 )
 
 $ErrorActionPreference = 'Stop'
-$Root = Split-Path -Parent $PSScriptRoot
+if (-not $Root) { $Root = Split-Path -Parent $PSScriptRoot }
+$Root = (Resolve-Path $Root).Path
 if (-not $TaskName) { $TaskName = "RocketRentalLive$Port" }
 function Info($m) { Write-Host "[live] $m" -ForegroundColor Cyan }
 

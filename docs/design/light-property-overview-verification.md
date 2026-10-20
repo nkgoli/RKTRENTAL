@@ -150,3 +150,30 @@ reported ready/passing; its fixture/schema/selectors need correction, listed
 in README. Only scoped new checks were run, with prior implementation checks
 reused. No desktop acquisition, cancelled-approval bypass, financial/provider
 action, push, deployment, Preview publication or independent integration.
+
+## Latest manager-directed readiness reconciliation — 00:51UTC
+
+The manager's observed missing34628/50524/51600 PIDs correspond to the instance
+explicitly stopped at00:31:01. This checkout's recorded instance had already
+been restarted at00:32:55. Fresh guarded Status at00:51:16.7447702UTC confirmed
+baseline43608/candidate61628/PG48680 still running with matching recorded
+start-time/executable identities, source hashes and both BUILD_IDs; both
+/sign-in HTTP probes returned200. postmaster.pid exists. No duplicate Start,
+reseed or rebuild was performed over this healthy instance.
+
+Per the latest manager limit, exactly one fresh configured navigation followed
+immediately by a short snapshot was attempted. Navigation returned HTTP503
+ACP_RUNTIME_MCP_OUTCOME_UNCERTAIN (sent/result lost, non-retryable); the snapshot
+succeeded and showed about:blank. No further MCP attempt or uncertain mutation
+retry followed. This is transport/session evidence, not an application defect.
+Earlier saved capture/flow outcomes remain separately attributed above.
+
+The fresh native question remains pending; no new human question/desktop
+acquisition was made. Pending native file scope is **only** the existing
+.runtime/synth/synth-a.png and synth-b.png (both68bytes freshly confirmed).
+C/text files are excluded from that native authorization. True vacant route:
+http://localhost:3242/properties/synth-ov-prop-mvfy0u3z?unit=synth-ov-unit-mvfy0u3z.
+Latest DB-confirmed fixture remains Georgetown/S1bedrooms3/S2 and zero documents,
+reflecting completed earlier isolated checks; no uncertain mutation was retried
+or fixture reverted. Preserve it and await manager start notice/exclusive access.
+Runtime remains ready/running; final native results/release are still pending.

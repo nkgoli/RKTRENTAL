@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { emptyDraft } from '@/lib/lease-create/types';
 import { withResolvedEnd } from '@/lib/lease-create/validation';
 import { STANDARD_FEES, STANDARD_ITEMS } from '@/lib/lease-create/templates';
@@ -54,6 +54,57 @@ describe('light Term and Rent steps', () => {
     expect(screen.getByLabelText(/Security deposit/)).toBeTruthy();
     expect(screen.getAllByRole('option')).toHaveLength(28);
     expect(screen.getByText('Scheduled charges preview')).toBeTruthy();
+  });
+
+  it('links the custom end-date error to its control and shows the preview disclosure', () => {
+    const errors = { endDate: 'End date must be on or after start date.' };
+    const { unmount } = render(<TermStep draft={draft} update={vi.fn()} errors={errors} />);
+    const custom = document.getElementById('custom-end-date') as HTMLInputElement;
+    expect(custom).toBeTruthy();
+    expect(custom.getAttribute('aria-invalid')).toBe('true');
+    const describedBy = custom.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy as string)?.textContent).toContain(
+      'End date must be on or after start date.',
+    );
+    unmount();
+    render(<RentStep draft={draft} update={vi.fn()} errors={{}} />);
+    expect(
+      screen.getByText('Preview only. Charges are created when the lease is sent or activated.'),
+    ).toBeTruthy();
+  });
+
+  it('toggles optional fees and associates enabled amount errors with labelled fields', () => {
+    const update = vi.fn();
+    const enabled = {
+      ...draft,
+      moveInFeeEnabled: true,
+      moveInFee: '',
+      petDepositEnabled: true,
+      petDeposit: '0',
+      lateFeeEnabled: true,
+      graceDays: 40,
+    };
+    const errors = {
+      moveInFee: 'Enter a move-in fee greater than zero.',
+      petDeposit: 'Enter a pet deposit greater than zero.',
+      graceDays: 'Enter 0 to 31 days.',
+    };
+    render(<RentStep draft={enabled} update={update} errors={errors} />);
+    for (const [label, message] of [
+      ['Move-in fee amount', errors.moveInFee],
+      ['Pet deposit amount', errors.petDeposit],
+      ['Late fee grace period (days)', errors.graceDays],
+    ] as const) {
+      const field = screen.getByLabelText((text) => text.startsWith(label));
+      expect(field.getAttribute('aria-invalid')).toBe('true');
+      const id = field.getAttribute('aria-describedby');
+      expect(id).toBeTruthy();
+      expect(document.getElementById(id as string)?.textContent).toContain(message);
+    }
+    expect(screen.getByLabelText('Late fee amount')).toBeTruthy();
+    fireEvent.click(screen.getByRole('checkbox', { name: /Move-in fee/ }));
+    expect(update).toHaveBeenCalledWith({ moveInFeeEnabled: false });
   });
 
   it('exposes the accessible step list, draft status and next destination', () => {

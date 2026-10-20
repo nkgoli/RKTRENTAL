@@ -722,6 +722,30 @@ button.step:hover .stepLabel {
 .fees .check:last-child {
   grid-column: 1 / -1;
 }
+.feeCard {
+  display: block;
+  cursor: default;
+}
+.feeToggle {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  min-height: 44px;
+  cursor: pointer;
+}
+.feeToggle input[type='checkbox'] {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--design-primary);
+}
+.feeFields {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding-left: 30px;
+}
 
 /* Charges preview */
 .ledger {

@@ -9,6 +9,7 @@ import {
   propertyRoiPatch,
   type Values,
 } from '@/components/analysis/fields';
+import type { RoiDemoProvenance } from '@/lib/properties/roi-inputs';
 import { FieldError } from './FieldError';
 import styles from '../properties.module.css';
 
@@ -16,13 +17,19 @@ export function PropertyRoiFields({
   values,
   onChange,
   original,
+  demo,
   errors = {},
 }: {
   values: Values;
   onChange: (values: Values) => void;
   original?: Values;
+  /** Stored provenance of fictional demo values; unchanged ones are labeled. */
+  demo?: RoiDemoProvenance;
   errors?: Record<string, string>;
 }) {
+  const isDemo = (path: string) =>
+    !!demo?.paths.includes(path) && !!original?.[path] && values[path] === original[path];
+  const demoCount = demo?.paths.filter(isDemo).length ?? 0;
   const id = useId();
   const ref = useRef<HTMLDivElement>(null);
   const found = friendlyIssues(
@@ -66,6 +73,13 @@ export function PropertyRoiFields({
           <p className="muted">
             Clear a saved field to mark it unknown. Unchanged fields keep their latest saved values.
             Existing saved analyses keep their own assumptions.
+          </p>
+        )}
+        {demoCount > 0 && (
+          <p className="muted" data-demo-assumptions={demoCount}>
+            Sample data: {demoCount} value{demoCount === 1 ? ' is a' : 's are'} fictional demo
+            {demoCount === 1 ? ' assumption' : ' assumptions'} ({demo!.label}), not recorded
+            actuals. Replace a value with your own to use it.
           </p>
         )}
         {!!found.length && (
@@ -155,6 +169,9 @@ export function PropertyRoiFields({
                       />
                     )}
                     <FieldError id={`${fieldId}-error`} message={error?.message} />
+                    {isDemo(field.path) && (
+                      <span className="muted">Fictional demo value - not a recorded actual.</span>
+                    )}
                     {original?.[field.path] && !values[field.path] && (
                       <span className="muted">Will be cleared on save.</span>
                     )}

@@ -114,6 +114,27 @@ amount or down-payment percentage. The public facade and core pipeline share
 these sufficiency rules; `missingData`, calculation and READY saves use the same
 contract. Partial property data does not need to be a calculable deal.
 
+## Fictional demo provenance
+
+Demo loaders record the values they write in the additive `PropertyRoiProvenance` table
+(one row per property: `label`, e.g. `seed-roi-inputs-v1`, and `values` keyed by financial
+input path). `Property.roiInputs` itself is unchanged, so builds that predate the table keep
+reading it. Customer `roiInputs` submissions cannot carry provenance (unknown keys are rejected).
+
+- A stored input is a demo assumption only while it still equals the recorded value and is not
+  cleared. Canonical price/debt are never demo values.
+- A property create/update or ROI patch that supplies or clears a path removes that path from
+  the row in the same transaction, so a customer re-entering the same number owns it.
+- `getProperty(id).roiInputs.demo` is `{ label, paths }` for the still-demo paths, or absent.
+- `loadDraft` evidence for those paths carries `demo: <label>` and a "Fictional demo
+  assumption" note; all other evidence is unchanged. `demo` is an optional field of the
+  evidence contract, so saved analyses keep it for values the manager did not change. Evidence
+  added for a manager edit has no `demo`, and the latest evidence for a path decides its label.
+- UI: ROI Analysis and the property Edit page show a "Sample data" notice with the count, and
+  "Fictional demo value - not a recorded actual" beside each such field. Editing a field
+  removes its label straight away. Consumers such as the actual/projected views should read
+  `evidence[].demo` (analysis) or `roiInputs.demo` (property), not the note text.
+
 ## Verification
 
 Run `node --import ./prisma/os-userinfo.mjs tests/analysis/property-inputs-runtime.mjs`.

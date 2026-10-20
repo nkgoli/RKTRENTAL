@@ -88,6 +88,11 @@ export const EvidenceSchema = z
     sourceId: text.optional(),
     observedAt: iso,
     note: z.string().min(1).max(2000),
+    /** Demo dataset label when the value is a fictional demo assumption, not recorded data. */
+    demo: z
+      .string()
+      .regex(/^[a-z0-9][a-z0-9-]{0,63}$/)
+      .optional(),
   })
   .strict();
 const ScenarioSchema = z

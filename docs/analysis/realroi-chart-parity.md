@@ -1027,7 +1027,9 @@ With the sample inputs the panels reproduce the reference figures:
 
 `rr-charts-*` use the matched sample inputs at 1440. `rr-live-maple-*` use the
 saved live dataset. `ref-live-charts-{expenses,amortization,exit,sensitivity}-{1440,390}`
-are fresh reference captures from the same session.
+are fresh reference captures from the same session. To stay under the project's
+64 MiB repository-tree limit, this task's captures are stored as 256-colour palette
+PNGs (5.1 MB re-encoded to 1.8 MB), so gradients show slight banding.
 
 | Chart                                                                         | Reference                                                                                                                                                                                                        | RocketRental                                                                                                                                                                                                         |
 | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

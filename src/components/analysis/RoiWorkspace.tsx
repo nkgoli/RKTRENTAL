@@ -47,7 +47,7 @@ import {
   type FieldSpec,
   type Values,
 } from './fields';
-import { ComboChart, chartColors } from './RoiChart';
+import { NetCashFlowCard, OutcomeCard, ProjectionMilestones } from './RoiSummaryCharts';
 import styles from './analysis.module.css';
 
 type Result = ReturnType<typeof calculatePayload>['base'];
@@ -848,6 +848,7 @@ export function RoiWorkspace({
                       stale={stale}
                       onOpen={() => changeView('actual')}
                     />
+                    {result && <OutcomeCard key={`outcome-${selected}`} result={result} />}
                     <section className={styles.card}>
                       <h2>From income to cash flow</h2>
                       <dl className={styles.statement}>
@@ -869,34 +870,19 @@ export function RoiWorkspace({
                         ))}
                       </dl>
                     </section>
+                    {result ? (
+                      <>
+                        <NetCashFlowCard key={`cash-${selected}`} result={result} />
+                        <ProjectionMilestones key={`table-${selected}`} result={result} />
+                      </>
+                    ) : null}
                     <section className={styles.card}>
-                      <h2>Cash flow over time</h2>
+                      <h2>Exact annual cash flow</h2>
                       <p>Annual operating cash flow, before sale proceeds and tax.</p>
                       {result ? (
                         <>
-                          <ComboChart
-                            label={`Annual cash flow over ${result.annualCashflows.length} years`}
-                            height={200}
-                            format={money}
-                            years={result.annualCashflows.map((y) => y.year)}
-                            series={[
-                              {
-                                label: 'Annual cash flow',
-                                kind: 'bar',
-                                values: result.annualCashflows.map((y) => y.cashFlow),
-                                color: chartColors.teal,
-                                negativeColor: chartColors.red,
-                              },
-                            ]}
-                            details={(i) => [
-                              [
-                                'Cumulative cash flow',
-                                money(result.annualCashflows[i].cumulativeCashFlow),
-                              ],
-                            ]}
-                          />
                           <details>
-                            <summary>Exact annual cash flow</summary>
+                            <summary>Show every year</summary>
                             <div
                               className={styles.table}
                               tabIndex={0}

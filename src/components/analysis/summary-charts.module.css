@@ -1,0 +1,276 @@
+/* Summary cards modelled on RealROI's Outcome and Cash Flow & Equity Projections. */
+.outcome {
+  --chart-mono:
+    'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, Menlo, monospace;
+}
+.big {
+  margin: 0 !important;
+  font-size: 30px !important;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #0284c7 !important;
+}
+.big[data-negative] {
+  color: #b91c1c !important;
+}
+.outcomeRow {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.qualityBox {
+  flex: 1 1 160px;
+  display: grid;
+  gap: 6px;
+}
+.quality {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+}
+.qualityTitle {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+}
+.quality > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.quality dt {
+  color: #334155;
+}
+.quality dd {
+  margin: 0;
+  font-family: var(--chart-mono);
+  font-weight: 700;
+  color: #0f172a;
+}
+.quality dd[data-tone='bad'] {
+  color: #dc2626;
+}
+.quality dd[data-tone='good'] {
+  color: #16a34a;
+}
+.parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  list-style: none;
+  margin: 0;
+  padding: 12px 0;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+  color: #475569;
+}
+.parts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.parts i {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+.parts b {
+  font-family: var(--chart-mono);
+  font-weight: 600;
+  color: #0f172a;
+}
+.parts b[data-negative] {
+  color: #b91c1c;
+}
+.note {
+  margin: 0 !important;
+  font-size: 11px !important;
+  color: #64748b;
+}
+.centered {
+  display: flex;
+  justify-content: center;
+}
+.tableControls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: #64748b;
+}
+.key i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #14b8a6;
+}
+.key i[data-tone='loss'] {
+  margin-left: 8px;
+  background: #ef4444;
+}
+.scroll {
+  overflow-x: auto;
+  margin: 0 -16px;
+}
+.table {
+  --chart-mono:
+    'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, Menlo, monospace;
+  width: 100%;
+  min-width: 600px;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.table thead th {
+  padding: 10px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: right;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+}
+.table thead th:first-child {
+  padding-left: 16px;
+  text-align: left;
+  font-size: 10px;
+  color: #64748b;
+}
+.table thead small {
+  display: block;
+  font-family: var(--chart-mono);
+  font-size: 10px;
+  color: #94a3b8;
+}
+.table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+}
+.table tbody th[scope='row'] {
+  padding: 8px 8px 8px 16px;
+  white-space: nowrap;
+  text-align: left;
+  font-weight: 400;
+  color: #334155;
+}
+.table td {
+  padding: 8px;
+  text-align: right;
+  font-family: var(--chart-mono);
+  color: #1e293b;
+  white-space: nowrap;
+}
+.table td > span {
+  margin-right: 8px;
+}
+.table td[data-tone='gain'] {
+  color: #15803d;
+}
+.table td[data-tone='loss'] {
+  color: #dc2626;
+}
+.table tr[data-strong] {
+  background: #f0fdfa;
+}
+.table tr[data-strong] th,
+.table tr[data-strong] td {
+  font-weight: 700;
+  color: #0f766e;
+}
+.table tr[data-strong] td[data-tone='loss'] {
+  color: #dc2626;
+}
+.section {
+  background: #f8fafc;
+}
+.section th {
+  padding: 0 !important;
+}
+.section button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  text-align: left;
+}
+.section button:hover {
+  background: #f1f5f9;
+}
+.icon {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: white;
+}
+.chevron {
+  display: inline-block;
+  flex: none;
+  margin-left: auto;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #94a3b8;
+  border-bottom: 2px solid #94a3b8;
+  transform: rotate(-45deg);
+}
+.section button[aria-expanded='true'] .chevron {
+  transform: rotate(45deg);
+}
+.foot {
+  margin: 0 !important;
+  font-size: 10px !important;
+  color: #64748b;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .scroll {
+    margin: 0 -12px;
+  }
+}
+/* In a narrow column (the Summary beside the assumptions form) the five
+   milestone columns compact instead of scrolling: shorter bars, tighter cells. */
+.scroll {
+  container-type: inline-size;
+}
+@container (max-width: 760px) {
+  .table {
+    min-width: 0;
+    font-size: 12px;
+  }
+  .table thead th,
+  .table td {
+    padding: 8px 4px;
+  }
+  .table tbody th[scope='row'] {
+    padding-left: 12px;
+    white-space: normal;
+    min-width: 128px;
+  }
+  .table td > span {
+    width: 24px;
+    margin-right: 4px;
+  }
+}

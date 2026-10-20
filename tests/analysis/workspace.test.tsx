@@ -100,7 +100,7 @@ describe('property autofill and calculation sufficiency', () => {
     fireEvent.change(field('input.financing.loanAmount'), { target: { value: '50000' } });
     expect(summary().queryByText('$10,800')).toBeNull();
     expect(screen.getByRole('link', { name: /Interest rate.*financed purchase/ })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Pay in cash · No loan' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to cash purchase (set loan to $0)' }));
     expect(summary().getByText('$10,800')).toBeTruthy();
     expect(field('input.financing.downPaymentPercent').value).toBe('');
     expect(field('input.financing.loanTermYears').value).toBe('');
@@ -118,7 +118,7 @@ describe('property autofill and calculation sufficiency', () => {
       data: { payload: p, missing: [], facts },
     });
     await open();
-    fireEvent.click(screen.getByRole('button', { name: 'Pay in cash · No loan' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to cash purchase (set loan to $0)' }));
     expect(
       within(screen.getByRole('region', { name: 'Year 1 at a glance' })).getByText('$10,800'),
     ).toBeTruthy();

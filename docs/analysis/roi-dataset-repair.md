@@ -60,3 +60,33 @@ a demo label; the other 27 assumptions retained theirs.
 `start.ps1` now separates its default logs by app/database port pair and accepts
 `-LogDirectory` for checks with separate initial/repeat logs. Test data stays in
 its isolated directory; neither live database is used for initial seed tests.
+
+## Live verification
+
+The production build was rebuilt and served at the URL above, then the app and
+database were stopped and restarted using the pinned launcher without supplying
+ports. The repeat run reused the same production build, applied no migrations
+and skipped seeding. Both live database directories remain intact. All row
+hashes in all 32 application tables matched each database's own baseline after
+the repair; the isolated helpers were stopped while the live app remained up.
+
+Browser checks at 1440px and 390px confirmed populated Maple assumptions, the
+demo notice and the same-period actuals above. There was no horizontal page
+overflow. Switching from Maple to Harbor and back loaded each property's own
+loan and inputs. A full reload and the real restart retained Maple's inputs and
+actuals. The chart and exact table agree: year 1 cash flow is -$2,555.40, year 2
+is -$175.80 and year 2 cumulative cash flow is -$2,731.20. Year 1 debt service
+is $150,179.40.
+
+The cash action was tried on an unsaved Maple draft only: loan became $0,
+modeled debt service $0 and annual cash flow $147,624. The draft was discarded
+by a full reload, restoring the stored $1,980,000 loan. No save was performed
+and no database rows changed. Maple has no saved analysis revision in this
+dataset; “Reload saved analysis” reports the new-analysis state when none exists.
+The positive loan is a saved property detail.
+
+Focused ROI seed, actual-comparison and workspace tests, TypeScript, component
+lint, PowerShell parsing and the production build were checked. Browser console
+checks after the rebuild reported no errors. The record coverage gaps and the
+absence of actual loan payments described above are the remaining missing data;
+they are not filled with forecast assumptions.

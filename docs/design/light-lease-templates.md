@@ -63,7 +63,24 @@ Evidence under `.playwright-mcp/`:
 
 ## Runtime and native review handoff
 
-Hidden durable production runtime: `http://127.0.0.1:3147`; isolated PostgreSQL on port 5547, data under ignored `.data/lease-template-review`. Migrations and the ordinary seed ran only against this fixture. The runtime uses the seed's manager account. No shared database mutations were made. Runtime identity/PIDs, build ID and startup time are recorded in `.data/lease-template-review-runtime/runtime.json`; stdout/stderr remain beside that receipt. Both processes use `Start-Process -WindowStyle Hidden`, independent of the terminal session. HTTP `/sign-in` returned 200 and the runner signed in successfully.
+### Runtime restoration, 2026-10-20
+
+The manager reported `ERR_CONNECTION_REFUSED` from existing Edge at 04:44 UTC. At reconciliation, the previous receipt's app/fixture launcher PIDs were absent, both dedicated ports 3147 and 5547 had no listeners, and the retained fixture `PG_VERSION` and production build were present. The reason the earlier processes exited was not established. No unrelated listener was stopped.
+
+Ran the existing `review-runtime.ps1` start operation with hidden processes. It reused the existing fixture without migrations or seeding, and reused build `1MBXb7xWZbEv8AKonRns8` without rebuilding. HEAD was `73d485f86e90761dbc4c10a53610fc06f4814e5c`; application source/config/schema/package files still matched build-source `80fcd26976020f828ca2d6f424d05831fed60db2` exactly. Prior passed tests were not repeated.
+
+The refreshed receipt records startup at `2026-10-20T04:45:39.6769648Z`: app PID 57924 owns the IPv6-any listener on port 3147; fixture launcher PID 3232 owns PostgreSQL child PID 56236, which listens on IPv4/IPv6 loopback port 5547 and uses this checkout's `.data/lease-template-review`. Process command lines and creation times were verified. HTTP checks through both `localhost` and `127.0.0.1` returned 200; unauthenticated library requests follow the sign-in flow. A read-only database query confirmed the comparison template remains version 1.
+
+Manager review URLs, sent immediately after readiness verification:
+
+- Library: `http://localhost:3147/leases/templates`
+- Long-wording comparison editor: `http://localhost:3147/leases/templates/cmvfrdf7d0001b9c0mvnisy73`
+- Create: `http://localhost:3147/leases/templates/new`
+- Sign-in: `http://localhost:3147/sign-in`
+
+These are runtime readiness observations, not native Edge observations. Native acceptance remains pending the manager's results. No desktop was acquired and no new release confirmation is claimed. Use the live receipt for later process ownership rather than historical PIDs in this document.
+
+Hidden production runtime: `http://127.0.0.1:3147`; isolated PostgreSQL on port 5547, data under ignored `.data/lease-template-review`. Migrations and the ordinary seed originally ran only against this fixture. The runtime uses the seed's manager account. No shared database mutations were made. Runtime identity/PIDs, build ID and startup time are recorded in `.data/lease-template-review-runtime/runtime.json`; stdout/stderr remain beside that receipt. Both processes use `Start-Process -WindowStyle Hidden`, independent of the terminal session. HTTP `/sign-in` returned 200 and the runner previously signed in successfully.
 
 Restart from the assigned checkout in PowerShell:
 

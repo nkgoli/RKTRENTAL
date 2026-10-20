@@ -1,15 +1,17 @@
 # Light lease builder — review and signing
 
-The final review and mock-signing references are finished in **Designs/rocketrental-light-lease-review, revision 5**. They preserve the ten-step light wizard and distinguish active leases, signing-provider outcomes and stored signed documents.
+The final review and mock-signing references are finished in **Designs/rocketrental-light-lease-review, revision 7**. They preserve the ten-step light wizard and distinguish active leases, signing-provider outcomes and stored signed documents. Both final-review screens now clarify when previewed charges are created.
 
 This is a design and implementation handoff. No application implementation, database operation, real email, actual signing, deployment, merge or push was performed.
 
 ## Coordinates and scope
 
-- Task: **Design light lease review and signing screens**.
-- Retained source baseline inspected: `5632094d41d499697f71b0128dd63a9d3e492547`; verified as the assigned checkout HEAD before work and as an ancestor before submission.
+- Original task: **Design light lease review and signing screens**.
+- Correction task: **Clarify scheduled charges in desktop and phone lease review**.
+- Original source baseline inspected: `5632094d41d499697f71b0128dd63a9d3e492547`; verified as the assigned checkout HEAD before the original work and as an ancestor before its submission.
+- Correction baseline: `d7c3e2552324de617348ac1368226644f7da4a2e`. The original handoff commit `a2eb96419ff360e8a4f6986b155fe7fd3b74b79c` is contained in this checkout.
 - Only committed path: `docs/design/light-lease-builder-review-send.md`. The exact handoff commit is supplied by the completion report; screenshots are separate workspace evidence.
-- Final design screens: `review` (1280 px), `review-phone` (390 px), `signing` (1280 px), `signing-phone` (390 px), all at **revision 5**.
+- Final design screens: `review` (1280 px), `review-phone` (390 px), `signing` (1280 px), `signing-phone` (390 px), all available at **revision 7**. This correction wrote only `review` and `review-phone`; the signing screens remain unchanged from revision 5.
 - Continuity references read: `Designs/rocketrental-light-lease-documents` r5 (lessor), `Designs/rocketrental-light-lease-terms` r13 (clauses), `Designs/rocketrental-light-lease-builder` r14 (rent), and review/signing starters r1.
 - `Diagrams/rocketrental-mindmap` r4: `f-leasing-1` → final creation/charges; `f-leasing-2` → renewal context; `f-leasing-3` → e-signature; `f-docs-1` → stored signed lease. These nodes contain no file references; the source files below supply the behavior.
 
@@ -47,6 +49,8 @@ All supporting panels are under a separate, initially expanded **Supporting stat
 | Scheduled charges | [ChargesPreview](../../src/components/lease-builder/steps.tsx#L275) uses `previewScheduledCharges`; move-in rows/total, first monthly date, last month and monthly count |
 | Terms | Option labels; only included resolved template titles for CLAUSE/RULE/DISCLOSURE, or legacy label helpers when no template exists; uploaded attachment names |
 | Lessor and signature | Lessor name and optional address; Electronic · mock provider · primary tenant name |
+
+**Preview boundary:** Both final-review screens display **“Preview only. Charges are created when the lease is sent or activated.”** directly below the scheduled-charges heading and its “Created in the Payments ledger” label, before the first charge row. This is the approved disclosure from `Designs/rocketrental-light-lease-builder` revision 14, screen `rent`, using the review design's existing ledger-note style. Viewing the preview or saving a draft does not create ledger charges; creation belongs to the send/activation boundary described below. The disclosure does not change the setup amounts, recurring preview or conditional-fee rules.
 
 Empty optional lists show **None**; unselected tenants show **Not selected**; missing money, dates or lessor name use **—**. Zero is not treated as a missing amount. The long filename fixture is plain text, not a download control. Attachment names are taken from uploaded file records, not an invented packet-generation capability.
 
@@ -134,23 +138,19 @@ These are design handoff requirements or source limitations, not completed appli
 
 ## Verification and capture references
 
-Observed: four `design_screenshot` renders at revision 5; all ten step labels and exactly one current step per screen; correct same-device review/signing link destinations; supported-state separation; readable long summary values; static pending/error/result treatments; no observed overlapping controls. Playwright opened the exact private design targets at 1280 × 900 and 390 × 844 and captured full pages and lower state panels. Private target URLs are deliberately not persisted here.
+At **revision 7**, inspected `design_screenshot` renders for `review` and `review-phone`, then opened their exact private design targets in Playwright at **1280 × 900** and **390 × 844**. Captured and visually inspected the complete scheduled-charges region at each width. The disclosure is readable below the header, before the first row: one line on desktop and two lines on phone. The existing charge amounts remain readable, including the $3,503.23 move-in total. Private target URLs are not persisted here.
+
+Compared the saved revision 7 markup against revision 5: removing the single inserted disclosure paragraph from each affected screen reproduces its original markup exactly. The stylesheet and tokens are unchanged. This preserves all ten steps, exactly one current step, all eight review supporting states, summaries, amounts, controls and same-device signing links. Browser snapshots also confirmed the disclosure, ten-step navigation and `signing` / `signing-phone` destinations. Neither signing screen was written by this correction.
 
 | Screen / inspected region | Exact workspace capture |
 | --- | --- |
-| Review desktop, full page | [.playwright-mcp/lease-review-r5-desktop-full.png](../../.playwright-mcp/lease-review-r5-desktop-full.png) |
-| Review desktop, all eight supporting states | [.playwright-mcp/lease-review-r5-desktop-states.png](../../.playwright-mcp/lease-review-r5-desktop-states.png) |
-| Review phone, full page | [.playwright-mcp/lease-review-r5-phone-full.png](../../.playwright-mcp/lease-review-r5-phone-full.png) |
-| Review phone, uncertain send | [.playwright-mcp/lease-review-r5-phone-uncertain.png](../../.playwright-mcp/lease-review-r5-phone-uncertain.png) |
-| Review phone, saved draft/renewal | [.playwright-mcp/lease-review-r5-phone-resume.png](../../.playwright-mcp/lease-review-r5-phone-resume.png) |
-| Signing desktop, full page | [.playwright-mcp/lease-signing-r5-desktop-full.png](../../.playwright-mcp/lease-signing-r5-desktop-full.png) |
-| Signing desktop, all six supporting states | [.playwright-mcp/lease-signing-r5-desktop-states.png](../../.playwright-mcp/lease-signing-r5-desktop-states.png) |
-| Signing phone, full page | [.playwright-mcp/lease-signing-r5-phone-full.png](../../.playwright-mcp/lease-signing-r5-phone-full.png) |
-| Signing phone, uncertain mock signing | [.playwright-mcp/lease-signing-r5-phone-uncertain.png](../../.playwright-mcp/lease-signing-r5-phone-uncertain.png) |
-| Signing phone, renewal result | [.playwright-mcp/lease-signing-r5-phone-renewal.png](../../.playwright-mcp/lease-signing-r5-phone-renewal.png) |
+| `review`, revision 7, scheduled charges at 1280 px | [.playwright-mcp/lease-review-r7-desktop-charges.png](../../.playwright-mcp/lease-review-r7-desktop-charges.png) |
+| `review-phone`, revision 7, scheduled charges at 390 px | [.playwright-mcp/lease-review-r7-phone-charges.png](../../.playwright-mcp/lease-review-r7-phone-charges.png) |
 
-The captures are attached workspace evidence, not committed application assets. The full phone design renderer image is height-limited; separate lower-state captures and full Playwright captures address that limit.
+The captures are attached workspace evidence, not committed application assets. These focused captures show the affected region without the phone design renderer's full-page height limit.
 
-Static link mapping was verified from saved design markup and browser snapshots. Click/evaluate automation encountered Playwright MCP session loss/timeouts, so no successful click-flow, automated overflow audit or keyboard interaction claim is made. Fresh navigation, semantic snapshots and screenshots succeeded. This does not establish live application acceptance.
+The original revision 5 handoff recorded inspection of all four screens and their supporting states, including long summaries, pending/error/result treatments, uncertain outcomes and renewal context. Those unchanged-state findings and historical captures remain in the original task submission; this correction's current captures are listed above.
 
-No application build, lint, unit suite, database integration test or live send/sign operation was run. Those are outside this design-only change and the Task explicitly excludes repeating other Tasks' successful tests. The documentation is checked with `git diff --check`, local source/capture link existence and a path-limited commit inspection.
+Navigation, semantic snapshots and screenshots succeeded. An optional script-based geometry audit was stopped after the design target's sandbox blocked script execution; no automated overflow, click-flow or keyboard interaction result is claimed. This does not establish live application acceptance.
+
+No application build, lint, unit suite, database integration test or live send/sign operation was rerun for this design-only correction. Completed application checks remain reusable under the Task contract. The documentation is checked with `git diff --check`, local source/capture link existence and a path-limited commit inspection.

@@ -1,8 +1,16 @@
 ﻿'use client';
 
 import { useActionState, useEffect, useId, useRef, useState } from 'react';
+import Link from 'next/link';
 import { Alert, Button, Field, FormRow, Input, Select } from '@/components/ui';
-import { createPropertyAction, setPropertyArchivedAction, type FormState } from '../actions';
+import {
+  createPropertyAction,
+  savePropertyPageAction,
+  setPropertyArchivedAction,
+  type FormState,
+} from '../actions';
+import { valuesFrom } from '@/components/analysis/fields';
+import type { PropertyRoiInputs } from '@/lib/properties/roi-inputs';
 import { FieldError } from './FieldError';
 import { PropertyRoiFields } from './PropertyRoiFields';
 import styles from '../properties.module.css';
@@ -10,17 +18,54 @@ import styles from '../properties.module.css';
 export type OwnerOption = { id: string; name: string };
 const empty: FormState = {};
 
-export function AddPropertyForm({
+export type EditableProperty = {
+  id: string;
+  name: string;
+  type: string;
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  yearBuilt: number | null;
+  ownerId: string | null;
+  unitCount: number;
+  roiInputs: PropertyRoiInputs;
+};
+
+export function PropertyForm({
   owners,
+  cancelHref,
+  initial,
   onCancel,
 }: {
   owners: OwnerOption[];
-  onCancel: () => void;
+  cancelHref: string;
+  initial?: EditableProperty;
+  onCancel?: () => void;
 }) {
-  const [state, action, pending] = useActionState(createPropertyAction, empty);
-  const [type, setType] = useState('MULTI_UNIT');
-  const [values, setValues] = useState<Record<string, string>>({ unitCount: '0' });
-  const [roiValues, setRoiValues] = useState<Record<string, string>>({});
+  const [state, action, pending] = useActionState(
+    initial ? savePropertyPageAction : createPropertyAction,
+    empty,
+  );
+  const [type, setType] = useState(initial?.type ?? 'MULTI_UNIT');
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    initial
+      ? Object.fromEntries(
+          [
+            'name',
+            'street',
+            'city',
+            'state',
+            'postalCode',
+            'yearBuilt',
+            'ownerId',
+            'unitCount',
+          ].map((key) => [key, String(initial[key as keyof EditableProperty] ?? '')]),
+        )
+      : { unitCount: '0' },
+  );
+  const [originalRoi] = useState(() => (initial ? valuesFrom(initial.roiInputs) : undefined));
+  const [roiValues, setRoiValues] = useState<Record<string, string>>(originalRoi ?? {});
   function inputProps(name: string) {
     return {
       name,
@@ -47,121 +92,159 @@ export function AddPropertyForm({
         noValidate
         aria-busy={pending}
       >
-        {state.message && !state.ok && <Alert tone="warning">{state.message}</Alert>}
-        <FormRow>
-          <Field label="Property name">
-            <Input
-              {...inputProps('name')}
-              placeholder="e.g. Oak Terrace"
-              required
-              aria-invalid={!!e.name}
-              aria-describedby={e.name ? `${formId}-name-error` : undefined}
-            />
-            <FieldError id={`${formId}-name-error`} message={e.name} />
-          </Field>
-          <Field label="Type">
-            <Select
-              name="type"
-              aria-invalid={!!e.type}
-              aria-describedby={e.type ? `${formId}-type-error` : undefined}
-              value={type}
-              onChange={(ev) => setType(ev.target.value)}
-            >
-              <option value="MULTI_UNIT">Multi-unit building</option>
-              <option value="SINGLE_UNIT">Single-unit home</option>
-            </Select>
-            <FieldError id={`${formId}-type-error`} message={e.type} />
-          </Field>
-        </FormRow>
-        <Field label="Street address">
-          <Input
-            {...inputProps('street')}
-            placeholder="214 Maple Ave"
-            required
-            aria-invalid={!!e.street}
-            aria-describedby={e.street ? `${formId}-street-error` : undefined}
+        {initial && <input type="hidden" name="propertyId" value={initial.id} />}
+        {initial && (
+          <input
+            type="hidden"
+            name="changedBasics"
+            value={JSON.stringify(
+              [
+                'name',
+                'street',
+                'city',
+                'state',
+                'postalCode',
+                'yearBuilt',
+                'ownerId',
+                'type',
+              ].filter(
+                (key) =>
+                  (key === 'type' ? type : values[key]) !==
+                  String(initial[key as keyof EditableProperty] ?? ''),
+              ),
+            )}
           />
-          <FieldError id={`${formId}-street-error`} message={e.street} />
-        </Field>
-        <FormRow columns={3}>
-          <Field label="City">
-            <Input
-              {...inputProps('city')}
-              placeholder="Austin"
-              required
-              aria-invalid={!!e.city}
-              aria-describedby={e.city ? `${formId}-city-error` : undefined}
-            />
-            <FieldError id={`${formId}-city-error`} message={e.city} />
-          </Field>
-          <Field label="State">
-            <Input
-              {...inputProps('state')}
-              placeholder="TX"
-              maxLength={2}
-              required
-              aria-invalid={!!e.state}
-              aria-describedby={e.state ? `${formId}-state-error` : undefined}
-            />
-            <FieldError id={`${formId}-state-error`} message={e.state} />
-          </Field>
-          <Field label="ZIP">
-            <Input
-              {...inputProps('postalCode')}
-              placeholder="78704"
-              required
-              aria-invalid={!!e.postalCode}
-              aria-describedby={e.postalCode ? `${formId}-postalCode-error` : undefined}
-            />
-            <FieldError id={`${formId}-postalCode-error`} message={e.postalCode} />
-          </Field>
-        </FormRow>
-        <FormRow columns={3}>
-          {type === 'MULTI_UNIT' ? (
-            <Field label="Number of units" hint="You can add or rename units later.">
+        )}
+        {state.message && !state.ok && <Alert tone="warning">{state.message}</Alert>}
+        <section className={styles.basicsSection} aria-labelledby={`${formId}-basics`}>
+          <h2 id={`${formId}-basics`}>Property details</h2>
+          <p className="muted">
+            Start with the name, address and property type. Financial details below are optional.
+          </p>
+          <FormRow>
+            <Field label="Property name">
               <Input
-                {...inputProps('unitCount')}
-                type="number"
-                min={0}
-
-                aria-invalid={!!e.unitCount}
-                aria-describedby={e.unitCount ? `${formId}-unitCount-error` : undefined}
+                {...inputProps('name')}
+                placeholder="e.g. Oak Terrace"
+                required
+                aria-invalid={!!e.name}
+                aria-describedby={e.name ? `${formId}-name-error` : undefined}
               />
-              <FieldError id={`${formId}-unitCount-error`} message={e.unitCount} />
+              <FieldError id={`${formId}-name-error`} message={e.name} />
             </Field>
-          ) : (
-            <Field label="Units" hint="A single-unit home has one unit.">
-              <Input value="1" disabled readOnly />
+            <Field label="Type">
+              <Select
+                name="type"
+                aria-invalid={!!e.type}
+                aria-describedby={e.type ? `${formId}-type-error` : undefined}
+                value={type}
+                onChange={(ev) => setType(ev.target.value)}
+              >
+                <option value="MULTI_UNIT">Multi-unit building</option>
+                <option value="SINGLE_UNIT">Single-unit home</option>
+              </Select>
+              <FieldError id={`${formId}-type-error`} message={e.type} />
             </Field>
-          )}
-          <Field label="Year built">
+          </FormRow>
+          <Field label="Street address">
             <Input
-              {...inputProps('yearBuilt')}
-              placeholder="2004"
-              inputMode="numeric"
-              aria-invalid={!!e.yearBuilt}
-              aria-describedby={e.yearBuilt ? `${formId}-yearBuilt-error` : undefined}
+              {...inputProps('street')}
+              placeholder="214 Maple Ave"
+              required
+              aria-invalid={!!e.street}
+              aria-describedby={e.street ? `${formId}-street-error` : undefined}
             />
-            <FieldError id={`${formId}-yearBuilt-error`} message={e.yearBuilt} />
+            <FieldError id={`${formId}-street-error`} message={e.street} />
           </Field>
-          <Field label="Owner">
-            <Select
-              {...inputProps('ownerId')}
-              aria-invalid={!!e.ownerId}
-              aria-describedby={e.ownerId ? `${formId}-ownerId-error` : undefined}
-              style={{ width: '100%' }}
-            >
-              <option value="">No owner</option>
-              {owners.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </Select>
-            <FieldError id={`${formId}-ownerId-error`} message={e.ownerId} />
-          </Field>
-        </FormRow>
-        <PropertyRoiFields values={roiValues} onChange={setRoiValues} errors={state.errors} />
+          <FormRow columns={3}>
+            <Field label="City">
+              <Input
+                {...inputProps('city')}
+                placeholder="Austin"
+                required
+                aria-invalid={!!e.city}
+                aria-describedby={e.city ? `${formId}-city-error` : undefined}
+              />
+              <FieldError id={`${formId}-city-error`} message={e.city} />
+            </Field>
+            <Field label="State">
+              <Input
+                {...inputProps('state')}
+                placeholder="TX"
+                maxLength={2}
+                required
+                aria-invalid={!!e.state}
+                aria-describedby={e.state ? `${formId}-state-error` : undefined}
+              />
+              <FieldError id={`${formId}-state-error`} message={e.state} />
+            </Field>
+            <Field label="ZIP">
+              <Input
+                {...inputProps('postalCode')}
+                placeholder="78704"
+                required
+                aria-invalid={!!e.postalCode}
+                aria-describedby={e.postalCode ? `${formId}-postalCode-error` : undefined}
+              />
+              <FieldError id={`${formId}-postalCode-error`} message={e.postalCode} />
+            </Field>
+          </FormRow>
+          <FormRow columns={3}>
+            {initial ? (
+              <Field label="Units" hint="Add or rename units from the property overview.">
+                <Input value={initial.unitCount} readOnly />
+              </Field>
+            ) : type === 'MULTI_UNIT' ? (
+              <Field label="Number of units" hint="You can add or rename units later.">
+                <Input
+                  {...inputProps('unitCount')}
+                  type="number"
+                  min={0}
+
+                  aria-invalid={!!e.unitCount}
+                  aria-describedby={e.unitCount ? `${formId}-unitCount-error` : undefined}
+                />
+                <FieldError id={`${formId}-unitCount-error`} message={e.unitCount} />
+              </Field>
+            ) : (
+              <Field label="Units" hint="A single-unit home has one unit.">
+                <Input value="1" disabled readOnly />
+              </Field>
+            )}
+            <Field label="Year built">
+              <Input
+                {...inputProps('yearBuilt')}
+                placeholder="2004"
+                inputMode="numeric"
+                aria-invalid={!!e.yearBuilt}
+                aria-describedby={e.yearBuilt ? `${formId}-yearBuilt-error` : undefined}
+              />
+              <FieldError id={`${formId}-yearBuilt-error`} message={e.yearBuilt} />
+            </Field>
+            <Field label="Owner">
+              <Select
+                {...inputProps('ownerId')}
+                aria-invalid={!!e.ownerId}
+                aria-describedby={e.ownerId ? `${formId}-ownerId-error` : undefined}
+                style={{ width: '100%' }}
+              >
+                <option value="">No owner</option>
+                {owners.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </Select>
+              <FieldError id={`${formId}-ownerId-error`} message={e.ownerId} />
+            </Field>
+          </FormRow>
+        </section>
+        <PropertyRoiFields
+          values={roiValues}
+          original={originalRoi}
+          onChange={setRoiValues}
+          errors={state.errors}
+        />
         <p className="muted" style={{ fontSize: 13 }}>
           Add cover photos from the property page after saving.
         </p>
@@ -169,13 +252,30 @@ export function AddPropertyForm({
           <Button type="submit" variant="primary" disabled={pending}>
             {pending ? 'Saving…' : 'Save property'}
           </Button>
-          <Button variant="ghost" onClick={onCancel}>
-            Cancel
-          </Button>
+          {onCancel ? (
+            <Button type="button" variant="ghost" onClick={onCancel}>
+              Cancel
+            </Button>
+          ) : (
+            <Link className="btn btn-ghost" href={cancelHref}>
+              Cancel
+            </Link>
+          )}
         </div>
       </form>
     </>
   );
+}
+
+/** Kept for callers embedding the shared form; application entry points use the dedicated page. */
+export function AddPropertyForm({
+  owners,
+  onCancel,
+}: {
+  owners: OwnerOption[];
+  onCancel: () => void;
+}) {
+  return <PropertyForm owners={owners} cancelHref="/properties" onCancel={onCancel} />;
 }
 
 export function ArchiveButton({ propertyId, archived }: { propertyId: string; archived: boolean }) {

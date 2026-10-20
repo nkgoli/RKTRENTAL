@@ -1,7 +1,7 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import type { AuthSession } from '../auth/session';
 import { z } from 'zod';
-import { parseRoiInputs } from '../properties/roi-inputs';
+import { clearRoiPath, parseRoiInputs } from '../properties/roi-inputs';
 import {
   ENGINE_ID,
   IdSchema,
@@ -237,6 +237,8 @@ export function analysisService(session: Manager, db: PrismaClient) {
         payload.evidence = evidence.filter(
           (e) => !(e.path === 'input.income.monthlyRent' && e.source === 'lease'),
         );
+      for (const path of stored.data.cleared ?? []) clearRoiPath(payload, path);
+      payload.evidence = payload.evidence.filter((e) => !stored.data!.cleared?.includes(e.path));
     }
     return {
       ok: true,

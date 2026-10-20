@@ -48,6 +48,16 @@ const DraftInputObjectSchema = DealInputSchema.omit({ taxes: true })
   })
   .partial()
   .strict();
+/** Allowlisted financial leaf paths; shared by property patches and explicit clears. */
+export const financialInputPaths = [
+  ...Object.keys(purchase.shape).map((key) => `input.purchase.${key}`),
+  ...(['financing', 'income', 'expenses', 'appreciationExit'] as const).flatMap((section) =>
+    Object.keys(DealInputSchema.shape[section].shape).map((key) => `input.${section}.${key}`),
+  ),
+  'options.startDate',
+  'options.discountRate',
+  'options.tax',
+];
 export const DraftInputSchema = DraftInputObjectSchema as z.ZodType<DraftInput>;
 const rate = z.number().finite().min(0).max(100);
 const tax = z

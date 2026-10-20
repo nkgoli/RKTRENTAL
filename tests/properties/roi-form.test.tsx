@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { AddPropertyForm } from '@/app/(manager)/properties/_components/PropertyForm';
-import { PropertyRoiEditor } from '@/app/(manager)/properties/_components/PropertyRoiEditor';
-import { createPropertyAction, updatePropertyRoiAction } from '@/app/(manager)/properties/actions';
+import { PropertyForm } from '@/app/(manager)/properties/_components/PropertyForm';
+import { createPropertyAction, savePropertyPageAction } from '@/app/(manager)/properties/actions';
 import { parsePropertyInput } from '@/lib/properties/validation';
 import { parseRoiInputs } from '@/lib/properties/roi-inputs';
 import { propertyRoiPatch, valuesFrom } from '@/components/analysis/fields';
@@ -11,7 +10,7 @@ import { payload } from '../analysis/fixture';
 
 vi.mock('@/app/(manager)/properties/actions', () => ({
   createPropertyAction: vi.fn(),
-  updatePropertyRoiAction: vi.fn(),
+  savePropertyPageAction: vi.fn(),
   setPropertyArchivedAction: vi.fn(),
 }));
 beforeEach(() => {
@@ -20,7 +19,7 @@ beforeEach(() => {
     const parsed = parsePropertyInput(data);
     return parsed.ok ? { ok: true } : { errors: parsed.errors };
   });
-  vi.mocked(updatePropertyRoiAction).mockImplementation(async (_state, data) => {
+  vi.mocked(savePropertyPageAction).mockImplementation(async (_state, data) => {
     const parsed = parseRoiInputs(data.get('roiInputs'));
     return parsed.success ? { ok: true } : { errors: parsed.errors };
   });
@@ -39,7 +38,7 @@ function basics() {
 it.each([false, true])(
   'creates with optional ROI inputs (partial: %s) and retains explicit zero',
   async (partial) => {
-    render(<AddPropertyForm owners={[]} onCancel={() => {}} />);
+    render(<PropertyForm owners={[]} cancelHref="/properties" />);
     basics();
     if (partial) {
       fill('Purchase price ($)', '250000');
@@ -67,7 +66,7 @@ it.each([false, true])(
   },
 );
 it('keeps invalid optional text and opens/focuses its labeled correction after submission', async () => {
-  render(<AddPropertyForm owners={[]} onCancel={() => {}} />);
+  render(<PropertyForm owners={[]} cancelHref="/properties" />);
   basics();
   fill('Interest rate (%)', 'not a rate');
   fireEvent.submit(screen.getByRole('button', { name: 'Save property' }).closest('form')!);
@@ -77,30 +76,58 @@ it('keeps invalid optional text and opens/focuses its labeled correction after s
   expect(field.closest('details')?.open).toBe(true);
   expect(screen.getByRole('link', { name: /Interest rate.*Enter a valid number/ })).toBeTruthy();
 });
-it('uses the cash choice only for the two explicitly described amounts', () => {
-  render(<AddPropertyForm owners={[]} onCancel={() => {}} />);
-  fireEvent.click(screen.getByText('Use all cash · $0 loan, 100% down'));
+it('uses the cash choice without inventing loan terms or a down payment assumption', () => {
+  render(<PropertyForm owners={[]} cancelHref="/properties" />);
+  fireEvent.click(screen.getByText('Pay in cash · No loan'));
   expect(
     (screen.getByLabelText('Loan amount ($, overrides down payment)') as HTMLInputElement).value,
   ).toBe('0');
-  expect((screen.getByLabelText('Down payment (%)') as HTMLInputElement).value).toBe('100');
+  expect((screen.getByLabelText('Down payment (%)') as HTMLInputElement).value).toBe('');
   expect((screen.getByLabelText('Interest rate (%)') as HTMLInputElement).value).toBe('');
 });
-it('populates later editing and sends only supplied edits, retaining unrelated saved values', async () => {
+it('prefills the combined edit form and distinguishes clear, zero and unchanged values', async () => {
   const initial = propertyRoiPatch(valuesFrom(payload()));
-  render(<PropertyRoiEditor propertyId="test-home" initial={initial} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Edit ROI details' }));
+  render(
+    <PropertyForm
+      owners={[]}
+      cancelHref="/properties/test-home"
+      initial={{
+        id: 'test-home',
+        name: 'Saved home',
+        type: 'SINGLE_UNIT',
+        street: '1 Test',
+        city: 'Austin',
+        state: 'TX',
+        postalCode: '78701',
+        yearBuilt: 2000,
+        ownerId: null,
+        unitCount: 1,
+        roiInputs: initial,
+      }}
+    />,
+  );
+  expect((screen.getByLabelText('Property name') as HTMLInputElement).value).toBe('Saved home');
   expect((screen.getByLabelText('Purchase price ($)') as HTMLInputElement).value).toBe('100000');
   expect((screen.getByLabelText('Other income ($ / month)') as HTMLInputElement).value).toBe('0');
   fill('Scheduled rent ($ / month)', '0');
-  fill('Property tax ($ / year)', ''); // Blank in a property patch keeps the saved value.
-  fireEvent.submit(screen.getByRole('button', { name: 'Save ROI details' }).closest('form')!);
-  await screen.findByText('ROI details saved.');
-  const data = vi.mocked(updatePropertyRoiAction).mock.calls[0][1];
+  fill('Property tax ($ / year)', '');
+  fill('Purchase price ($)', '');
+  fireEvent.submit(screen.getByRole('button', { name: 'Save property' }).closest('form')!);
+  await waitFor(() => expect(savePropertyPageAction).toHaveBeenCalledOnce());
+  const data = vi.mocked(savePropertyPageAction).mock.calls[0][1];
   expect(data.get('propertyId')).toBe('test-home');
+  expect(data.get('changedBasics')).toBe('[]');
   expect(JSON.parse(String(data.get('roiInputs')))).toEqual({
     version: 1,
     input: { income: { monthlyRent: 0 } },
     options: {},
+    cleared: ['input.purchase.purchasePrice', 'input.expenses.propertyTax'],
   });
+});
+it('provides Cancel navigation without submitting the form', () => {
+  render(<PropertyForm owners={[]} cancelHref="/properties?filter=multi" />);
+  basics();
+  const cancel = screen.getByRole('link', { name: 'Cancel' });
+  expect(cancel.getAttribute('href')).toBe('/properties?filter=multi');
+  expect(createPropertyAction).not.toHaveBeenCalled();
 });

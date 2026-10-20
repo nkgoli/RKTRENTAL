@@ -329,6 +329,41 @@
 .propertyForm [aria-invalid='true'] {
   border: 2px solid var(--design-danger);
 }
+.formPage {
+  width: 100%;
+  min-width: 0;
+}
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-bottom: 16px;
+}
+.basicsSection,
+.formPage .roiDetails {
+  background: var(--design-surface);
+  border: 1px solid var(--rr-border);
+  border-radius: 12px;
+  padding: 24px;
+}
+.basicsSection {
+  display: grid;
+  gap: 16px;
+}
+.basicsSection h2 {
+  font-size: 20px;
+}
+.basicsSection p {
+  font-size: 13px;
+}
+.formPage .formActions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--design-surface);
+  border-top: 1px solid var(--rr-border);
+  padding: 16px;
+}
 .formActions {
   display: flex;
   align-items: center;
@@ -416,6 +451,15 @@
   .formActions button {
     flex: 1 1 auto;
     min-height: 44px;
+  }
+  .formPage .basicsSection,
+  .formPage .roiDetails {
+    padding: 16px;
+  }
+  .formPage .formActions a {
+    min-height: 44px;
+    flex: 1 1 auto;
+    justify-content: center;
   }
 }
 @media (pointer: coarse) {

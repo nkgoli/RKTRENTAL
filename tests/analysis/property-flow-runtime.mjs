@@ -1,10 +1,12 @@
 // Isolated, synthetic Add Property -> ROI browser fixture. Never loads app .env files.
 import EmbeddedPostgres from '../../prisma/node_modules/embedded-postgres/dist/index.js';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 const directory = path.resolve('.data/optional-property-roi');
 const databaseDir = path.join(directory, 'postgres');
+const stopFile = path.join(directory, 'stop-request');
+if (existsSync(stopFile)) unlinkSync(stopFile);
 mkdirSync(directory, { recursive: true });
 const postgres = new EmbeddedPostgres({
   databaseDir,
@@ -40,6 +42,8 @@ const identity = {
   synthetic: true,
   startedAt: new Date().toISOString(),
   fixturePid: process.pid,
+  appMode: process.env.PROPERTY_FLOW_PRODUCTION === '1' ? 'production' : 'development',
+  stopFile,
 };
 let app;
 let stopping = false;
@@ -64,8 +68,11 @@ async function stop(exitCode = 0) {
   );
   process.exit(exitCode);
 }
-process.on('SIGINT', stop);
-process.on('SIGTERM', stop);
+process.on('SIGINT', () => void stop());
+process.on('SIGTERM', () => void stop());
+setInterval(() => {
+  if (existsSync(stopFile)) void stop();
+}, 500).unref();
 try {
   if (!existsSync(path.join(databaseDir, 'PG_VERSION'))) await postgres.initialise();
   await postgres.start();
@@ -80,11 +87,20 @@ try {
   const seeded = await db.organization.findUnique({ where: { id: 'seed-rocket-rental' } });
   await db.$disconnect();
   if (!seeded) run(['--import', 'tsx', 'prisma/seed.ts']);
-  app = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'dev', '-p', '3181'], {
-    env,
-    stdio: 'inherit',
-    windowsHide: true,
-  });
+  app = spawn(
+    process.execPath,
+    [
+      'node_modules/next/dist/bin/next',
+      identity.appMode === 'production' ? 'start' : 'dev',
+      '-p',
+      '3181',
+    ],
+    {
+      env,
+      stdio: 'inherit',
+      windowsHide: true,
+    },
+  );
   app.on('exit', (code) => void stop(code ?? 0));
   writeFileSync(
     'docs/analysis/property-flow-runtime.json',

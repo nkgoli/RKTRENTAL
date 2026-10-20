@@ -53,7 +53,7 @@ export function PropertyRoiFields({
         name="roiInputs"
         value={JSON.stringify(propertyRoiPatch(values, original))}
       />
-      <details>
+      <details open>
         <summary>
           ROI details <span className="muted">· Optional</span>
         </summary>
@@ -64,7 +64,8 @@ export function PropertyRoiFields({
         </p>
         {original && (
           <p className="muted">
-            Blank fields keep their saved value. Existing saved analyses keep their own assumptions.
+            Clear a saved field to mark it unknown. Unchanged fields keep their latest saved values.
+            Existing saved analyses keep their own assumptions.
           </p>
         )}
         {!!found.length && (
@@ -95,7 +96,7 @@ export function PropertyRoiFields({
               <>
                 <p className="muted">
                   Financing a purchase? Enter the loan amount or down payment and the loan terms
-                  below. For a cash purchase, choose the explicit amounts here.
+                  below. Paying in cash? Choose no loan; loan-only terms will not be needed.
                 </p>
                 <button
                   type="button"
@@ -104,23 +105,22 @@ export function PropertyRoiFields({
                     onChange({
                       ...values,
                       'input.financing.loanAmount': '0',
-                      'input.financing.downPaymentPercent': '100',
                     })
                   }
                 >
-                  Use all cash · $0 loan, 100% down
+                  Pay in cash · No loan
                 </button>
                 <p className="muted">
-                  A cash purchase has no debt payments. To calculate, still enter the loan fields
-                  requested by the model, including a rate, term, type and any fees. No values are
-                  assumed.
+                  A $0 loan means no debt payments or lender costs. Interest rate, loan term and
+                  loan type are not needed. Any saved loan details stay available if your plans
+                  change.
                 </p>
               </>
             )}
             {group.title === 'Expenses & reserves' && (
               <p className="muted">
                 Fixed annual maintenance, capital reserves and management replace their percentages,
-                including an explicit $0. The model also requires each percentage to be entered.
+                including an explicit $0. Enter either the fixed annual cost or its percentage.
               </p>
             )}
             <div className={styles.roiGrid}>
@@ -155,6 +155,9 @@ export function PropertyRoiFields({
                       />
                     )}
                     <FieldError id={`${fieldId}-error`} message={error?.message} />
+                    {original?.[field.path] && !values[field.path] && (
+                      <span className="muted">Will be cleared on save.</span>
+                    )}
                   </Field>
                 );
               })}

@@ -139,12 +139,16 @@ export function valuesFrom(payload: Pick<AnalysisPayload, 'input' | 'options'>):
   );
 }
 
-/** Property patches omit blanks and untouched values; zero is always an explicit value. */
+/** Untouched values are omitted; clearing a previously entered value is an explicit unknown. */
 export function propertyRoiPatch(values: Values, original?: Values): PropertyRoiInputs {
   const patch: PropertyRoiInputs = { version: 1, input: {}, options: {} };
   for (const f of groups.flatMap((g) => g.fields)) {
     const raw = values[f.path]?.trim();
-    if (!raw || (original && raw === original[f.path])) continue;
+    if (raw === (original?.[f.path] ?? '')) continue;
+    if (!raw) {
+      if (original?.[f.path]) (patch.cleared ??= []).push(f.path);
+      continue;
+    }
     const keys = f.path.split('.');
     let parent = patch as unknown as Record<string, unknown>;
     for (const key of keys.slice(0, -1)) {

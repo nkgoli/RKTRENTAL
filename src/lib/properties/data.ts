@@ -368,38 +368,47 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
     return { ok: true, id: created.id };
   }
 
-  async function updateProperty(id: string, input: PropertyInput): Promise<WriteResult> {
-    const existing = await client.property.findFirst({
-      where: { id, organizationId },
-      include: { units: { select: { id: true, status: true } } },
-    });
-    if (!existing) return { ok: false, errors: { _form: 'Property not found' } };
-
-    const liveUnits = existing.units.filter((u) => u.status !== 'ARCHIVED').length;
-    const typeErr = existing.type === input.type ? null : checkTypeChange(input.type, liveUnits);
-    if (typeErr) return { ok: false, errors: typeErr };
-    const ownerErr = await ownerError(input.ownerId);
+  async function updateProperty(
+    id: string,
+    input: PropertyInput,
+    changedBasics?: string[],
+  ): Promise<WriteResult> {
+    const ownerErr =
+      !changedBasics || changedBasics.includes('ownerId') ? await ownerError(input.ownerId) : null;
     if (ownerErr) return { ok: false, errors: ownerErr };
 
     const { unitCount: _unitCount, roiInputs, ...fields } = input;
     void _unitCount;
-    await client.$transaction(async (tx) => {
+    return client.$transaction(async (tx) => {
       // Serialize financial patches on this tenant-owned row to avoid lost sibling fields.
       await tx.$queryRaw`SELECT id FROM "Property" WHERE id = ${id} AND "organizationId" = ${organizationId} FOR UPDATE`;
-      const current = await tx.property.findFirst({ where: { id, organizationId } });
-      if (!current) throw new Error('Property not found');
+      const current = await tx.property.findFirst({
+        where: { id, organizationId },
+        include: { units: { select: { id: true, status: true } } },
+      });
+      if (!current) return { ok: false, errors: { _form: 'Property not found' } };
+      const basics = changedBasics
+        ? Object.fromEntries(Object.entries(fields).filter(([key]) => changedBasics.includes(key)))
+        : fields;
+      const nextType = basics.type ?? current.type;
+      const liveUnits = current.units.filter((u) => u.status !== 'ARCHIVED').length;
+      const typeErr =
+        current.type === nextType
+          ? null
+          : checkTypeChange(nextType as PropertyTypeValue, liveUnits);
+      if (typeErr) return { ok: false, errors: typeErr };
       await tx.property.updateMany({
         where: { id, organizationId },
-        data: { ...fields, ...roiStorage(current.roiInputs, roiInputs) },
+        data: { ...basics, ...roiStorage(current.roiInputs, roiInputs) },
       });
-      if (existing.type !== input.type) {
-        if (input.type === 'MULTI_UNIT') {
+      if (current.type !== nextType) {
+        if (nextType === 'MULTI_UNIT') {
           await tx.unit.updateMany({
             where: { propertyId: id, organizationId },
             data: { isImplicit: false },
           });
-        } else if (existing.units.length) {
-          const only = existing.units.find((u) => u.status !== 'ARCHIVED') ?? existing.units[0];
+        } else if (current.units.length) {
+          const only = current.units.find((u) => u.status !== 'ARCHIVED') ?? current.units[0];
           await tx.unit.updateMany({
             where: { id: only.id, organizationId },
             data: { isImplicit: true, number: IMPLICIT_UNIT_NUMBER },
@@ -415,8 +424,8 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
           });
         }
       }
+      return { ok: true, id };
     });
-    return { ok: true, id };
   }
 
   async function updateRoiInputs(id: string, patch: PropertyRoiInputs): Promise<WriteResult> {

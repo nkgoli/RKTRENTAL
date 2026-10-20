@@ -41,7 +41,42 @@ export async function updatePropertyAction(
   if (!result.ok) return failed(result.errors);
   revalidatePath('/properties');
   revalidatePath(`/properties/${propertyId}`);
+  revalidatePath('/roi-analysis');
   return { ok: true, message: 'Property saved.' };
+}
+
+/** Dedicated Edit Property form submits only changed basics and financial leaf patches. */
+export async function savePropertyPageAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await requireManagerRole();
+  const propertyId = String(formData.get('propertyId') ?? '');
+  const parsed = parsePropertyInput(formData);
+  if (!parsed.ok) return failed(parsed.errors);
+  const allowed = ['name', 'type', 'street', 'city', 'state', 'postalCode', 'yearBuilt', 'ownerId'];
+  let changes: string[];
+  try {
+    const raw: unknown = JSON.parse(String(formData.get('changedBasics')));
+    if (
+      !Array.isArray(raw) ||
+      !raw.every((key) => typeof key === 'string' && allowed.includes(key))
+    )
+      throw Error();
+    changes = raw;
+  } catch {
+    return failed({ _form: 'Reload this property and try saving again.' });
+  }
+  const result = await propertiesDb(session.organizationId).updateProperty(
+    propertyId,
+    parsed.data,
+    changes,
+  );
+  if (!result.ok) return failed(result.errors);
+  revalidatePath('/properties');
+  revalidatePath(`/properties/${propertyId}`, 'layout');
+  revalidatePath('/roi-analysis');
+  redirect(`/properties/${propertyId}`);
 }
 
 export async function updatePropertyRoiAction(

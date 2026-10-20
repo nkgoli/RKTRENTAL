@@ -1,0 +1,58 @@
+﻿{
+    "candidateCommit":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+    "dbPort":  55441,
+    "candidatePort":  3242,
+    "baselineBuild":  "GPkMC-fReltH7INFyPztO",
+    "baselinePort":  3241,
+    "candidateDirectory":  "candidate-1f72f27",
+    "candidateBuild":  "EheygKX6UxTxKO1h1ktwh",
+    "sourceFiles":  [
+                        {
+                            "sha256":  "42C080CAC408A25EA21621F8FBB7CF367D331D8B522C7476EBB2338D2DFD012E",
+                            "path":  "docs/design/light-property-overviews.md"
+                        },
+                        {
+                            "sha256":  "6C87594A8B916E81C2ACBBB5EEA11DBDDC6FBEE7B0D58536C636DAEF15E65596",
+                            "path":  "src/app/(manager)/properties/[id]/workspace.module.css"
+                        },
+                        {
+                            "sha256":  "1AC47BF1E6152123E9ED2C79032C8DE2D78BC7D781182B1BF7BEC40A1118091F",
+                            "path":  "src/components/units/DeleteUnitControl.tsx"
+                        },
+                        {
+                            "sha256":  "2E5683DD9702553943F75315FC39DCEAD692D6FE92E7A6294A22632BABC8B98D",
+                            "path":  "src/components/upload/FileUploader.module.css"
+                        },
+                        {
+                            "sha256":  "E52627B921C4EAB50FF9B198C014720024A3036111B5B8A373F6F97B13C49B8A",
+                            "path":  "src/components/workspace/LeaseTimeline.module.css"
+                        },
+                        {
+                            "sha256":  "0F58E3D9A8343174E36223CF29AFB326BCE0D92FD667B20312972915C83B0934",
+                            "path":  "src/components/workspace/Workspace.module.css"
+                        },
+                        {
+                            "sha256":  "A75793A5C8A16DC42DF6B56C8B9B591B120695BD4CB4AE7A1EEA55B3DD3FA1C5",
+                            "path":  "src/components/workspace/WorkspaceHeader.tsx"
+                        },
+                        {
+                            "sha256":  "02B4338AFB120B9F0880168E222D60ABBA8B4B96316F2BE8352D0379F3F9DEDD",
+                            "path":  "src/components/workspace/WorkspaceMedia.module.css"
+                        },
+                        {
+                            "sha256":  "677ED6E1EE76FE198075841A8A9A584EF147E4802D5B017D9B962EECB57D1EDA",
+                            "path":  "src/components/workspace/WorkspaceMedia.tsx"
+                        },
+                        {
+                            "sha256":  "D5935E3A3CBCF32C8DD747F041CC0F7443FD6CB0A0CB29932328E03E45B566E8",
+                            "path":  "src/components/workspace/WorkspaceOverview.module.css"
+                        },
+                        {
+                            "sha256":  "C72D0987B56AC7CC0362B5784AF37EBCD7267106D292DC2EFB595BAF46774339",
+                            "path":  "src/components/workspace/WorkspaceOverview.tsx"
+                        }
+                    ],
+    "candidateSourceCommit":  "HEAD 1f72f27 (contains 89fce3685016b878b3688a0e3995e733362a8141)",
+    "baselineCommit":  "4adfb9649c4fdf65c1ed07a0152a3038775c581c",
+    "baselineDirectory":  "baseline"
+}

@@ -1,0 +1,360 @@
+{
+    "browser":  "Configured Playwright MCP dedicated automation profile; not native Edge",
+    "captures":  [
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-1280-property.png",
+                         "sha256":  "1222ADA25C9BDBE782A615A9F1FA6BBB134D4C6E7E2D7085B1E0E26AE83CEBC1",
+                         "phase":  "after",
+                         "viewport":  {
+                                          "height":  1000,
+                                          "width":  1280
+                                      },
+                         "pixelWidth":  1265,
+                         "pixelHeight":  3604,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "PG55441 demo seed42; Maple Court",
+                         "observedUtc":  "2026-10-20T00:25:25.5625757Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-1280-synthetic-vacant.png",
+                         "sha256":  "1E3A2CCCD71CE2E893CF74160E0AE157E5EBCFD9710767D24D40CB3DC6E90D8A",
+                         "phase":  "after",
+                         "viewport":  {
+                                          "height":  1000,
+                                          "width":  1280
+                                      },
+                         "pixelWidth":  1265,
+                         "pixelHeight":  1522,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "PG55441 synthetic property synth-ov-prop-mvfy0u3z / S1 synth-ov-unit-mvfy0u3z; see fixture-observed.json and handoff",
+                         "observedUtc":  "2026-10-20T00:43:29.4915338Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-1280-unit-3a-occupied.png",
+                         "sha256":  "674403DE456900767449EB6B8577D9FC7485C240B06DB8CD0A550B9513577584",
+                         "phase":  "after",
+                         "viewport":  {
+                                          "height":  1000,
+                                          "width":  1280
+                                      },
+                         "pixelWidth":  1265,
+                         "pixelHeight":  1773,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "PG55441 demo seed42; Maple Court",
+                         "observedUtc":  "2026-10-20T00:25:26.6166845Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-1280-unit-occupied.png",
+                         "sha256":  "A795601D7B6652828A2B940A7D9411816068C5F902E392BCB73F8E266DB4EFCD",
+                         "phase":  "after",
+                         "viewport":  {
+                                          "height":  1000,
+                                          "width":  1280
+                                      },
+                         "pixelWidth":  1265,
+                         "pixelHeight":  1773,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "PG55441 demo seed42; Maple Court",
+                         "observedUtc":  "2026-10-20T00:25:26.1053950Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-390-property.png",
+                         "sha256":  "0F6BE01A6C396039EDF0E69525FAC1C748B14E8992B88E5D0DB9D49F395E8E01",
+                         "phase":  "after",
+                         "viewport":  {
+                                          "height":  844,
+                                          "width":  390
+                                      },
+                         "pixelWidth":  375,
+                         "pixelHeight":  7151,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "PG55441 demo seed42; Maple Court",
+                         "observedUtc":  "2026-10-20T00:25:27.1454368Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-390-synthetic-vacant.png",
+                         "sha256":  "3C39556DDAB5F4AE357F3F7EECB19D9C12D4DC4803F69AA50C5127D54D8001B2",
+                         "phase":  "after",
+                         "viewport":  {
+                                          "height":  844,
+                                          "width":  390
+                                      },
+                         "pixelWidth":  375,
+                         "pixelHeight":  1936,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "PG55441 synthetic property synth-ov-prop-mvfy0u3z / S1 synth-ov-unit-mvfy0u3z; see fixture-observed.json and handoff",
+                         "observedUtc":  "2026-10-20T00:43:30.4571308Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-390-unit-3a-occupied.png",
+                         "sha256":  "E13D10DC318190D1F0840DDDFA1F45441B4595C926ED0C0242A795D8404C64F9",
+                         "phase":  "after",
+                         "viewport":  {
+                                          "height":  844,
+                                          "width":  390
+                                      },
+                         "pixelWidth":  375,
+                         "pixelHeight":  2229,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "PG55441 demo seed42; Maple Court",
+                         "observedUtc":  "2026-10-20T00:25:28.0939328Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-390-unit-occupied.png",
+                         "sha256":  "9FDFDD25DB0DEDFE00276F072091792730F59AD53F9084C36D6B9A44A5E59520",
+                         "phase":  "after",
+                         "viewport":  {
+                                          "height":  844,
+                                          "width":  390
+                                      },
+                         "pixelWidth":  375,
+                         "pixelHeight":  2541,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "PG55441 demo seed42; Maple Court",
+                         "observedUtc":  "2026-10-20T00:25:27.6398728Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-add-unit-validation.png",
+                         "sha256":  "C424ADEE60E8130B5041AF1F20913BD23C715180640EF89EAC053B9C672DAEE6",
+                         "phase":  "after",
+                         "viewport":  null,
+                         "pixelWidth":  1532,
+                         "pixelHeight":  2837,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "PG55441 synthetic property synth-ov-prop-mvfy0u3z / S1 synth-ov-unit-mvfy0u3z; see fixture-observed.json and handoff",
+                         "observedUtc":  "2026-10-20T00:34:29.6684969Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-archived-property.png",
+                         "sha256":  "C3527BC2668E5CE3CB22A34DB23A121CE7E51767421F2A62AB9B5A192285F17C",
+                         "phase":  "after",
+                         "viewport":  null,
+                         "pixelWidth":  1532,
+                         "pixelHeight":  2547,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "PG55441 synthetic property synth-ov-prop-mvfy0u3z / S1 synth-ov-unit-mvfy0u3z; see fixture-observed.json and handoff",
+                         "observedUtc":  "2026-10-20T00:39:58.5947034Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-delete-dismissed.png",
+                         "sha256":  "417734237298D18C54336F32AB52F99079902A95FF445F8454EAF5216249351E",
+                         "phase":  "after",
+                         "viewport":  null,
+                         "pixelWidth":  1532,
+                         "pixelHeight":  2334,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "PG55441 synthetic property synth-ov-prop-mvfy0u3z / S1 synth-ov-unit-mvfy0u3z; see fixture-observed.json and handoff",
+                         "observedUtc":  "2026-10-20T00:38:19.0442808Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-media-cover-order.png",
+                         "sha256":  "6D5FED9CD5FDB80A6CE3891BCA96A8FFDBE6C679040B22FAD9835ED1CEDB3429",
+                         "phase":  "after",
+                         "viewport":  null,
+                         "pixelWidth":  1532,
+                         "pixelHeight":  3410,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "PG55441 synthetic property synth-ov-prop-mvfy0u3z / S1 synth-ov-unit-mvfy0u3z; see fixture-observed.json and handoff",
+                         "observedUtc":  "2026-10-20T00:42:56.3206948Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-media-removed.png",
+                         "sha256":  "CE2B31783F1F13A15D801BBC21742E329F82D22907E041A17768FDA355E1F529",
+                         "phase":  "after",
+                         "viewport":  null,
+                         "pixelWidth":  1532,
+                         "pixelHeight":  2993,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "PG55441 synthetic property synth-ov-prop-mvfy0u3z / S1 synth-ov-unit-mvfy0u3z; see fixture-observed.json and handoff",
+                         "observedUtc":  "2026-10-20T00:43:26.0051924Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-preview-restored.png",
+                         "sha256":  "6D5FED9CD5FDB80A6CE3891BCA96A8FFDBE6C679040B22FAD9835ED1CEDB3429",
+                         "phase":  "after",
+                         "viewport":  null,
+                         "pixelWidth":  1532,
+                         "pixelHeight":  3410,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "PG55441 synthetic property synth-ov-prop-mvfy0u3z / S1 synth-ov-unit-mvfy0u3z; see fixture-observed.json and handoff",
+                         "observedUtc":  "2026-10-20T00:42:57.9314038Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-preview-unavailable.png",
+                         "sha256":  "1BEDB871144ED23B30A7B5D533A9558BDD7EDE23FB2140848B74DD9655B1C4CD",
+                         "phase":  "after",
+                         "viewport":  null,
+                         "pixelWidth":  1532,
+                         "pixelHeight":  3410,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "PG55441 synthetic property synth-ov-prop-mvfy0u3z / S1 synth-ov-unit-mvfy0u3z; see fixture-observed.json and handoff",
+                         "observedUtc":  "2026-10-20T00:42:56.8828365Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-property-validation.png",
+                         "sha256":  "29966B2C183AF5D460F1BCFFCC5FE9C1917096DF3D08672D3CB555A2390C60BE",
+                         "phase":  "after",
+                         "viewport":  null,
+                         "pixelWidth":  1532,
+                         "pixelHeight":  3150,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "PG55441 synthetic property synth-ov-prop-mvfy0u3z / S1 synth-ov-unit-mvfy0u3z; see fixture-observed.json and handoff",
+                         "observedUtc":  "2026-10-20T00:33:58.6956105Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/after-unit-validation.png",
+                         "sha256":  "B8E43E65708DAD070A7860391A222720F9556FFF7337C0FEFCED83138CBF98DB",
+                         "phase":  "after",
+                         "viewport":  null,
+                         "pixelWidth":  1532,
+                         "pixelHeight":  2822,
+                         "source":  "1f72f27adc9b2708c2c882187304afb87b169d3e",
+                         "build":  "EheygKX6UxTxKO1h1ktwh",
+                         "fixture":  "PG55441 synthetic property synth-ov-prop-mvfy0u3z / S1 synth-ov-unit-mvfy0u3z; see fixture-observed.json and handoff",
+                         "observedUtc":  "2026-10-20T00:37:08.7802190Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/before-1280-property.png",
+                         "sha256":  "DBC909493831983F9E1B4FABD1754E55C59C69AE09D3460154FEEAA1A70465D3",
+                         "phase":  "before",
+                         "viewport":  {
+                                          "height":  1000,
+                                          "width":  1280
+                                      },
+                         "pixelWidth":  1265,
+                         "pixelHeight":  3317,
+                         "source":  "4adfb9649c4fdf65c1ed07a0152a3038775c581c",
+                         "build":  "GPkMC-fReltH7INFyPztO",
+                         "fixture":  "PG55441 demo seed42; Maple Court",
+                         "observedUtc":  "2026-10-20T00:25:46.8201729Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/before-1280-synthetic-vacant.png",
+                         "sha256":  "FD8F121432F1E6926E29F0593B62C86AE0D58EDB72C7299A9451C48059E01EC9",
+                         "phase":  "before",
+                         "viewport":  {
+                                          "height":  1000,
+                                          "width":  1280
+                                      },
+                         "pixelWidth":  1265,
+                         "pixelHeight":  1433,
+                         "source":  "4adfb9649c4fdf65c1ed07a0152a3038775c581c",
+                         "build":  "GPkMC-fReltH7INFyPztO",
+                         "fixture":  "PG55441 synthetic property synth-ov-prop-mvfy0u3z / S1 synth-ov-unit-mvfy0u3z; see fixture-observed.json and handoff",
+                         "observedUtc":  "2026-10-20T00:43:27.5613501Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/before-1280-unit-3a-occupied.png",
+                         "sha256":  "28A72CD4207581E6BEA71A8502AD84506B3A05A8E188E1239C22C9B470222F4D",
+                         "phase":  "before",
+                         "viewport":  {
+                                          "height":  1000,
+                                          "width":  1280
+                                      },
+                         "pixelWidth":  1265,
+                         "pixelHeight":  1631,
+                         "source":  "4adfb9649c4fdf65c1ed07a0152a3038775c581c",
+                         "build":  "GPkMC-fReltH7INFyPztO",
+                         "fixture":  "PG55441 demo seed42; Maple Court",
+                         "observedUtc":  "2026-10-20T00:25:47.8602172Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/before-1280-unit-occupied.png",
+                         "sha256":  "2F6A9B14C5C081BA38419FE514EB2F943D2F00FCB8DD45354F7A07342AC02C0D",
+                         "phase":  "before",
+                         "viewport":  {
+                                          "height":  1000,
+                                          "width":  1280
+                                      },
+                         "pixelWidth":  1265,
+                         "pixelHeight":  1631,
+                         "source":  "4adfb9649c4fdf65c1ed07a0152a3038775c581c",
+                         "build":  "GPkMC-fReltH7INFyPztO",
+                         "fixture":  "PG55441 demo seed42; Maple Court",
+                         "observedUtc":  "2026-10-20T00:25:47.3655140Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/before-390-property.png",
+                         "sha256":  "68F1DEB64B06C2674AA1660DFEAD699F73736159D77DFAC25934A0DB9F1AB07C",
+                         "phase":  "before",
+                         "viewport":  {
+                                          "height":  844,
+                                          "width":  390
+                                      },
+                         "pixelWidth":  375,
+                         "pixelHeight":  5844,
+                         "source":  "4adfb9649c4fdf65c1ed07a0152a3038775c581c",
+                         "build":  "GPkMC-fReltH7INFyPztO",
+                         "fixture":  "PG55441 demo seed42; Maple Court",
+                         "observedUtc":  "2026-10-20T00:25:48.4697735Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/before-390-synthetic-vacant.png",
+                         "sha256":  "201D69B82E22C3A8216C0774A69083CEC94B3A1CF0ED562FFCCE63BE3E27DB33",
+                         "phase":  "before",
+                         "viewport":  {
+                                          "height":  844,
+                                          "width":  390
+                                      },
+                         "pixelWidth":  375,
+                         "pixelHeight":  1833,
+                         "source":  "4adfb9649c4fdf65c1ed07a0152a3038775c581c",
+                         "build":  "GPkMC-fReltH7INFyPztO",
+                         "fixture":  "PG55441 synthetic property synth-ov-prop-mvfy0u3z / S1 synth-ov-unit-mvfy0u3z; see fixture-observed.json and handoff",
+                         "observedUtc":  "2026-10-20T00:43:28.5110217Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/before-390-unit-3a-occupied.png",
+                         "sha256":  "F494DF6AE0A47BF7E36C7482DFF04EE33C4F69ED309A3FF12BF9F966E08F2819",
+                         "phase":  "before",
+                         "viewport":  {
+                                          "height":  844,
+                                          "width":  390
+                                      },
+                         "pixelWidth":  375,
+                         "pixelHeight":  2374,
+                         "source":  "4adfb9649c4fdf65c1ed07a0152a3038775c581c",
+                         "build":  "GPkMC-fReltH7INFyPztO",
+                         "fixture":  "PG55441 demo seed42; Maple Court",
+                         "observedUtc":  "2026-10-20T00:25:49.5064612Z"
+                     },
+                     {
+                         "file":  "tests/workspace/native-review/evidence/before-390-unit-occupied.png",
+                         "sha256":  "C96BD295C6A95080F64EC438029D28C8D733C891D97046929E28433A17B3AEA8",
+                         "phase":  "before",
+                         "viewport":  {
+                                          "height":  844,
+                                          "width":  390
+                                      },
+                         "pixelWidth":  375,
+                         "pixelHeight":  2692,
+                         "source":  "4adfb9649c4fdf65c1ed07a0152a3038775c581c",
+                         "build":  "GPkMC-fReltH7INFyPztO",
+                         "fixture":  "PG55441 demo seed42; Maple Court",
+                         "observedUtc":  "2026-10-20T00:25:49.0168489Z"
+                     }
+                 ],
+    "notes":  [
+                  "Sixteen before/after captures cover property/occupied4B/occupied3A and true synthetic vacantS1 at1280/390.",
+                  "Interaction screenshot viewport null means not separately measured; pixel dimensions describe full-page image, not viewport.",
+                  "Synthetic vacant before/after set was recaptured after S1bedrooms3, same two-unit fixture and Georgetown city.",
+                  "Three failed/inconclusive attempt screenshots remain on disk but are excluded from submitted capture evidence.",
+                  "Media preview-failure screenshot uses browser interception404; recovery unroutes it and confirms naturalWidth1."
+              ]
+}

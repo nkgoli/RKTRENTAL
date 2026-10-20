@@ -28,3 +28,12 @@ Nested Listing/Applications/Leases/Payments/Returns/Maintenance panels were not 
 
 - Browser verification in the existing Edge session at desktop and 390px with before/after screenshots was not performed in this run; the visual result is verified by the passing component tests, typecheck, lint, and production build only. Route/state coverage (occupied/vacant, add/edit/save/error, guarded delete/archive, no-units, photo/document upload and preview-failure recovery) is preserved from the existing implementation and its tests rather than re-exercised in a browser.
 - Illustration geometry and counts in the design remain illustrative; all displayed figures come from the existing data layer.
+
+## Supplemental browser evidence
+
+The later verification Task records configured-Playwright desktop/390px
+before/after captures and actual isolated overview flow observations in
+[light-property-overview-verification.md](light-property-overview-verification.md).
+Those results supplement, rather than rerun, the implementation checks above.
+Native existing-Edge review and specific navigation/guard/file limitations
+remain explicit in that handoff; they are not claimed by this implementation.

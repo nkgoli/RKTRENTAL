@@ -157,7 +157,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           These portfolio figures are month-based summaries, not recorded-only results. Cash flow
           and cash-on-cash subtract scheduled debt service (loan payments are not recorded), ROI
           adds 3%/yr assumed appreciation, yield uses scheduled rent, and a month without expense
-          records counts as here. For recorded actuals with coverage, open a property&rsquo;s{' '}
+          records counts as $0 here. For recorded actuals with coverage, open a property&rsquo;s{' '}
           <strong>Actual vs projected</strong>.
         </p>
       </Alert>

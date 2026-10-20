@@ -4,8 +4,7 @@ import { calculatePayload, type AnalysisPayload, type ValidationIssue } from '@/
 import { scenarioExamples, type ScenarioDraft } from '@/lib/analysis/scenarios';
 import { dollars, rate } from '@/lib/analysis/projections';
 import { groups, readPath, taxFields } from './fields';
-import { scenarioSeries } from '@/lib/analysis/chart-data';
-import { ChartCard, ComboChart, seriesPalette } from './RoiChart';
+import { ScenarioCharts } from './RoiScenarioCharts';
 import styles from './analysis.module.css';
 import scenarioStyles from './scenarios.module.css';
 
@@ -49,7 +48,6 @@ export function RoiScenarios({
   base: AnalysisPayload;
   saving: boolean;
 }) {
-  const [horizon, setHorizon] = useState(10);
   const [exampleName, setExampleName] = useState('');
   const example = scenarioExamples.find((candidate) => candidate.name === exampleName);
   const calculated = useMemo(() => {
@@ -62,8 +60,11 @@ export function RoiScenarios({
   const cases = calculated
     ? [{ name: 'Base Case', result: calculated.base }, ...calculated.scenarios]
     : [];
-  const max = Math.max(1, Math.min(50, ...cases.map((c) => c.result.annualCashflows.length)));
-  const years = Math.min(horizon, max);
+  // Exact tables run to the longest hold; shorter holds read "Unavailable".
+  const years = Math.max(
+    1,
+    Math.min(50, Math.max(...cases.map((c) => c.result.annualCashflows.length))),
+  );
   const fields = groups.flatMap((g) => g.fields).filter((f) => f.path.startsWith('input.'));
   function update(index: number, change: Partial<ScenarioDraft>) {
     onChange(drafts.map((d, i) => (i === index ? { ...d, ...change } : d)));
@@ -306,31 +307,18 @@ export function RoiScenarios({
         </p>
       ) : (
         <>
-          <label className={styles.field}>
-            Chart horizon
-            <select value={years} onChange={(e) => setHorizon(Number(e.target.value))}>
-              {Array.from({ length: max }, (_, i) => (
-                <option key={i} value={i + 1}>
-                  {i + 1} years
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className={styles.properties}>
-            {cases.map((c, i) => (
-              <section className={styles.card} key={i}>
-                <h3>{c.name}</h3>
-                <p>Year 1 cash flow</p>
-                <strong>{dollars(c.result.annualCashflows[0].cashFlow / 12)} / month</strong>
-                <p>Cash-on-cash: {rate(c.result.summaryMetrics.cashOnCash)}</p>
-                <p>Hold-period leveraged IRR: {rate(c.result.summaryMetrics.irrLeveraged)}</p>
-                <p>
-                  Year {years} equity before selling costs:{' '}
-                  {dollars(c.result.equityTimeline.find((r) => r.month === years * 12)?.equity)}
-                </p>
-              </section>
-            ))}
-          </div>
+          <ScenarioCharts
+            cases={cases.map((c, i) => ({
+              id: i === 0 ? 'base' : (drafts[i - 1]?.id ?? String(i)),
+              name: c.name,
+              result: c.result,
+            }))}
+            drafts={drafts}
+            baseInput={base.input}
+            label={(path) => fields.find((f) => f.path === `input.${path}`)?.label ?? path}
+            onAddExample={add}
+            disabled={saving}
+          />
           <div className={styles.table} tabIndex={0} role="region" aria-label="Scenario metrics">
             <table>
               <caption>Key metrics - amounts and deltas</caption>
@@ -375,26 +363,10 @@ export function RoiScenarios({
             </table>
           </div>
           {(['equity', 'cashFlow'] as const).map((metric) => (
-            <ChartCard
-              key={metric}
-              title={metric === 'equity' ? 'Equity growth by scenario' : 'Cash flow by scenario'}
-              subtitle={`Projected · years 1–${years} · USD · before tax`}
-            >
-              <ComboChart
-                label={
-                  metric === 'equity'
-                    ? 'Year-end equity before selling costs'
-                    : 'Annual operating cash flow'
-                }
-                years={Array.from({ length: years }, (_, i) => i + 1)}
-                series={cases.map((c, i) => ({
-                  label: c.name,
-                  color: seriesPalette[i % seriesPalette.length],
-                  // Alternate dashes keep identical scenarios visible on top of each other.
-                  dashed: i % 2 === 1,
-                  values: scenarioSeries(c, years, metric),
-                }))}
-              />
+            <details key={metric} className={styles.card}>
+              <summary>
+                Exact {metric === 'equity' ? 'equity' : 'cash flow'} by scenario · years 1–{years}
+              </summary>
               <div
                 className={styles.table}
                 role="region"
@@ -433,7 +405,7 @@ export function RoiScenarios({
                   </tbody>
                 </table>
               </div>
-            </ChartCard>
+            </details>
           ))}
         </>
       )}

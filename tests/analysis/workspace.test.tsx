@@ -349,7 +349,7 @@ describe('ROI summary workspace', () => {
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="b" />,
     );
     expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull();
-    expect(screen.getByText('Property b')).toBeTruthy();
+    expect(screen.getByText('Property b', { selector: 'strong' })).toBeTruthy();
     view.rerender(
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="foreign" />,
     );
@@ -412,7 +412,7 @@ describe('ROI summary workspace', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Discard and continue' }));
     await screen.findByRole('button', { name: 'Save draft' });
-    expect(screen.getByText('Property b')).toBeTruthy();
+    expect(screen.getByText('Property b', { selector: 'strong' })).toBeTruthy();
     expect(rent().value).not.toBe('bad');
     view.rerender(<RoiWorkspace selection={{ ok: true, data: [] }} initialPropertyId="b" />);
     await screen.findByText(/unavailable or archived/);
@@ -452,7 +452,7 @@ describe('ROI summary workspace', () => {
     fireEvent.change(rent(), { target: { value: '0' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue property change' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
-    await screen.findByText('Property b');
+    await screen.findByText('Property b', { selector: 'strong' });
     await screen.findByRole('button', { name: 'Save draft' });
     expect(window.location.search).toBe('?property=b');
     expect(saveRoiAnalysisAction).toHaveBeenCalledWith(
@@ -478,7 +478,7 @@ describe('ROI summary workspace', () => {
     await screen.findByRole('button', { name: 'Save draft' });
     await act(async () => resolve({ ok: false, code: 'CONFLICT', currentRevision: 7 }));
     expect(screen.queryByText(/A newer revision exists/)).toBeNull();
-    expect(screen.getByText('Property b')).toBeTruthy();
+    expect(screen.getByText('Property b', { selector: 'strong' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Save draft' }).hasAttribute('disabled')).toBe(false);
   });
   it('uses live router queries even when the server initial property prop is unchanged', async () => {
@@ -488,7 +488,7 @@ describe('ROI summary workspace', () => {
     await screen.findByRole('button', { name: 'Save draft' });
     routeQuery.value = new URLSearchParams('property=b');
     view.rerender(<RoiWorkspace selection={selection} initialPropertyId="a" />);
-    await screen.findByText('Property b');
+    await screen.findByText('Property b', { selector: 'strong' });
     await screen.findByRole('button', { name: 'Save draft' });
     routeQuery.value = new URLSearchParams();
     view.rerender(<RoiWorkspace selection={selection} initialPropertyId="a" />);
@@ -518,7 +518,7 @@ describe('ROI summary workspace', () => {
     expect(rent().value).toBe('bad');
     fireEvent.click(screen.getByRole('link', { name: 'Other property route' }));
     fireEvent.click(screen.getByRole('button', { name: 'Discard and continue' }));
-    await screen.findByText('Property b');
+    await screen.findByText('Property b', { selector: 'strong' });
     fireEvent.click(link);
     expect(screen.getByRole('searchbox')).toBeTruthy();
   });
@@ -1026,8 +1026,15 @@ it('saves benchmark selections across panels and restores them by property', asy
   } as never);
   fireEvent.click(screen.getByRole('button', { name: 'Reload saved analysis' }));
   await screen.findByText(/Loaded draft/);
+  // Benchmarks shows the fixed RealROI market set; the saved selection lives on Compare.
   fireEvent.click(screen.getByRole('tab', { name: 'Benchmarks' }));
   panel = within(screen.getByRole('tabpanel', { name: 'Benchmarks' }));
+  expect(panel.queryByRole('checkbox', { name: 'US Bonds' })).toBeNull();
+  expect(panel.getByRole('region', { name: 'Investment comparison' }).textContent).toContain(
+    'Nasdaq 100',
+  );
+  fireEvent.click(screen.getByRole('tab', { name: 'Compare' }));
+  panel = within(screen.getByRole('tabpanel', { name: 'Compare' }));
   expect((panel.getByRole('checkbox', { name: 'US Bonds' }) as HTMLInputElement).checked).toBe(
     true,
   );

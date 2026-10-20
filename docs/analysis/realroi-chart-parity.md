@@ -120,33 +120,33 @@ open on Equity; Exit is labelled "Exit Analysis".
 
 "Ref shots" are the screenshot files without the `ref-` prefix and `.png` suffix.
 
-| #   | Reference chart (route → tab)                                             | Type                                         | Ref shots                                                                                                                                             | RocketRental now                                                                 | Gap                                                |
-| --- | ------------------------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------- |
-| C1  | Net Cash Flow by Year (Summary)                                           | Bar, positive/negative cells                 | summary-net-cashflow-{y1,y5,y30,custom,y30-tooltip,y5-tooltip-negative}-1440; mobile-390-viewport-summary-net-cashflow                                | `NetCashFlowCard` (`RoiSummaryCharts.tsx`)                                       | **Delivered** (§9.3)                               |
-| C2  | Outcome: Wealth Created donut (Summary)                                   | Pie / donut                                  | summary-outcome-donut-{y1,y30,y30-tooltip}-1440, summary-outcome-custom-1440, summary-outcome-after-best-fix-1440                                     | `OutcomeCard` (`RoiSummaryCharts.tsx`)                                           | **Delivered** (§9.3); after-best-fix belongs to C4 |
-| C3  | Deal Snapshot risk ring, gauge and factor bars (Summary)                  | SVG ring + semicircle gauge + segmented bars | summary-deal-snapshot{,-monthly,-cashflow-popover}-1440, summary-risk-meter-expanded-gauge-1440, mobile-390-viewport-summary-deal-snapshot            | **None** (Summary "Year 1 at a glance" text metrics)                             | Missing                                            |
-| C4  | Fix My Deal lever bars (Summary)                                          | Segmented gradient bars + pills              | summary-fix-my-deal{,-expanded,-best-fix-applied}-1440                                                                                                | **None**                                                                         | Missing                                            |
-| C5  | Cash Flow & Equity Projections mini bars (Summary)                        | Table + inline % bars                        | summary-projection-table-{keyrows,full}-1440                                                                                                          | `ProjectionMilestones` (`RoiSummaryCharts.tsx`); exact table kept                | **Delivered** (§9.3)                               |
-| C6  | Equity Composition vs Debt Paydown (Charts → Equity)                      | Stacked bars + line, dual axis, overlays     | charts-equity-composition-{y1,y5,y30,custom,incl-down,indexed,y30-tooltip,indexed-tooltip}-1440; mobile-390-viewport-equity-{composition,tap-tooltip} | `EquityComposition` (`RoiProjections.tsx`)                                       | **Delivered** (§9.3)                               |
-| C7  | Value vs Mortgage Balance (Charts → Equity)                               | Area band + 2 lines                          | charts-value-vs-mortgage-{y10,y30-tooltip}-1440; charts-full-1440                                                                                     | `ValueVsMortgage` (`RoiProjections.tsx`)                                         | **Delivered** (§9.3)                               |
-| C8  | Cash Flow & Cumulative (Charts → Cash Flow)                               | Bars + line + pre/post shading               | charts-cashflow-cumulative-{y10-default,y1,y30,custom,custom-y20,y10-tooltip}-1440                                                                    | `CashFlowCumulative` (`RoiProjections.tsx`)                                      | **Delivered** (§9.3)                               |
-| C9  | Income to Cash Flow Bridge (Charts → Cash Flow)                           | 3 lines + bars                               | charts-cashflow-bridge-{y10-default,y1,y30,y10-tooltip}-1440                                                                                          | `IncomeBridge` (`RoiProjections.tsx`); Year-1 list kept                          | **Delivered** (§9.3)                               |
-| C10 | Operating Expenses ranked bars (Charts → Expenses)                        | CSS horizontal bars                          | charts-expenses-{y1,y10,y30,custom,y30-sort-delta,simulate-tax,info-tooltip}-1440                                                                     | `OperatingExpenses` (`RoiExpenses.tsx`); growth lines and exact tables kept      | **Delivered** (§10.3)                              |
-| C11 | Principal vs Interest Over Time (Charts → Amortization)                   | Overlapping areas                            | charts-amortization-area-{default,tooltip}-1440                                                                                                       | `PrincipalVsInterest` (`RoiAmortization.tsx`)                                    | **Delivered** (§10.3)                              |
-| C12 | Loan Payoff Breakdown bar (Charts → Amortization)                         | Two-segment progress bar                     | charts-amortization-schedule-summary-1440                                                                                                             | `Schedule` payoff bar (`RoiAmortization.tsx`)                                    | **Delivered** (§10.3)                              |
-| C13 | Schedule "Paid Off" mini bars and milestone chips (Charts → Amortization) | Table + inline bars                          | charts-amortization-schedule-{summary,detailed}-1440, charts-amortization-insights-10y-y20-1440                                                       | `Schedule` table, chips, Summary/Detailed; exact tables kept                     | **Delivered** (§10.3)                              |
-| C14 | Exit Analysis & Comparison (Charts → Exit Analysis)                       | Stacked bars + reference lines               | charts-exit-{default-y10-selected,total-cash-back,cleared-hover-tooltip,y30-selected,breakeven-chip-selected}-1440                                    | `Comparison` (`RoiExit.tsx`); exact statement, probes and table kept             | **Delivered** (§10.3)                              |
-| C15 | Sensitivity heatmap (Charts → Sensitivity)                                | visx heatmap + contour + gradient legend     | charts-sensitivity-{year1-default,stabilized,year5,show-values,colorblind-values,customize-ranges,hover-cell}-1440                                    | `Heatmap` (`RoiSensitivity.tsx`); exact grid kept                                | **Delivered** (§10.3)                              |
-| C16 | Sensitivity gradient legend (inside C15)                                  | Gradient bar                                 | same as C15                                                                                                                                           | Gradient legend in `Heatmap`                                                     | **Delivered** (§10.3)                              |
-| C17 | Amortization "Interest (First Ny)" and "Balance at YN" cards              | KPI cards with selects                       | charts-amortization-insights-10y-y20-1440                                                                                                             | Insight cards in `Schedule`                                                      | **Delivered** (§10.3)                              |
-| C18 | Equity Growth by Scenario (Scenarios)                                     | Multi-line                                   | scenarios-equity-growth-{30y,10y,tooltip,with-worst,focused-optimistic}-1440, scenarios-tab-full-1440, scenarios-delta-vs-base-1440                   | `RoiScenarios` "Equity growth by scenario" + "Cash flow by scenario" ComboCharts | Moderate                                           |
-| C19 | Investment Growth Over Time (Benchmarks)                                  | Multi-line, Index/Dollars                    | benchmarks-growth-{indexed,dollars,indexed-tooltip,dollars-tooltip,focused-sp500}-1440                                                                | `RoiBenchmarks` I1 (indexed, property excluded) + I2 (USD)                       | Moderate                                           |
-| C20 | Risk vs Return scatter (Benchmarks)                                       | Recharts scatter                             | benchmarks-risk-return-{scatter,tooltip}-1440                                                                                                         | `RoiBenchmarks` I3 hand-made SVG scatter, property omitted, no tooltip           | Moderate                                           |
-| C21 | Investment Growth Over Time (Compare)                                     | Multi-line, USD                              | compare-growth-{default,tooltip,reits-selected}-1440                                                                                                  | `RoiBenchmarks` I2 with `compare`                                                | Moderate                                           |
-| C22 | Annualized Returns Comparison (Compare)                                   | Bar per asset                                | compare-annualized-bars-{default,tooltip}-1440                                                                                                        | **None**                                                                         | Missing                                            |
-| C23 | Multi-Dimensional Comparison (Compare)                                    | Radar                                        | compare-radar-{default,hover-no-tooltip}-1440                                                                                                         | **None**                                                                         | Missing                                            |
-| C24 | Compare side-by-side table (Compare)                                      | Table, Best/Worst badges                     | compare-side-by-side-vs-property-1440, compare-tab-full-1440                                                                                          | "Side-by-side comparison" table                                                  | Minor                                              |
-| C25 | Rental Distribution bell curve (Search)                                   | Area + reference dots                        | **not renderable**: needs RentCast/Google keys; see search-manual-entry-no-chart-1440                                                                 | **None** (`/rent-comps` has a range bar)                                         | Missing, source-only                               |
+| #   | Reference chart (route → tab)                                             | Type                                         | Ref shots                                                                                                                                             | RocketRental now                                                            | Gap                                                |
+| --- | ------------------------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------- |
+| C1  | Net Cash Flow by Year (Summary)                                           | Bar, positive/negative cells                 | summary-net-cashflow-{y1,y5,y30,custom,y30-tooltip,y5-tooltip-negative}-1440; mobile-390-viewport-summary-net-cashflow                                | `NetCashFlowCard` (`RoiSummaryCharts.tsx`)                                  | **Delivered** (§9.3)                               |
+| C2  | Outcome: Wealth Created donut (Summary)                                   | Pie / donut                                  | summary-outcome-donut-{y1,y30,y30-tooltip}-1440, summary-outcome-custom-1440, summary-outcome-after-best-fix-1440                                     | `OutcomeCard` (`RoiSummaryCharts.tsx`)                                      | **Delivered** (§9.3); after-best-fix belongs to C4 |
+| C3  | Deal Snapshot risk ring, gauge and factor bars (Summary)                  | SVG ring + semicircle gauge + segmented bars | summary-deal-snapshot{,-monthly,-cashflow-popover}-1440, summary-risk-meter-expanded-gauge-1440, mobile-390-viewport-summary-deal-snapshot            | `DealSnapshot` (`RoiDealPanels.tsx`)                                        | **Delivered** (§11.2)                              |
+| C4  | Fix My Deal lever bars (Summary)                                          | Segmented gradient bars + pills              | summary-fix-my-deal{,-expanded,-best-fix-applied}-1440                                                                                                | `FixMyDeal` (`RoiDealPanels.tsx`)                                           | **Delivered** (§11.2)                              |
+| C5  | Cash Flow & Equity Projections mini bars (Summary)                        | Table + inline % bars                        | summary-projection-table-{keyrows,full}-1440                                                                                                          | `ProjectionMilestones` (`RoiSummaryCharts.tsx`); exact table kept           | **Delivered** (§9.3)                               |
+| C6  | Equity Composition vs Debt Paydown (Charts → Equity)                      | Stacked bars + line, dual axis, overlays     | charts-equity-composition-{y1,y5,y30,custom,incl-down,indexed,y30-tooltip,indexed-tooltip}-1440; mobile-390-viewport-equity-{composition,tap-tooltip} | `EquityComposition` (`RoiProjections.tsx`)                                  | **Delivered** (§9.3)                               |
+| C7  | Value vs Mortgage Balance (Charts → Equity)                               | Area band + 2 lines                          | charts-value-vs-mortgage-{y10,y30-tooltip}-1440; charts-full-1440                                                                                     | `ValueVsMortgage` (`RoiProjections.tsx`)                                    | **Delivered** (§9.3)                               |
+| C8  | Cash Flow & Cumulative (Charts → Cash Flow)                               | Bars + line + pre/post shading               | charts-cashflow-cumulative-{y10-default,y1,y30,custom,custom-y20,y10-tooltip}-1440                                                                    | `CashFlowCumulative` (`RoiProjections.tsx`)                                 | **Delivered** (§9.3)                               |
+| C9  | Income to Cash Flow Bridge (Charts → Cash Flow)                           | 3 lines + bars                               | charts-cashflow-bridge-{y10-default,y1,y30,y10-tooltip}-1440                                                                                          | `IncomeBridge` (`RoiProjections.tsx`); Year-1 list kept                     | **Delivered** (§9.3)                               |
+| C10 | Operating Expenses ranked bars (Charts → Expenses)                        | CSS horizontal bars                          | charts-expenses-{y1,y10,y30,custom,y30-sort-delta,simulate-tax,info-tooltip}-1440                                                                     | `OperatingExpenses` (`RoiExpenses.tsx`); growth lines and exact tables kept | **Delivered** (§10.3)                              |
+| C11 | Principal vs Interest Over Time (Charts → Amortization)                   | Overlapping areas                            | charts-amortization-area-{default,tooltip}-1440                                                                                                       | `PrincipalVsInterest` (`RoiAmortization.tsx`)                               | **Delivered** (§10.3)                              |
+| C12 | Loan Payoff Breakdown bar (Charts → Amortization)                         | Two-segment progress bar                     | charts-amortization-schedule-summary-1440                                                                                                             | `Schedule` payoff bar (`RoiAmortization.tsx`)                               | **Delivered** (§10.3)                              |
+| C13 | Schedule "Paid Off" mini bars and milestone chips (Charts → Amortization) | Table + inline bars                          | charts-amortization-schedule-{summary,detailed}-1440, charts-amortization-insights-10y-y20-1440                                                       | `Schedule` table, chips, Summary/Detailed; exact tables kept                | **Delivered** (§10.3)                              |
+| C14 | Exit Analysis & Comparison (Charts → Exit Analysis)                       | Stacked bars + reference lines               | charts-exit-{default-y10-selected,total-cash-back,cleared-hover-tooltip,y30-selected,breakeven-chip-selected}-1440                                    | `Comparison` (`RoiExit.tsx`); exact statement, probes and table kept        | **Delivered** (§10.3)                              |
+| C15 | Sensitivity heatmap (Charts → Sensitivity)                                | visx heatmap + contour + gradient legend     | charts-sensitivity-{year1-default,stabilized,year5,show-values,colorblind-values,customize-ranges,hover-cell}-1440                                    | `Heatmap` (`RoiSensitivity.tsx`); exact grid kept                           | **Delivered** (§10.3)                              |
+| C16 | Sensitivity gradient legend (inside C15)                                  | Gradient bar                                 | same as C15                                                                                                                                           | Gradient legend in `Heatmap`                                                | **Delivered** (§10.3)                              |
+| C17 | Amortization "Interest (First Ny)" and "Balance at YN" cards              | KPI cards with selects                       | charts-amortization-insights-10y-y20-1440                                                                                                             | Insight cards in `Schedule`                                                 | **Delivered** (§10.3)                              |
+| C18 | Equity Growth by Scenario (Scenarios)                                     | Multi-line                                   | scenarios-equity-growth-{30y,10y,tooltip,with-worst,focused-optimistic}-1440, scenarios-tab-full-1440, scenarios-delta-vs-base-1440                   | `ScenarioCharts` (`RoiScenarioCharts.tsx`)                                  | **Delivered** (§11.2)                              |
+| C19 | Investment Growth Over Time (Benchmarks)                                  | Multi-line, Index/Dollars                    | benchmarks-growth-{indexed,dollars,indexed-tooltip,dollars-tooltip,focused-sp500}-1440                                                                | `BenchmarksView` growth chart (`RoiBenchmarks.tsx`)                         | **Delivered** (§11.2)                              |
+| C20 | Risk vs Return scatter (Benchmarks)                                       | Recharts scatter                             | benchmarks-risk-return-{scatter,tooltip}-1440                                                                                                         | `ScatterChart` (`RoiCompareCharts.tsx`)                                     | **Delivered** (§11.2)                              |
+| C21 | Investment Growth Over Time (Compare)                                     | Multi-line, USD                              | compare-growth-{default,tooltip,reits-selected}-1440                                                                                                  | `CompareView` growth chart (`RoiBenchmarks.tsx`)                            | **Delivered** (§11.2)                              |
+| C22 | Annualized Returns Comparison (Compare)                                   | Bar per asset                                | compare-annualized-bars-{default,tooltip}-1440                                                                                                        | `CompareView` bar chart (`ComboChart` with per-bar `colors`)                | **Delivered** (§11.2)                              |
+| C23 | Multi-Dimensional Comparison (Compare)                                    | Radar                                        | compare-radar-{default,hover-no-tooltip}-1440                                                                                                         | `RadarChart` (`RoiCompareCharts.tsx`)                                       | **Delivered** (§11.2)                              |
+| C24 | Compare side-by-side table (Compare)                                      | Table, Best/Worst badges                     | compare-side-by-side-vs-property-1440, compare-tab-full-1440                                                                                          | `CompareView` side-by-side table, winners, asset cards                      | **Delivered** (§11.2)                              |
+| C25 | Rental Distribution bell curve (Search)                                   | Area + reference dots                        | **not renderable**: needs RentCast/Google keys; see search-manual-entry-no-chart-1440                                                                 | `RentDistribution` on the comps workbench                                   | **Delivered** (§11.2), source-only reference       |
 
 **Not rendered anywhere in the reference** (dead code, so no parity is needed):
 
@@ -1064,3 +1064,128 @@ Browser interactions checked:
 5. The balloon notice also appears when the final scheduled payment differs from the
    regular payment by more than $1 because of rounding (sample: $1,794.25). This
    existing behaviour was not changed by this task.
+
+## 11. TASK-DFDAA085 delivery: comparison charts and live parity
+
+Charts C3, C4 and C18–C25 are built, and every chart in §4 now has a RocketRental
+counterpart. Each new chart was checked against the running reference on 3300 at
+1440×900 and 390×844 on 2026-10-20, with the §1 sample inputs typed into an unsaved
+Maple Court draft on the task build (3110, database 5434 read only). The draft was
+discarded by leaving the page, never through "Reload saved analysis", and no row
+changed (§11.5).
+
+### 11.1 New pieces
+
+| Where                   | What                                                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `deal-insights.ts`      | Risk factors (reference weights and thresholds on engine metrics), engine-run levers, bisection-solved targets and "How to Improve"  |
+| `RoiDealPanels.tsx`     | `DealSnapshot` (C3) and `FixMyDeal` (C4)                                                                                             |
+| `RoiScenarioCharts.tsx` | `ScenarioCharts` (C18): preset chips, Key Differences, focusable KPI tiles, Key Metrics table, equity and cash-flow charts           |
+| `RoiCompareCharts.tsx`  | `ScatterChart` (C20) and `RadarChart` (C23), both with hover, tap and arrow-key readouts and a polite live region                    |
+| `RoiBenchmarks.tsx`     | `BenchmarksView` (C19/C20) and `CompareView` (C21–C24)                                                                               |
+| `benchmarks.ts`         | `marketComparison` (property against S&P 500, Nasdaq 100 and US Bonds), `radarScores`, `riskAdjusted`                                |
+| `scenarios.ts`          | `scenarioColors` (reference preset colours), `scenarioDifferences`                                                                   |
+| `RoiChart.tsx`          | Series `colors` (per-bar fill), line `opacity` (focus), `tickFormat`. Closed ⓘ tips use `display: none` so they never widen the page |
+| `RentDistribution.tsx`  | C25 on the comps workbench (`/properties/<id>/listing`), from `lib/comps/distribution.ts`                                            |
+
+### 11.2 Chart results
+
+With the sample inputs RocketRental reproduces these reference figures exactly:
+cash flow −$94/mo (−$1,133/yr), CoC −1.11%, cash in $102,000; scenario IRRs 10.4% /
+13.0% / 7.4% and the insight "7.4% (Conservative) to 13.0% (Optimistic) — a 5.6%
+spread"; breakeven pills Base Yr 18, Optimistic Yr 14, Conservative Yr 27; the Year 16
+equity tooltip $421,136 / $523,080; the Year 18 benchmark tooltip 578.7 (478.7%) /
+603.3 (503.3%) / 833.2 / 240.7 and $590,278 / $615,349 / $849,856.
+
+**C3 Deal Snapshot.** Resolved: dark band, "(Year 1)", status pill, assumption chip,
+Monthly/Annual toggle, Snapshot sidebar (NOI, rent, price, appreciation, 5-yr returns),
+five KPI tiles that open their breakdown (click, tap or Enter; Escape or an outside
+click closes), the 44 px ring, level pill, top-3 factor pills and five-segment bars, the
+worst-factor hint, and the expanded semicircle gauge with all six factors, Good/Watch/Risk
+badges and "How to Improve". Deliberate: one score with one meaning — the ring and the
+gauge both show the risk score (reference defect 4); it is labelled "Heuristic, not
+advice"; a factor with a missing input is shown as not scored and left out of the
+weighted average; an all-cash deal reads "No debt". "How to Improve" targets are solved
+with the engine, not the reference's approximations. The cash-flow popover adds the
+capital-reserves row so it reconciles.
+
+**C4 Fix My Deal.** Resolved: six levers with +$/yr and the five-segment pill bars,
+Best Fix / Reset, collapsible Targets to Hit with Apply / Apply All, the Applied
+adjustments strip, and the collapsible "If you apply all fixes" Cash Flow / DSCR / CoC
+grid. Deliberate: each lever is a full engine run (rent +$100 is +$929/yr, not the
+reference's 1,140, because management, maintenance and CapEx scale with rent); fixed
+annual costs are cut by 1% of gross rent; the combined grid runs all levers together
+instead of adding them; Best Fix picks the largest engine impact (reference defect 10);
+the what-if stays inside the card and never saves.
+
+**C18 Scenarios.** Resolved: reference preset colours, Base fixed, other cases toggle
+with ×/+, missing presets offered as "+" chips that add an unsaved example, Key
+Differences pills (green/red by effect), bordered KPI tiles that focus a scenario
+(others fade to 0.3, focused line w3), Absolute / Δ vs Base, Key Metrics with impact dots,
+best/worst shading and a Y1/Y5/Y10/Y30/Custom horizon, `Y{n}` labels, breakeven pills
+and the IRR-spread insight. Deliberate: the horizon runs to the longest hold so a
+shorter scenario leaves a gap, never $0; tiles never overflow (reference defect 8); the
+cash-flow chart and exact cents tables stay; with only Base Case the insight says so.
+
+**C19/C20 Benchmarks.** Resolved: the out/under-performance banner, four risk tiles,
+Investment Comparison table, Index (100) / Dollars chart (property solid w3, references
+dashed `5 5`, y = 100 line, milestone ticks and table), focusable benchmark cards and the
+insight. The Benchmarks tab always shows the three reference markets, read-only, as the
+reference does; the saved selection (at most two) lives on Compare. Scatter decision: the
+property's volatility is not measured, so it is drawn as a labelled return line ("8.80% ·
+volatility not measured") instead of a point at an invented x; the tooltip has no `size`
+row (reference defect 9).
+
+**C21–C24 Compare.** Resolved: asset chips (property fixed), winner cards, the
+Absolute / vs Property table with Best/Worst badges and impact dots, the USD growth
+chart, per-asset annualized-return bars and the radar with a tooltip (the reference has
+none). Deliberate: a third pick shows the existing limit message instead of silently
+dropping the oldest (RocketRental's saved-selection rule); "Most Stable" only ranks
+measured volatilities; property Stability and Risk-Adj are "Not measured" (open, dashed
+shape) and its Yield is its Year-1 cash-on-cash, so no score is invented (the reference
+uses a fixed 12% volatility and 0.3 × return yield). The exact comparison table stays.
+
+**C25 Rental Distribution.** The reference cannot render it without RentCast/Google
+keys, so it was built from source: Low/Average/High tiles, a normal curve over the
+included comps with a teal gradient, comps as slate dots, the subject's rent as a teal
+line and dot ("You $1.7k", "≈ Avg" when within 8%), a dashed average and the suggested
+range band. Deliberate: the subject's rent is plotted but not averaged into the curve;
+the subtitle counts comps, not curve points; arrow keys read each rent.
+
+### 11.3 Paired screenshots (`docs/analysis/realroi-chart-parity/`)
+
+| Chart | Reference                                                                                                                                                                                                                                  | RocketRental                                                                                                                                                                                                                         |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| C3    | `ref-summary-deal-snapshot{,-monthly,-cashflow-popover}-1440`, `ref-live-summary-deal-snapshot-1440`, `ref-live-summary-risk-expanded-1440`, `ref-summary-risk-meter-expanded-gauge-1440`, `ref-mobile-390-viewport-summary-deal-snapshot` | `rr-summary-deal-snapshot-1440`, `rr-summary-risk-meter-expanded-gauge-1440`, `rr-mobile-390-deal-snapshot`, `-deal-snapshot-popover`, `-risk-expanded`                                                                              |
+| C4    | `ref-summary-fix-my-deal{,-expanded,-best-fix-applied}-1440`, `ref-live-summary-fix-my-deal-1440`                                                                                                                                          | `rr-summary-fix-my-deal-1440`, `-expanded-1440`, `-best-fix-applied-1440`, `rr-mobile-390-fix-my-deal-applied`                                                                                                                       |
+| C18   | `ref-scenarios-equity-growth-{30y,10y,tooltip,focused-optimistic}-1440`, `ref-scenarios-delta-vs-base-1440`, `ref-scenarios-tab-full-1440`                                                                                                 | `rr-scenarios-selection-1440`, `-kpis-1440`, `-kpis-delta-1440`, `-metrics-table-1440`, `-delta-vs-base-1440`, `-equity-growth-{30y,10y,tooltip}-1440`, `-focused-optimistic-1440`, `-cash-flow-1440`, `rr-mobile-390-scenarios-tap` |
+| C19   | `ref-benchmarks-growth-{indexed,dollars,indexed-tooltip,dollars-tooltip,focused-sp500}-1440`                                                                                                                                               | `rr-benchmarks-summary-banner-1440`, `rr-benchmarks-growth-{indexed,dollars,indexed-tooltip,dollars-tooltip,focused-sp500}-1440`                                                                                                     |
+| C20   | `ref-benchmarks-risk-return-{scatter,tooltip}-1440`                                                                                                                                                                                        | `rr-benchmarks-risk-return-{scatter,tooltip}-1440`                                                                                                                                                                                   |
+| C21   | `ref-compare-growth-{default,tooltip,reits-selected}-1440`                                                                                                                                                                                 | `rr-compare-asset-picker-1440`, `rr-compare-growth-{default,tooltip,reits-selected}-1440`                                                                                                                                            |
+| C22   | `ref-compare-annualized-bars-{default,tooltip}-1440`                                                                                                                                                                                       | `rr-compare-annualized-bars-{default,tooltip}-1440`                                                                                                                                                                                  |
+| C23   | `ref-compare-radar-{default,hover-no-tooltip}-1440`                                                                                                                                                                                        | `rr-compare-radar-{default,tooltip}-1440`                                                                                                                                                                                            |
+| C24   | `ref-compare-side-by-side-vs-property-1440`, `ref-compare-tab-full-1440`                                                                                                                                                                   | `rr-compare-side-by-side-1440`, `-vs-property-1440`                                                                                                                                                                                  |
+| C25   | not renderable (`ref-search-manual-entry-no-chart-1440`)                                                                                                                                                                                   | `rr-rent-comps-rental-distribution{,-tooltip}-1440`, `rr-mobile-390-rent-comps-rental-distribution`                                                                                                                                  |
+
+All captures are palette PNGs to stay under
+the 64 MiB tree limit; full-page and tall mobile panel captures were not committed.
+
+**Interactions checked:** chip show/hide and "+" example chips; tile focus; Absolute /
+Δ vs Base; horizon presets; Index / Dollars; benchmark-card focus; Compare asset chips,
+the two-asset limit and swapping to REITs; KPI popovers (click, Escape); risk expand;
+lever toggles, Best Fix, Apply, Apply All and Reset; hover on every chart; arrow keys on
+the scenario, growth, scatter, bar, radar and distribution plots; tap at 390. At 390 px
+`scrollWidth` equals `clientWidth` on Summary, Charts (all six sub-tabs), Scenarios,
+Benchmarks, Compare and the comps page. The earlier C1–C17 charts were re-checked at
+1440 and 390 on saved Maple data: all render, no overflow, no console errors.
+
+### 11.4 Remaining differences
+
+1. Engine definitions (§9.5, §10.5): reserves below NOI (DSCR 1.03 vs 0.95), so the risk
+   score is 65 (reference 73), targets aim at DSCR ≥ 1.25 rather than ≥ 1.0, lever values
+   differ, and the property's annualized growth is 8.80% (reference 8.95%).
+2. Deliberate behaviour noted in §11.2 (single risk score, no invented volatility or
+   yield, selection limit, Benchmarks fixed market set, what-if never saved).
+3. Key Metrics rows use RocketRental metrics (NOI, cap rate, cash flow, equity,
+   cumulative cash, IRR, equity multiple) rather than the reference's "Total Return".
+4. C25 has no rendered reference to pair with; it follows the source.

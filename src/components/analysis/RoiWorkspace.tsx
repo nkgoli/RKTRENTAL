@@ -48,6 +48,7 @@ import {
   type Values,
 } from './fields';
 import { NetCashFlowCard, OutcomeCard, ProjectionMilestones } from './RoiSummaryCharts';
+import { DealSnapshot, FixMyDeal } from './RoiDealPanels';
 import styles from './analysis.module.css';
 
 type Result = ReturnType<typeof calculatePayload>['base'];
@@ -821,6 +822,13 @@ export function RoiWorkspace({
                   hidden={view !== 'summary'}
                 >
                   <div className={styles.stack}>
+                    {result && calculatedPayload && (
+                      <DealSnapshot
+                        key={`snapshot-${selected}`}
+                        result={result}
+                        payload={calculatedPayload}
+                      />
+                    )}
                     <section className={styles.card} aria-label="Year 1 at a glance">
                       <h2>Year 1 at a glance</h2>
                       <div className={styles.metrics}>
@@ -849,6 +857,13 @@ export function RoiWorkspace({
                       onOpen={() => changeView('actual')}
                     />
                     {result && <OutcomeCard key={`outcome-${selected}`} result={result} />}
+                    {result && calculatedPayload && (
+                      <FixMyDeal
+                        key={`fix-${selected}`}
+                        result={result}
+                        payload={calculatedPayload}
+                      />
+                    )}
                     <section className={styles.card}>
                       <h2>From income to cash flow</h2>
                       <dl className={styles.statement}>

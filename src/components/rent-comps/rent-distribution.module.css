@@ -1,0 +1,95 @@
+/* RealROI Rental Distribution card: slate-100 header strip, three stat tiles, bell curve. */
+.card {
+  --chart-mono:
+    'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, Menlo, monospace;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: white;
+  overflow: hidden;
+  min-width: 0;
+}
+.head {
+  padding: 12px 16px;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+}
+.head h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.head h2 svg {
+  color: #475569;
+}
+.head p {
+  margin: 2px 0 0;
+  font-size: 10px;
+  color: #526174;
+}
+.body {
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.stats > div {
+  padding: 8px;
+  border-radius: 8px;
+  background: #f8fafc;
+  text-align: center;
+}
+.stats > div[data-tone='teal'] {
+  background: #f0fdfa;
+}
+.stats dt {
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #526174;
+}
+.stats > div[data-tone='teal'] dt {
+  color: #0f766e;
+}
+.stats dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155;
+}
+.stats > div[data-tone='teal'] dd {
+  color: #0f766e;
+}
+.you,
+.comp {
+  border-radius: 50%;
+}
+.you {
+  background: #0d9488 !important;
+  border: 2px solid #0f766e;
+}
+.comp {
+  width: 10px !important;
+  height: 10px !important;
+  background: #94a3b8 !important;
+  border: 1px solid #64748b;
+}
+.band {
+  width: 16px !important;
+  height: 8px !important;
+  background: #14b8a626 !important;
+  border: 1px dashed #14b8a640;
+}
+.note {
+  margin: 0;
+  font-size: 10px;
+  color: #64748b;
+}

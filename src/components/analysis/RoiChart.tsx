@@ -146,6 +146,8 @@ export type ChartSeries = {
   /** Fill and outline of the emphasised (selected) bar. */
   activeColor?: string;
   activeStroke?: string;
+  /** Per-index bar fills (one bar per asset, coloured by asset). */
+  colors?: string[];
 };
 
 export type ChartMarker = {
@@ -717,6 +719,7 @@ export function ComboChart({
   emphasizeHover = false,
   onSelect,
   xTicks,
+  tickFormat,
 }: {
   label: string;
   years: (number | string)[];
@@ -752,6 +755,8 @@ export function ComboChart({
   onSelect?: (index: number) => void;
   /** Year-label indexes when the chart has its own tick set. */
   xTicks?: number[];
+  /** Y tick text override (e.g. `10.5%`); defaults to `$Nk` or the index. */
+  tickFormat?: (value: number, step: number) => string;
 }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(660);
@@ -792,7 +797,8 @@ export function ComboChart({
     narrow ? 4 : 5,
   );
   const step = scale.ticks.length > 1 ? scale.ticks[1] - scale.ticks[0] : 1;
-  const axis = (v: number) => (unit === 'USD' ? thousands(v, step) : v.toFixed(0));
+  const axis = (v: number) =>
+    tickFormat ? tickFormat(v, step) : unit === 'USD' ? thousands(v, step) : v.toFixed(0);
   // Margins fit the widest tick label so rotated axis titles never overlap it.
   const labelW = Math.max(...scale.ticks.map((t) => axis(t).length)) * (narrow ? 6 : 6.6) + 10;
   const m = {
@@ -1171,7 +1177,8 @@ export function ComboChart({
             {loose.map((s, g) =>
               s.values.slice(0, n).map((v, i) => {
                 if (v == null || !Number.isFinite(v)) return null;
-                const fill = v < 0 && s.negativeColor ? s.negativeColor : s.color;
+                const fill =
+                  v < 0 && s.negativeColor ? s.negativeColor : (s.colors?.[i] ?? s.color);
                 return (
                   <path
                     key={`${s.label}-${i}`}
@@ -1190,7 +1197,7 @@ export function ComboChart({
               }),
             )}
             {lines.map((s) => (
-              <g key={s.label}>
+              <g key={s.label} opacity={s.opacity} className={c.series}>
                 {segments(s.values.slice(0, n)).map((run) => (
                   <path
                     key={run.start}

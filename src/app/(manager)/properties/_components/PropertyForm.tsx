@@ -81,7 +81,11 @@ export function PropertyForm({
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (state.errors) form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+    // Navigate only after the mutation has returned, avoiding a pending action redirect
+    // between the static /new page and the dynamic property workspace layout.
+    if (state.ok && state.destination) window.location.assign(state.destination);
   }, [state]);
+  const saving = pending || !!state.destination;
 
   return (
     <>
@@ -90,7 +94,7 @@ export function PropertyForm({
         className={styles.propertyForm}
         action={action}
         noValidate
-        aria-busy={pending}
+        aria-busy={saving}
       >
         {initial && <input type="hidden" name="propertyId" value={initial.id} />}
         {initial && (
@@ -249,8 +253,8 @@ export function PropertyForm({
           Add cover photos from the property page after saving.
         </p>
         <div className={styles.formActions}>
-          <Button type="submit" variant="primary" disabled={pending}>
-            {pending ? 'Saving…' : 'Save property'}
+          <Button type="submit" variant="primary" disabled={saving}>
+            {saving ? 'Saving…' : 'Save property'}
           </Button>
           {onCancel ? (
             <Button type="button" variant="ghost" onClick={onCancel}>

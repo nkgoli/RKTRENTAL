@@ -8,7 +8,12 @@ import { propertiesDb } from '@/lib/properties/data';
 import { parsePropertyInput, parseUnitInput, type FieldErrors } from '@/lib/properties/validation';
 import { parseRoiInputs } from '@/lib/properties/roi-inputs';
 
-export type FormState = { ok?: boolean; message?: string; errors?: FieldErrors };
+export type FormState = {
+  ok?: boolean;
+  message?: string;
+  errors?: FieldErrors;
+  destination?: string;
+};
 
 const failed = (errors: FieldErrors): FormState => ({
   errors,
@@ -26,7 +31,7 @@ export async function createPropertyAction(
   if (!result.ok) return failed(result.errors);
   revalidatePath('/properties');
   revalidatePath('/roi-analysis');
-  redirect(`/properties/${result.id}`);
+  return { ok: true, destination: `/properties/${result.id}` };
 }
 
 export async function updatePropertyAction(
@@ -76,7 +81,7 @@ export async function savePropertyPageAction(
   revalidatePath('/properties');
   revalidatePath(`/properties/${propertyId}`, 'layout');
   revalidatePath('/roi-analysis');
-  redirect(`/properties/${propertyId}`);
+  return { ok: true, destination: `/properties/${propertyId}` };
 }
 
 export async function updatePropertyRoiAction(

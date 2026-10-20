@@ -1,4 +1,4 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,6 +15,7 @@ import {
 const routeQuery = vi.hoisted(() => ({ value: null as URLSearchParams | null }));
 vi.mock('next/navigation', () => ({ useSearchParams: () => routeQuery.value }));
 vi.mock('@/app/(manager)/roi-analysis/actions', () => ({
+  loadActualReturnsAction: vi.fn(async () => ({ ok: false, code: 'NOT_FOUND' })),
   loadRoiDraftAction: vi.fn(),
   loadSavedRoiAnalysisAction: vi.fn(),
   saveRoiAnalysisAction: vi.fn(),

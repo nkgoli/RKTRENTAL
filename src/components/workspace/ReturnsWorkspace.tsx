@@ -34,7 +34,10 @@ export function ReturnsWorkspace({
       <p className={styles.context}>
         {returns.unitId
           ? 'Unit income follows settled payments. Property expenses, debt and value are allocated by scheduled or listed rent; equally when no rent is set.'
-          : 'Income follows settled payments. Expenses and debt service cover the selected period.'}
+          : 'Income follows settled payments. Expenses and debt service cover the selected period.'}{' '}
+        <a href={`/roi-analysis?${new URLSearchParams({ property: propertyId, view: 'actual', ...periodParams(returns.period) })}`}>
+          Compare {propertyName} with projections
+        </a>
       </p>
       <div className="kpis">
         <KpiCard

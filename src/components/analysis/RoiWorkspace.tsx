@@ -12,10 +12,19 @@ import {
   type ValidationIssue,
 } from '@/lib/analysis';
 import {
+  loadActualReturnsAction,
   loadRoiDraftAction,
   loadSavedRoiAnalysisAction,
   saveRoiAnalysisAction,
 } from '@/app/(manager)/roi-analysis/actions';
+import {
+  actualWindow,
+  periodChoiceFrom,
+  periodChoiceParams,
+  type PeriodChoice,
+  type ProjectionYear,
+} from '@/lib/analysis/actuals';
+import { ActualSnapshot, RoiActuals, actualFailure, type ActualsState } from './RoiActuals';
 import {
   customDraft,
   applyCustomBenchmarks,
@@ -88,7 +97,16 @@ export function RoiWorkspace({
   const [message, setMessage] = useState('');
   const [requestErrors, setErrors] = useState<ValidationIssue[]>([]);
   const [calculationVersion, setCalculationVersion] = useState(0);
-  const [view, setView] = useState('summary');
+  const [view, setViewState] = useState(() =>
+    searchParams?.get('view') === 'actual' ? 'actual' : 'summary',
+  );
+  const [period, setPeriodState] = useState<PeriodChoice>(() => periodChoiceFrom(searchParams));
+  // Mirrors for URL writes made in the same event as a state change.
+  const viewRef = useRef(view);
+  const periodRef = useRef(period);
+  const [actuals, setActuals] = useState<ActualsState>({ status: 'loading' });
+  const actualsToken = useRef(0);
+  const [actualsAttempt, setActualsAttempt] = useState(0);
   const [facts, setFacts] = useState<Facts | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [recovery, setRecovery] = useState<string | null>(null);
@@ -135,6 +153,42 @@ export function RoiWorkspace({
   const result = projection.result;
   const calculatedPayload = projection.payload;
   const stale = !result || !!requestErrors.length;
+  const range = useMemo(() => actualWindow(period, new Date()), [period]);
+  const projectionYear: ProjectionYear | null = result
+    ? {
+        effectiveGrossIncome: result.summaryMetrics.effectiveGrossIncome,
+        totalOperatingExpenses: result.summaryMetrics.totalOperatingExpenses,
+        noi: result.summaryMetrics.noi,
+        annualDebtService: result.summaryMetrics.annualDebtService,
+        annualCashFlow: result.summaryMetrics.annualCashFlow,
+      }
+    : null;
+  // Recorded actuals load independently of the projection: they need only the property and
+  // period, and a failure here never blocks or changes the assumptions.
+  const actualsProperty = property ? selected : '';
+  useEffect(() => {
+    if (!actualsProperty) return;
+    const request = ++actualsToken.current;
+    setActuals({ status: 'loading' });
+    (async () => {
+      try {
+        const loaded = await loadActualReturnsAction({
+          propertyId: actualsProperty,
+          from: range.from,
+          to: range.to,
+        });
+        if (request !== actualsToken.current) return;
+        setActuals(
+          loaded.ok
+            ? { status: 'ready', data: loaded.data }
+            : { status: 'error', message: actualFailure(loaded.code) },
+        );
+      } catch {
+        if (request === actualsToken.current)
+          setActuals({ status: 'error', message: actualFailure('') });
+      }
+    })();
+  }, [actualsProperty, range.from, range.to, actualsAttempt]);
 
   function install(p: AnalysisPayload, rev: number) {
     setPayload(p);
@@ -193,7 +247,9 @@ export function RoiWorkspace({
   }
   // Route changes reuse this client component. Keep the guard and request token alive.
   const navigate = useRef<(id: string) => void>(() => {});
+  const adopt = useRef<(query: URLSearchParams) => void>(() => {});
   useEffect(() => {
+    adopt.current = adoptLocation;
     navigate.current = (id) => {
       if (id === selected && (!id || property)) return;
       if (dirty && property) {
@@ -207,8 +263,11 @@ export function RoiWorkspace({
   }, [urlProperty, selection]);
   useEffect(() => {
     const counter = token;
-    const onPop = () =>
-      navigate.current(new URLSearchParams(window.location.search).get('property') ?? '');
+    const onPop = () => {
+      const query = new URLSearchParams(window.location.search);
+      adopt.current(query);
+      navigate.current(query.get('property') ?? '');
+    };
     window.addEventListener('popstate', onPop);
     return () => {
       window.removeEventListener('popstate', onPop);
@@ -243,6 +302,7 @@ export function RoiWorkspace({
       )
         return;
       event.preventDefault();
+      adoptLocation(destination.searchParams);
       choose(destination.searchParams.get('property') ?? '');
     };
     document.addEventListener('click', onLink, true);
@@ -271,14 +331,41 @@ export function RoiWorkspace({
   }, [pending, saving]);
 
   function propertyUrl(id: string) {
-    return id ? `/roi-analysis?property=${encodeURIComponent(id)}` : '/roi-analysis';
+    if (!id) return '/roi-analysis';
+    const query = new URLSearchParams({ property: id });
+    if (viewRef.current === 'actual') query.set('view', 'actual');
+    for (const [name, value] of Object.entries(periodChoiceParams(periodRef.current)))
+      query.set(name, value);
+    return `/roi-analysis?${query}`;
+  }
+  function setView(next: string) {
+    viewRef.current = next;
+    setViewState(next);
+  }
+  /** Tab or period changes keep the address shareable and reload-safe without a history entry. */
+  function changeView(next: string) {
+    setView(next);
+    if (selected) window.history.replaceState(null, '', propertyUrl(selected));
+  }
+  function changePeriod(next: PeriodChoice) {
+    periodRef.current = next;
+    setPeriodState(next);
+    if (selected) window.history.replaceState(null, '', propertyUrl(selected));
+  }
+  function adoptLocation(query: URLSearchParams) {
+    if (query.get('view') === 'actual') setView('actual');
+    if (query.has('period')) {
+      const next = periodChoiceFrom(query);
+      periodRef.current = next;
+      setPeriodState(next);
+    }
   }
   function closeGuard() {
     setPending(null);
     queueMicrotask(() => returnFocus.current?.focus());
   }
   function focusField(path: string) {
-    setView(
+    changeView(
       path.startsWith('benchmarks')
         ? 'compare'
         : path.startsWith('scenarios')
@@ -308,7 +395,8 @@ export function RoiWorkspace({
     setValues({});
     setSelected(id);
     setPayload(null);
-    setView('summary');
+    // The actual-versus-projected view and its period are shared context across properties.
+    setView(viewRef.current === 'actual' ? 'actual' : 'summary');
     if (writeHistory) window.history.pushState(null, '', propertyUrl(id));
     if (id) void load(id);
     else {
@@ -468,9 +556,12 @@ export function RoiWorkspace({
         )}
         <div className={styles.heading}>
           <div>
-            <p className={styles.eyebrow}>Property planning</p>
+            <p className={styles.eyebrow}>Returns &amp; ROI</p>
             <h1>{selected ? 'ROI Analysis' : 'Choose a property'}</h1>
-            <p>Explore projected returns with assumptions you control.</p>
+            <p>
+              Compare recorded rent and expenses with projected returns from assumptions you
+              control.
+            </p>
           </div>
           {selected && (
             <button disabled={saving} onClick={() => choose('')}>
@@ -489,6 +580,11 @@ export function RoiWorkspace({
                 terms, whole-property rent, operating budgets, reserves and growth assumptions
                 support the calculation. You can add missing details here or in the property’s ROI
                 details.
+              </p>
+              <p>
+                Actual results come from the rent payments and expenses you record. Open a property
+                and choose <strong>Actual vs projected</strong> to compare them for any period, or
+                see every property in <a href="/returns">Portfolio returns</a>.
               </p>
             </section>
           </>
@@ -574,14 +670,37 @@ export function RoiWorkspace({
                   label="ROI sections"
                   choices={[
                     { id: 'summary', label: 'Summary' },
+                    { id: 'actual', label: 'Actual vs projected' },
                     { id: 'charts', label: 'Charts' },
                     { id: 'scenarios', label: 'Scenarios' },
                     { id: 'benchmarks', label: 'Benchmarks' },
                     { id: 'compare', label: 'Compare' },
                   ]}
                   value={view}
-                  onChange={setView}
+                  onChange={changeView}
                 />
+                <div
+                  id="roi-section-panel-actual"
+                  role="tabpanel"
+                  aria-labelledby="roi-section-tab-actual"
+                  hidden={view !== 'actual'}
+                >
+                  <RoiActuals
+                    propertyId={selected}
+                    propertyName={property?.name ?? 'Property'}
+                    choice={period}
+                    window={range}
+                    state={actuals}
+                    projection={projectionYear}
+                    stale={stale}
+                    missingAssumptions={projection.errors.length}
+                    onPeriod={changePeriod}
+                    onRetry={() => setActualsAttempt((n) => n + 1)}
+                    onReviewAssumptions={() =>
+                      focusField(errors[0]?.path ?? 'input.purchase.purchasePrice')
+                    }
+                  />
+                </div>
                 {['benchmarks', 'compare'].map((panel) => (
                   <div
                     key={panel}
@@ -681,6 +800,13 @@ export function RoiWorkspace({
                         before tax
                       </p>
                     </section>
+                    <ActualSnapshot
+                      window={range}
+                      state={actuals}
+                      projection={projectionYear}
+                      stale={stale}
+                      onOpen={() => changeView('actual')}
+                    />
                     <section className={styles.card}>
                       <h2>From income to cash flow</h2>
                       <dl className={styles.statement}>

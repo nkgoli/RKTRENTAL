@@ -166,14 +166,14 @@
   line-height: 1.4;
   text-transform: none;
   white-space: normal;
-  visibility: hidden;
-  opacity: 0;
+  /* display (not visibility) so a closed tip near the edge never widens the page;
+     aria-describedby still reads hidden content. */
+  display: none;
   pointer-events: none;
 }
 .info:hover [role='tooltip'],
 .info button:focus-visible + [role='tooltip'] {
-  visibility: visible;
-  opacity: 1;
+  display: block;
 }
 .tiles {
   display: grid;
@@ -750,6 +750,7 @@
   }
   .bar,
   .hover,
+  .series,
   .slice,
   .mini i,
   .segmented button {

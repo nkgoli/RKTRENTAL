@@ -5,6 +5,7 @@ import { unstable_rethrow } from 'next/navigation';
 import { useActionState, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Alert, Badge, Card, CardHeader } from '@/components/ui';
 import { EmptyState } from '@/components/RouteStates';
+import { RentDistribution } from '@/components/rent-comps/RentDistribution';
 import { MAP, dollars, mapPins, suggestRent, summarize, type CompRow } from '@/lib/comps/core';
 import { applyRentAction, type ApplyState } from './actions';
 import { uncertainApply } from './apply-state';
@@ -356,6 +357,14 @@ export function CompsWorkbench(props: WorkbenchProps) {
           )}
         </Card>
       </div>
+
+      <RentDistribution
+        rents={included.map((row) => dollars(row.monthlyRentCents))}
+        subjectRent={baseline}
+        subjectLabel={`${subjectKind} (${baselineLabel})`}
+        rangeLow={suggestion?.rangeLow}
+        rangeHigh={suggestion?.rangeHigh}
+      />
 
       <Card flush>
         <CardHeader

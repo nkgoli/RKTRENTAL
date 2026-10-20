@@ -154,3 +154,52 @@ Behaviour in the same run, at both widths:
 - Home then → announces year 2 with exact cents (`Cash Flow -$175.80`). This
   matches the earlier verified readout.
 - There were no console errors.
+
+## 6. Startup and seeding
+
+No startup, seed, migration or launcher code changed. Only styles, presentation
+colour constants, tests and docs did. The fresh and repeat startup evidence in
+`realroi-chart-parity.md` §12.4–12.5 therefore still applies and was not rerun.
+
+This work's isolated runtime did run the real `scripts/start.ps1` twice on a new
+`.data/postgres-5541`:
+
+- The first run initialised the database, migrated and seeded it.
+- The repeat run logged "Demo seed is up to date".
+
+`npm run build` cannot regenerate the Prisma engine while the live copy holds it
+(EPERM), so the isolated builds ran `next build` directly. The Prisma schema is
+unchanged.
+
+## 7. Live delivery (2026-10-20)
+
+- Root `main` was fast-forwarded to `b57e710`. Root's own local edits were left as
+  they were: `prisma/package-lock.json` and the untracked `start-rocketrental.ps1`.
+- `register-live-task.ps1 -Restart` restarted `RocketRentalLive3100`
+  (`start.ps1 -Port 3100 -DbPort 5434 -SkipInstall -StopExisting`).
+  - It rebuilt from build `80LybE7yms0czS-GwZ-0s` to `qH58PGKbiK-DM2WYQRPrA`. That
+    build's `_buildManifest.js` returns 200, and `/fonts/jetbrains-mono-…woff2` now
+    returns 404.
+  - Processes: `next start -p 3100` under PowerShell, with postgres on
+    `.data/postgres-5434`.
+  - `.demo-seeded` is still 2026-10-20 11:57:30, so nothing was reseeded.
+  - `.data/postgres-5433` was not started; it was last written at 12:31.
+- Read-only live check on Maple Court at 1440 and 390 px
+  (`roi-app-style/after/live-3100-check.json`). It clicked only tabs: no Save, no
+  Reload and no Compare selection, and Elm Street was not opened.
+  - Cards: 12 px radius, `rgb(220,227,237)` border. Titles: Space Grotesk 16 px.
+    Tile values: Space Grotesk. Pressed toggles: `rgb(49,89,217)`, 999px.
+    JetBrains Mono is not loaded.
+  - All six Charts sub-tabs, Scenarios, Benchmarks, Actual vs projected and
+    Summary rendered without horizontal overflow or console errors.
+  - Actual vs projected still reads $215,850 and $80,000 with "Rent coverage is
+    partial". Maple is at revision 0.
+  - The keyboard readout gives year 2 Cash Flow −$175.80, as before.
+  - The live ROI page captures were byte-identical to the isolated
+    `after/roi-page-1440.png` and `roi-page-390.png`, so they were not added again.
+- **Data preservation in 5434** (`roi-app-style/after/live-5434-hashes.json`):
+  - Every row of all 33 tables was hashed (row count plus an MD5 over the sorted
+    row MD5s) before integration and after the restart and live check.
+  - All 33 tables were identical. The digest stayed `bc7bed62…61d2`.
+  - The one `RoiAnalysisState` row, the 18 Elm Street DRAFT at revision 2, is
+    unchanged.

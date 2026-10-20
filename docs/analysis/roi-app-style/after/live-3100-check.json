@@ -1,0 +1,174 @@
+﻿{
+  "390": {
+    "tabs": {
+      "Equity": {
+        "svgs": 52,
+        "overflow": false
+      },
+      "Cash Flow": {
+        "svgs": 52,
+        "overflow": false
+      },
+      "Expenses": {
+        "svgs": 52,
+        "overflow": false
+      },
+      "Amortization": {
+        "svgs": 52,
+        "overflow": false
+      },
+      "Exit Analysis": {
+        "svgs": 52,
+        "overflow": false
+      },
+      "Sensitivity": {
+        "svgs": 52,
+        "overflow": false
+      },
+      "Scenarios": {
+        "svgs": 5,
+        "overflow": false
+      },
+      "Benchmarks": {
+        "svgs": 11,
+        "overflow": false
+      },
+      "Actual vs projected": {
+        "svgs": 3,
+        "overflow": false
+      },
+      "Summary": {
+        "svgs": 25,
+        "overflow": false
+      }
+    },
+    "styles": {
+      "card": {
+        "font": "Inter",
+        "size": "14px",
+        "radius": "12px",
+        "border": "rgb(220, 227, 237)",
+        "bg": "rgb(255, 255, 255)"
+      },
+      "title": {
+        "font": "\"Space Grotesk\"",
+        "size": "16px",
+        "radius": "0px",
+        "border": "rgb(23, 36, 59)",
+        "bg": "rgba(0, 0, 0, 0)"
+      },
+      "tile": {
+        "font": "\"Space Grotesk\"",
+        "size": "15px",
+        "radius": "0px",
+        "border": "rgb(23, 36, 59)",
+        "bg": "rgba(0, 0, 0, 0)"
+      },
+      "pressed": {
+        "font": "Inter",
+        "size": "13px",
+        "radius": "999px",
+        "border": "rgb(49, 89, 217)",
+        "bg": "rgb(49, 89, 217)"
+      },
+      "jetbrains": false,
+      "text": "Revision 0"
+    },
+    "actual": [
+      "$215,850",
+      "Rent coverage is partial",
+      "$80,000",
+      "Rent coverage is partial",
+      "Rent coverage is partial",
+      "$215,850"
+    ],
+    "keyboard": "Year 2: Effective income $267,444.00; − Operating costs $103,295.40; = NOI $164,148.60; − Debt service $150,179.40; − Capital reserves $14,145.00; = Cash Flow -$175.80",
+    "errors": 0
+  },
+  "1440": {
+    "tabs": {
+      "Equity": {
+        "svgs": 52,
+        "overflow": false
+      },
+      "Cash Flow": {
+        "svgs": 52,
+        "overflow": false
+      },
+      "Expenses": {
+        "svgs": 52,
+        "overflow": false
+      },
+      "Amortization": {
+        "svgs": 52,
+        "overflow": false
+      },
+      "Exit Analysis": {
+        "svgs": 52,
+        "overflow": false
+      },
+      "Sensitivity": {
+        "svgs": 52,
+        "overflow": false
+      },
+      "Scenarios": {
+        "svgs": 5,
+        "overflow": false
+      },
+      "Benchmarks": {
+        "svgs": 11,
+        "overflow": false
+      },
+      "Actual vs projected": {
+        "svgs": 3,
+        "overflow": false
+      },
+      "Summary": {
+        "svgs": 25,
+        "overflow": false
+      }
+    },
+    "styles": {
+      "card": {
+        "font": "Inter",
+        "size": "14px",
+        "radius": "12px",
+        "border": "rgb(220, 227, 237)",
+        "bg": "rgb(255, 255, 255)"
+      },
+      "title": {
+        "font": "\"Space Grotesk\"",
+        "size": "16px",
+        "radius": "0px",
+        "border": "rgb(23, 36, 59)",
+        "bg": "rgba(0, 0, 0, 0)"
+      },
+      "tile": {
+        "font": "\"Space Grotesk\"",
+        "size": "15px",
+        "radius": "0px",
+        "border": "rgb(23, 36, 59)",
+        "bg": "rgba(0, 0, 0, 0)"
+      },
+      "pressed": {
+        "font": "Inter",
+        "size": "13px",
+        "radius": "999px",
+        "border": "rgb(49, 89, 217)",
+        "bg": "rgb(49, 89, 217)"
+      },
+      "jetbrains": false,
+      "text": "Revision 0"
+    },
+    "actual": [
+      "$215,850",
+      "Rent coverage is partial",
+      "$80,000",
+      "Rent coverage is partial",
+      "Rent coverage is partial",
+      "$215,850"
+    ],
+    "keyboard": "Year 2: Effective income $267,444.00; − Operating costs $103,295.40; = NOI $164,148.60; − Debt service $150,179.40; − Capital reserves $14,145.00; = Cash Flow -$175.80",
+    "errors": 0
+  }
+}

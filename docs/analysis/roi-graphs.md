@@ -57,6 +57,10 @@ fall outside the existing ROI graphs.
 - Hover (mouse), tap (touch) and arrow keys / Home / End / Escape on the focusable
   plot select a year. A polite live region announces the year's values.
 - Below 480 px the readout is shown under the chart instead of over it.
+- A selected year is only used while the chart still has it. Shortening the
+  horizon, switching property or scenario, or emptying the data clears the
+  selection before the readout, `details` callback or highlight read it, so a
+  tapped last year can no longer show "Year undefined" or read past the rows.
 - Transitions run only under `prefers-reduced-motion: no-preference`.
 
 ## Evidence
@@ -64,4 +68,24 @@ fall outside the existing ROI graphs.
 `docs/analysis/roi-graphs/` holds the before and after screenshots (desktop
 1440 px and 390 px) taken from the live localhost:3100 app.
 `tests/analysis/chart-data.test.tsx` covers the adapters and checks the chart
-readout against the projection table.
+readout against the projection table, plus rerender regressions for shrinking
+and empty data with a selected last point (keyboard, hover and touch).
+
+`docs/analysis/roi-graphs/fix/` replaces the cropped 390 px captures with
+uncropped ones: a 390x844 viewport shot of each chart card, a full-page shot
+of every chart view at 390 px, and 1440x900 viewport shots of each card. At
+390 px every card measures `scrollWidth == clientWidth` (325 px, inside the
+390 px viewport); only exact tables scroll, inside their own focusable region.
+The earlier `after-*-390.png` files were narrow crops, not a layout overflow.
+`candidate-*` shots come from the candidate build: touch on the last year then
+Y5, a scenario horizon cut to 3 years, the no-ROI property and actual vs projected.
+
+## Keeping localhost:3100 running
+
+`scripts/register-live-task.ps1` registers the per-user scheduled task
+`RocketRentalLive3100`, which runs `scripts/start.ps1 -Port 3100 -DbPort 5433
+-SkipInstall` hidden. Task Scheduler owns the app and embedded Postgres, so they
+outlive the shell or agent session that started them; the task also starts at
+logon and restarts after a failed exit. It never reseeds (`.demo-seeded` is kept)
+or resets `.data/postgres-5433`. Use `-Restart` to pick up new commits (start.ps1
+rebuilds when sources are newer than `.next/BUILD_ID`) and `-Remove` to stop it.

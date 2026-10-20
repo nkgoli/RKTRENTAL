@@ -116,6 +116,93 @@ describe('ROI combo chart', () => {
     expect(container.querySelector('[aria-live]')?.textContent).toBe('');
   });
 
+  it('drops a selected last point when the data shrinks or empties instead of reading past it', () => {
+    const data = (count: number) =>
+      Array.from({ length: count }, (_, i) => ({ year: i + 1, cumulativeCashFlow: -100 * (i + 1) }));
+    // Mirrors the Summary and Equity callbacks, which index their own rows directly.
+    const chart = (rows: ReturnType<typeof data>) => (
+      <ComboChart
+        label="Shrinking cash"
+        years={rows.map((r) => r.year)}
+        series={[
+          { label: 'Cash', kind: 'bar', values: rows.map((r) => r.cumulativeCashFlow), color: '#0d9488' },
+        ]}
+        details={(i) => [['Cumulative', dollars(rows[i].cumulativeCashFlow)]]}
+      />
+    );
+    const { container, rerender } = render(chart(data(10)));
+    const live = () => container.querySelector('[aria-live]')!.textContent;
+    const plot = screen.getByRole('group', { name: /Shrinking cash/ });
+    const svg = container.querySelector('svg')!;
+    svg.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 660, height: 280, right: 660, bottom: 280 }) as DOMRect;
+
+    // Keyboard: last of ten, then five years.
+    fireEvent.keyDown(plot, { key: 'End' });
+    expect(live()).toContain('Year 10: Cash -$1,000.00; Cumulative -$1,000.00');
+    rerender(chart(data(5)));
+    expect(live()).toBe('');
+    expect(container.textContent).not.toContain('undefined');
+    // Five bars and no highlight band.
+    expect(container.querySelectorAll('svg rect')).toHaveLength(5);
+    fireEvent.keyDown(plot, { key: 'ArrowLeft' });
+    expect(live()).toContain('Year 5: Cash -$500.00');
+
+    // Touch on the far right, then the data empties and comes back shorter.
+    fireEvent.pointerDown(svg, { clientX: 655, pointerType: 'touch' });
+    expect(live()).toContain('Year 5:');
+    rerender(chart([]));
+    expect(live()).toBe('');
+    expect(container.querySelectorAll('circle, svg rect')).toHaveLength(0);
+    rerender(chart(data(3)));
+    expect(live()).toBe('');
+    expect(container.textContent).not.toContain('undefined');
+
+    // Mouse hover on the last of three, then two remain.
+    fireEvent.pointerMove(svg, { clientX: 655, pointerType: 'mouse' });
+    expect(live()).toContain('Year 3: Cash -$300.00');
+    rerender(chart(data(2)));
+    expect(live()).toBe('');
+    fireEvent.keyDown(plot, { key: 'End' });
+    expect(live()).toContain('Year 2: Cash -$200.00; Cumulative -$200.00');
+  });
+
+  it('clears a selected final year when the horizon, property or hold gets shorter', () => {
+    const long = financed(12);
+    const short = financed(4);
+    const props = (p: ReturnType<typeof financed>) => ({
+      result: calculatePayload(p).base,
+      calculatedPayload: p,
+      calculationVersion: 1,
+      stale: false,
+      saving: false,
+      onEdit: () => {},
+    });
+    const { container, rerender } = render(<RoiProjections {...props(long)} />);
+    const cash = screen.getByRole('group', { name: /Annual and cumulative operating cash flow/ });
+    const liveOf = (plot: HTMLElement) => plot.parentElement!.querySelector('[aria-live]')!.textContent;
+
+    // Horizon: year 12 selected, then Y5.
+    fireEvent.keyDown(cash, { key: 'End' });
+    expect(liveOf(cash)).toContain('Year 12:');
+    const horizon = screen.getByRole('group', { name: 'Cash flow chart horizon' });
+    fireEvent.click(within(horizon).getByRole('button', { name: 'Y5' }));
+    expect(liveOf(cash)).toBe('');
+
+    // Property/scenario change: equity year 12 selected, then a four-year hold.
+    fireEvent.click(screen.getByRole('tab', { name: /Equity/ }));
+    const equity = screen.getByRole('group', { name: /Equity composition and loan balance/ });
+    fireEvent.keyDown(equity, { key: 'End' });
+    expect(liveOf(equity)).toContain('Year 12:');
+    rerender(<RoiProjections {...props(short)} />);
+    expect(liveOf(equity)).toBe('');
+    expect(container.textContent).not.toMatch(/Year undefined|NaN/);
+    fireEvent.keyDown(equity, { key: 'End' });
+    const rows = projectionRows(calculatePayload(short).base);
+    expect(liveOf(equity)).toContain(`Year 4:`);
+    expect(liveOf(equity)).toContain(`Property value ${dollars(rows[3].propertyValue)}`);
+  });
+
   it('matches the exact projection table for the final year and follows the horizon', () => {
     const p = financed(12);
     const result = calculatePayload(p).base;

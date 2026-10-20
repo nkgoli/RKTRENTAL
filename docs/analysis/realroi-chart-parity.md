@@ -1189,3 +1189,29 @@ Benchmarks, Compare and the comps page. The earlier C1–C17 charts were re-chec
 3. Key Metrics rows use RocketRental metrics (NOI, cap rate, cash flow, equity,
    cumulative cash, IRR, equity multiple) rather than the reference's "Total Return".
 4. C25 has no rendered reference to pair with; it follows the source.
+
+### 11.5 Live delivery (2026-10-20)
+
+- `main` in the project root was merged to `cfea7f6` and the real app was rebuilt and
+  restarted with `scripts/start-live.ps1 -StopExisting -Rebuild -SkipInstall`: no
+  pending migrations, seed "up to date", served build `CwBGDFWOAtf7o78IofNLb` from
+  `cfea7f6`, whose bundles contain the new charts. To outlive the agent session it was
+  then relaunched once more with `start-live.ps1 -StopExisting -SkipInstall` as a
+  detached process (parent `WmiPrvSE`), still `http://localhost:3100` on
+  `localhost:5434/rocketrental`.
+- Live checks at 1440 and 390 after the reference (3300) and task build (3110) were
+  closed: Maple Court shows the Deal Snapshot, Fix My Deal and all new tabs; Actual vs
+  projected reads income $215,850 and expenses $80,000 with "Rent coverage is partial";
+  the exact table reads Year 1 −$2,555 and Year 2 −$176 / −$2,731; Harbor ↔ Maple
+  switching loads each property's own inputs ($4,790,000 / $3,350,000 and $2,830,000 /
+  $1,980,000); a full reload keeps them; no tab overflows at 390; the only console error
+  is the existing `/favicon.ico` 404. Compare shows its "Choose at least one reference
+  asset" state because Maple has no saved selection.
+- Data preservation: row counts and MD5 of every row in all 33 tables of 5434 were
+  identical before the work, after the browser checks and after both restarts
+  (`RoiAnalysisState` empty, 4 properties). `.data/postgres-5433` and
+  `.data/postgres-5434` are both kept; nothing was reseeded, reset or switched.
+- Open item for the owner: the scheduled task `RocketRentalLive3100` still runs
+  `start.ps1 -Port 3100 -DbPort 5433` at logon, so after the next sign-in it would serve
+  the other dataset. It was not changed here. To pin it to this dataset, run
+  `scripts/register-live-task.ps1 -DbPort 5434 -Restart`.

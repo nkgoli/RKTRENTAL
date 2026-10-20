@@ -55,7 +55,7 @@ test('manager runs screening and approves Olivia Reed with a written reason', as
   await page.getByLabel('Decision reason').selectOption('criteria-met');
   await page.getByRole('button', { name: 'Approve' }).click();
   await expect(page.getByRole('status')).toContainText('Applicant approved');
-  const createLease = page.getByRole('link', { name: 'Create lease →' });
+  const createLease = page.getByRole('link', { name: 'Create lease', exact: true });
   await expect(createLease).toHaveAttribute(
     'href',
     `/leases/new?unit=seed-unit-maple-7&applicant=${oliviaId}`,

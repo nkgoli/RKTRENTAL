@@ -1,28 +1,87 @@
+.panel {
+  min-width: 0;
+  color: var(--design-text);
+}
 .settings {
   border: 1px solid var(--rr-border);
-  border-radius: 8px;
+  border-radius: var(--design-radius);
+  background: var(--design-surface);
   min-width: 0;
 }
 .settings summary {
   cursor: pointer;
-  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 15px 17px;
+  min-height: 52px;
   color: var(--design-text);
   font-size: 13px;
 }
 .settings summary span {
   color: var(--design-muted);
-  margin-left: 12px;
   font-size: 12px;
 }
 .settings form {
   border: 0;
   border-top: 1px solid var(--rr-border);
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 12px 12px;
   box-shadow: none;
 }
-.groupRow {
-  gap: 16px;
-  align-items: start;
+.settingsGrid {
+  padding: 18px;
+}
+.settingsGrid label {
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+.settingsGrid label small {
+  font-weight: 400;
+  color: var(--design-muted);
+  overflow-wrap: anywhere;
+}
+.settingsGrid select {
+  min-width: 0;
+  min-height: 38px;
+  font-size: 13px;
+}
+.panel .chips li {
+  padding: 5px 8px;
+  border: 1px solid var(--rr-border);
+  border-radius: 6px;
+  background: var(--design-background);
+  color: var(--design-text);
+  font-weight: 400;
+}
+.groups {
+  border-radius: var(--design-radius);
+  overflow: hidden;
+}
+.panel .groupRow {
+  grid-template-columns: 150px minmax(0, 1fr) 150px;
+  gap: 18px;
+  align-items: center;
+  padding: 18px;
+}
+.groupRow h3 {
+  font-size: 16px;
+}
+.groupRow small {
+  font-size: 11px;
+}
+.panel .person {
+  padding: 9px 11px;
+  border: 1px solid var(--rr-border);
+  border-radius: 8px;
+  background: var(--design-background);
+  max-width: 100%;
+  min-width: 0;
+}
+.person > span:last-of-type {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .email {
   display: block;
@@ -31,18 +90,53 @@
   font-size: 12px;
   overflow-wrap: anywhere;
 }
-@media (max-width: 700px) {
+.panel .groupActions {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  justify-content: start;
+}
+@media (max-width: 720px) {
+  .settings summary {
+    display: block;
+    padding: 14px;
+  }
   .settings summary span {
     display: block;
-    margin: 4px 0 0 18px;
+    margin-top: 4px;
   }
-  .settings select {
+  .settingsGrid {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 14px;
+  }
+  .settingsGrid select {
     max-width: 100%;
+    min-height: 44px;
+    font-size: 16px;
   }
-  .groupRow {
+  .panel .groupRow {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 14px;
+    gap: 12px;
+  }
+  .panel .people {
+    display: grid;
     grid-template-columns: minmax(0, 1fr);
   }
-  .groupRow a {
-    max-width: 100%;
+  .panel .person {
+    display: flex;
+    min-height: 56px;
+    width: 100%;
+    padding: 10px 12px;
+  }
+  .panel .groupActions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .pageHeader {
+    align-items: start;
+    flex-direction: column;
   }
 }

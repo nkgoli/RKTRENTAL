@@ -6,6 +6,8 @@ import { Pagination, pageFrom, paginate } from '@/components/ui/Pagination';
 import { db } from '@/lib/db/client';
 import { loadIntegrations } from '@/lib/integrations/service';
 import { SCREENING_PACKAGES } from '@/lib/integrations/settings';
+import { SelectionField } from '@/app/(manager)/applications/SelectionField';
+import { ApplicationArrow } from '@/app/(manager)/applications/ApplicationArrow';
 import type { ApplicationStatus } from '@/lib/screening/policy';
 import { unitScopeWhere, scopeQuery, type ScopeFilter } from '@/lib/workspace/scope';
 import { saveApplicationSettingsAction } from './actions';
@@ -121,7 +123,7 @@ export async function ApplicationsPanel({
     });
 
   return (
-    <section className={styles.panel} aria-label="Applications">
+    <section className={`${styles.panel} ${ux.panel}`} aria-label="Applications">
       {message && (
         <Alert tone={message.tone}>
           <div>{message.text}</div>
@@ -146,33 +148,28 @@ export async function ApplicationsPanel({
               Save settings
             </Button>
           </div>
-          <div className={styles.settings}>
+          <div className={`${styles.settings} ${ux.settingsGrid}`}>
             <div>
               <p className={styles.settingLabel}>What we collect</p>
-              <ul className={styles.chips}>
+              <ul className={`${styles.chips} ${ux.chips}`}>
                 {collected.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
             </div>
-            <label className={styles.settingField}>
-              <span className={styles.settingLabel}>Screening reports</span>
-              <select name="defaultPackage" defaultValue={screening.defaultPackage}>
-                {SCREENING_PACKAGES.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <small className="muted">
-                Applicants consent before each report is ordered. Applies to every property.
-              </small>
-            </label>
+            <SelectionField
+              className={styles.settingField}
+              label="Screening reports"
+              name="defaultPackage"
+              defaultValue={screening.defaultPackage}
+              options={SCREENING_PACKAGES}
+              help="Applicants consent before each report is ordered. Applies to every property."
+            />
           </div>
         </form>
       </details>
 
-      <div className={styles.pageHeader}>
+      <div className={`${styles.pageHeader} ${ux.pageHeader}`}>
         <div>
           <h2>Applicants</h2>
           <p className="muted">
@@ -210,7 +207,7 @@ export async function ApplicationsPanel({
         </div>
       ) : (
         <div className="card flush">
-          <ul className={styles.groups}>
+          <ul className={`${styles.groups} ${ux.groups}`}>
             {paginate(allGroups, current).map((group) => {
               const status = group.status;
               const approved = group.items.find((a) => a.status === 'APPROVED');
@@ -234,12 +231,12 @@ export async function ApplicationsPanel({
                       {date(group.items[0].appliedAt)}
                     </small>
                   </div>
-                  <ul className={styles.pills}>
+                  <ul className={`${styles.pills} ${ux.people}`}>
                     {group.items.map((application) => (
                       <li key={application.id}>
                         <Link
                           href={reviewHref(application.id)}
-                          className={styles.pill}
+                          className={`${styles.pill} ${ux.person}`}
                           data-status={application.status}
                           title={`${application.applicantEmail} · applied ${date(application.appliedAt)}`}
                         >
@@ -256,14 +253,14 @@ export async function ApplicationsPanel({
                       </li>
                     ))}
                   </ul>
-                  <div className={styles.groupActions}>
+                  <div className={`${styles.groupActions} ${ux.groupActions}`}>
                     <Badge tone={tones[status]}>{labels[status]}</Badge>
                     {approved && (
                       <Link
                         className="btn btn-primary btn-sm"
                         href={leaseHref(group.unitId, approved.id)}
                       >
-                        Create lease →
+                        Create lease <ApplicationArrow />
                       </Link>
                     )}
                   </div>

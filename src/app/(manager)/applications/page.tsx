@@ -3,7 +3,6 @@ import { EmptyState } from '@/components/RouteStates';
 import { Avatar, Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Pagination, PAGE_SIZE, pageFrom } from '@/components/ui/Pagination';
-import { KpiCard } from '@/components/dashboard/KpiCard';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
 import { scopeFilterFrom, unitScopeWhere } from '@/lib/workspace/scope';
@@ -12,6 +11,8 @@ import { requireManagerRole } from '@/lib/auth/access';
 import { hasCurrentConsent, type ApplicationStatus } from '@/lib/screening/policy';
 import { recordDecision, requestScreening } from './actions';
 import { ReviewDecisionForm, ScreeningSubmit } from './ReviewForms';
+import { ApplicantList, BackToApplicants } from './ApplicantList';
+import { ApplicationArrow } from './ApplicationArrow';
 import styles from './applications.module.css';
 
 type SearchParams = {
@@ -59,6 +60,18 @@ function objectSummary(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+}
+
+function ApplicationMetric({ label, value, note }: { label: string; value: number; note: string }) {
+  return (
+    <div className={styles.metric}>
+      <strong>{value}</strong>
+      <div>
+        <p>{label}</p>
+        <small>{note}</small>
+      </div>
+    </div>
+  );
 }
 
 export default async function ApplicationsPage({
@@ -184,7 +197,7 @@ export default async function ApplicationsPage({
       />
       <PageHeader
         title="Applications"
-        eyebrow="Leasing"
+        eyebrow={scope.propertyId ? 'Leasing / Property applications' : 'Leasing / All properties'}
         actions={[{ label: 'Screening provider', href: '/integrations' }]}
       />
       {scopedReturn && (
@@ -204,6 +217,8 @@ export default async function ApplicationsPage({
             <span>Search applicants</span>
             <span className={styles.search}>
               <input
+                type="search"
+                maxLength={100}
                 aria-label="Search applicants or units"
                 name="q"
                 placeholder="Search applicants or units"
@@ -250,13 +265,13 @@ export default async function ApplicationsPage({
         </p>
       )}
 
-      <div className={`kpis ${styles.summaryStrip}`}>
-        <KpiCard
+      <section className={styles.summaryStrip} aria-label="Applications at a glance">
+        <ApplicationMetric
           label="New applications"
           value={countByStatus.get('SUBMITTED') ?? 0}
           note="Not screened yet"
         />
-        <KpiCard
+        <ApplicationMetric
           label="Screening in progress"
           value={countByStatus.get('SCREENING') ?? 0}
           note={
@@ -267,30 +282,15 @@ export default async function ApplicationsPage({
                 : 'Provider not connected'
           }
         />
-        <KpiCard
+        <ApplicationMetric
           label="Ready for decision"
           value={countByStatus.get('REVIEW') ?? 0}
           note={(countByStatus.get('REVIEW') ?? 0) > 0 ? 'Consent recorded' : 'No reports ready'}
         />
-      </div>
+      </section>
 
       <div className={styles.reviewGrid}>
-        <section
-          className={styles.listCard}
-          id="applicants"
-          tabIndex={-1}
-          aria-labelledby="applicants-title"
-        >
-          <div className={styles.listHeader}>
-            <div>
-              <h2 id="applicants-title">Applicants</h2>
-              <p>
-                {filteredCount === totalCount
-                  ? `${totalCount} applications`
-                  : `${filteredCount} of ${totalCount} applications`}
-              </p>
-            </div>
-          </div>
+        <ApplicantList count={filteredCount} total={totalCount}>
           {ordered.length ? (
             <ul>
               {ordered.map((application) => {
@@ -382,7 +382,7 @@ export default async function ApplicationsPage({
               return '/applications?' + next.toString();
             }}
           />
-        </section>
+        </ApplicantList>
 
         {selected ? (
           <section
@@ -391,9 +391,7 @@ export default async function ApplicationsPage({
             tabIndex={-1}
             aria-labelledby="selected-title"
           >
-            <a href="#applicants" className={styles.backToList}>
-              ↑ Back to applicants
-            </a>
+            <BackToApplicants />
             <div className={styles.detailHeader}>
               <div className={styles.identity}>
                 <Avatar initials={initials(selected.applicantName)} size="lg" />
@@ -569,7 +567,7 @@ export default async function ApplicationsPage({
                     }
                     variant="primary"
                   >
-                    Create lease →
+                    Create lease <ApplicationArrow />
                   </Button>
                 </div>
               ) : (

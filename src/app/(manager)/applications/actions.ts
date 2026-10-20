@@ -134,7 +134,12 @@ export async function requestScreening(formData: FormData) {
   await syncApplicationGroupStatus(db, applicationId);
 
   revalidatePath('/applications');
-  redirect(applicationsRedirectUrl(applicationId, 'screening', scopeFrom(formData)));
+  redirect(
+    applicationsRedirectUrl(applicationId, 'screening', scopeFrom(formData)).replace(
+      '/applications?',
+      '/applications/result?',
+    ),
+  );
 }
 
 const decisionReasons = new Set([
@@ -194,5 +199,10 @@ export async function recordDecision(formData: FormData) {
   });
 
   revalidatePath('/applications');
-  redirect(applicationsRedirectUrl(applicationId, decision.toLowerCase(), scopeFrom(formData)));
+  redirect(
+    applicationsRedirectUrl(applicationId, decision.toLowerCase(), scopeFrom(formData)).replace(
+      '/applications?',
+      '/applications/result?',
+    ),
+  );
 }

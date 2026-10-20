@@ -34,4 +34,29 @@ describe('review decision controls', () => {
       reason: 'criteria-met',
     });
   });
+
+  it.each([
+    'credit-below-criteria',
+    'background-review',
+    'eviction-review',
+    'application-incomplete',
+  ])('allows only decline for %s and exposes the full selected label', async (reason) => {
+    const user = userEvent.setup();
+    const action = vi.fn(async (data: FormData) => {
+      expect(data.get('applicationId')).toBe('app-2');
+    });
+    render(<ReviewDecisionForm action={action} applicationId="app-2" />);
+    await user.selectOptions(screen.getByRole('combobox'), reason);
+    const selected = (screen.getByRole('combobox') as HTMLSelectElement).selectedOptions[0].text;
+    expect(screen.getByText(selected, { selector: 'small' })).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Approve' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    await user.click(screen.getByRole('button', { name: 'Decline' }));
+    expect(Object.fromEntries(action.mock.calls[0][0])).toMatchObject({
+      applicationId: 'app-2',
+      decision: 'DECLINED',
+      reason,
+    });
+  });
 });

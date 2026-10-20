@@ -24,6 +24,8 @@ export type ManagerNavItem = {
   actions?: ManagerAction[];
   /** Route stays reachable and titled, but has no sidebar link. */
   hidden?: boolean;
+  /** Other routes that belong to this sidebar entry and mark it current. */
+  activeFor?: string[];
 };
 
 export type ManagerNavGroup = {
@@ -84,14 +86,22 @@ export const managerNav: ManagerNavGroup[] = [
     label: 'Money',
     items: [
       { label: 'Payments', href: '/payments', icon: 'payments' },
-      { label: 'ROI Analysis', href: '/roi-analysis', icon: 'roi-analysis' },
+      // Returns and ROI are one workspace: property actuals sit beside projections there,
+      // and the portfolio report is reached from it rather than as a competing entry.
+      {
+        label: 'Returns & ROI',
+        href: '/roi-analysis',
+        icon: 'roi-analysis',
+        activeFor: ['/returns'],
+      },
       { label: 'Rent Analysis', href: '/rent-analysis', icon: 'rent-analysis' },
       {
-        label: 'Returns',
+        label: 'Portfolio returns',
         href: '/returns',
         icon: 'returns',
-        title: 'Returns and metrics',
+        title: 'Portfolio returns',
         actions: [{ label: 'Export report', href: '/returns' }],
+        hidden: true,
       },
       { label: 'Rent comps', href: '/rent-comps', icon: 'rent-comps', hidden: true },
     ],
@@ -122,6 +132,13 @@ export const tenantTabs: TenantTab[] = [
 /** True when `pathname` is `href` or a route nested under it. */
 export function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/** True when the sidebar entry is current for pathname, including its related routes. */
+export function isItemActive(pathname: string, item: ManagerNavItem): boolean {
+  return (
+    isActive(pathname, item.href) || !!item.activeFor?.some((href) => isActive(pathname, href))
+  );
 }
 
 export function findManagerItem(

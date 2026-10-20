@@ -75,7 +75,7 @@ it('follows the real menu to explicit selection, selected dashboard and return s
   expect(nav.getByRole('link', { name: 'Rent Analysis' }).getAttribute('aria-current')).toBe(
     'page',
   );
-  expect(nav.getByRole('link', { name: 'ROI Analysis' }).hasAttribute('aria-current')).toBe(false);
+  expect(nav.getByRole('link', { name: 'Returns & ROI' }).hasAttribute('aria-current')).toBe(false);
   const select = screen.getByRole('link', { name: 'Open Rent Analysis' });
   expect(select.getAttribute('href')).toBe('/rent-analysis?property=authorized-maple');
   await navigate(select.getAttribute('href')!);

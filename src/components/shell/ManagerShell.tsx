@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -7,7 +7,7 @@ import { cx } from '../ui/cx';
 import { DOCKED_QUERY, FOCUSABLE, nextTrapIndex } from './drawer';
 import { Icon } from './Icons';
 import { PageHeaderContext, type PageHeaderConfig } from './PageHeader';
-import { findManagerItem, isActive, managerNav } from './nav';
+import { findManagerItem, isItemActive, managerNav } from './nav';
 import focus from './focus.module.css';
 
 export type ManagerUser = { name: string; role: string; initials: string };
@@ -130,7 +130,7 @@ export function ManagerShell({
                 <div className={cx('nav-section', group.pinned && 'nav-pinned')} key={group.label}>
                   {!group.hideLabel && <p className="nav-label">{group.label}</p>}
                   {items.map((item) => {
-                    const active = isActive(pathname, item.href);
+                    const active = isItemActive(pathname, item);
                     return (
                       <a
                         key={item.href}

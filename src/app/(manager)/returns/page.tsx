@@ -62,8 +62,9 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
   const { monthly, yearly, expenseBreakdown } = activity;
   const shownProperties = selected ? [selected] : overview.properties;
   const scope = selected ?? overview.portfolio;
+  // A property's returns open in the combined Returns & ROI workspace, beside its projection.
   const returnsHref = (propertyId: string) =>
-    `/properties/${propertyId}/returns?${new URLSearchParams(range)}`;
+    `/roi-analysis?${new URLSearchParams({ property: propertyId, view: 'actual', ...range })}`;
   const notice = params.notice ? notices[params.notice] : undefined;
   const adding = params.add !== undefined || params.notice === 'expense-invalid';
   const query = (extra: Record<string, string> = {}) =>
@@ -86,10 +87,14 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
   return (
     <>
       <PageHeader
-        eyebrow="Performance"
-        title="Returns and metrics"
+        eyebrow="Returns & ROI"
+        title="Portfolio returns"
         actions={[
           { label: 'Owner payouts', href: '/payments' },
+          {
+            label: selected ? 'Compare with projections' : 'Property analysis',
+            href: selected ? returnsHref(selected.propertyId) : '/roi-analysis',
+          },
           { label: 'Export report', href: exportHref, primary: true },
         ]}
       />
@@ -144,7 +149,8 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
 
       <p className={styles.context}>
         {selected?.propertyName ?? 'Portfolio'} · {period.label}. Income follows settled payments.
-        Returns use the selected period; occupancy is current.
+        Returns use the selected period; occupancy is current. Open a property to compare its
+        recorded returns with ROI projections.
       </p>
       {overview.properties.length === 0 && (
         <EmptyState

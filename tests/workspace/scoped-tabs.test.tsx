@@ -17,7 +17,8 @@ describe('workspace tabs on leasing and ops pages', () => {
   it('keeps every unit tab under the property route and marks the active one', () => {
     const html = renderToStaticMarkup(<Workspace scope={scope} activeTab="maintenance" />);
     expect(html).toContain('href="/properties/p1?unit=u1"');
-    expect(html).toContain('href="/properties/p1/listing?unit=u1"');
+    expect(html).not.toContain('/properties/p1/listing');
+    expect(html).not.toContain('>Listing<');
     expect(html).toContain('href="/properties/p1/returns?unit=u1"');
     for (const page of ['applications', 'leases', 'payments', 'maintenance']) {
       expect(html).toContain(`href="/properties/p1/${page}?unit=u1"`);

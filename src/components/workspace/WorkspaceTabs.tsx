@@ -8,7 +8,6 @@ import styles from './Workspace.module.css';
 
 const tabs: { label: string; key: WorkspaceTab }[] = [
   { label: 'Overview', key: 'overview' },
-  { label: 'Listing', key: 'listing' },
   { label: 'Applications', key: 'applications' },
   { label: 'Leases', key: 'leases' },
   { label: 'Payments', key: 'payments' },

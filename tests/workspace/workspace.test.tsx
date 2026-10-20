@@ -57,7 +57,8 @@ describe('property and unit workspace render', () => {
     expect(html).not.toContain('Property workspace');
     expect(html).toContain('214 Maple Ave, Austin, TX');
     expect(html).toContain('aria-current="page"');
-    expect(html).toContain('href="/properties/property-1/listing"');
+    expect(html).not.toContain('href="/properties/property-1/listing"');
+    expect(html).toContain('href="/properties/property-1/payments"');
     expect(html).toContain('href="/properties/property-1/returns"');
     expect(html).toContain('Applications');
   });

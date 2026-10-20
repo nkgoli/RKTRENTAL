@@ -2,8 +2,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { Workspace } from '@/components/workspace/Workspace';
 
+const nav = vi.hoisted(() => ({ pathname: '/maintenance' }));
+
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/maintenance',
+  usePathname: () => nav.pathname,
   useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: () => undefined }),
 }));
@@ -32,5 +34,16 @@ describe('workspace tabs on leasing and ops pages', () => {
     const html = renderToStaticMarkup(<Workspace scope={{ ...scope, unitId: undefined, unitNumber: undefined }} activeTab="payments" />);
     expect(html).toContain('href="/properties/p1/payments"');
     expect(html).not.toContain('?unit=');
+  });
+
+  it('marks no tab active on the direct listing route', () => {
+    nav.pathname = '/properties/p1/listing';
+    try {
+      const html = renderToStaticMarkup(<Workspace scope={scope} />);
+      expect(html.match(/aria-current="page"/g)).toHaveLength(1); // breadcrumb only
+      expect(html).not.toContain('>Listing<');
+    } finally {
+      nav.pathname = '/maintenance';
+    }
   });
 });

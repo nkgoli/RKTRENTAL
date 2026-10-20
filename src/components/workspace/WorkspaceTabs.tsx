@@ -22,7 +22,9 @@ export function WorkspaceTabs({ propertyId, unitId, activeTab }: { propertyId: s
   const base = `/properties/${propertyId}`;
   const routeTab = pathname === base ? 'overview' : pathname.startsWith(`${base}/`)
     ? pathname.slice(base.length + 1).split('/')[0] : undefined;
-  const selected = tabs.find((tab) => tab.key === routeTab)?.key ?? activeTab ?? 'overview';
+  // The listing route stays reachable directly but has no tab; mark none active there.
+  const selected = tabs.find((tab) => tab.key === routeTab)?.key
+    ?? (routeTab === 'listing' ? undefined : activeTab ?? 'overview');
 
   return <nav className={styles.tabs} aria-label="Workspace sections">
     {tabs.map((tab) => {

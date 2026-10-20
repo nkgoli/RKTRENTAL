@@ -5,16 +5,20 @@ rent and expenses sit beside the projection for the same property, period and sc
 
 ## Routes and navigation
 
-| Entry                                       | Behaviour                                                                                                                          |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Sidebar **Returns & ROI** → `/roi-analysis` | Replaces the separate "ROI Analysis" and "Returns" entries. It stays current on `/returns`.                                        |
-| `/roi-analysis?property=ID&view=actual`     | **Actual vs projected** tab. `period` (`MTD…5Y`, or `CUSTOM` with `from`/`to` YYYY-MM) is kept in the URL on every tab.            |
-| `/properties/ID/returns[?period…]`          | Redirects to the workspace above with its period. With `?unit=` it keeps the unit-allocated report, which links to the comparison. |
-| `/returns` (Portfolio returns)              | Kept for portfolio totals, the expense form and the CSV export. Property links open the property's comparison.                     |
-| `/returns/export`                           | Unchanged CSV export, also linked from the comparison as "Export returns summary".                                                 |
+| Entry                                       | Behaviour                                                                                                                               |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Sidebar **Returns & ROI** → `/roi-analysis` | Replaces the separate "ROI Analysis" and "Returns" entries. It stays current on `/returns`.                                             |
+| `/roi-analysis?property=ID&view=actual`     | **Actual vs projected** tab. `period` (`MTD…5Y`, or `CUSTOM` with `from`/`to` YYYY-MM) is kept in the URL on every tab.                 |
+| `/properties/ID/returns[?period…]`          | Redirects to the workspace above with its period. With `?unit=` it keeps the unit-allocated report, which links to the comparison.      |
+| `/returns` (Portfolio returns)              | Kept for portfolio totals, the expense form and the CSV export. Property links open the property's comparison.                          |
+| `/returns/export`                           | Portfolio CSV export. Estimate columns are labelled (scheduled debt, assumed appreciation, scheduled rent). Not used by the comparison. |
 
-Switching property keeps the Actual vs projected view and its period. Other tabs reset to
-Summary as before. Saved analyses, scenarios, benchmarks and the unsaved-changes guard are unchanged.
+Switching property keeps the Actual vs projected view and its period by writing them into the
+new property's URL. Other tabs reset to Summary as before. Browser Back/Forward restore view and
+period from the complete address: a plain `?property=ID` means Summary and the default 12M
+period, whatever was showing before. If unsaved changes block a Back to another property, the
+target's view and period are applied only once you continue. Saved analyses, scenarios,
+benchmarks and the unsaved-changes guard are unchanged.
 
 ## Data and labels
 
@@ -29,6 +33,17 @@ Summary as before. Saved analyses, scenarios, benchmarks and the unsaved-changes
   "Scheduled and estimated".
 - "Needed to complete this comparison" links to the place to supply each input: assumptions,
   lease, payments, expense form or property financing.
+- Coverage only counts evidenced days (lease months with a rent charge; months with a recorded
+  expense). Gaps, undated receipts and old-only history show as partial or unavailable, never as
+  complete or $0.
+- **Export this comparison (CSV)** builds the file in the browser from the same contract and
+  comparison the table renders: property name and ID, the exact inclusive days, as-of time,
+  projection basis (saved revision, saved property details or unsaved edits), each row's actual
+  and projected status and amount, coverage and the separately labelled scheduled/estimated
+  figures. Unavailable values are blank with their status, never 0.
+- **Portfolio returns (estimates)** links to `/returns` for the same property and period. That
+  page now states that its cash flow, cash-on-cash, ROI and yield use scheduled debt, 3%/yr
+  assumed appreciation and scheduled rent, and keeps the expense form and its CSV.
 - Logic: `src/lib/analysis/actuals.ts`. UI: `src/components/analysis/RoiActuals.tsx`.
 
 ## Verification (isolated runtime, not the user's app)

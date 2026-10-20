@@ -3,6 +3,8 @@ import { useState } from 'react';
 import {
   ACTUAL_PERIOD_KEYS,
   compareActualToProjection,
+  comparisonCsv,
+  comparisonFileName,
   neededInputs,
   periodChoiceParams,
   type ActualWindow,
@@ -217,6 +219,7 @@ export function RoiActuals({
   projection,
   stale,
   missingAssumptions,
+  projectionBasis,
   onPeriod,
   onRetry,
   onReviewAssumptions,
@@ -229,6 +232,8 @@ export function RoiActuals({
   projection: ProjectionYear | null;
   stale: boolean;
   missingAssumptions: number;
+  /** Where the projected column comes from (saved revision, defaults or unsaved edits). */
+  projectionBasis: string;
   onPeriod: (choice: PeriodChoice) => void;
   onRetry: () => void;
   onReviewAssumptions: () => void;
@@ -236,10 +241,27 @@ export function RoiActuals({
   const data = state.status === 'ready' ? state.data : null;
   const comparison = data ? compareActualToProjection(data, stale ? null : projection) : null;
   const needed = neededInputs(propertyId, data, stale ? missingAssumptions : 0);
-  const exportQuery = new URLSearchParams({
-    property: propertyId,
-    ...periodChoiceParams(choice),
-  });
+  const [exported, setExported] = useState('');
+  // The CSV is built from exactly what is on screen: same property, days and statuses.
+  function exportComparison() {
+    if (!data || !comparison) return;
+    const csv = comparisonCsv(data, comparison, {
+      propertyId,
+      propertyName,
+      windowLabel: `${range.label}${range.throughToday ? ' (through today)' : ''}`,
+      projectionBasis: stale ? 'No projection (assumptions incomplete)' : projectionBasis,
+    });
+    const name = comparisonFileName(data);
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = name;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    setExported(`Exported ${name}`);
+  }
   return (
     <div className={styles.actuals}>
       <section className={styles.card} aria-labelledby="actuals-heading">
@@ -422,11 +444,26 @@ export function RoiActuals({
               {data.excludedAssumptions.map((a) => excludedLabels[a] ?? a).join(', ')}.
             </p>
             <p className={styles.links}>
-              <a href={`/returns/export?${exportQuery}`}>Export returns summary (CSV)</a>
-              <a href={`/returns?${new URLSearchParams(periodChoiceParams(choice))}`}>
-                Portfolio returns
+              <button type="button" onClick={exportComparison}>
+                Export this comparison (CSV)
+              </button>
+              <a
+                href={`/returns?${new URLSearchParams({ property: propertyId, ...periodChoiceParams(choice) })}`}
+              >
+                Portfolio returns (estimates)
               </a>
             </p>
+            <p className={styles.fine}>
+              The export matches this table: {propertyName}, {data.period.from} to {data.period.to},
+              with unavailable and partial values kept as shown. Portfolio returns are month-based
+              summaries that use scheduled debt service and 3% assumed appreciation; they are
+              estimates, not recorded results.
+            </p>
+            {exported && (
+              <p role="status" className={styles.fine}>
+                {exported}
+              </p>
+            )}
           </section>
         </div>
       )}

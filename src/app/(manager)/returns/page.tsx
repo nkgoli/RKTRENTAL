@@ -152,6 +152,15 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
         Returns use the selected period; occupancy is current. Open a property to compare its
         recorded returns with ROI projections.
       </p>
+      <Alert tone="warning">
+        <p>
+          These portfolio figures are month-based summaries, not recorded-only results. Cash flow
+          and cash-on-cash subtract scheduled debt service (loan payments are not recorded), ROI
+          adds 3%/yr assumed appreciation, yield uses scheduled rent, and a month without expense
+          records counts as here. For recorded actuals with coverage, open a property&rsquo;s{' '}
+          <strong>Actual vs projected</strong>.
+        </p>
+      </Alert>
       {overview.properties.length === 0 && (
         <EmptyState
           title="No properties to report"
@@ -175,7 +184,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           <KpiCard
             label="Cash flow"
             value={formatUsd(metrics.cashFlowCents)}
-            note={`After ${formatUsd(metrics.debtServiceCents)} debt service`}
+            note={`Estimate: after ${formatUsd(metrics.debtServiceCents)} scheduled debt service, not recorded loan payments`}
           />
           <KpiCard
             label="Cap rate"
@@ -189,7 +198,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           <KpiCard
             label="Cash-on-cash return"
             value={formatPercent(metrics.cashOnCash)}
-            note={`On ${metrics.cashInvestedCents ? formatUsd(metrics.cashInvestedCents) : '—'} invested`}
+            note={`Estimate on ${metrics.cashInvestedCents ? formatUsd(metrics.cashInvestedCents) : '—'} invested · scheduled debt`}
           />
           <KpiCard
             label="Occupancy"
@@ -270,7 +279,8 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             <h3>Returns by property</h3>
           </div>
           <span className="muted" style={{ fontSize: 13 }}>
-            ROI includes 3% assumed appreciation · Yield is scheduled rent ÷ value
+            Estimates: ROI adds 3%/yr assumed appreciation · cash-on-cash uses scheduled debt
+            service · yield is scheduled rent ÷ value
           </span>
         </div>
         <div
@@ -296,13 +306,13 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
                   Cap rate
                 </th>
                 <th scope="col" className="num">
-                  Cash-on-cash
+                  Cash-on-cash (est.)
                 </th>
                 <th scope="col" className="num">
-                  ROI
+                  ROI (est.)
                 </th>
                 <th scope="col" className="num">
-                  Yield
+                  Yield (sched.)
                 </th>
               </tr>
             </thead>
@@ -447,7 +457,10 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
                   : `All properties (${overview.properties.length})`}
               </dd>
               <dt>Includes</dt>
-              <dd>NOI, cash flow, cap rate, cash-on-cash, ROI, yield</dd>
+              <dd>
+                NOI and cap rate from recorded income and expenses; cash flow, cash-on-cash, ROI and
+                yield as labelled estimates (scheduled debt, assumed appreciation, scheduled rent)
+              </dd>
             </dl>
             <Button href={exportHref} variant="primary">
               Export report (CSV)

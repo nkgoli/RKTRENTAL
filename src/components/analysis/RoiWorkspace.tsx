@@ -247,9 +247,16 @@ export function RoiWorkspace({
   }
   // Route changes reuse this client component. Keep the guard and request token alive.
   const navigate = useRef<(id: string) => void>(() => {});
-  const adopt = useRef<(query: URLSearchParams) => void>(() => {});
+  const restore = useRef<(query: URLSearchParams) => void>(() => {});
+  // A location whose view and period wait for the unsaved-changes decision.
+  const pendingLocation = useRef<URLSearchParams | null>(null);
   useEffect(() => {
-    adopt.current = adoptLocation;
+    restore.current = (query) => {
+      const id = query.get('property') ?? '';
+      if (dirty && property && id !== selected) pendingLocation.current = query;
+      else adoptLocation(query);
+      navigate.current(id);
+    };
     navigate.current = (id) => {
       if (id === selected && (!id || property)) return;
       if (dirty && property) {
@@ -263,11 +270,8 @@ export function RoiWorkspace({
   }, [urlProperty, selection]);
   useEffect(() => {
     const counter = token;
-    const onPop = () => {
-      const query = new URLSearchParams(window.location.search);
-      adopt.current(query);
-      navigate.current(query.get('property') ?? '');
-    };
+    // Back/Forward restore everything the address holds, including absent parameters.
+    const onPop = () => restore.current(new URLSearchParams(window.location.search));
     window.addEventListener('popstate', onPop);
     return () => {
       window.removeEventListener('popstate', onPop);
@@ -302,8 +306,15 @@ export function RoiWorkspace({
       )
         return;
       event.preventDefault();
-      adoptLocation(destination.searchParams);
-      choose(destination.searchParams.get('property') ?? '');
+      const id = destination.searchParams.get('property') ?? '';
+      if (id && id === selected) {
+        adoptLocation(destination.searchParams);
+        window.history.pushState(null, '', propertyUrl(id));
+      } else {
+        if (dirty) pendingLocation.current = destination.searchParams;
+        else adoptLocation(destination.searchParams);
+        choose(id);
+      }
     };
     document.addEventListener('click', onLink, true);
     return () => document.removeEventListener('click', onLink, true);
@@ -352,15 +363,15 @@ export function RoiWorkspace({
     setPeriodState(next);
     if (selected) window.history.replaceState(null, '', propertyUrl(selected));
   }
+  /** Adopts view and period from a complete address; absent parameters mean the defaults. */
   function adoptLocation(query: URLSearchParams) {
-    if (query.get('view') === 'actual') setView('actual');
-    if (query.has('period')) {
-      const next = periodChoiceFrom(query);
-      periodRef.current = next;
-      setPeriodState(next);
-    }
+    setView(query.get('view') === 'actual' ? 'actual' : 'summary');
+    const next = periodChoiceFrom(query);
+    periodRef.current = next;
+    setPeriodState(next);
   }
   function closeGuard() {
+    pendingLocation.current = null;
     setPending(null);
     queueMicrotask(() => returnFocus.current?.focus());
   }
@@ -387,6 +398,9 @@ export function RoiWorkspace({
     }, 0);
   }
   function switchProperty(id: string, writeHistory = true) {
+    const waiting = pendingLocation.current;
+    pendingLocation.current = null;
+    if (waiting && (waiting.get('property') ?? '') === id) adoptLocation(waiting);
     token.current++;
     setPending(null);
     setRecovery(null);
@@ -713,6 +727,13 @@ export function RoiWorkspace({
                     projection={projectionYear}
                     stale={stale}
                     missingAssumptions={projection.errors.length}
+                    projectionBasis={
+                      dirty
+                        ? 'Current unsaved assumptions'
+                        : revision > 0
+                          ? `Saved analysis, revision ${revision}`
+                          : 'Saved property details (analysis not yet saved)'
+                    }
                     onPeriod={changePeriod}
                     onRetry={() => setActualsAttempt((n) => n + 1)}
                     onReviewAssumptions={() =>

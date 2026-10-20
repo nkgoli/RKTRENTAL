@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   actualWindow,
   compareActualToProjection,
+  comparisonCsv,
+  comparisonFileName,
   neededInputs,
   periodChoiceFrom,
   periodChoiceParams,
@@ -60,6 +62,7 @@ function input(overrides: Partial<ActualReturnsInput> = {}): ActualReturnsInput 
         lastOn: d('2026-03-15'),
       },
     ],
+    expenseDays: [d('2026-01-15'), d('2026-02-15'), d('2026-03-15')],
     earliestExpenseOn: d('2025-06-10'),
     ...overrides,
   };
@@ -155,6 +158,61 @@ describe('actual versus projected comparison', () => {
     );
     expect(neededInputs('P1', actual, 0).find((n) => n.id === 'financing')?.href).toBe(
       '/properties/P1/edit',
+    );
+  });
+});
+
+describe('comparison export', () => {
+  it('reconciles to the comparison cell for cell, keeping partial and unavailable values', () => {
+    const actual = computeActualReturns(
+      input({ charges: [rent('c1', '2026-01'), rent('c2', '2026-02')] }),
+    );
+    const c = compareActualToProjection(actual, projection);
+    const csv = comparisonCsv(actual, c, {
+      propertyId: 'P1',
+      propertyName: '=Elm',
+      windowLabel: 'Jan 1, 2026 – Mar 31, 2026',
+      projectionBasis: 'Saved analysis, revision 2',
+    });
+    const lines = csv.trim().split('\n');
+    // Text that could run as a formula is neutralised; numbers stay numeric, even negative.
+    expect(lines[0]).toBe("Property,'=Elm");
+    expect(csv).toContain('Period from,2026-01-01\nPeriod to (inclusive),2026-03-31');
+    for (const r of c.rows) {
+      const cells = lines.find((l) => l.startsWith(`${r.label},`))!.split(',');
+      expect(cells[1]).toBe(r.actual.status);
+      expect(cells[2]).toBe(r.actual.cents == null ? '' : (r.actual.cents / 100).toFixed(2));
+      expect(cells[4]).toBe(r.projected.cents == null ? '' : (r.projected.cents / 100).toFixed(2));
+      expect(cells[5]).toBe(
+        r.difference.cents == null ? '' : (r.difference.cents / 100).toFixed(2),
+      );
+    }
+    expect(row(c, 'income').actual.status).toBe('partial');
+    expect(csv).toMatch(/^Operating income,partial,3000\.00,projected,5000\.00,,/m);
+    expect(csv).toMatch(/^Debt service,unavailable,,projected,2250\.00,,/m);
+    expect(csv).toMatch(/^Rent records,partial,59,90,/m);
+    expect(csv).toMatch(
+      /^Cash flow after scheduled debt \(estimate\),partial,-3000\.50,scheduled,/m,
+    );
+    expect(comparisonFileName(actual)).toBe('actual-vs-projected-elm-2026-01-01-to-2026-03-31.csv');
+  });
+});
+
+describe('needed inputs for unverified history', () => {
+  it('explains old-only ledgers and month gaps instead of asking for nothing', () => {
+    const old = computeActualReturns(
+      input({
+        leases: [{ id: 'L1', startDate: d('2020-01-01'), endDate: d('2020-12-31') }],
+        charges: [rent('c0', '2020-02')],
+        payments: [],
+      }),
+    );
+    const rentNeed = neededInputs('P1', old, 0).find((n) => n.id === 'rent')!;
+    expect(rentNeed.text).toMatch(/not \$0/);
+    expect(rentNeed.linkLabel).toBe('Review leases');
+    const gapped = computeActualReturns(input({ expenseDays: [d('2026-01-15')] }));
+    expect(neededInputs('P1', gapped, 0).find((n) => n.id === 'expense-window')?.text).toMatch(
+      /31 of 90 days.*unverified, not \$0/,
     );
   });
 });

@@ -17,7 +17,8 @@ function cell(value: string, untrustedText = false): string {
 
 /**
  * Builds the owner-ready CSV export: one row per property plus a Portfolio
- * total row. Money is plain dollars with two places and ratios are percents,
+ * total row. Debt service is the scheduled annual figure, ROI adds assumed appreciation and
+ * yield uses scheduled rent; their headers say so, keeping them apart from recorded results. Money is plain dollars with two places and ratios are percents,
  * so the file opens cleanly in a spreadsheet.
  */
 export function buildReturnsCsv(
@@ -31,12 +32,12 @@ export function buildReturnsCsv(
     'Income',
     'Expenses',
     'NOI',
-    'Debt service',
-    'Cash flow',
+    'Debt service (scheduled, not recorded)',
+    'Cash flow (estimate: scheduled debt)',
     'Cap rate',
-    'Cash-on-cash',
-    'ROI',
-    'Yield',
+    'Cash-on-cash (estimate: scheduled debt)',
+    'ROI (estimate: incl. 3%/yr assumed appreciation)',
+    'Yield (scheduled rent)',
     'Expense ratio',
   ];
   const line = (row: ReturnsCsvRow) =>

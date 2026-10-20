@@ -42,6 +42,14 @@ function recorded(request: { propertyId: string; from: string; to: string }, emp
   const p = actualPeriod(request.from, request.to);
   if (!p.ok) throw new Error('bad period');
   const month = request.from.slice(0, 7);
+  // A rent charge in every month of the window: the lease ledger evidences the whole period.
+  const months: string[] = [];
+  for (
+    let m = d(`${month}-01`);
+    m <= d(request.to);
+    m = new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth() + 1, 1))
+  )
+    months.push(m.toISOString().slice(0, 7));
   const data = computeActualReturns({
     property: {
       id: request.propertyId,
@@ -56,15 +64,13 @@ function recorded(request: { propertyId: string; from: string; to: string }, emp
     leases: empty ? [] : [{ id: 'L1', startDate: d('2020-01-01'), endDate: d('2030-12-31') }],
     charges: empty
       ? []
-      : [
-          {
-            id: 'c1',
-            leaseId: 'L1',
-            kind: 'RENT',
-            amountCents: 123_400,
-            dueDate: d(`${month}-01`),
-          },
-        ],
+      : months.map((m) => ({
+          id: `c-${m}`,
+          leaseId: 'L1',
+          kind: 'RENT' as const,
+          amountCents: 123_400,
+          dueDate: d(`${m}-01`),
+        })),
     payments: empty
       ? []
       : [
@@ -78,6 +84,7 @@ function recorded(request: { propertyId: string; from: string; to: string }, emp
         ],
     excludedPayments: [],
     expenses: [],
+    expenseDays: [],
     earliestExpenseOn: null,
   });
   return { ok: true as const, data: JSON.parse(JSON.stringify(data)) };
@@ -198,6 +205,80 @@ describe('actual versus projected in the ROI workspace', () => {
       ),
     );
     expect(window.location.search).toBe('?property=a');
+  });
+
+  it('restores view and period from the complete URL on Back, including absent parameters', async () => {
+    await open('property=a');
+    expect(screen.getByRole('tab', { name: 'Summary' }).getAttribute('aria-selected')).toBe('true');
+    await waitFor(() => expect(lastRequest()).toMatchObject({ propertyId: 'a' }));
+    const defaultFrom = lastRequest().from;
+    fireEvent.click(screen.getByRole('tab', { name: 'Actual vs projected' }));
+    fireEvent.click(panel().getByRole('button', { name: 'YTD' }));
+    // Switching property pushes a history entry that keeps the shared view and period.
+    fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Property b/ }));
+    await screen.findByRole('button', { name: 'Save draft' });
+    expect(window.location.search).toBe('?property=b&view=actual&period=YTD');
+
+    // Back to the plain default address: Summary and the default period, not the last tab.
+    window.history.replaceState(null, '', '/roi-analysis?property=a');
+    fireEvent(window, new PopStateEvent('popstate'));
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: 'Summary' }).getAttribute('aria-selected')).toBe(
+        'true',
+      ),
+    );
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({ propertyId: 'a', from: defaultFrom }),
+    );
+    expect(
+      panel().getByRole('button', { name: '12M', hidden: true }).getAttribute('aria-pressed'),
+    ).toBe('true');
+
+    // Forward to a custom address restores its exact months.
+    window.history.replaceState(
+      null,
+      '',
+      '/roi-analysis?property=a&view=actual&period=CUSTOM&from=2026-01&to=2026-03',
+    );
+    fireEvent(window, new PopStateEvent('popstate'));
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({ from: '2026-01-01', to: '2026-03-31' }),
+    );
+    expect(
+      screen.getByRole('tab', { name: 'Actual vs projected' }).getAttribute('aria-selected'),
+    ).toBe('true');
+  });
+
+  it('exports exactly the displayed property, days and statuses', async () => {
+    let blob: Blob | null = null;
+    const create = vi.fn((b: Blob) => {
+      blob = b;
+      return 'blob:test';
+    });
+    Object.assign(URL, { createObjectURL: create, revokeObjectURL: vi.fn() });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    await open('property=a&view=actual&period=CUSTOM&from=2026-01&to=2026-03');
+    const table = await panel().findByRole('table');
+    expect(within(table).getByRole('row', { name: /Operating income/ })).toBeTruthy();
+    fireEvent.click(panel().getByRole('button', { name: 'Export this comparison (CSV)' }));
+    expect(create).toHaveBeenCalledTimes(1);
+    const csv = await blob!.text();
+    expect(csv).toContain('Property,Property a');
+    expect(csv).toContain('Period from,2026-01-01');
+    expect(csv).toContain('Period to (inclusive),2026-03-31');
+    expect(csv).toMatch(/Operating income,recorded,1234\.00,projected,/);
+    // Unavailable stays blank with its status, never 0.
+    expect(csv).toMatch(/Operating expenses,unavailable,,projected,/);
+    expect(
+      await panel().findByText(
+        'Exported actual-vs-projected-property-a-2026-01-01-to-2026-03-31.csv',
+      ),
+    ).toBeTruthy();
+    expect(
+      panel().getByRole('link', { name: 'Portfolio returns (estimates)' }).getAttribute('href'),
+    ).toBe('/returns?property=a&period=CUSTOM&from=2026-01&to=2026-03');
+    click.mockRestore();
   });
 
   it('keeps the projection usable when actuals cannot load', async () => {

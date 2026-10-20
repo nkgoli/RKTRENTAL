@@ -258,21 +258,29 @@ export function neededInputs(
   const unclassified = actual.income.receipts.filter(
     (r) => r.classification === 'mixed' || r.classification === 'unapplied',
   ).length;
+  const days = (c: ActualAmount['coverage']) => `${c.observedDays} of ${c.periodDays} days`;
   if (rent.status === 'unavailable')
     out.push(
-      rent.coverage.status === 'none' && !rent.coverage.recordedFrom
+      !rent.coverage.hasHistory
         ? {
             id: 'rent',
             text: 'No lease, rent charge or payment is recorded for this property, so actual rent is unavailable.',
             href: `${base}/leases`,
             linkLabel: 'Add a lease',
           }
-        : {
-            id: 'rent',
-            text: 'No rent is recorded for this period.',
-            href: `${base}/payments`,
-            linkLabel: 'Record rent payments',
-          },
+        : rent.coverage.status === 'none'
+          ? {
+              id: 'rent',
+              text: 'No lease term with a recorded rent charge covers this period, so actual rent is unavailable, not $0. Older records do not count for later periods.',
+              href: `${base}/leases`,
+              linkLabel: 'Review leases',
+            }
+          : {
+              id: 'rent',
+              text: `Rent records evidence only ${days(rent.coverage)} and no rent receipt is recorded in them; the rest is unverified, so rent is unavailable, not $0.`,
+              href: `${base}/payments`,
+              linkLabel: 'Record rent payments',
+            },
     );
   else if (unclassified > 0)
     out.push({
@@ -281,29 +289,29 @@ export function neededInputs(
       href: `${base}/payments`,
       linkLabel: 'Review payments',
     });
-  else if (rent.coverage.status === 'partial' && rent.coverage.recordedFrom)
+  else if (rent.coverage.status !== 'complete')
     out.push({
       id: 'rent-window',
-      text: `Rent records start ${rent.coverage.recordedFrom}; earlier days in this period are not covered.`,
-      href: `${base}/leases`,
-      linkLabel: 'Review leases',
+      text: `Rent records evidence ${days(rent.coverage)} of this period. ${rent.coverage.gaps.join(' ')}`,
+      href: actual.income.excluded.undatedCount ? `${base}/payments` : `${base}/leases`,
+      linkLabel: actual.income.excluded.undatedCount ? 'Review payments' : 'Review leases',
     });
   const expenses = actual.expenses.total;
+  const addExpense = `/returns?${new URLSearchParams({ property: propertyId, add: '1' })}#add-expense`;
   if (expenses.status === 'unavailable')
     out.push({
       id: 'expenses',
-      text:
-        expenses.coverage.status === 'none'
-          ? 'No expenses have ever been recorded for this property; actual expenses and NOI are unavailable, not $0.'
-          : 'No expenses are recorded in this period; actual expenses and NOI are unavailable, not $0.',
-      href: `/returns?${new URLSearchParams({ property: propertyId, add: '1' })}#add-expense`,
+      text: !expenses.coverage.hasHistory
+        ? 'No expenses have ever been recorded for this property; actual expenses and NOI are unavailable, not $0.'
+        : 'No expenses are recorded in this period; actual expenses and NOI are unavailable, not $0.',
+      href: addExpense,
       linkLabel: 'Add expense',
     });
-  else if (expenses.coverage.status === 'partial' && expenses.coverage.recordedFrom)
+  else if (expenses.coverage.status !== 'complete')
     out.push({
       id: 'expense-window',
-      text: `Expense records start ${expenses.coverage.recordedFrom}; earlier days in this period are not covered.`,
-      href: `/returns?${new URLSearchParams({ property: propertyId, add: '1' })}#add-expense`,
+      text: `Expenses are recorded in months covering ${days(expenses.coverage)}; months without a recorded expense are unverified, not $0. ${expenses.coverage.gaps.join(' ')}`,
+      href: addExpense,
       linkLabel: 'Add expense',
     });
   if (actual.debtService.actual.status === 'unavailable')
@@ -330,4 +338,124 @@ export function neededInputs(
       linkLabel: 'Edit property',
     });
   return out;
+}
+
+// ----------------------------------------------------------------------------------- export
+
+export type ComparisonExportMeta = {
+  propertyId: string;
+  propertyName: string;
+  /** The displayed window label, for example "Nov 1, 2025 – Oct 20, 2026". */
+  windowLabel: string;
+  /** Where the projection column comes from, for example "Saved ready analysis, revision 3". */
+  projectionBasis: string;
+};
+
+const csvCell = (value: string) => {
+  const numeric = /^-?\d+(\.\d+)?%?$/.test(value);
+  const safe = !numeric && /^[\s\u0000-\u001f]*[=+\-@]/u.test(value) ? `'${value}` : value;
+  return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+};
+/** Signed money stays numeric for spreadsheets; only text cells are formula-guarded. */
+const csvMoney = (cents: number | null) => (cents == null ? '' : (cents / 100).toFixed(2));
+
+/**
+ * The visible actual-versus-projected comparison as CSV. Built from the same contract and
+ * comparison the screen renders, so property, exact day range, statuses and amounts
+ * reconcile cell for cell. Unavailable values are blank with their status, never 0; the
+ * projection, schedules and estimates are labelled and kept out of the actual column.
+ */
+export function comparisonCsv(
+  actual: ActualReturns,
+  comparison: Comparison,
+  meta: ComparisonExportMeta,
+): string {
+  const lines: string[][] = [
+    ['Property', meta.propertyName],
+    ['Property ID', meta.propertyId],
+    ['Scope', 'Whole property'],
+    ['Period from', actual.period.from],
+    ['Period to (inclusive)', actual.period.to],
+    ['Displayed period', meta.windowLabel],
+    ['As of', actual.asOf],
+    ['Currency', actual.currency],
+    ['Actual basis', 'Recorded cash: settled payments by paid date, expenses by date'],
+    ['Projected basis', `${meta.projectionBasis}; Year-1 rate × ${comparison.scaleLabel}`],
+    [],
+    [
+      'Line',
+      'Actual status',
+      'Actual (recorded)',
+      'Projected status',
+      'Projected (ROI assumptions)',
+      'Difference',
+      'Notes',
+    ],
+    ...comparison.rows.map((row) => [
+      row.label,
+      row.actual.status,
+      csvMoney(row.actual.cents),
+      row.projected.status,
+      csvMoney(row.projected.cents),
+      csvMoney(row.difference.cents),
+      [...row.actual.notes, ...(row.difference.reason ? [row.difference.reason] : [])].join(' | '),
+    ]),
+    [],
+    ['Coverage', 'Status', 'Evidenced days', 'Period days', 'Notes'],
+    ...(
+      [
+        ['Rent records', actual.income.confirmedRent.coverage],
+        ['Expense records', actual.expenses.total.coverage],
+      ] as const
+    ).map(([label, c]) => [
+      label,
+      c.status,
+      String(c.observedDays),
+      String(c.periodDays),
+      c.gaps.join(' | '),
+    ]),
+    [],
+    ['Scheduled and estimated (not actual)', 'Status', 'Amount', 'Basis', 'Notes'],
+    [
+      'Rent billed (scheduled)',
+      actual.scheduled.billedRent.status,
+      csvMoney(actual.scheduled.billedRent.cents),
+      'scheduled',
+      actual.scheduled.billedRent.reason ?? '',
+    ],
+    ...(
+      [
+        ['Debt service (scheduled)', actual.scheduled.debtService],
+        ['Cash flow after scheduled debt (estimate)', actual.estimates.cashFlowAfterScheduledDebt],
+        ['NOI annualized from actuals (estimate)', actual.estimates.annualizedNoi],
+      ] as const
+    ).map(([label, e]) => [
+      label,
+      e.status,
+      csvMoney(e.value),
+      e.basis,
+      [e.note, ...e.missing].join(' | '),
+    ]),
+    [
+      'Actual cap rate for the period',
+      actual.actual.periodCapRate.status,
+      actual.actual.periodCapRate.value == null
+        ? ''
+        : `${(actual.actual.periodCapRate.value * 100).toFixed(2)}%`,
+      'recorded',
+      actual.actual.periodCapRate.missing.join(' | '),
+    ],
+  ];
+  return `${lines.map((cells) => cells.map(csvCell).join(',')).join('\n')}\n`;
+}
+
+/** File name with the property and exact inclusive days, safe for every platform. */
+export function comparisonFileName(actual: ActualReturns): string {
+  const slug =
+    actual.propertyName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 40) || 'property';
+  return `actual-vs-projected-${slug}-${actual.period.from}-to-${actual.period.to}.csv`;
 }

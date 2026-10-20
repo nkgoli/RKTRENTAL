@@ -21,7 +21,7 @@
 import type { ChargeKindName } from '@/lib/ledger/core';
 import type { Cents } from './core';
 
-export const ACTUAL_RETURNS_VERSION = 1;
+export const ACTUAL_RETURNS_VERSION = 2;
 export const ACTUAL_CURRENCY = 'USD';
 
 /** Assumptions that the actual result never contains; shown so the UI can say so. */
@@ -157,6 +157,8 @@ export type ActualReturnsInput = {
   excludedPayments: { status: 'PENDING' | 'FAILED' | 'REFUNDED'; amountCents: Cents }[];
   /** Expense rows in the period, aggregated per category. */
   expenses: ActualExpense[];
+  /** Distinct Expense.occurredOn days in the period: the months they fall in are evidenced. */
+  expenseDays: Date[];
   /** Earliest Expense.occurredOn ever recorded for the property, or null. */
   earliestExpenseOn: Date | null;
 };
@@ -165,15 +167,22 @@ export type ActualReturnsInput = {
 
 export type CoverageStatus = 'complete' | 'partial' | 'none';
 
+/**
+ * How much of the period the source's records actually evidence. `complete` needs evidence
+ * for every day of the period through asOf and no unresolved records (such as undated
+ * receipts); history elsewhere never fills a gap.
+ */
 export type Coverage = {
   status: CoverageStatus;
-  /** Days of the period inside the source's recorded window (and on or before asOf). */
+  /** Days of the period backed by evidence (and on or before asOf). */
   observedDays: number;
   periodDays: number;
-  /** Inclusive YYYY-MM-DD window the source has records for, clipped to asOf; null if none. */
+  /** First and last evidenced day inside the period (YYYY-MM-DD); null if none. */
   recordedFrom: string | null;
   recordedTo: string | null;
   gaps: string[];
+  /** Whether the source has any record at all for this property, in any period. */
+  hasHistory: boolean;
 };
 
 export type SourceRef = {
@@ -371,46 +380,87 @@ export function classifyReceipt(applied: ClassifiedReceipt['appliedCents']): Rec
 
 // ---------------------------------------------------------------------------------- coverage
 
+/** Half-open UTC day interval [start, end). */
+type Span = { start: number; end: number };
+
+const MAX_GAP_RANGES = 3;
+
+/** Merges overlapping or touching spans and clips them to [min, max). */
+function mergeSpans(spans: Span[], min: number, max: number): Span[] {
+  const clipped = spans
+    .map((s) => ({ start: Math.max(s.start, min), end: Math.min(s.end, max) }))
+    .filter((s) => s.end > s.start)
+    .sort((a, b) => a.start - b.start);
+  const out: Span[] = [];
+  for (const span of clipped) {
+    const last = out.at(-1);
+    if (last && span.start <= last.end) last.end = Math.max(last.end, span.end);
+    else out.push({ ...span });
+  }
+  return out;
+}
+
+const spanLabel = (s: Span) =>
+  s.end - s.start === DAY_MS
+    ? isoDay(new Date(s.start))
+    : `${isoDay(new Date(s.start))} – ${isoDay(new Date(s.end - DAY_MS))}`;
+
+/**
+ * Coverage from explicit evidence spans only. A day counts as observed when a span supporting
+ * the source covers it and it is on or before asOf. Earliest-record-to-today is never assumed:
+ * days between evidence spans are reported as gaps, and `notes` (for example undated receipts)
+ * keep a fully spanned period from being labelled complete.
+ */
 function coverage(
   period: ActualPeriod,
   asOf: Date,
-  recordedFrom: Date | null,
-  gapsWhenNone: string,
+  evidence: Span[],
+  hasHistory: boolean,
+  whenNone: string,
+  gapNote: string,
+  notes: string[] = [],
 ): Coverage {
-  const asOfEnd = new Date(
-    Date.UTC(asOf.getUTCFullYear(), asOf.getUTCMonth(), asOf.getUTCDate() + 1),
-  );
-  const base = { periodDays: period.days };
-  if (!recordedFrom || recordedFrom.getTime() >= asOfEnd.getTime())
-    return {
-      ...base,
-      status: 'none',
-      observedDays: 0,
-      recordedFrom: null,
-      recordedTo: null,
-      gaps: [gapsWhenNone],
-    };
-  const from = new Date(Math.max(period.start.getTime(), recordedFrom.getTime()));
-  const to = new Date(Math.min(period.endExclusive.getTime(), asOfEnd.getTime()));
-  const observedDays = Math.max(0, Math.round((to.getTime() - from.getTime()) / DAY_MS));
+  const asOfEnd = Date.UTC(asOf.getUTCFullYear(), asOf.getUTCMonth(), asOf.getUTCDate() + 1);
+  const start = period.start.getTime();
+  const observable = Math.min(period.endExclusive.getTime(), asOfEnd);
+  const covered = mergeSpans(evidence, start, observable);
+  const observedDays = covered.reduce((s, c) => s + Math.round((c.end - c.start) / DAY_MS), 0);
+  const holes: Span[] = [];
+  let cursor = start;
+  for (const c of covered) {
+    if (c.start > cursor) holes.push({ start: cursor, end: c.start });
+    cursor = c.end;
+  }
+  if (observable > cursor) holes.push({ start: cursor, end: observable });
   const gaps: string[] = [];
-  if (recordedFrom.getTime() > period.start.getTime())
-    gaps.push(
-      `No records before ${isoDay(recordedFrom)}; ${isoDay(period.start)} – ${isoDay(
-        new Date(Math.min(recordedFrom.getTime(), period.endExclusive.getTime()) - DAY_MS),
-      )} is not observed.`,
-    );
-  if (asOfEnd.getTime() < period.endExclusive.getTime())
+  if (observedDays === 0) gaps.push(whenNone);
+  else if (holes.length) {
+    const shown = holes.slice(0, MAX_GAP_RANGES).map(spanLabel).join(', ');
+    const more = holes.length > MAX_GAP_RANGES ? ` and ${holes.length - MAX_GAP_RANGES} more` : '';
+    gaps.push(`${gapNote} ${shown}${more}.`);
+  }
+  if (asOfEnd < period.endExclusive.getTime())
     gaps.push(`The period continues after the as-of date ${isoDay(asOf)}.`);
+  gaps.push(...notes);
+  const status: CoverageStatus =
+    observedDays === 0
+      ? 'none'
+      : observedDays === period.days && notes.length === 0
+        ? 'complete'
+        : 'partial';
   return {
-    ...base,
-    status: observedDays === 0 ? 'none' : observedDays === period.days ? 'complete' : 'partial',
+    status,
     observedDays,
-    recordedFrom: isoDay(recordedFrom),
-    recordedTo: isoDay(new Date(asOfEnd.getTime() - DAY_MS)),
-    gaps: observedDays === 0 && !gaps.length ? [gapsWhenNone] : gaps,
+    periodDays: period.days,
+    recordedFrom: covered.length ? isoDay(new Date(covered[0].start)) : null,
+    recordedTo: covered.length ? isoDay(new Date(covered.at(-1)!.end - DAY_MS)) : null,
+    gaps,
+    hasHistory,
   };
 }
+
+const monthStart = (date: Date) => Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1);
+const nextMonthStart = (date: Date) => Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1);
 
 function sourceRef(source: SourceRef['source'], ids: string[], note: string): SourceRef {
   return {
@@ -422,7 +472,11 @@ function sourceRef(source: SourceRef['source'], ids: string[], note: string): So
   };
 }
 
-/** Recorded when rows exist, zero when the source covers the period with none, else unavailable. */
+/**
+ * Recorded when rows exist (an observed total, whatever the coverage), zero only when the
+ * evidence covers the whole period with none, else unavailable. Partial evidence without
+ * rows is never turned into $0: the unevidenced days could hold anything.
+ */
 function observed(
   cents: Cents,
   rows: number,
@@ -439,7 +493,7 @@ function observed(
       coverage: cov,
       sources,
     };
-  if (zeroAllowed && cov.status !== 'none')
+  if (zeroAllowed && cov.status === 'complete')
     return { status: 'zero', cents: 0, basis: 'recorded', coverage: cov, sources };
   return {
     status: 'unavailable',
@@ -447,7 +501,10 @@ function observed(
     basis: 'recorded',
     coverage: cov,
     sources,
-    reason: unavailableReason,
+    reason:
+      cov.status === 'partial'
+        ? `None recorded in the ${cov.observedDays} evidenced of ${cov.periodDays} days; the other days are unverified, so this is not $0.`
+        : unavailableReason,
   };
 }
 
@@ -491,20 +548,56 @@ export function computeActualReturns(input: ActualReturnsInput): ActualReturns {
       };
     });
 
-  // The ledger window starts at the first lease term, charge or settled payment.
-  const ledgerDates = [
-    ...input.leases.map((l) => l.startDate),
-    ...input.charges.map((c) => c.dueDate),
-    ...input.payments.map((p) => p.paidAt ?? p.createdAt),
-  ];
-  const ledgerFrom = ledgerDates.length
-    ? new Date(Math.min(...ledgerDates.map((d) => d.getTime())))
-    : null;
+  // The ledger evidences a day only inside a recorded lease term whose month carries that
+  // lease's RENT charge: then rent was billed through RocketRental and collections against
+  // it are expected here. Days outside every lease term (vacancy cannot be told apart from
+  // an unrecorded tenancy) and lease months without a rent charge stay unverified.
+  const rentMonths = new Set(
+    input.charges
+      .filter((c) => c.kind === 'RENT')
+      .map((c) => `${c.leaseId}:${monthStart(c.dueDate)}`),
+  );
+  const ledgerEvidence: Span[] = [];
+  for (const lease of input.leases) {
+    const termEnd = lease.endDate.getTime() + DAY_MS;
+    for (
+      let month = monthStart(lease.startDate);
+      month < Math.min(termEnd, period.endExclusive.getTime());
+      month = nextMonthStart(new Date(month))
+    ) {
+      const monthEnd = nextMonthStart(new Date(month));
+      if (monthEnd <= period.start.getTime() || !rentMonths.has(`${lease.id}:${month}`)) continue;
+      ledgerEvidence.push({
+        start: Math.max(month, lease.startDate.getTime()),
+        end: Math.min(monthEnd, termEnd),
+      });
+    }
+  }
+  // A settled receipt without a paid date on a lease running in the period may belong to it.
+  const periodLeases = new Set(
+    input.leases
+      .filter(
+        (l) =>
+          l.startDate.getTime() < period.endExclusive.getTime() &&
+          l.endDate.getTime() + DAY_MS > period.start.getTime(),
+      )
+      .map((l) => l.id),
+  );
+  const undatedInPeriod = input.payments.filter((p) => !p.paidAt && periodLeases.has(p.leaseId));
   const ledgerCoverage = coverage(
     period,
     asOf,
-    ledgerFrom,
-    'No lease, charge or payment is recorded for this property.',
+    ledgerEvidence,
+    input.leases.length + input.charges.length + input.payments.length > 0,
+    input.leases.length
+      ? 'No lease term with a recorded rent charge covers this period.'
+      : 'No lease, charge or payment is recorded for this property.',
+    'Not evidenced by a lease term with a rent charge:',
+    undatedInPeriod.length
+      ? [
+          `${undatedInPeriod.length} settled payment(s) on leases active in this period have no paid date and may belong to it.`,
+        ]
+      : [],
   );
 
   const byClass = (cls: ReceiptClass) => receipts.filter((r) => r.classification === cls);
@@ -593,12 +686,18 @@ export function computeActualReturns(input: ActualReturnsInput): ActualReturns {
     undatedCount: input.payments.filter((p) => !p.paidAt).length,
   };
 
-  // Expenses: absence of rows is never a zero; rows summing to zero would be.
+  // Expenses: absence of rows is never a zero; rows summing to zero would be. Expense entry is
+  // manual, so only months with at least one recorded expense count as evidenced.
+  const expenseMonths = new Set(input.expenseDays.map(monthStart));
   const expenseCoverage = coverage(
     period,
     asOf,
-    input.earliestExpenseOn,
-    'No expense has ever been recorded for this property.',
+    [...expenseMonths].map((start) => ({ start, end: nextMonthStart(new Date(start)) })),
+    input.earliestExpenseOn !== null,
+    input.earliestExpenseOn === null
+      ? 'No expense has ever been recorded for this property.'
+      : 'No expense is recorded in this period.',
+    'No expense recorded in',
   );
   const expenseRows = input.expenses.reduce((s, e) => s + e.count, 0);
   const expenseTotal = observed(
@@ -615,9 +714,9 @@ export function computeActualReturns(input: ActualReturnsInput): ActualReturns {
       },
     ],
     false,
-    expenseRows === 0 && expenseCoverage.status !== 'none'
-      ? 'No expense is recorded in this period; absence of records is not a zero.'
-      : 'No expense history covers this period.',
+    input.earliestExpenseOn === null
+      ? 'No expense has ever been recorded for this property.'
+      : 'No expense is recorded in this period; absence of records is not a zero.',
   );
 
   // Debt: payments to lenders are not recorded. An explicit zero loan amount is the only
@@ -640,6 +739,7 @@ export function computeActualReturns(input: ActualReturnsInput): ActualReturns {
           recordedFrom: null,
           recordedTo: null,
           gaps: [],
+          hasHistory: true,
         },
         sources: [
           { ...propertyRef, note: 'Property.loanAmount is explicitly 0: no financing recorded.' },
@@ -656,6 +756,7 @@ export function computeActualReturns(input: ActualReturnsInput): ActualReturns {
           recordedFrom: null,
           recordedTo: null,
           gaps: ['Loan payments are not recorded in RocketRental.'],
+          hasHistory: false,
         },
         sources: [propertyRef],
         reason:

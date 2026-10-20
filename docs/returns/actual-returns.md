@@ -70,17 +70,31 @@ propagate; they are never disguised as missing data. DTOs are plain JSON (ISO st
 `ActualAmount.status` keeps three cases distinct:
 
 - `recorded`: rows exist; `cents` is their sum.
-- `zero`: `cents: 0` from an explicit observation: the ledger covers the period and shows no
-  receipts of that class (rent billed, nothing collected), a zero-sum expense row, or an explicit
-  zero loan amount.
+- `zero`: `cents: 0` from an explicit observation: the ledger evidences **every** day of the
+  period and shows no receipts of that class (rent billed, nothing collected), a zero-sum expense
+  row, or an explicit zero loan amount. Partial evidence without rows is never `zero`.
 - `unavailable`: `cents: null` plus `reason`. Render "—"/"Not recorded", **never 0**. Absence of
   expense rows is always `unavailable`.
 
 `coverage` = `{ status: complete | partial | none, observedDays, periodDays, recordedFrom,
-recordedTo, gaps[] }`. The ledger window starts at the earliest non-draft lease start, charge or
-settled payment; the expense window at the earliest expense ever recorded; both end at as-of.
-Rent coverage is also `partial` when any receipt in the period is mixed or unapplied. Gaps
-between leases inside the window are treated as observed vacancy.
+recordedTo, gaps[], hasHistory }` (contract version 2). Coverage comes only from evidence for the
+period itself; the earliest record never vouches for later days:
+
+- **Ledger (rent and receipts)**: a day is evidenced when it is inside a non-draft lease term and
+  that lease has a RENT charge due in the same calendar month. Days outside every lease term
+  (vacancy cannot be told apart from an unrecorded tenancy) and lease months without a rent charge
+  are gaps. An old lease or charge therefore gives `none` for later periods, not `zero`.
+- **Undated receipts**: a settled payment without `paidAt` on a lease whose term overlaps the
+  period keeps ledger coverage `partial` (it may belong to the period), so rent, receipts and
+  every metric derived from them are `partial`, and a `zero` cannot be inferred.
+- **Expenses**: only calendar months with at least one recorded expense are evidenced; other
+  months are listed as gaps ("No expense recorded in …").
+- Days after as-of are a gap. `recordedFrom`/`recordedTo` are the first and last evidenced days.
+  `hasHistory` says whether the source has any record for the property at all.
+
+Rows that exist are always reported as an observed total (`recorded`), with the coverage that
+explains how far they can be trusted. Rent coverage is also `partial` when any receipt in the
+period is mixed or unapplied.
 
 ## Derived metrics
 

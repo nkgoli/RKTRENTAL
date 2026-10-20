@@ -71,6 +71,7 @@ function input(overrides: Partial<ActualReturnsInput> = {}): ActualReturnsInput 
         lastOn: d('2026-03-31'),
       },
     ],
+    expenseDays: [d('2026-01-15'), d('2026-02-01'), d('2026-03-31')],
     earliestExpenseOn: d('2025-06-10'),
     ...overrides,
   };
@@ -338,7 +339,7 @@ describe('unknown, partial and zero observations', () => {
   });
 
   it('keeps a period without expense rows unavailable, but a recorded zero sum is zero', () => {
-    const none = computeActualReturns(input({ expenses: [] }));
+    const none = computeActualReturns(input({ expenses: [], expenseDays: [] }));
     expect(none.expenses.total).toMatchObject({ status: 'unavailable', cents: null });
     expect(none.expenses.total.reason).toMatch(/not a zero/);
     expect(none.actual.noi).toMatchObject({ status: 'unavailable', missing: ['expenses'] });
@@ -366,6 +367,7 @@ describe('unknown, partial and zero observations', () => {
         charges: [rent('c2', '2026-02'), rent('c3', '2026-03')],
         payments: [pay('p2', '2026-02-03T15:00:00Z', 150_000)],
         earliestExpenseOn: d('2026-03-01'),
+        expenseDays: [d('2026-03-01')],
         expenses: [
           {
             category: 'TAXES',
@@ -404,6 +406,107 @@ describe('unknown, partial and zero observations', () => {
       coverage: { status: 'none' },
     });
     expect(r.expenses.total).toMatchObject({ status: 'unavailable', coverage: { status: 'none' } });
+  });
+
+  it('never lets an old lease or charge establish coverage or zero collections later', () => {
+    const r = computeActualReturns(
+      input({
+        leases: [{ id: 'L1', startDate: d('2020-01-01'), endDate: d('2020-12-31') }],
+        charges: [{ ...rent('old', '2020-03'), dueDate: d('2020-03-01') }],
+        payments: [],
+      }),
+    );
+    expect(r.income.confirmedRent).toMatchObject({
+      status: 'unavailable',
+      cents: null,
+      coverage: { status: 'none', observedDays: 0, hasHistory: true },
+    });
+    expect(r.income.totalReceipts.status).toBe('unavailable');
+    expect(r.scheduled.billedRent.status).toBe('unavailable');
+    expect(r.actual.operatingIncome).toMatchObject({ status: 'unavailable', value: null });
+    expect(r.actual.noi.value).toBeNull();
+  });
+
+  it('keeps lease months without rent charges unverified instead of zero', () => {
+    const noReceipts = computeActualReturns(
+      input({ charges: [rent('c1', '2026-01')], payments: [] }),
+    );
+    expect(noReceipts.income.confirmedRent).toMatchObject({
+      status: 'unavailable',
+      cents: null,
+      coverage: { status: 'partial', observedDays: 31, recordedTo: '2026-01-31' },
+    });
+    expect(noReceipts.income.confirmedRent.reason).toMatch(/not \$0/);
+    expect(noReceipts.income.confirmedRent.coverage.gaps.join(' ')).toMatch(
+      /2026-02-01 – 2026-03-31/,
+    );
+    // Recorded receipts stay visible as an observed total, flagged partial.
+    const observed = computeActualReturns(input({ charges: [rent('c1', '2026-01')] }));
+    expect(observed.income.confirmedRent).toMatchObject({
+      status: 'recorded',
+      coverage: { status: 'partial' },
+    });
+    expect(observed.actual.operatingIncome.status).toBe('partial');
+    expect(observed.estimates.annualizedNoi.status).toBe('partial');
+  });
+
+  it('counts only months with recorded expenses as expense coverage', () => {
+    const r = computeActualReturns(
+      input({
+        earliestExpenseOn: d('2024-05-01'),
+        expenseDays: [d('2026-01-15')],
+        expenses: [
+          {
+            category: 'TAXES',
+            amountCents: 120_000,
+            count: 1,
+            firstOn: d('2026-01-15'),
+            lastOn: d('2026-01-15'),
+          },
+        ],
+      }),
+    );
+    expect(r.expenses.total).toMatchObject({
+      status: 'recorded',
+      cents: 120_000,
+      coverage: { status: 'partial', observedDays: 31 },
+    });
+    expect(r.expenses.total.coverage.gaps.join(' ')).toMatch(/No expense recorded in 2026-02-01/);
+    expect(r.actual.noi).toMatchObject({ status: 'partial', value: 330_000 });
+    expect(r.actual.periodCapRate.status).toBe('partial');
+    expect(r.actual.expenseRatio.status).toBe('partial');
+  });
+
+  it('propagates undated receipts on leases in the period to coverage and metrics', () => {
+    const undated = {
+      id: 'nodate',
+      leaseId: 'L1',
+      amountCents: 150_000,
+      paidAt: null,
+      createdAt: t('2026-04-10'),
+    };
+    const r = computeActualReturns(input({ payments: [...input().payments, undated] }));
+    expect(r.income.confirmedRent).toMatchObject({
+      status: 'recorded',
+      cents: 450_000,
+      coverage: { status: 'partial', observedDays: 90 },
+    });
+    expect(r.income.confirmedRent.coverage.gaps.join(' ')).toMatch(/no paid date/);
+    expect(r.actual.noi.status).toBe('partial');
+    // With no dated receipt, the undated one prevents an inferred $0.
+    const onlyUndated = computeActualReturns(input({ payments: [undated] }));
+    expect(onlyUndated.income.confirmedRent).toMatchObject({ status: 'unavailable', cents: null });
+    // An undated receipt on a lease outside the period does not touch it.
+    const elsewhere = computeActualReturns(
+      input({
+        leases: [
+          ...input().leases,
+          { id: 'L2', startDate: d('2021-01-01'), endDate: d('2021-12-31') },
+        ],
+        payments: [...input().payments, { ...undated, leaseId: 'L2' }],
+      }),
+    );
+    expect(elsewhere.income.confirmedRent.coverage.status).toBe('complete');
   });
 
   it('derives ratios only with supported denominators', () => {

@@ -63,8 +63,8 @@ export function actualReturnsService(
     const leaseIds = leases.map((l) => l.id);
     const inPeriod = { gte: period.start, lt: period.endExclusive };
 
-    const [charges, payments, excludedPayments, expenseGroups, earliestExpense] = await Promise.all(
-      [
+    const [charges, payments, excludedPayments, expenseGroups, expenseDays, earliestExpense] =
+      await Promise.all([
         client.charge.findMany({
           where: { organizationId, leaseId: { in: leaseIds } },
           select: {
@@ -103,12 +103,17 @@ export function actualReturnsService(
           _min: { occurredOn: true },
           _max: { occurredOn: true },
         }),
+        // Distinct days are bounded by the period length (at most 50 years of days).
+        client.expense.findMany({
+          where: { organizationId, propertyId, occurredOn: inPeriod },
+          select: { occurredOn: true },
+          distinct: ['occurredOn'],
+        }),
         client.expense.aggregate({
           where: { organizationId, propertyId },
           _min: { occurredOn: true },
         }),
-      ],
-    );
+      ]);
 
     return {
       ok: true,
@@ -137,6 +142,7 @@ export function actualReturnsService(
           firstOn: g._min.occurredOn as Date,
           lastOn: g._max.occurredOn as Date,
         })),
+        expenseDays: expenseDays.map((e) => e.occurredOn),
         earliestExpenseOn: earliestExpense._min.occurredOn,
       }),
     };

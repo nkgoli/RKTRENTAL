@@ -1,4 +1,4 @@
-﻿import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -27,16 +27,19 @@ async function noPageOverflow(page: Page) {
     })),
   ).toEqual({ width: page.viewportSize()!.width, scroll: page.viewportSize()!.width });
 }
-async function openDialog(page: Page) {
+async function openPropertyPage(page: Page) {
   const current = new URL(page.url());
-  current.searchParams.set('add', '1');
   const trigger = page.getByRole('link', { name: '+ Add property', exact: true });
-  await expect(trigger).toHaveAttribute('href', current.pathname + current.search);
+  const destination = new URL((await trigger.getAttribute('href'))!, current);
+  expect(destination.pathname).toBe('/properties/new');
+  const back = new URL(destination.searchParams.get('returnTo')!, current);
+  for (const key of ['q', 'filter', 'view'])
+    expect(back.searchParams.get(key)).toBe(current.searchParams.get(key));
   await trigger.click();
-  const dialog = page.getByRole('dialog', { name: 'Add a property', exact: true });
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByLabel('Property name', { exact: true })).toBeFocused();
-  return dialog;
+  await expect(page.getByRole('heading', { name: 'Add property', exact: true })).toBeVisible();
+  const form = page.locator('main form');
+  await expect(form).toBeVisible();
+  return form;
 }
 
 test.afterAll(async () => {
@@ -204,43 +207,45 @@ test('candidate seeded cards, filters, empty recovery and phone scrolling', asyn
   }
 });
 
-test('Chromium modal semantics, cancellation and actual validation at both widths', async ({
-  page,
-}) => {
+test('dedicated page cancellation and retained validation at both widths', async ({ page }) => {
   await signIn(page, 'http://localhost:3232');
   for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     await page.goto('/properties?view=list&filter=multi&q=Maple');
-    let dialog = await openDialog(page);
-    await dialog.getByLabel('City', { exact: true }).fill('Retained city');
-    await dialog.getByRole('button', { name: 'Save property', exact: true }).click();
-    await expect(dialog.getByText('Property name is required', { exact: true })).toBeVisible();
-    await expect(dialog.getByLabel('Property name', { exact: false })).toBeFocused();
-    await expect(dialog.getByLabel('City', { exact: true })).toHaveValue('Retained city');
+    let form = await openPropertyPage(page);
+    await form.getByLabel('City', { exact: true }).fill('Retained city');
+    await form.getByRole('button', { name: 'Save property', exact: true }).click();
+    await expect(form.getByText('Property name is required', { exact: true })).toBeVisible();
+    await expect(form.getByLabel('Property name', { exact: false })).toBeFocused();
+    await expect(form.getByLabel('City', { exact: true })).toHaveValue('Retained city');
     await capture(page, `after-${width}-validation`);
-    await page.keyboard.press('Shift+Tab');
-    await expect(dialog.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
-    await page.keyboard.press('Shift+Tab');
-    await expect(dialog.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();
+    await form.getByRole('button', { name: 'Save property', exact: true }).focus();
     await page.keyboard.press('Tab');
-    await expect(dialog.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
-    await page.keyboard.press('Escape');
-    await expect(dialog).not.toBeVisible();
-    await expect(page).toHaveURL(/\/properties\?view=list&filter=multi&q=Maple$/);
-    await expect(page.getByRole('link', { name: '+ Add property', exact: true })).toBeFocused();
-    dialog = await openDialog(page);
-    await expect(dialog.getByLabel('City', { exact: true })).toHaveValue('');
-    await capture(page, `after-${width}-add-dialog`);
-    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await expect(dialog).not.toBeVisible();
-    await expect(page).toHaveURL(/\/properties\?view=list&filter=multi&q=Maple$/);
+    await expect(form.getByRole('link', { name: 'Cancel', exact: true })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(
+      (url) =>
+        url.pathname === '/properties' &&
+        url.searchParams.get('view') === 'list' &&
+        url.searchParams.get('filter') === 'multi' &&
+        url.searchParams.get('q') === 'Maple',
+    );
+    form = await openPropertyPage(page);
+    await expect(form.getByLabel('City', { exact: true })).toHaveValue('');
+    await capture(page, `after-${width}-add-page`);
+    await form.getByRole('link', { name: 'Cancel', exact: true }).click();
+    await expect(page).toHaveURL(
+      (url) =>
+        url.pathname === '/properties' &&
+        url.searchParams.get('view') === 'list' &&
+        url.searchParams.get('filter') === 'multi' &&
+        url.searchParams.get('q') === 'Maple',
+    );
     observations.push({
-      flow: 'dialog errors and cancel',
+      flow: 'dedicated page errors and cancel',
       width,
       valuesRetained: true,
-      focusTrap: true,
-      escape: true,
-      returnFocus: true,
+      keyboardCancel: true,
       queryPreserved: true,
     });
   }
@@ -257,33 +262,32 @@ test('actual multi and single creation persists and uses existing destinations',
   for (const type of ['MULTI_UNIT', 'SINGLE_UNIT'] as const) {
     await page.setViewportSize({ width: type === 'MULTI_UNIT' ? 1280 : 390, height: 1000 });
     await page.goto('/properties');
-    const dialog = await openDialog(page);
+    const form = await openPropertyPage(page);
     const name = `Directory review ${type} ${Date.now()}`;
-    await dialog.getByLabel('Property name', { exact: true }).fill(name);
-    await dialog.getByRole('combobox', { name: 'Type', exact: true }).selectOption(type);
-    await dialog.getByLabel('Street address', { exact: true }).fill('73 Isolated Fixture Lane');
-    await dialog.getByLabel('City', { exact: true }).fill('Austin');
-    await dialog.getByLabel('State', { exact: true }).fill('TX');
-    await dialog.getByLabel('ZIP', { exact: true }).fill('78704');
-    if (type === 'MULTI_UNIT')
-      await dialog.getByLabel('Number of units', { exact: false }).fill('2');
+    await form.getByLabel('Property name', { exact: true }).fill(name);
+    await form.getByRole('combobox', { name: 'Type', exact: true }).selectOption(type);
+    await form.getByLabel('Street address', { exact: true }).fill('73 Isolated Fixture Lane');
+    await form.getByLabel('City', { exact: true }).fill('Austin');
+    await form.getByLabel('State', { exact: true }).fill('TX');
+    await form.getByLabel('ZIP', { exact: true }).fill('78704');
+    if (type === 'MULTI_UNIT') await form.getByLabel('Number of units', { exact: false }).fill('2');
     let release!: () => void;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    await page.route('**/properties?add=1', async (route) => {
+    await page.route('**/properties/new**', async (route) => {
       if (route.request().method() === 'POST') await gate;
       await route.continue();
     });
-    const submit = dialog
+    const submit = form
       .getByRole('button', { name: 'Save property', exact: true })
       .click({ noWaitAfter: true });
-    await expect(dialog.getByRole('button', { name: 'Saving…', exact: true })).toBeDisabled();
+    await expect(form.getByRole('button', { name: 'Saving…', exact: true })).toBeDisabled();
     await capture(page, `after-create-${type}-saving`);
     release();
     await submit;
     await expect(page).toHaveURL(/\/properties\/[^/?]+$/);
-    await page.unroute('**/properties?add=1');
+    await page.unroute('**/properties/new**');
     const id = new URL(page.url()).pathname.split('/')[2];
     const property = await db.property.findUniqueOrThrow({
       where: { id },

@@ -25,10 +25,10 @@ async function addProperty(
 ) {
   await page.goto('/properties');
   await page.getByRole('link', { name: '+ Add property' }).click();
-  const form = page.locator('#add-property');
+  const form = page.locator('main form');
   await expect(form).toBeVisible({ timeout: 15_000 });
   await form.getByLabel('Property name').fill(name);
-  await form.getByLabel('Type').selectOption({ label: type });
+  await form.getByRole('combobox', { name: 'Type', exact: true }).selectOption({ label: type });
   await form.getByLabel('Street address').fill('77 Test Lane');
   await form.getByLabel('City').fill('Austin');
   await form.getByLabel('State').fill('TX');
@@ -45,8 +45,10 @@ test('add a property, add a unit, open the unit', async ({ page }) => {
   // Server-side validation shows field errors without creating anything.
   await page.goto('/properties');
   await page.getByRole('link', { name: '+ Add property' }).click();
-  await expect(page.locator('#add-property')).toBeVisible({ timeout: 15_000 });
-  await page.locator('#add-property').getByRole('button', { name: 'Save property' }).click();
+  await expect(page.getByRole('heading', { name: 'Add property', exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
+  await page.locator('main form').getByRole('button', { name: 'Save property' }).click();
   await expect(page.getByText('Property name is required')).toBeVisible();
 
   await addProperty(page, name, 'Multi-unit building');
@@ -83,7 +85,9 @@ test('add a property, add a unit, open the unit', async ({ page }) => {
   const propertyId = unitUrl.pathname.split('/')[2];
   const unitId = unitUrl.searchParams.get('unit') ?? unitUrl.pathname.split('/').pop();
   await expect(
-    page.getByRole('navigation', { name: 'Workspace sections' }).getByRole('link', { name: 'Listing' }),
+    page
+      .getByRole('navigation', { name: 'Workspace sections' })
+      .getByRole('link', { name: 'Listing' }),
   ).toHaveAttribute('href', `/properties/${propertyId}/listing?unit=${unitId}`);
 
   // Edit the unit.
@@ -146,10 +150,9 @@ test('seeded Maple Court shows its units and the 4B lease', async ({ page }) => 
   await expect(
     page.getByRole('heading', { level: 1, name: 'Maple Court · Unit 4B' }),
   ).toBeVisible();
-  await expect(page.locator('a[href^="/tenants/"]', { hasText: 'Alex Rivera' }).first()).toHaveAttribute(
-    'href',
-    /\/tenants\//,
-  );
+  await expect(
+    page.locator('a[href^="/tenants/"]', { hasText: 'Alex Rivera' }).first(),
+  ).toHaveAttribute('href', /\/tenants\//);
   await expect(page.getByRole('link', { name: 'View lease' })).toHaveAttribute(
     'href',
     /\/leases\//,
@@ -160,8 +163,13 @@ test('seeded Maple Court shows its units and the 4B lease', async ({ page }) => 
   await expect(page.getByText('A unit with linked records cannot be deleted.')).toBeVisible();
 });
 
-test('unit switcher keeps the tab; timeline, applications, leases and maintenance states', async ({ page }) => {
-  const tab = (p: Page, label: string) => p.getByRole('navigation', { name: 'Workspace sections' }).getByRole('link', { name: label, exact: true });
+test('unit switcher keeps the tab; timeline, applications, leases and maintenance states', async ({
+  page,
+}) => {
+  const tab = (p: Page, label: string) =>
+    p
+      .getByRole('navigation', { name: 'Workspace sections' })
+      .getByRole('link', { name: label, exact: true });
   await signIn(page);
   await page.goto('/properties');
   await page.getByRole('link', { name: /Maple Court/ }).click();
@@ -172,7 +180,9 @@ test('unit switcher keeps the tab; timeline, applications, leases and maintenanc
   const timeline = page.getByTestId('lease-timeline');
   await expect(timeline).toBeVisible();
   expect(await timeline.locator('[data-unit-row]').count()).toBeGreaterThan(1);
-  await expect(timeline.getByTestId('timeline-today')).toHaveCount(await timeline.locator('[data-unit-row]').count());
+  await expect(timeline.getByTestId('timeline-today')).toHaveCount(
+    await timeline.locator('[data-unit-row]').count(),
+  );
   await expect(page.getByLabel('Payments this month')).toBeVisible();
 
   // Switch to a unit on the Leases tab: same tab, ?unit= set.
@@ -180,8 +190,13 @@ test('unit switcher keeps the tab; timeline, applications, leases and maintenanc
   await expect(page).toHaveURL(/\/leases$/);
   await switcher.selectOption({ label: 'Unit 4B' });
   await expect(page).toHaveURL(/\/leases\?unit=/);
-  await expect(page.getByRole('heading', { level: 1, name: 'Maple Court · Unit 4B' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Set up lease' })).toHaveAttribute('href', /\/leases\/new\?unit=/);
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Maple Court · Unit 4B' }),
+  ).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Set up lease' })).toHaveAttribute(
+    'href',
+    /\/leases\/new\?unit=/,
+  );
   await expect(page.getByRole('heading', { name: /^Current/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: /^Drafts/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: /^Past/ })).toBeVisible();

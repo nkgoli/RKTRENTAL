@@ -1,5 +1,10 @@
 # Optional property details → automatic ROI
 
+> Historical evidence from the first implementation. Its dialog and inline-editor
+> screenshots do not verify the dedicated pages requested in review. See
+> [the dedicated-page correction report](property-pages-review.md) for current
+> checks, explicit clears, browser captures and unresolved scope requirements.
+
 “Collect optional ROI details and calculate from saved properties” adds optional,
 grouped financial inputs to Add Property, a later ROI details editor on the property
 overview, and automatic calculation in the selected property's ROI workspace.

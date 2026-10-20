@@ -38,7 +38,9 @@ RocketRental app shell, calculation engine, tables and CSV exports are unchanged
 
 Not adopted: the indexed equity view, custom year slider, donut charts,
 multi-dimension analysis and risk scoring. These would need new calculations or
-fall outside the existing ROI graphs.
+fall outside the existing ROI graphs. This exclusion is superseded by
+`realroi-chart-parity.md`, which inventories every chart rendered by the running
+reference and assigns each gap to an implementation Task.
 
 ## Meaning kept visible
 

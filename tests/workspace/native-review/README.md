@@ -1,67 +1,66 @@
 # Overview browser review handoff
 
-Current result: 12 configured-Playwright MCP before/after captures exist in
-`evidence/`, with exact hashes/source/build/viewport identities in
-`evidence/capture-manifest.json`. These are automation-profile browser evidence,
-not native existing Edge evidence. Full flow/native acceptance remains pending.
-See `docs/design/light-property-overview-verification.md` for attribution/gaps.
+Current result:25 configured-Playwright MCP captures, including16 matching
+before/after property/occupied/vacant images at1280x1000 and390x844. These are
+automation-profile evidence, not native existing Edge evidence. Per-flow results,
+failed/inconclusive probes, original manager attribution and all remaining
+limitations are in docs/design/light-property-overview-verification.md.
 
-Retained runtime (do not rebuild or reseed):
+Retained runtime (do not rebuild/reseed):
 
-- `.runtime/baseline`: source 4adfb9649c4fdf65c1ed07a0152a3038775c581c,
-  BUILD_ID GPkMC-fReltH7INFyPztO, http://localhost:3241.
-- `.runtime/candidate-1f72f27`: source
+- Baseline .runtime/baseline: source4adfb9649c4fdf65c1ed07a0152a3038775c581c,
+  buildGPkMC-fReltH7INFyPztO, http://localhost:3241.
+- Candidate .runtime/candidate-1f72f27: source
   1f72f27adc9b2708c2c882187304afb87b169d3e (contains overview89fce36),
-  BUILD_ID EheygKX6UxTxKO1h1ktwh, http://localhost:3242.
-- `.runtime/postgres`: task-local PG16 on55441, migrated and demo-seeded42
-  on2026-10-20. Organization seed-rocket-rental. Preserve this fixture.
-- Actual routes: `/properties/demo-property-maple`, occupied4B
-  `?unit=demo-unit-maple-11`, occupied3A `?unit=demo-unit-maple-7`.
-  Do not infer vacancy from the old spec's constant names.
-- Disposable property `synth-ov-prop-mvfy0u3z`, vacantS1
-  `?unit=synth-ov-unit-mvfy0u3z`; prepared but no browser edits/media applied.
-  Identity `.runtime/synthetic-identity.json`.
-- Generated disposable files `.runtime/synth/synth-a.png`, `synth-b.png`,
-  `synth-c.png`, `synth-note.txt`; local storage `.runtime/storage-candidate`.
-- `node tests/workspace/native-review/fixture-review.cjs inspect` reads the
-  fixed task-local DB and synthetic identity. `prepare` refuses to replace an
-  existing identity. Keep it for resumed/native review.
+  buildEheygKX6UxTxKO1h1ktwh, http://localhost:3242.
+- .runtime/postgres: task-local PG16 on55441; all19 migrations/demo seed42
+  applied2026-10-20; organization seed-rocket-rental. Preserve the fixture.
+- Actual seeded routes /properties/demo-property-maple, occupied4B
+  ?unit=demo-unit-maple-11 and occupied3A ?unit=demo-unit-maple-7.
+- Disposable property /properties/synth-ov-prop-mvfy0u3z, vacantS1
+  ?unit=synth-ov-unit-mvfy0u3z; S2cmvfycjhc0001b9jwizb1xmie. CityGeorgetown,
+  S1bedrooms3, active property; uploaded photos removed, zero documents.
+- Synthetic original files .runtime/synth/synth-a.png, synth-b.png,
+  synth-c.png and synth-note.txt. The text note is not an accepted document
+  format; no document upload pass. Local storage .runtime/storage-candidate.
+- node tests/workspace/native-review/fixture-review.cjs inspect reads only
+  fixed task-local PG55441/synthetic identity. prepare refuses to replace
+  .runtime/synthetic-identity.json. Do not recreate before native review.
 
-Guarded PowerShell interface from this assigned checkout (absolute script path):
+Guarded commands (absolute script path, from assigned checkout):
 
 ```powershell
 $reviewScript = Join-Path $PWD 'tests/workspace/native-review/overview-review.ps1'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File $reviewScript -Action Status
+# Start only if verified stopped/free and manager has no active fixture window:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File $reviewScript -Action Start
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File $reviewScript -Action Status
-# After all checks:
+# After native/isolated checks, stop then verify:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File $reviewScript -Action Stop
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File $reviewScript -Action Status
 ```
 
-Start guards build/source hashes, fixture, process identities and free ports,
-launches hidden child services and records ownership. Status verifies the
-recorded processes and sign-in HTTP response. Stop checks process/start-time/
-executable identity and fixture PID, then cleanly stops only these services.
-The local TCP inventory returned no entries even during successful HTTP
-requests, so always also inspect process/HTTP/PID results. Never replace an
-occupied port or mismatched process. Do not restart directory3231/3232/55431.
+Start checks build/source hashes, fixture, recorded process identities and
+ports; hidden child services record ownership. Status verifies process identity
+and sign-in HTTP responses. Stop checks PID/start/executable and fixture PID,
+then shuts down only these services. TCP inventory returned no entries even
+while HTTP worked: inspect process/HTTP/PID evidence too. Never replace an
+occupied port/mismatched process or restart directory3231/3232/55431.
 
-`overview-review.spec.ts` is an **unexecuted inherited draft**, not a passing
-browser result or a safe ready command: its seed IDs/email, document targetId,
-nested unit organizationId, numeric validation input, cover-adjacent reorder
-expectation and preview placeholder selector need correction for this actual
-fixture/schema. Its relative `page.goto` calls also lack baseURL. Do not run it
-unchanged. Configured MCP, not that CLI spec, produced the 12 captures.
+Services were restarted at00:32:55UTC for the planned native window; preserve
+them until manager coordinates final release. No actual grant/start notice
+has yet been received. On notice, pause all isolated fixture mutations until
+manager release; do not acquire desktop/file controls or bypass cancellation.
 
-Remaining checks: actual canonical navigation/switcher and keyboard; true
-vacant desktop/390 capture; inline save/cancel/validation; add-unit validation
-and save; protected-delete dismissal/implicit and linked-record guards;
-archive/restore; disposable media upload/cover/order/remove/document and
-preview-failure/recovery. No financial or live-provider actions.
+The inherited overview-review.spec.ts is an **unexecuted draft**, not a passing
+result or ready command. Incorrect seed IDs/email, Document.targetId, nested
+unit organizationId, numeric validation input, cover-adjacent reorder expectation,
+preview placeholder selector, relative page.goto without baseURL and hidden
+phone-card .first() selector assumptions need correction before running it.
+Configured MCP, not that CLI spec, produced the submitted evidence.
 
-Browser recovery: immediate configured MCP navigation/code sequence succeeded
-for captures, but later again returned MCP_SESSION_NOT_FOUND; closing the
-automation page and navigating afresh did not repair it. Manager coordination
-is required for configured-browser recovery and any native existing-Edge grant.
-Do not acquire desktop/file controls or bypass cancelled approvals.
+Remaining: native review/final release, implicit single-family delete guard,
+fully reliable canonical soft navigation/all-units and immediate media refresh,
+unit-cancel value assertion, and document upload. Direct routes and persisted
+results must not be substituted for successful soft-navigation/native results.
+No financial/provider action, push or integration is authorized here.

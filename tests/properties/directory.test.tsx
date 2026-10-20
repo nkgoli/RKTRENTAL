@@ -15,9 +15,6 @@ vi.mock('@/lib/properties/data', () => ({
   propertyFilterFrom: (v: string) =>
     ['multi', 'single', 'vacancies', 'archived'].includes(v) ? v : 'all',
 }));
-vi.mock('@/app/(manager)/properties/_components/AddPropertyDialog', () => ({
-  AddPropertyDialog: () => null,
-}));
 const property = (extra = {}) => ({
   id: 'fixture-property',
   name: 'Fixture Court',
@@ -102,7 +99,7 @@ describe('property directory presentation', () => {
     ).toBeTruthy();
   });
   it.each([
-    [{}, 'No properties yet', '/properties?add=1'],
+    [{}, 'No properties yet', '/properties/new?returnTo=%2Fproperties'],
     [{ q: 'absent' }, 'No properties match this view', '/properties'],
   ])('offers the correct empty recovery', async (params, title, destination) => {
     mocks.list.mockResolvedValue({ properties: [], totals: { units: 0, occupied: 0, vacant: 0 } });

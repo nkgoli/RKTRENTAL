@@ -2,7 +2,7 @@
 
 import { useActionState, useState, type ReactNode } from 'react';
 import { Alert, Badge, Button, Card, CardHeader, Input, Select } from '@/components/ui';
-import { updatePropertyAction, updateUnitAction, type FormState } from '@/app/(manager)/properties/actions';
+import { updateUnitAction, type FormState } from '@/app/(manager)/properties/actions';
 import { FieldError } from '@/app/(manager)/properties/_components/FieldError';
 import { formatMoney } from '@/lib/properties/format';
 import styles from './WorkspaceOverview.module.css';
@@ -121,71 +121,20 @@ export type PropertyFactsValues = {
   ownerId: string | null;
 };
 
-function PropertyFactsForm({ propertyId, initial, owners, onDone }: {
-  propertyId: string; initial: PropertyFactsValues; owners: { id: string; name: string }[]; onDone: () => void;
-}) {
-  const [state, action, pending] = useActionState(async (prev: FormState, formData: FormData) => {
-    const next = await updatePropertyAction(prev, formData);
-    if (next.ok) onDone();
-    return next;
-  }, empty);
-  const e = state.errors ?? {};
-  return <form action={action} noValidate>
-    <input type="hidden" name="propertyId" value={propertyId} />
-    {state.message && !state.ok && <Alert tone="warning">{state.message}</Alert>}
-    <dl className={styles.facts}>
-      <EditRow label="Name" name="name" error={e.name}>
-        <Input id="fact-name" name="name" defaultValue={initial.name} required aria-invalid={!!e.name} />
-      </EditRow>
-      <EditRow label="Street address" name="street" error={e.street}>
-        <Input id="fact-street" name="street" defaultValue={initial.street} required aria-invalid={!!e.street} />
-      </EditRow>
-      <EditRow label="City" name="city" error={e.city}>
-        <Input id="fact-city" name="city" defaultValue={initial.city} required aria-invalid={!!e.city} />
-      </EditRow>
-      <EditRow label="State" name="state" error={e.state}>
-        <Input id="fact-state" name="state" defaultValue={initial.state} maxLength={2} required aria-invalid={!!e.state} />
-      </EditRow>
-      <EditRow label="ZIP" name="postalCode" error={e.postalCode}>
-        <Input id="fact-postalCode" name="postalCode" defaultValue={initial.postalCode} required aria-invalid={!!e.postalCode} />
-      </EditRow>
-      <EditRow label="Type" name="type" error={e.type}>
-        <Select id="fact-type" name="type" defaultValue={initial.type}>
-          <option value="MULTI_UNIT">Multi-unit building</option>
-          <option value="SINGLE_UNIT">Single-unit home</option>
-        </Select>
-      </EditRow>
-      <EditRow label="Year built" name="yearBuilt" error={e.yearBuilt}>
-        <Input id="fact-yearBuilt" name="yearBuilt" inputMode="numeric" defaultValue={initial.yearBuilt ?? ''} aria-invalid={!!e.yearBuilt} />
-      </EditRow>
-      <EditRow label="Owner" name="ownerId" error={e.ownerId}>
-        <Select id="fact-ownerId" name="ownerId" defaultValue={initial.ownerId ?? ''}>
-          <option value="">No owner</option>
-          {owners.map((owner) => <option key={owner.id} value={owner.id}>{owner.name}</option>)}
-        </Select>
-      </EditRow>
-    </dl>
-    <EditActions pending={pending} onCancel={onDone} />
-  </form>;
-}
-
-/** Property details that switch to inline fields in place. */
-export function PropertyFactsCard({ propertyId, initial, owners, address, typeLabel, unitSummary, ownerName, footer }: {
+/** Property details link to the full edit page; unit editing remains inline. */
+export function PropertyFactsCard({ propertyId, initial, address, typeLabel, unitSummary, ownerName, footer }: {
   propertyId: string; initial: PropertyFactsValues; owners: { id: string; name: string }[];
   address: string; typeLabel: string; unitSummary: string; ownerName: string; footer?: ReactNode;
 }) {
-  const [editing, setEditing] = useState(false);
   return <Card id="property-facts">
-    <CardHeader title="Property details" action={editing ? undefined : <Button type="button" variant="secondary" size="sm" onClick={() => setEditing(true)}>Edit</Button>} />
-    {editing
-      ? <PropertyFactsForm propertyId={propertyId} initial={initial} owners={owners} onDone={() => setEditing(false)} />
-      : <dl className={styles.facts}>
-        <dt>Address</dt><dd>{address}</dd>
-        <dt>Type</dt><dd>{typeLabel}</dd>
-        <dt>Year built</dt><dd>{initial.yearBuilt ?? '—'}</dd>
-        <dt>Units</dt><dd>{unitSummary}</dd>
-        <dt>Owner</dt><dd>{ownerName}</dd>
-      </dl>}
-    {!editing && footer}
+    <CardHeader title="Property details" action={<a href={`/properties/${propertyId}/edit`} className="btn btn-secondary btn-sm">Edit</a>} />
+    <dl className={styles.facts}>
+      <dt>Address</dt><dd>{address}</dd>
+      <dt>Type</dt><dd>{typeLabel}</dd>
+      <dt>Year built</dt><dd>{initial.yearBuilt ?? '—'}</dd>
+      <dt>Units</dt><dd>{unitSummary}</dd>
+      <dt>Owner</dt><dd>{ownerName}</dd>
+    </dl>
+    {footer}
   </Card>;
 }

@@ -6,8 +6,14 @@ import { requireManagerRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
 import { propertiesDb } from '@/lib/properties/data';
 import { parsePropertyInput, parseUnitInput, type FieldErrors } from '@/lib/properties/validation';
+import { parseRoiInputs } from '@/lib/properties/roi-inputs';
 
-export type FormState = { ok?: boolean; message?: string; errors?: FieldErrors };
+export type FormState = {
+  ok?: boolean;
+  message?: string;
+  errors?: FieldErrors;
+  destination?: string;
+};
 
 const failed = (errors: FieldErrors): FormState => ({
   errors,
@@ -24,7 +30,8 @@ export async function createPropertyAction(
   const result = await propertiesDb(session.organizationId).createProperty(parsed.data);
   if (!result.ok) return failed(result.errors);
   revalidatePath('/properties');
-  redirect(`/properties/${result.id}`);
+  revalidatePath('/roi-analysis');
+  return { ok: true, destination: `/properties/${result.id}` };
 }
 
 export async function updatePropertyAction(
@@ -39,7 +46,60 @@ export async function updatePropertyAction(
   if (!result.ok) return failed(result.errors);
   revalidatePath('/properties');
   revalidatePath(`/properties/${propertyId}`);
+  revalidatePath('/roi-analysis');
   return { ok: true, message: 'Property saved.' };
+}
+
+/** Dedicated Edit Property form submits only changed basics and financial leaf patches. */
+export async function savePropertyPageAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await requireManagerRole();
+  const propertyId = String(formData.get('propertyId') ?? '');
+  const parsed = parsePropertyInput(formData);
+  if (!parsed.ok) return failed(parsed.errors);
+  const allowed = ['name', 'type', 'street', 'city', 'state', 'postalCode', 'yearBuilt', 'ownerId'];
+  let changes: string[];
+  try {
+    const raw: unknown = JSON.parse(String(formData.get('changedBasics')));
+    if (
+      !Array.isArray(raw) ||
+      !raw.every((key) => typeof key === 'string' && allowed.includes(key))
+    )
+      throw Error();
+    changes = raw;
+  } catch {
+    return failed({ _form: 'Reload this property and try saving again.' });
+  }
+  const result = await propertiesDb(session.organizationId).updateProperty(
+    propertyId,
+    parsed.data,
+    changes,
+  );
+  if (!result.ok) return failed(result.errors);
+  revalidatePath('/properties');
+  revalidatePath(`/properties/${propertyId}`, 'layout');
+  revalidatePath('/roi-analysis');
+  return { ok: true, destination: `/properties/${propertyId}` };
+}
+
+export async function updatePropertyRoiAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await requireManagerRole();
+  const propertyId = String(formData.get('propertyId') ?? '');
+  const parsed = parseRoiInputs(formData.get('roiInputs'));
+  if (!parsed.success) return failed(parsed.errors);
+  const result = await propertiesDb(session.organizationId).updateRoiInputs(
+    propertyId,
+    parsed.data ?? { version: 1, input: {}, options: {} },
+  );
+  if (!result.ok) return failed(result.errors);
+  revalidatePath(`/properties/${propertyId}`);
+  revalidatePath('/roi-analysis');
+  return { ok: true, message: 'ROI details saved.' };
 }
 
 export async function setPropertyArchivedAction(
@@ -106,5 +166,7 @@ export async function deleteEmptyUnitAction(formData: FormData): Promise<never> 
   });
   revalidatePath('/properties');
   revalidatePath(`/properties/${propertyId}`);
-  redirect(`/properties/${propertyId}?notice=${result.count ? 'unit-deleted' : 'unit-delete-blocked'}`);
+  redirect(
+    `/properties/${propertyId}?notice=${result.count ? 'unit-deleted' : 'unit-delete-blocked'}`,
+  );
 }

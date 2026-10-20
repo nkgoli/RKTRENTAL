@@ -1,12 +1,19 @@
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
-import { DraftInputSchema, OptionsSchema, type DraftInput } from '../analysis/contract';
+import {
+  DraftInputSchema,
+  OptionsSchema,
+  financialInputPaths,
+  type DraftInput,
+} from '../analysis/contract';
 
 const sections = ['purchase', 'financing', 'income', 'expenses', 'appreciationExit'] as const;
 export type PropertyRoiInputs = {
   version: 1;
   input: Pick<DraftInput, (typeof sections)[number]>;
   options: Partial<z.infer<typeof OptionsSchema>>;
+  /** Explicit unknowns also suppress automatic source fallbacks for a new analysis. */
+  cleared?: string[];
 };
 const Schema = z
   .object({
@@ -16,9 +23,28 @@ const Schema = z
       'Only financial sections are supported',
     ),
     options: OptionsSchema.partial(),
+    cleared: z
+      .array(
+        z
+          .string()
+          .refine(
+            (path) => financialInputPaths.includes(path),
+            'Choose a financial field to clear',
+          ),
+      )
+      .max(100)
+      .optional(),
   })
   .strict()
   .superRefine((v, ctx) => {
+    for (const path of v.cleared ?? []) {
+      if (valueAt(v, path) !== undefined)
+        ctx.addIssue({
+          code: 'custom',
+          path: path.split('.'),
+          message: 'Enter a value or clear it, not both',
+        });
+    }
     const walk = (value: unknown, path: (string | number)[]) => {
       if (typeof value === 'number' && (!Number.isFinite(value) || Math.abs(value) > 1e10))
         ctx.addIssue({
@@ -75,7 +101,38 @@ export function mergeRoiInputs(existing: unknown, patch: PropertyRoiInputs): Pro
   const input = { ...prior?.input };
   for (const key of sections)
     if (patch.input[key]) Object.assign(input, { [key]: { ...input[key], ...patch.input[key] } });
-  return { version: 1, input, options: { ...prior?.options, ...patch.options } };
+  const merged: PropertyRoiInputs = {
+    version: 1,
+    input,
+    options: { ...prior?.options, ...patch.options },
+  };
+  const cleared = new Set(prior?.cleared);
+  for (const path of financialInputPaths) {
+    if (valueAt(patch, path) !== undefined) cleared.delete(path);
+  }
+  for (const path of patch.cleared ?? []) cleared.add(path);
+  for (const path of cleared) clearRoiPath(merged, path);
+  if (cleared.size) merged.cleared = [...cleared].sort();
+  return merged;
+}
+
+function valueAt(object: unknown, path: string): unknown {
+  return path
+    .split('.')
+    .reduce<unknown>(
+      (value, key) =>
+        value && typeof value === 'object' ? (value as Record<string, unknown>)[key] : undefined,
+      object,
+    );
+}
+
+/** Only admitted leaf paths can be deleted; never traverse arbitrary object keys. */
+export function clearRoiPath(object: unknown, path: string) {
+  if (!financialInputPaths.includes(path)) return;
+  const keys = path.split('.');
+  const parent = valueAt(object, keys.slice(0, -1).join('.'));
+  if (parent && typeof parent === 'object')
+    delete (parent as Record<string, unknown>)[keys.at(-1)!];
 }
 
 /** Price/debt have one authoritative storage location; never retain stale duplicates. */
@@ -88,8 +145,16 @@ export function roiStorage(existing: unknown, patch?: PropertyRoiInputs) {
   if (merged.input.financing) delete merged.input.financing.loanAmount;
   return {
     roiInputs: JSON.parse(JSON.stringify(merged)) as Prisma.InputJsonValue,
-    ...(purchasePrice !== undefined ? { purchasePrice } : {}),
-    ...(loanAmount !== undefined ? { loanAmount } : {}),
+    ...(purchasePrice !== undefined
+      ? { purchasePrice }
+      : patch.cleared?.includes('input.purchase.purchasePrice')
+        ? { purchasePrice: null }
+        : {}),
+    ...(loanAmount !== undefined
+      ? { loanAmount }
+      : patch.cleared?.includes('input.financing.loanAmount')
+        ? { loanAmount: null }
+        : {}),
   };
 }
 
@@ -114,5 +179,6 @@ export function readPropertyRoiInputs(row: {
       },
     },
     options: stored?.options ?? {},
+    ...(stored?.cleared?.length ? { cleared: stored.cleared } : {}),
   };
 }

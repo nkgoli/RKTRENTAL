@@ -18,8 +18,21 @@ export function generateAmortizationSchedule(
   loanAmount: number,
   startDate?: Date,
 ): AmortizationSummary {
-  const monthlyRate = fromPercent(input.financing.interestRate) / 12;
-  const termMonths = input.financing.loanTermYears * 12;
+  if (loanAmount === 0) {
+    return {
+      monthlyPayment: 0,
+      totalPayments: 0,
+      totalInterest: 0,
+      totalPrincipal: 0,
+      schedule: [],
+    };
+  }
+  const { interestRate, loanTermYears } = input.financing;
+  if (interestRate === undefined || loanTermYears === undefined) {
+    throw new Error('Enter an interest rate and loan term for this financed purchase.');
+  }
+  const monthlyRate = fromPercent(interestRate) / 12;
+  const termMonths = loanTermYears * 12;
   const amortizationMonths = input.financing.amortizationYears
     ? input.financing.amortizationYears * 12
     : termMonths;
@@ -27,7 +40,7 @@ export function generateAmortizationSchedule(
   // Calculate monthly payment based on amortization period
   const monthlyPayment = calculateMonthlyPayment(
     loanAmount,
-    fromPercent(input.financing.interestRate),
+    fromPercent(interestRate),
     amortizationMonths,
   );
 

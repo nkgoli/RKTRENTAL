@@ -68,10 +68,15 @@ payload plus field provenance and missing-data issues.
 
 Updates patch individual fields within supplied sections. An omitted or empty
 top-level `roiInputs` FormData value leaves all financial data untouched. Empty
-sections do not clear saved fields. The UI must omit blank inputs when building
-the JSON: **blank means unknown/no patch; explicit 0 is a value**. Null is not a
-clear operation. A future clearing workflow requires an explicit contract; do not
-send zeros to clear unknowns. Concurrent patches lock the tenant-owned property
+sections do not clear saved fields. New blank fields and untouched edits are
+omitted. Clearing a previously entered value sends its allowlisted leaf path in
+the optional `cleared` array, for example
+`{"version":1,"input":{},"options":{},"cleared":["input.purchase.purchasePrice"]}`.
+The same path cannot be supplied and cleared in one patch. Explicit 0 remains a
+value; null is not accepted as a number. Clear markers persist as unknowns,
+remove the stored JSON leaf, and set canonical purchasePrice/loanAmount columns
+to null when selected. Supplying a new value removes its clear marker.
+Concurrent patches lock the tenant-owned property
 row and merge against its latest JSON, preserving sibling assumptions. Reads,
 row locks, and writes are organization-scoped. Property and units are created in
 one transaction; property updates and ROI patches also share one transaction.
@@ -87,7 +92,8 @@ one transaction; property updates and ROI patches also share one transaction.
    financial fields and projection options, each with `source: property`, property
    source ID, observation timestamp and an explanatory note.
 3. Explicit property forecast monthly rent, including zero, outranks scheduled
-   lease rent. Otherwise only a complete schedule (one current active lease for
+   lease rent. An explicitly cleared forecast remains unknown, even if current
+   lease rent is available separately in `facts`. Otherwise only a complete schedule (one current active lease for
    every non-archived unit) supplies whole-property monthly rent with lease
    provenance. The schedule remains separately available in `facts` even when
    overridden. Forecast rent is never written back to leases.
@@ -96,15 +102,17 @@ one transaction; property updates and ROI patches also share one transaction.
    service never become inferred forecast assumptions. No market rates, growth,
    vacancies, fees, dates or projection defaults are invented.
 
-The existing engine gives fixed maintenance/capex/management amounts precedence
-over their percentages, including fixed zero. Complete calculation still requires
-the corresponding percentage fields to be explicit. Explicit loan amount wins
-over the engine's down-payment-based loan calculation. For all-cash examples,
-provide loan amount 0 and down-payment percent 100; calculation still needs its
-explicit rate, term, type, fees and other required assumptions. Partial all-cash
-data may be saved without inventing these terms. Cross-field calculation limits
-remain enforced by `missingData` and the public engine when calculating/saving
-READY; partial property data does not need to be a calculable deal.
+Fixed maintenance/capex/management amounts take precedence over their percentages,
+including fixed zero. Only one basis is required per cost. Clearing the fixed
+amount activates its saved percentage; if neither is known, calculation waits.
+Explicit loan amount 0 (or 100% down payment with no loan override) means no debt,
+so rate, term, loan type, points and lender fees may remain absent. No-debt
+calculations have no loan payments or lender costs. Previously saved loan details
+remain stored, and explicit loan amounts override down-payment percentages.
+Financed purchases require their applicable loan details, plus either the loan
+amount or down-payment percentage. The public facade and core pipeline share
+these sufficiency rules; `missingData`, calculation and READY saves use the same
+contract. Partial property data does not need to be a calculable deal.
 
 ## Verification
 
@@ -116,6 +124,15 @@ tests plus existing analysis persistence and contract tests. Database data stays
 under `.data/`; the server is stopped in `finally`. On Windows, PostgreSQL may
 need execution outside a restricted sandbox token to initialize.
 
-The dependent UI task owns form controls, serialization and browser flows. This
-change supplies the persisted contract and action plumbing; it does not publish
-a Preview or add financial controls.
+Dedicated `/properties/new` and `/properties/[id]/edit` pages combine basic
+details with optional financial groups. Edit prefills both, submits only changed
+basic fields and financial leaves, and explicitly clears fields whose saved
+values were erased. The property transaction merges against the latest locked
+row, preserving unrelated edits. Save returns to the property overview; Cancel
+performs no write. The older ROI-only inline editor and Add dialog are removed.
+
+ROI selection uses the saved analysis first, then the property draft. Its
+projection recalculates synchronously when the inputs change; insufficient or
+invalid inputs remove the previous results. Missing sections expand into friendly
+field labels with keyboard focus links. See [the UI verification report](property-roi-ux.md)
+for the Add Property through save/reload browser evidence.

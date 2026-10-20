@@ -1,0 +1,23 @@
+{
+  "checkout": "C:\\Users\\nkgol\\RocketRental\\.orchestra\\workspaces\\@5vofg25owpkjrwhuulg\\repository",
+  "branch": "orchestra/work-2gcjdifqik3o7helc0b-52amd99m9z4htmyegcb",
+  "startupHead": "682ef5dbc47870e3377006f686d1ea4ef67d9954",
+  "databaseDir": "C:\\Users\\nkgol\\RocketRental\\.orchestra\\workspaces\\@5vofg25owpkjrwhuulg\\repository\\.data\\optional-property-roi\\postgres",
+  "database": "property_flow",
+  "databasePort": 55581,
+  "appPort": 3181,
+  "synthetic": true,
+  "startedAt": "2026-10-20T08:07:18.376Z",
+  "fixturePid": 44548,
+  "appMode": "production",
+  "stopFile": "C:\\Users\\nkgol\\RocketRental\\.orchestra\\workspaces\\@5vofg25owpkjrwhuulg\\repository\\.data\\optional-property-roi\\stop-request",
+  "appPid": 16936,
+  "stoppedAt": "2026-10-20T08:16:10.441Z",
+  "stopHead": "682ef5dbc47870e3377006f686d1ea4ef67d9954",
+  "released": true,
+  "releaseVerifiedAt": "2026-10-20T08:16:55.0464744Z",
+  "verifiedOwnedPids": [44548, 16936, 45560, 8108],
+  "remainingOwnedProcesses": [],
+  "remainingListeners": [],
+  "verifiedPorts": [3181, 55581, 55582]
+}

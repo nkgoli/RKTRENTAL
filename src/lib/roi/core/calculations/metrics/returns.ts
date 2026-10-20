@@ -12,13 +12,14 @@ export function calculateTotalCashRequired(input: DealInput): number {
 
   // Points on the loan
   const loanAmount = calculateLoanAmount(input);
-  const pointsCost = loanAmount * fromPercent(input.financing.pointsPaid);
-  const lenderFees = input.financing.lenderFees;
+  const { pointsPaid, lenderFees } = input.financing;
+  if (loanAmount > 0 && (pointsPaid === undefined || lenderFees === undefined)) {
+    throw new Error('Enter points and lender fees for this financed purchase.');
+  }
+  // No lender costs apply without a loan. Keep saved loan assumptions unchanged.
+  const financingCosts = loanAmount === 0 ? 0 : loanAmount * fromPercent(pointsPaid!) + lenderFees!;
 
-  return round(
-    downPayment + closingCosts + rehabCosts + furnishingCosts + pointsCost + lenderFees,
-    2,
-  );
+  return round(downPayment + closingCosts + rehabCosts + furnishingCosts + financingCosts, 2);
 }
 
 /**
@@ -27,6 +28,9 @@ export function calculateTotalCashRequired(input: DealInput): number {
 export function calculateLoanAmount(input: DealInput): number {
   if (input.financing.loanAmount !== undefined) {
     return input.financing.loanAmount;
+  }
+  if (input.financing.downPaymentPercent === undefined) {
+    throw new Error('Enter a loan amount or down payment percentage.');
   }
   const downPayment =
     input.purchase.purchasePrice * fromPercent(input.financing.downPaymentPercent);

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   PayloadSchema,
@@ -31,6 +31,8 @@ import {
   allFields,
   applyValues,
   groups,
+  fieldLabel,
+  friendlyIssues,
   taxFields,
   valuesFrom,
   type FieldSpec,
@@ -84,12 +86,9 @@ export function RoiWorkspace({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
-  const [errors, setErrors] = useState<ValidationIssue[]>([]);
-  const [result, setResult] = useState<Result | null>(null);
-  const [calculatedPayload, setCalculatedPayload] = useState<AnalysisPayload | null>(null);
+  const [requestErrors, setErrors] = useState<ValidationIssue[]>([]);
   const [calculationVersion, setCalculationVersion] = useState(0);
   const [view, setView] = useState('summary');
-  const [stale, setStale] = useState(false);
   const [facts, setFacts] = useState<Facts | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [recovery, setRecovery] = useState<string | null>(null);
@@ -99,6 +98,43 @@ export function RoiWorkspace({
   const token = useRef(0);
   const properties = selection.ok ? selection.data : [];
   const property = properties.find((p) => p.id === selected);
+  // First load and edits use the same synchronous calculation. Saved snapshots
+  // take precedence over property defaults in load(); unknowns remain unknown.
+  const projection = useMemo<{
+    result: Result | null;
+    payload: AnalysisPayload | null;
+    errors: ValidationIssue[];
+  }>(() => {
+    if (!payload) return { result: null, payload: null, errors: [] };
+    const edited = applyValues(payload, values, tax);
+    try {
+      const current = PayloadSchema.parse(
+        applyScenarios(
+          {
+            ...edited,
+            benchmarks: applyCustomBenchmarks(benchmarks, customBenchmark),
+          },
+          scenarios,
+        ),
+      );
+      return {
+        result: calculatePayload({ ...current, benchmarks: [] }).base,
+        payload: current,
+        errors: [],
+      };
+    } catch (error) {
+      const missing = missingData(edited);
+      return {
+        result: null,
+        payload: null,
+        errors: friendlyIssues(missing.length ? missing : issues(error)),
+      };
+    }
+  }, [payload, values, tax, benchmarks, customBenchmark, scenarios]);
+  const errors = requestErrors.length ? requestErrors : projection.errors;
+  const result = projection.result;
+  const calculatedPayload = projection.payload;
+  const stale = !result || !!requestErrors.length;
 
   function install(p: AnalysisPayload, rev: number) {
     setPayload(p);
@@ -110,26 +146,13 @@ export function RoiWorkspace({
     setRevision(rev);
     setDirty(false);
     setConflict(false);
-    try {
-      setResult(calculatePayload({ ...p, benchmarks: [] }).base);
-      setCalculatedPayload(p);
-      setCalculationVersion((v) => v + 1);
-      setErrors([]);
-      setStale(false);
-    } catch (error) {
-      setResult(null);
-      setCalculatedPayload(null);
-      const missing = missingData(p);
-      setErrors(missing.length ? missing : issues(error));
-      setStale(true);
-    }
+    setErrors([]);
+    setCalculationVersion((v) => v + 1);
   }
   async function load(id: string) {
     const request = ++token.current;
     setLoading(true);
     setPayload(null);
-    setResult(null);
-    setCalculatedPayload(null);
     setFacts(null);
     setErrors([]);
     setMessage('');
@@ -159,7 +182,7 @@ export function RoiWorkspace({
       setMessage(
         saved.data
           ? `Loaded ${saved.data.status.toLowerCase()} - revision ${saved.data.revision}`
-          : 'New analysis - review source facts and enter your assumptions.',
+          : 'New analysis - saved property details are filled in. Add any missing assumptions below.',
       );
     } catch {
       if (request === token.current)
@@ -285,8 +308,6 @@ export function RoiWorkspace({
     setValues({});
     setSelected(id);
     setPayload(null);
-    setResult(null);
-    setCalculatedPayload(null);
     setView('summary');
     if (writeHistory) window.history.pushState(null, '', propertyUrl(id));
     if (id) void load(id);
@@ -307,8 +328,8 @@ export function RoiWorkspace({
   function edit(path: string, value: string) {
     setValues((v) => ({ ...v, [path]: value }));
     setDirty(true);
-    setStale(true);
-    setErrors((e) => e.filter((i) => i.path !== path));
+    setErrors([]);
+    setCalculationVersion((v) => v + 1);
   }
   function validate(calculate: boolean) {
     if (!payload) return null;
@@ -336,28 +357,17 @@ export function RoiWorkspace({
         })),
       ];
       if (calculate) {
-        const calculated = calculatePayload({ ...p, benchmarks: [] }).base;
-        setResult(calculated);
-        setCalculatedPayload(p);
+        calculatePayload({ ...p, benchmarks: [] });
         setCalculationVersion((v) => v + 1);
-        setStale(false);
       }
       setErrors([]);
       return p;
     } catch (error) {
-      const found = issues(error).map((i) => ({
-        ...i,
-        path:
-          i.path.startsWith('benchmarks') ||
-          i.path.startsWith('scenarios') ||
-          i.path.startsWith('options') ||
-          i.path.startsWith('input')
-            ? i.path
-            : `input.${i.path}`,
-      }));
+      const edited = applyValues(payload, values, tax);
+      const missing = calculate ? missingData(edited) : [];
+      const found = friendlyIssues(missing.length ? missing : issues(error));
       setErrors(found);
-      setStale(true);
-      setMessage('Check assumptions. Prior results are out of date.');
+      setMessage('Review the highlighted assumptions. Your entries are kept.');
       if (pending === null) focusField(found[0]?.path);
       return null;
     }
@@ -377,12 +387,11 @@ export function RoiWorkspace({
       });
       if (request !== token.current) return;
       if (!saved.ok) {
-        setErrors(saved.issues ?? []);
+        setErrors(friendlyIssues(saved.issues ?? []));
         setConflict(saved.code === 'CONFLICT');
         setMessage(failure(saved.code));
         if (saved.issues?.length) {
-          setStale(true);
-          if (pending === null) focusField(saved.issues[0].path);
+          if (pending === null) focusField(friendlyIssues(saved.issues)[0].path);
         }
         return;
       }
@@ -406,6 +415,7 @@ export function RoiWorkspace({
         {f.kind === 'select' || f.kind === 'boolean' ? (
           <select
             id={f.path}
+            aria-label={f.label}
             value={values[f.path] ?? ''}
             onChange={(e) => edit(f.path, e.target.value)}
             aria-invalid={!!error}
@@ -421,6 +431,7 @@ export function RoiWorkspace({
         ) : (
           <input
             id={f.path}
+            aria-label={f.label}
             type={f.kind === 'date' ? 'date' : 'text'}
             inputMode={f.kind === 'date' ? undefined : 'decimal'}
             value={values[f.path] ?? ''}
@@ -474,8 +485,10 @@ export function RoiWorkspace({
             <section className={styles.card}>
               <h2>What you’ll need</h2>
               <p>
-                Purchase and loan terms, rent, operating budgets, reserve policy and growth
-                assumptions. Recorded facts are starting points; missing values stay empty.
+                Saved property details fill your new ROI analysis automatically. Purchase and loan
+                terms, whole-property rent, operating budgets, reserves and growth assumptions
+                support the calculation. You can add missing details here or in the property’s ROI
+                details.
               </p>
             </section>
           </>
@@ -518,9 +531,20 @@ export function RoiWorkspace({
                     Reload saved analysis
                   </button>
                 </div>
+                <p role="status">
+                  {result && !stale
+                    ? 'Calculated automatically from your current assumptions.'
+                    : 'Add the missing assumptions to calculate automatically. You can save a draft at any time.'}
+                </p>
                 {!!errors.length && (
                   <details className={styles.notice} open>
-                    <summary>Review {errors.length} missing or invalid assumptions</summary>
+                    <summary>
+                      Complete your calculation · {errors.length} assumptions to review
+                    </summary>
+                    <p>
+                      Your property is saved. ROI details are optional for property setup. Follow a
+                      link to enter or correct an assumption; no missing costs or rates are assumed.
+                    </p>
                     <ul>
                       {errors.map((e, i) => (
                         <li key={i}>
@@ -531,7 +555,7 @@ export function RoiWorkspace({
                               focusField(e.path);
                             }}
                           >
-                            {e.path}: {e.message}
+                            {fieldLabel(e.path)}: {e.message}
                           </a>
                         </li>
                       ))}
@@ -573,13 +597,15 @@ export function RoiWorkspace({
                       onCustomChange={(d) => {
                         setCustomBenchmark(d);
                         setDirty(true);
-                        setStale(true);
+                        setErrors([]);
+                        setCalculationVersion((v) => v + 1);
                       }}
                       errors={errors}
                       onChange={(b) => {
                         setBenchmarks(b);
                         setDirty(true);
-                        setStale(true);
+                        setErrors([]);
+                        setCalculationVersion((v) => v + 1);
                       }}
                       snapshot={calculatedPayload}
                       stale={stale}
@@ -601,7 +627,8 @@ export function RoiWorkspace({
                     onChange={(d) => {
                       setScenarios(d);
                       setDirty(true);
-                      setStale(true);
+                      setErrors([]);
+                      setCalculationVersion((v) => v + 1);
                     }}
                     snapshot={calculatedPayload}
                     stale={stale}
@@ -773,7 +800,7 @@ export function RoiWorkspace({
                             .filter((e) => e.source !== 'manager')
                             .map((e, i) => (
                               <li key={i}>
-                                {e.path} - {e.source} - {e.note}
+                                {fieldLabel(e.path)} - {e.source} - {e.note}
                               </li>
                             ))}
                         </ul>
@@ -785,33 +812,18 @@ export function RoiWorkspace({
                     <p>
                       Blank means missing. Enter 0 explicitly where applicable. Fixed annual costs
                       override the corresponding percentage; clear fixed amounts to use percentages.
-                      Enter each required percentage even when a fixed amount is used. Use the units
-                      shown beside each assumption.
+                      A fixed cost needs no percentage. A $0 loan needs no loan-only terms. Use the
+                      units shown beside each assumption.
                     </p>
                     <fieldset disabled={saving}>
-                      <label className={styles.check}>
-                        <input
-                          type="checkbox"
-                          checked={
-                            values['input.financing.loanAmount'] === '0' &&
-                            values['input.financing.downPaymentPercent'] === '100'
-                          }
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              edit('input.financing.loanAmount', '0');
-                              edit('input.financing.downPaymentPercent', '100');
-                            } else {
-                              edit('input.financing.loanAmount', '');
-                              edit('input.financing.downPaymentPercent', '');
-                            }
-                          }}
-                        />
-                        All-cash purchase
-                      </label>
+                      <button type="button" onClick={() => edit('input.financing.loanAmount', '0')}>
+                        Pay in cash · No loan
+                      </button>
                       <p>
-                        All-cash sets loan amount to 0 and down payment to 100%. Enter explicit
-                        interest rate, term and other required loan assumptions. With a zero loan
-                        amount, these do not add debt payments.
+                        A $0 loan means no debt payments or lender costs. Loan-only details are not
+                        needed. Other saved loan details stay available if your plans change. To
+                        finance the purchase, enter a loan amount or clear it and enter a down
+                        payment percentage.
                       </p>
                       {groups.map((g) => (
                         <details key={g.title} open>
@@ -828,7 +840,8 @@ export function RoiWorkspace({
                             onChange={(e) => {
                               setTax(e.target.checked);
                               setDirty(true);
-                              setStale(true);
+                              setErrors([]);
+                              setCalculationVersion((v) => v + 1);
                             }}
                           />
                           Include explicit tax assumptions

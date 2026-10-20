@@ -4,6 +4,7 @@ import {
   analyzeWithScenario,
   compareWithBenchmarks,
   DealInputSchema,
+  DealInputFieldsSchema,
   SOURCE_COMMIT,
   type AnalysisOptions,
   type DealInput,
@@ -20,7 +21,7 @@ const iso = z
     const d = new Date(v);
     return Number.isFinite(d.getTime()) && d.getUTCFullYear() >= 1900 && d.getUTCFullYear() <= 2100;
   }, 'Expected ISO timestamp in 1900–2100');
-const purchase = DealInputSchema.shape.purchase.extend({ acquisitionDate: iso.optional() });
+const purchase = DealInputFieldsSchema.shape.purchase.extend({ acquisitionDate: iso.optional() });
 export type DraftInput = {
   propertyId?: string;
   schemaVersion?: 1;
@@ -31,23 +32,33 @@ export type DraftInput = {
   expenses?: Partial<DealInput['expenses']>;
   appreciationExit?: Partial<DealInput['appreciationExit']>;
 };
-const DraftInputObjectSchema = DealInputSchema.omit({ taxes: true })
+const DraftInputObjectSchema = DealInputFieldsSchema.omit({ taxes: true })
   .extend({
     schemaVersion: z.literal(1).optional(),
     purchase: purchase.partial().optional(),
-    financing: DealInputSchema.shape.financing
+    financing: DealInputFieldsSchema.shape.financing
       .extend({
         loanTermYears: z.number().int().min(1).max(50),
         amortizationYears: z.number().int().min(1).max(50).optional(),
       })
       .partial()
       .optional(),
-    income: DealInputSchema.shape.income.partial().optional(),
-    expenses: DealInputSchema.shape.expenses.partial().optional(),
-    appreciationExit: DealInputSchema.shape.appreciationExit.partial().optional(),
+    income: DealInputFieldsSchema.shape.income.partial().optional(),
+    expenses: DealInputFieldsSchema.shape.expenses.partial().optional(),
+    appreciationExit: DealInputFieldsSchema.shape.appreciationExit.partial().optional(),
   })
   .partial()
   .strict();
+/** Allowlisted financial leaf paths; shared by property patches and explicit clears. */
+export const financialInputPaths = [
+  ...Object.keys(purchase.shape).map((key) => `input.purchase.${key}`),
+  ...(['financing', 'income', 'expenses', 'appreciationExit'] as const).flatMap((section) =>
+    Object.keys(DealInputFieldsSchema.shape[section].shape).map((key) => `input.${section}.${key}`),
+  ),
+  'options.startDate',
+  'options.discountRate',
+  'options.tax',
+];
 export const DraftInputSchema = DraftInputObjectSchema as z.ZodType<DraftInput>;
 const rate = z.number().finite().min(0).max(100);
 const tax = z

@@ -6,6 +6,7 @@ import { propertiesDb } from '../../src/lib/properties/data';
 import { analysisService } from '../../src/lib/analysis/service';
 import { calculatePayload } from '../../src/lib/analysis/contract';
 import { payload } from './fixture';
+import { cashPayload } from './cash-fixture';
 
 const basic = {
   name: 'Optional inputs home',
@@ -84,6 +85,87 @@ describe.skipIf(process.env.RUN_ANALYSIS_DB !== '1')('property ROI database roun
     if (!result.ok) throw Error('create failed');
     return result.id;
   }
+  it('saves and resumes READY cash inputs without loan terms or overridden percentages', async () => {
+    const cash = cashPayload();
+    const { purchase, financing, income, expenses, appreciationExit } = cash.input;
+    const id = await create({
+      version: 1,
+      input: { purchase, financing, income, expenses, appreciationExit },
+      options: cash.options,
+    });
+    const detail = await properties.getProperty(id);
+    expect(detail?.roiInputs.input.financing).toEqual({ loanAmount: 0 });
+    expect(detail?.roiInputs.input.expenses?.maintenancePercent).toBeUndefined();
+    const draft = await analysis.loadDraft(id);
+    if (!draft.ok) throw Error('draft failed');
+    expect(draft.data.missing).toEqual([]);
+    expect(calculatePayload(draft.data.payload).base.summaryMetrics.annualCashFlow).toBe(10800);
+    const saved = await analysis.save({
+      propertyId: id,
+      expectedRevision: 0,
+      status: 'READY',
+      payload: draft.data.payload,
+    });
+    expect(saved.ok).toBe(true);
+    const resumed = await analysis.loadSaved(id);
+    if (!resumed.ok || !resumed.data) throw Error('resume failed');
+    expect(resumed.data.payload.input.financing).toEqual({ loanAmount: 0 });
+    expect(resumed.data.payload.input.expenses?.maintenancePercent).toBeUndefined();
+    expect(calculatePayload(resumed.data.payload).base.summaryMetrics.annualDebtService).toBe(0);
+    const missing = structuredClone(resumed.data.payload);
+    delete missing.input.expenses!.maintenance;
+    expect(
+      await analysis.save({
+        propertyId: id,
+        expectedRevision: 1,
+        status: 'READY',
+        payload: missing,
+      }),
+    ).toMatchObject({ ok: false, code: 'MISSING_DATA' });
+    missing.input.expenses!.maintenancePercent = 0;
+    expect(
+      (
+        await analysis.save({
+          propertyId: id,
+          expectedRevision: 1,
+          status: 'READY',
+          payload: missing,
+        })
+      ).ok,
+    ).toBe(true);
+  });
+  it('patches ROI details without changing basics, sibling assumptions or another organization', async () => {
+    const id = await create(source());
+    const before = await db.property.findUniqueOrThrow({ where: { id } });
+    await Promise.all([
+      properties.updateRoiInputs(id, {
+        version: 1,
+        input: { income: { monthlyRent: 0 } },
+        options: {},
+      }),
+      properties.updateRoiInputs(id, {
+        version: 1,
+        input: { expenses: { insurance: 432 } },
+        options: {},
+      }),
+    ]);
+    const reloaded = await properties.getProperty(id);
+    expect(reloaded?.name).toBe(before.name);
+    expect(reloaded?.roiInputs.input.income?.monthlyRent).toBe(0);
+    expect(reloaded?.roiInputs.input.expenses?.insurance).toBe(432);
+    expect(reloaded?.roiInputs.input.expenses?.propertyTax).toBe(1200);
+    expect(reloaded?.roiInputs.input.purchase?.purchasePrice).toBe(100000);
+    expect(
+      (
+        await foreign.updateRoiInputs(id, {
+          version: 1,
+          input: { income: { monthlyRent: 9999 } },
+          options: {},
+        })
+      ).ok,
+    ).toBe(false);
+    expect((await properties.getProperty(id))?.roiInputs.input.income?.monthlyRent).toBe(0);
+  });
   it('creates no-data properties, reloads unknowns, and upgrades an existing property with partial values', async () => {
     const id = await create();
     const row = await db.property.findUniqueOrThrow({ where: { id } });
@@ -212,5 +294,74 @@ describe.skipIf(process.env.RUN_ANALYSIS_DB !== '1')('property ROI database roun
         .map((e) => e.source),
     ).toEqual(['property']);
     expect((await properties.getProperty(id))?.roiInputs.input.financing?.loanAmount).toBe(60000);
+    await properties.updateProperty(
+      id,
+      parsed({
+        version: 1,
+        input: {},
+        options: {},
+        cleared: ['input.income.monthlyRent'],
+      }),
+      [],
+    );
+    const cleared = await analysis.loadDraft(id, new Date('2026-06-01'));
+    expect(cleared.ok && cleared.data.facts.scheduledMonthlyRent).toBe(1800);
+    expect(cleared.ok && cleared.data.payload.input.income?.monthlyRent).toBeUndefined();
+    expect(
+      cleared.ok &&
+        cleared.data.payload.evidence.filter((e) => e.path === 'input.income.monthlyRent'),
+    ).toEqual([]);
+  });
+  it('clears canonical amounts and expenses while preserving concurrent edits and saved analyses', async () => {
+    const id = await create(source());
+    const draft = await analysis.loadDraft(id);
+    if (!draft.ok) throw Error('draft failed');
+    expect(
+      (
+        await analysis.save({
+          propertyId: id,
+          expectedRevision: 0,
+          status: 'READY',
+          payload: draft.data.payload,
+        })
+      ).ok,
+    ).toBe(true);
+    const snapshot = await analysis.loadSaved(id);
+    await Promise.all([
+      properties.updateProperty(
+        id,
+        parsed({
+          version: 1,
+          input: {},
+          options: {},
+          cleared: [
+            'input.purchase.purchasePrice',
+            'input.financing.loanAmount',
+            'input.expenses.propertyTax',
+          ],
+        }),
+        [],
+      ),
+      properties.updateProperty(
+        id,
+        {
+          ...parsed({ version: 1, input: { expenses: { insurance: 500 } }, options: {} }),
+          name: 'Concurrent name',
+        },
+        ['name'],
+      ),
+    ]);
+    const row = await db.property.findUniqueOrThrow({ where: { id } });
+    expect(row.purchasePrice).toBeNull();
+    expect(row.loanAmount).toBeNull();
+    const detail = await properties.getProperty(id);
+    expect(detail?.name).toBe('Concurrent name');
+    expect(detail?.roiInputs.input.expenses?.insurance).toBe(500);
+    expect(detail?.roiInputs.input.expenses?.propertyTax).toBeUndefined();
+    expect(await analysis.loadSaved(id)).toEqual(snapshot);
+    const fresh = await analysis.loadDraft(id);
+    expect(fresh.ok && fresh.data.payload.input.purchase?.purchasePrice).toBeUndefined();
+    expect(fresh.ok && fresh.data.payload.input.financing?.loanAmount).toBeUndefined();
+    expect(fresh.ok && fresh.data.missing.length).toBeGreaterThan(0);
   });
 });

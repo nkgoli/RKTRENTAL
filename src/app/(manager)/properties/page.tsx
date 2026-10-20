@@ -1,11 +1,11 @@
 ﻿import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { redirect } from 'next/navigation';
 import { Icon } from '@/components/shell/Icons';
 import { Card, Progress, Stat, Table, TableHead } from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import { propertiesDb, propertyFilterFrom, type PropertyFilter } from '@/lib/properties/data';
 import { formatAddress, formatMoney } from '@/lib/properties/format';
-import { AddPropertyDialog } from './_components/AddPropertyDialog';
 import styles from './properties.module.css';
 
 const FILTERS: { key: PropertyFilter; label: string }[] = [
@@ -50,17 +50,18 @@ function href(filter: PropertyFilter, q?: string, view?: View) {
 export default async function PropertiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; filter?: string; view?: string }>;
+  searchParams: Promise<{ q?: string; filter?: string; view?: string; add?: string }>;
 }) {
   const session = await requireManagerRole();
-  const { q, filter: filterParam, view: viewParam } = await searchParams;
+  const { q, filter: filterParam, view: viewParam, add } = await searchParams;
   const view: View = viewParam === 'list' ? 'list' : 'grid';
   const filter = propertyFilterFrom(filterParam);
+  const createHref = `/properties/new?returnTo=${encodeURIComponent(href(filter, q, view))}`;
+  if (add === '1') redirect(createHref);
   const data = propertiesDb(session.organizationId);
-  const [{ properties, totals }, counts, owners] = await Promise.all([
+  const [{ properties, totals }, counts] = await Promise.all([
     data.listProperties({ q, filter }),
     data.countByFilter(),
-    data.listOwners(),
   ]);
   const occupancy = totals.units ? Math.round((totals.occupied / totals.units) * 100) : 0;
 
@@ -72,7 +73,7 @@ export default async function PropertiesPage({
         actions={[
           {
             label: '+ Add property',
-            href: `${href(filter, q, view)}${href(filter, q, view).includes('?') ? '&' : '?'}add=1`,
+            href: createHref,
             primary: true,
           },
         ]}
@@ -187,7 +188,7 @@ export default async function PropertiesPage({
           </p>
           <a
             className="btn btn-secondary"
-            href={q || filter !== 'all' ? '/properties' : '/properties?add=1'}
+            href={q || filter !== 'all' ? '/properties' : createHref}
           >
             {q || filter !== 'all' ? 'Clear filters' : 'Add a property'}
           </a>
@@ -278,8 +279,6 @@ export default async function PropertiesPage({
           </div>
         </Card>
       )}
-
-      <AddPropertyDialog owners={owners} />
     </>
   );
 }

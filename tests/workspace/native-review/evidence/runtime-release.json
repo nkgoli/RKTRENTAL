@@ -50,5 +50,7 @@
                        ],
     "nativeGrantObtained":  false,
     "nativeQuestionOutcome":  "Timed out; no grant",
-    "browserFinalAttempt":  "MCP_SESSION_NOT_FOUND on navigation; no repeated attempt or mutation"
+    "browserFinalAttempt":  "MCP_SESSION_NOT_FOUND on navigation; no repeated attempt or mutation",
+    "reaffirmedUtc":  "2026-10-20T01:00:41.2219409Z",
+    "reaffirmation":  "Latest manager-directed guarded Stop was an idempotent no-op; Status reconfirmed all three stopped, both HTTP refused and postmaster.pid absent. No restart or browser tests."
 }

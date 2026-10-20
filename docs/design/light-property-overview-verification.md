@@ -132,16 +132,19 @@ EACCES no longer reproduces. Configured MCP_SESSION_NOT_FOUND recurred, but
 fresh sequences recovered sufficiently for the results above; this historical
 transport failure does not invalidate the saved captures/results.
 
-Guarded stops verified at00:22:33 and00:31:01UTC: all three owned processes
-stopped, both HTTP probes refused, postmaster.pid absent. These are historical
-release checks. **Runtime was restarted/running for the manager's
-planned native window**, preserving fixture/builds: status at00:33:20UTC
-confirmed HTTP200/source/build/identity guards, baselinePID43608/start
-00:32:55.6273161Z, candidatePID61628/start00:32:55.6341880Z, PG48680/start
-00:32:55.5953480Z. services.json retains executable identity. Get-NetTCPConnection
-returned no entries even while HTTP worked; rely also on process/HTTP/PID guards.
-No fresh grant/start notice was received. Final release is recorded below.
-
+**Final state: stopped.** Guarded Stop/Status at00:57:17.6493799UTC verified
+release; the latest manager-directed guarded Stop/Status at
+2026-10-20T01:00:41.2219409Z reconfirmed baselineRunning=false,
+candidateRunning=false and postgresRunning=false. Both sign-in HTTP connections
+were refused and postmaster.pid was absent. The repeated Stop was an idempotent
+no-op because the recorded services were already stopped. No restart/polling/
+interaction test was performed. Recorded identities remain baseline43608,
+candidate61628 and PG48680 from00:32:55, for audit only. They are not running.
+The native question timed out; no window is scheduled and no grant exists.
+Builds, fixture data, files and25 committed captures remain preserved. The TCP
+inventory limitation described in earlier evidence does not replace these
+stopped-process/HTTP/PID checks. Native/file acceptance and both-build Open4B/
+all-units limits remain unchanged, with no app correction authorized.
 See [runtime commands](../../tests/workspace/native-review/README.md) for hidden
 Start/Status/Stop and exact generated-file paths. fixture-review.cjs prepare
 refuses to replace existing identity; inspect targets only PG55441. Syntax

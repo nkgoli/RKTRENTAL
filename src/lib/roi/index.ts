@@ -1,7 +1,8 @@
 /** RocketRental's supported public API. Adapted RealROI internals are not a persistence API. */
 import { z } from 'zod';
 import {
-  DealInputSchema as SourceSchema,
+  DealInputFieldsSchema as SourceSchema,
+  validateApplicableAssumptions,
   type DealInput,
 } from './core/domain/schemas/deal-input.schema';
 import { analyze as sourceAnalyze } from './core/pipeline/analysis-pipeline';
@@ -18,7 +19,7 @@ import type { BenchmarkData } from './benchmarks/types';
 export const SOURCE_COMMIT = '0b12c76fea3958b98f4a722f5acf3336f1fd7d45';
 export type { DealInput, BenchmarkData };
 
-// Remove financial sample defaults. A caller must consciously supply every assumption.
+// Remove financial sample defaults. A caller supplies every applicable assumption.
 function explicit<T extends z.ZodRawShape>(shape: T) {
   return z
     .object(
@@ -27,17 +28,19 @@ function explicit<T extends z.ZodRawShape>(shape: T) {
           key,
           schema instanceof z.ZodDefault ? schema.removeDefault() : schema,
         ]),
-      ),
+      ) as { [K in keyof T]: T[K] extends z.ZodDefault<infer U> ? U : T[K] },
     )
     .strict();
 }
-export const DealInputSchema = SourceSchema.extend({
+/** Field schemas also support partial drafts without imposing calculation sufficiency. */
+export const DealInputFieldsSchema = SourceSchema.extend({
   purchase: explicit(SourceSchema.shape.purchase.shape),
   financing: explicit(SourceSchema.shape.financing.shape),
   income: explicit(SourceSchema.shape.income.shape),
   expenses: explicit(SourceSchema.shape.expenses.shape),
   appreciationExit: explicit(SourceSchema.shape.appreciationExit.shape),
 }).strict();
+export const DealInputSchema = DealInputFieldsSchema.superRefine(validateApplicableAssumptions);
 
 const OptionsSchema = z
   .object({
@@ -163,7 +166,10 @@ export function analyze(input: unknown, suppliedOptions: AnalysisOptions): RoiAn
     throw new Error('Supply explicit tax assumptions in options.tax, not legacy input.taxes');
   const loan = calculateLoanAmount(parsed);
   if (loan > parsed.purchase.purchasePrice) throw new RangeError('Loan exceeds purchase price');
-  if (parsed.financing.loanTermYears > 50 || (parsed.financing.amortizationYears ?? 0) > 50) {
+  if (
+    (parsed.financing.loanTermYears ?? 0) > 50 ||
+    (parsed.financing.amortizationYears ?? 0) > 50
+  ) {
     throw new RangeError('Loan and amortization terms must not exceed 50 years');
   }
   const raw = sourceAnalyze(parsed, {

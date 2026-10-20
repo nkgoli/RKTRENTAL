@@ -812,8 +812,8 @@ export function RoiWorkspace({
                     <p>
                       Blank means missing. Enter 0 explicitly where applicable. Fixed annual costs
                       override the corresponding percentage; clear fixed amounts to use percentages.
-                      Enter each required percentage even when a fixed amount is used. Use the units
-                      shown beside each assumption.
+                      A fixed cost needs no percentage. A $0 loan needs no loan-only terms. Use the
+                      units shown beside each assumption.
                     </p>
                     <fieldset disabled={saving}>
                       <label className={styles.check}>

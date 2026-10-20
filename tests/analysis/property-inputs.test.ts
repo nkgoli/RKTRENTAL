@@ -6,6 +6,7 @@ import { propertiesDb } from '../../src/lib/properties/data';
 import { analysisService } from '../../src/lib/analysis/service';
 import { calculatePayload } from '../../src/lib/analysis/contract';
 import { payload } from './fixture';
+import { cashPayload } from './cash-fixture';
 
 const basic = {
   name: 'Optional inputs home',
@@ -84,6 +85,55 @@ describe.skipIf(process.env.RUN_ANALYSIS_DB !== '1')('property ROI database roun
     if (!result.ok) throw Error('create failed');
     return result.id;
   }
+  it('saves and resumes READY cash inputs without loan terms or overridden percentages', async () => {
+    const cash = cashPayload();
+    const { purchase, financing, income, expenses, appreciationExit } = cash.input;
+    const id = await create({
+      version: 1,
+      input: { purchase, financing, income, expenses, appreciationExit },
+      options: cash.options,
+    });
+    const detail = await properties.getProperty(id);
+    expect(detail?.roiInputs.input.financing).toEqual({ loanAmount: 0 });
+    expect(detail?.roiInputs.input.expenses?.maintenancePercent).toBeUndefined();
+    const draft = await analysis.loadDraft(id);
+    if (!draft.ok) throw Error('draft failed');
+    expect(draft.data.missing).toEqual([]);
+    expect(calculatePayload(draft.data.payload).base.summaryMetrics.annualCashFlow).toBe(10800);
+    const saved = await analysis.save({
+      propertyId: id,
+      expectedRevision: 0,
+      status: 'READY',
+      payload: draft.data.payload,
+    });
+    expect(saved.ok).toBe(true);
+    const resumed = await analysis.loadSaved(id);
+    if (!resumed.ok || !resumed.data) throw Error('resume failed');
+    expect(resumed.data.payload.input.financing).toEqual({ loanAmount: 0 });
+    expect(resumed.data.payload.input.expenses?.maintenancePercent).toBeUndefined();
+    expect(calculatePayload(resumed.data.payload).base.summaryMetrics.annualDebtService).toBe(0);
+    const missing = structuredClone(resumed.data.payload);
+    delete missing.input.expenses!.maintenance;
+    expect(
+      await analysis.save({
+        propertyId: id,
+        expectedRevision: 1,
+        status: 'READY',
+        payload: missing,
+      }),
+    ).toMatchObject({ ok: false, code: 'MISSING_DATA' });
+    missing.input.expenses!.maintenancePercent = 0;
+    expect(
+      (
+        await analysis.save({
+          propertyId: id,
+          expectedRevision: 1,
+          status: 'READY',
+          payload: missing,
+        })
+      ).ok,
+    ).toBe(true);
+  });
   it('patches ROI details without changing basics, sibling assumptions or another organization', async () => {
     const id = await create(source());
     const before = await db.property.findUniqueOrThrow({ where: { id } });

@@ -124,13 +124,14 @@ test('single-unit property links straight to its one unit; archive hides it', as
   await expect(page.getByRole('button', { name: 'Archive property' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Listing' }).first()).toBeVisible();
 
-  // Edit then archive from the property page.
+  // Edit on its dedicated page, then archive from the property overview.
   await page.getByRole('link', { name: 'Properties', exact: true }).first().click();
   await page.getByRole('link', { name: new RegExp(name) }).click();
   const details = page.locator('#property-facts');
-  await details.getByRole('button', { name: 'Edit' }).click();
-  await details.getByLabel('Year built').fill('2011');
-  await details.getByRole('button', { name: 'Save' }).click();
+  await details.getByRole('link', { name: 'Edit' }).click();
+  await expect(page.getByRole('heading', { name: 'Edit property', exact: true })).toBeVisible();
+  await page.getByLabel('Year built', { exact: true }).fill('2011');
+  await page.getByRole('button', { name: 'Save property' }).click();
   await expect(details.getByText('2011')).toBeVisible();
 
   await page.getByRole('button', { name: 'Archive property' }).click();

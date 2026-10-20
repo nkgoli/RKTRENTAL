@@ -38,24 +38,28 @@ export function calculateExpenseBreakdown(
   const propertyTax = input.expenses.propertyTax;
   const insurance = input.expenses.insurance;
   const hoa = input.expenses.hoaMonthly * 12;
+  function cost(fixed: number | undefined, percent: number | undefined, basis: number) {
+    if (fixed !== undefined) return fixed;
+    if (percent === undefined) throw new Error('Enter a fixed annual cost or percentage.');
+    return round(basis * fromPercent(percent), 2);
+  }
 
   // Maintenance - use dollar amount if provided, otherwise calculate from percentage
-  const maintenance =
-    input.expenses.maintenance !== undefined
-      ? input.expenses.maintenance
-      : round(grossRent * fromPercent(input.expenses.maintenancePercent), 2);
+  const maintenance = cost(
+    input.expenses.maintenance,
+    input.expenses.maintenancePercent,
+    grossRent,
+  );
 
   // CapEx - use dollar amount if provided, otherwise calculate from percentage
-  const capex =
-    input.expenses.capex !== undefined
-      ? input.expenses.capex
-      : round(grossRent * fromPercent(input.expenses.capexPercent), 2);
+  const capex = cost(input.expenses.capex, input.expenses.capexPercent, grossRent);
 
   // Property management - use dollar amount if provided, otherwise calculate from percentage of EGI
-  const propertyManagement =
-    input.expenses.propertyManagement !== undefined
-      ? input.expenses.propertyManagement
-      : round(effectiveGrossIncome * fromPercent(input.expenses.propertyManagementPercent), 2);
+  const propertyManagement = cost(
+    input.expenses.propertyManagement,
+    input.expenses.propertyManagementPercent,
+    effectiveGrossIncome,
+  );
 
   const utilities = input.expenses.utilitiesMonthly * 12;
   const leasing = input.expenses.leasingCosts;

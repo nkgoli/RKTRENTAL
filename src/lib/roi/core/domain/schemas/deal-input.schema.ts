@@ -57,21 +57,21 @@ export type LoanType = z.infer<typeof LoanTypeSchema>;
  */
 export const FinancingSchema = z.object({
   /** Down payment as a percentage (0-100) */
-  downPaymentPercent: z.number().min(0).max(100).default(20),
+  downPaymentPercent: z.number().min(0).max(100).optional(),
   /** Loan amount (calculated if not provided) */
   loanAmount: z.number().nonnegative().optional(),
   /** Annual interest rate as a percentage (e.g., 7.5 for 7.5%) */
-  interestRate: z.number().min(0).max(100).default(7),
+  interestRate: z.number().min(0).max(100).optional(),
   /** Loan term in years */
-  loanTermYears: z.number().int().positive().default(30),
+  loanTermYears: z.number().int().positive().optional(),
   /** Amortization period in years (can differ from loan term for balloon loans) */
   amortizationYears: z.number().int().positive().optional(),
   /** Type of loan */
-  loanType: LoanTypeSchema.default('conventional'),
+  loanType: LoanTypeSchema.optional(),
   /** Points paid at closing (as percentage of loan amount) */
-  pointsPaid: z.number().nonnegative().default(0),
+  pointsPaid: z.number().nonnegative().optional(),
   /** Other lender fees */
-  lenderFees: z.number().nonnegative().default(0),
+  lenderFees: z.number().nonnegative().optional(),
 });
 
 export type Financing = z.infer<typeof FinancingSchema>;
@@ -105,15 +105,15 @@ export const ExpensesSchema = z.object({
   /** Annual maintenance (or use maintenancePercent) */
   maintenance: z.number().nonnegative().optional(),
   /** Maintenance as percentage of gross rent (5-15% typical) */
-  maintenancePercent: z.number().min(0).max(100).default(5),
+  maintenancePercent: z.number().min(0).max(100).optional(),
   /** Annual CapEx reserve (or use capexPercent) */
   capex: z.number().nonnegative().optional(),
   /** CapEx as percentage of gross rent (5-10% typical) */
-  capexPercent: z.number().min(0).max(100).default(5),
+  capexPercent: z.number().min(0).max(100).optional(),
   /** Property management (or use propertyManagementPercent) */
   propertyManagement: z.number().nonnegative().optional(),
   /** Property management as percentage of effective gross income (8-12% typical) */
-  propertyManagementPercent: z.number().min(0).max(100).default(8),
+  propertyManagementPercent: z.number().min(0).max(100).optional(),
   /** Monthly utilities (if landlord pays) */
   utilitiesMonthly: z.number().nonnegative().default(0),
   /** Annual leasing/turnover costs */
@@ -167,7 +167,7 @@ export type TaxSettings = z.infer<typeof TaxSettingsSchema>;
 /**
  * Complete deal input schema
  */
-export const DealInputSchema = z.object({
+export const DealInputFieldsSchema = z.object({
   /** Opaque application property ID (RocketRental CUID or an imported UUID). */
   propertyId: z.string().min(1).max(200).optional(),
   /** Schema version for migrations */
@@ -188,6 +188,60 @@ export const DealInputSchema = z.object({
   taxes: TaxSettingsSchema,
 });
 
+/** Shared by the public calculation contract and the internal pipeline.
+ * Only applicable assumptions are required; omitted values stay omitted.
+ */
+export function validateApplicableAssumptions(
+  input: { financing: Partial<Financing>; expenses: Partial<Expenses> },
+  ctx: z.RefinementCtx,
+) {
+  const { financing, expenses } = input;
+  const noDebt =
+    financing.loanAmount === 0 ||
+    (financing.loanAmount === undefined && financing.downPaymentPercent === 100);
+  if (financing.loanAmount === undefined && financing.downPaymentPercent === undefined) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['financing', 'loanAmount'],
+      message: 'Enter a loan amount or down payment percentage. Enter 0 for a cash purchase.',
+    });
+  }
+  if (!noDebt) {
+    for (const key of [
+      'interestRate',
+      'loanTermYears',
+      'loanType',
+      'pointsPaid',
+      'lenderFees',
+    ] as const) {
+      if (financing[key] === undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['financing', key],
+          message:
+            key === 'loanType'
+              ? 'Choose the type of loan for this financed purchase.'
+              : 'Enter this loan detail to calculate a financed purchase. Use 0 only when it applies.',
+        });
+      }
+    }
+  }
+  for (const [fixed, percent, label] of [
+    ['maintenance', 'maintenancePercent', 'maintenance'],
+    ['capex', 'capexPercent', 'capital reserves'],
+    ['propertyManagement', 'propertyManagementPercent', 'management'],
+  ] as const) {
+    if (expenses[fixed] === undefined && expenses[percent] === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['expenses', percent],
+        message: `Enter a fixed annual cost or percentage for ${label}. Use 0 only when it applies.`,
+      });
+    }
+  }
+}
+
+export const DealInputSchema = DealInputFieldsSchema.superRefine(validateApplicableAssumptions);
 export type DealInput = z.infer<typeof DealInputSchema>;
 
 /**
@@ -211,6 +265,9 @@ export function createDefaultDealInput(): DealInput {
       downPaymentPercent: 20,
       interestRate: 7,
       loanTermYears: 30,
+      loanType: 'conventional',
+      pointsPaid: 0,
+      lenderFees: 0,
     },
     income: {
       monthlyRent: 2000,

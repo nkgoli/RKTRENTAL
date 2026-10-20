@@ -1,11 +1,13 @@
 import type { DealInput } from '../domain/schemas/deal-input.schema';
 import type { Warning, SummaryMetrics } from '../domain/schemas/analysis-result.schema';
+import { calculateLoanAmount } from '../calculations/metrics/returns';
 
 /**
  * Evaluate input and metrics to generate warnings
  */
 export function evaluateWarnings(input: DealInput, metrics: SummaryMetrics): Warning[] {
   const warnings: Warning[] = [];
+  const loanAmount = calculateLoanAmount(input);
 
   // DSCR warning
   if (metrics.dscr < 1.0 && metrics.dscr !== Infinity) {
@@ -79,7 +81,11 @@ export function evaluateWarnings(input: DealInput, metrics: SummaryMetrics): War
   }
 
   // High interest rate
-  if (input.financing.interestRate > 10) {
+  if (
+    loanAmount > 0 &&
+    input.financing.interestRate !== undefined &&
+    input.financing.interestRate > 10
+  ) {
     warnings.push({
       code: 'HIGH_INTEREST_RATE',
       severity: 'warning',
@@ -89,12 +95,16 @@ export function evaluateWarnings(input: DealInput, metrics: SummaryMetrics): War
   }
 
   // Low down payment (high LTV)
-  if (input.financing.downPaymentPercent < 20 && input.financing.loanType === 'conventional') {
+  const downPaymentPercent = (1 - loanAmount / input.purchase.purchasePrice) * 100;
+  if (loanAmount > 0 && downPaymentPercent < 20 && input.financing.loanType === 'conventional') {
     warnings.push({
       code: 'LOW_DOWN_PAYMENT',
       severity: 'info',
-      message: `Down payment of ${input.financing.downPaymentPercent}% may require PMI for conventional loans.`,
-      field: 'financing.downPaymentPercent',
+      message: `Down payment of ${Number(downPaymentPercent.toFixed(2))}% may require PMI for conventional loans.`,
+      field:
+        input.financing.loanAmount === undefined
+          ? 'financing.downPaymentPercent'
+          : 'financing.loanAmount',
     });
   }
 

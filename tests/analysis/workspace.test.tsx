@@ -6,6 +6,7 @@ import { RoiWorkspace } from '@/components/analysis/RoiWorkspace';
 import { applyValues, valuesFrom } from '@/components/analysis/fields';
 import { PayloadSchema, calculatePayload, issues } from '@/lib/analysis';
 import { payload } from './fixture';
+import { cashPayload } from './cash-fixture';
 import {
   loadRoiDraftAction,
   loadSavedRoiAnalysisAction,
@@ -76,6 +77,31 @@ async function open() {
 }
 const rent = () => document.getElementById('input.income.monthlyRent') as HTMLInputElement;
 describe('property autofill and calculation sufficiency', () => {
+  it('calculates cash with unknown loan terms and stops when its applicable cost basis is cleared', async () => {
+    const p = cashPayload('a');
+    vi.mocked(loadRoiDraftAction).mockResolvedValueOnce({
+      ok: true,
+      data: { payload: p, missing: [], facts },
+    });
+    await open();
+    const summary = () => within(screen.getByRole('region', { name: 'Year 1 at a glance' }));
+    const field = (path: string) => document.getElementById(path) as HTMLInputElement;
+    expect(summary().getByText('$10,800')).toBeTruthy();
+    expect(field('input.financing.loanTermYears').value).toBe('');
+    expect(field('input.expenses.maintenancePercent').value).toBe('');
+    fireEvent.change(field('input.expenses.maintenance'), { target: { value: '' } });
+    expect(summary().queryByText('$10,800')).toBeNull();
+    expect(
+      screen.getByRole('link', { name: /Maintenance.*fixed annual cost or percentage/ }),
+    ).toBeTruthy();
+    fireEvent.change(field('input.expenses.maintenancePercent'), { target: { value: '0' } });
+    expect(summary().getByText('$10,800')).toBeTruthy();
+    fireEvent.change(field('input.financing.loanAmount'), { target: { value: '50000' } });
+    expect(summary().queryByText('$10,800')).toBeNull();
+    expect(screen.getByRole('link', { name: /Interest rate.*financed purchase/ })).toBeTruthy();
+    fireEvent.change(field('input.financing.loanAmount'), { target: { value: '0' } });
+    expect(summary().getByText('$10,800')).toBeTruthy();
+  });
   it.each([0, 60000])(
     'calculates saved property defaults on selection with loan %s',
     async (loanAmount) => {

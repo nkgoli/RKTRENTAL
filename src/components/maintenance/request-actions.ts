@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { requireManagerRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
 import {
+  editRequestDetails,
   addRequestComment,
   addRequestPhoto,
   assignVendor,
@@ -37,6 +38,8 @@ export async function createRequest(
   const session = await requireManagerRole();
   try {
     const unitId = formValue(form, 'unitId');
+    if (selectedUnitId && selectedUnitId !== unitId)
+      return { error: 'Choose a unit from the current property and unit scope.' };
     if (propertyId) {
       const unit = await db.unit.findFirst({
         where: {
@@ -117,6 +120,32 @@ export async function updateRequest(
         photo: 'Photo uploaded.',
       }[kind],
     };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function saveRequestDetails(
+  form: FormData,
+  requestId: string,
+  propertyId: string,
+  unitId?: string,
+): Promise<RequestActionResult> {
+  const session = await requireManagerRole();
+  try {
+    await editRequestDetails(
+      session,
+      requestId,
+      {
+        title: formValue(form, 'title'),
+        description: formValue(form, 'description'),
+        priority: formValue(form, 'priority') as MaintenancePriority,
+      },
+      { propertyId, ...(unitId ? { unitId } : {}) },
+    );
+    refresh(propertyId);
+    revalidatePath(`/maintenance/${requestId}/edit`);
+    return { message: 'Repair request saved.' };
   } catch (error) {
     return failure(error);
   }

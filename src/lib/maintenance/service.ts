@@ -185,7 +185,11 @@ export async function listMaintenanceOptions(organizationId: string) {
       select: {
         id: true,
         name: true,
-        units: { select: { id: true, number: true }, orderBy: { number: 'asc' } },
+        units: {
+          where: { status: { not: 'ARCHIVED' } },
+          select: { id: true, number: true },
+          orderBy: { number: 'asc' },
+        },
       },
       orderBy: { name: 'asc' },
     }),
@@ -226,6 +230,7 @@ export async function createRequestAsManager(session: AuthSession, input: Create
   const unit = await db.unit.findFirst({
     where: {
       id: input.unitId,
+      status: { not: 'ARCHIVED' },
       organizationId: session.organizationId,
       property: { archivedAt: null },
     },
@@ -425,6 +430,42 @@ export async function addRequestPhoto(session: AuthSession, requestId: string, f
       storageKey: document.storageKey,
       sizeBytes: BigInt(document.sizeBytes),
       mimeType: document.mimeType,
+    },
+  });
+}
+
+/** Issue editing never changes location, status, assignment, photos or history. */
+export async function editRequestDetails(
+  session: AuthSession,
+  requestId: string,
+  input: Pick<CreateMaintenanceInput, 'title' | 'description' | 'priority'>,
+  scope: ScopeFilter = {},
+) {
+  manager(session);
+  const title = required(input.title, 'Title', 160);
+  const description = input.description?.trim() || null;
+  if (description && description.length > 3000)
+    throw new MaintenanceError('Description is too long');
+  const priority = input.priority ?? MaintenancePriority.NORMAL;
+  if (!Object.values(MaintenancePriority).includes(priority))
+    throw new MaintenanceError('Invalid priority');
+  const result = await db.maintenanceRequest.updateMany({
+    where: { id: requestId, organizationId: session.organizationId, ...directScopeWhere(scope) },
+    data: { title, description, priority },
+  });
+  if (!result.count) throw new MaintenanceError('Request not found in this scope');
+}
+
+export async function getMaintenanceRequest(
+  organizationId: string,
+  id: string,
+  scope: ScopeFilter = {},
+) {
+  return db.maintenanceRequest.findFirst({
+    where: { id, organizationId, ...directScopeWhere(scope) },
+    select: {
+      ...boardSelect,
+      photos: { where: { documentId: { not: null } }, select: { documentId: true } },
     },
   });
 }

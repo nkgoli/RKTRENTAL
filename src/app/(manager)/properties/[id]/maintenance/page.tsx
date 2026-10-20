@@ -1,17 +1,18 @@
 import { notFound } from 'next/navigation';
 import { PropertyMaintenanceList } from '@/components/workspace/panels/operations/PropertyMaintenanceList';
-import { NewMaintenanceRequestDialog } from '@/components/workspace/panels/operations/NewMaintenanceRequestDialog';
+import Link from 'next/link';
+import { maintenanceFormHref } from '@/lib/maintenance/navigation';
 import { requireManagerRole } from '@/lib/auth/access';
 import {
   listMaintenancePage,
   listMaintenanceOptions,
   parseMaintenanceQuery,
+  maintenanceQueryString,
 } from '@/lib/maintenance';
 import { withRequestPhotos } from '@/components/maintenance/request-photos';
 import { propertiesDb } from '@/lib/properties/data';
 import { first, type WorkspaceSearch } from '../routing';
 import {
-  createPropertyMaintenanceAction,
   assignPropertyMaintenanceAction,
   statusPropertyMaintenanceAction,
   commentPropertyMaintenanceAction,
@@ -42,10 +43,6 @@ export default async function PropertyMaintenancePage({
     { propertyId, ...(unitId ? { unitId } : {}) },
     query,
   );
-  const selectableUnits = property.units
-    .filter((unit) => unit.status !== 'ARCHIVED' && (!unitId || unit.id === unitId))
-    .map(({ id, number }) => ({ id, number }));
-  const createAction = createPropertyMaintenanceAction.bind(null, propertyId, unitId ?? '');
   const [{ vendors }, requests] = await Promise.all([
     listMaintenanceOptions(session.organizationId),
     withRequestPhotos(session.organizationId, list.requests),
@@ -66,13 +63,16 @@ export default async function PropertyMaintenancePage({
         query={query}
         unitId={unitId}
         createRequestControl={
-          <NewMaintenanceRequestDialog
-            action={createAction}
-            propertyName={property.name}
-            units={selectableUnits}
-            selectedUnitId={unitId}
-            triggerLabel={list.isEmpty ? 'Create your first request' : undefined}
-          />
+          <Link
+            className="btn btn-primary"
+            href={maintenanceFormHref(
+              propertyId,
+              unitId,
+              `/properties/${propertyId}/maintenance${maintenanceQueryString(query, { unit: unitId })}`,
+            )}
+          >
+            {list.isEmpty ? 'Create your first request' : '+ New request'}
+          </Link>
         }
       />
     </div>

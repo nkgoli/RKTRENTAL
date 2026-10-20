@@ -1,70 +1,117 @@
 import { expect, test } from '@playwright/test';
-
-const managerEmail = 'jordan.mills@rocketrental.example';
-const managerPassword = process.env.ROCKETRENTAL_DEMO_MANAGER_PASSWORD ?? 'JordanDemo#2026';
-const PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
-  'base64',
-);
-
-test('manager creates a photographed request, assigns a vendor, and changes status', async ({
-  page,
-}) => {
-  await page.goto('/sign-in');
-  await page.getByLabel('Email address').fill(managerEmail);
-  await page.getByLabel('Password').fill(managerPassword);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
-  await page.goto('/maintenance');
-  await expect(page.getByRole('heading', { name: 'Maintenance', level: 1 })).toBeVisible();
-  await expect(
-    page.locator('article').filter({ hasText: 'Kitchen sink leak' }).first(),
-  ).toBeVisible();
-  await expect(
-    page
-      .locator('article')
-      .filter({ hasText: 'Window latch loose' })
-      .getByText('Northstar Repairs')
-      .first(),
-  ).toBeVisible();
-
-  const title = `Test repair ${Date.now()}`;
-  await page
-    .locator('#new-request')
-    .getByRole('button', { name: '+ New request', exact: true })
-    .click();
-  const create = page.getByRole('dialog', { name: 'New repair request' });
-  await create.getByLabel('Unit').selectOption({ label: 'Maple Court · 4B' });
-  await create.getByLabel('Priority').selectOption('HIGH');
-  await create.getByLabel('Request title').fill(title);
-  await create.getByLabel('Description').fill('E2E maintenance request');
-  await create
-    .getByLabel('Choose a file')
-    .setInputFiles({ name: 'repair.png', mimeType: 'image/png', buffer: PNG });
-  await create.getByRole('button', { name: 'Create request' }).click();
-  await create.getByRole('link', { name: 'Request created' }).click();
-
-  const ticket = page.locator('article').filter({ hasText: title });
-  await expect(ticket).toBeVisible();
-  await expect(ticket.getByText('High')).toBeVisible();
-  await ticket.getByText('Manage request').click();
-  await expect(ticket.getByRole('img', { name: `${title} photo` })).toBeVisible();
-  await ticket.getByLabel('Assign vendor').selectOption({ label: 'Northstar Repairs' });
-  await ticket.getByRole('button', { name: 'Assign', exact: true }).click();
-
-  const assigned = page.locator('article').filter({ hasText: title });
-  await expect(assigned.getByText('Northstar Repairs').first()).toBeVisible();
-  await assigned.getByText('Manage request').click();
-  await assigned.getByLabel('Change status').selectOption('IN_PROGRESS');
-  await assigned.getByRole('button', { name: 'Update' }).click();
-  await expect(
-    page.getByRole('region', { name: 'In progress' }).locator('article').filter({ hasText: title }),
-  ).toBeVisible();
-  const inProgress = page.locator('article').filter({ hasText: title });
-  await inProgress.getByText('Manage request').click();
-  await inProgress.getByLabel('Comment').fill('Vendor visit confirmed.');
-  await inProgress.getByRole('button', { name: 'Add comment' }).click();
-  await expect(page.locator('article').filter({ hasText: title })).toContainText(
-    'Vendor visit confirmed.',
-  );
-});
+const fixture = 'maintenance-pages-property';
+const unit = 'maintenance-pages-unit';
+const photo = {
+  name: 'repair.png',
+  mimeType: 'image/png',
+  buffer: Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+    'base64',
+  ),
+};
+for (const width of [1440, 390])
+  test(`dedicated maintenance forms at ${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.goto('/sign-in');
+    await page.getByLabel('Email address').fill('maintenance-pages@example.test');
+    await page.getByLabel('Password', { exact: true }).fill('MaintenanceTest#2026');
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await page.waitForURL('**/dashboard');
+    await page.goto('/maintenance');
+    await page.getByRole('link', { name: 'New request', exact: true }).click();
+    const form = page.getByRole('form', { name: 'Create repair request', exact: true });
+    await expect(form).toBeVisible();
+    await page.getByLabel('Request title', { exact: true }).fill('Cancelled global draft');
+    await page.getByRole('link', { name: 'Cancel', exact: true }).click();
+    await page.waitForURL('**/maintenance');
+    await expect(page.getByText('Cancelled global draft', { exact: true })).toHaveCount(0);
+    const scope = `/properties/${fixture}/maintenance?unit=${unit}`;
+    await page.goto(scope);
+    await page.getByRole('link', { name: '+ New request', exact: true }).click();
+    await expect(form).toBeVisible();
+    await expect(page.getByLabel('Property and unit')).toHaveValue(unit);
+    await page.getByLabel('Request title', { exact: true }).fill('   ');
+    await page.getByLabel('Description', { exact: true }).fill('Keep draft after validation');
+    await page.getByRole('button', { name: 'Create request', exact: true }).click();
+    const error = page.getByRole('alert').filter({ hasText: 'Title is required' });
+    await expect(error).toBeFocused();
+    await expect(page.getByLabel('Description', { exact: true })).toHaveValue(
+      'Keep draft after validation',
+    );
+    const title = `Synthetic repair ${width} ${Date.now()}`;
+    await page.getByLabel('Request title', { exact: true }).fill(title);
+    await page.getByLabel('Priority', { exact: true }).selectOption('HIGH');
+    await page.getByLabel('Choose a file').setInputFiles(photo);
+    await page
+      .getByRole('button', { name: 'Create request', exact: true })
+      .scrollIntoViewIfNeeded();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.screenshot({
+      path: `tests/maintenance/evidence/automated-create-${width}.png`,
+      fullPage: true,
+    });
+    await page.getByRole('button', { name: 'Create request', exact: true }).click();
+    await expect(page.getByRole('status')).toContainText('Repair request created.');
+    await page.getByRole('status').getByRole('link').click();
+    await page.waitForURL(`**${scope}#request-*`);
+    const details = page.locator('details').filter({ hasText: title });
+    await details.locator('summary').click();
+    await details.getByRole('link', { name: 'Edit request', exact: true }).click();
+    await expect(page.getByLabel('Request title', { exact: true })).toHaveValue(title);
+    const edit = page.url();
+    await page.getByLabel('Request title', { exact: true }).fill(`${title} edited`);
+    await page.getByLabel('Description', { exact: true }).fill('Saved issue details');
+    await page.getByLabel('Priority', { exact: true }).selectOption('URGENT');
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Repair request saved.' }),
+    ).toBeVisible();
+    await page.reload();
+    await expect(page.getByLabel('Request title', { exact: true })).toHaveValue(`${title} edited`);
+    await expect(page.getByLabel('Description', { exact: true })).toHaveValue(
+      'Saved issue details',
+    );
+    await expect(page.getByLabel('Priority', { exact: true })).toHaveValue('URGENT');
+    await expect(page.getByRole('link', { name: /Open photo/ })).toHaveCount(1);
+    await page.locator('select[name=vendorId]').selectOption('maintenance-pages-vendor');
+    await page.getByRole('button', { name: 'Assign', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Vendor assigned.' })).toBeVisible();
+    await page.locator('select[name=status]').selectOption('IN_PROGRESS');
+    await page.getByRole('button', { name: 'Update', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Status updated.' })).toBeVisible();
+    await page.locator('textarea[name=comment]').fill('Retained activity');
+    await page.getByRole('button', { name: 'Add comment', exact: true }).click();
+    await expect(page.getByText('Retained activity', { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.locator('select[name=status]')).toHaveValue('IN_PROGRESS');
+    await expect(page.locator('select[name=vendorId]')).toHaveValue('maintenance-pages-vendor');
+    await expect(page.getByText('Retained activity', { exact: true })).toBeVisible();
+    await page
+      .getByLabel('Description', { exact: true })
+      .fill('Issue updated with existing activity');
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Repair request saved.' }),
+    ).toBeVisible();
+    await page.reload();
+    await expect(page.getByText('Retained activity', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Open photo/ })).toHaveCount(1);
+    await expect(page.locator('select[name=status]')).toHaveValue('IN_PROGRESS');
+    await page.screenshot({
+      path: `tests/maintenance/evidence/automated-edit-${width}.png`,
+      fullPage: true,
+    });
+    await page.getByLabel('Request title', { exact: true }).fill('Cancel must not write');
+    await page.getByRole('link', { name: 'Cancel', exact: true }).click();
+    await page.waitForURL(`**${scope}`);
+    await page.goto(edit);
+    await expect(page.getByLabel('Request title', { exact: true })).toHaveValue(`${title} edited`);
+    await page.goto('/maintenance/new?propertyId=seed-property-maple');
+    await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+    await expect(page.getByRole('form')).toHaveCount(0);
+    await page.goto('/maintenance/foreign-request/edit');
+    await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+    await expect(page.getByRole('form')).toHaveCount(0);
+  });

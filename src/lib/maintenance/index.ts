@@ -1,4 +1,6 @@
 export {
+  editRequestDetails,
+  getMaintenanceRequest,
   addRequestComment,
   addRequestPhoto,
   assignVendor,

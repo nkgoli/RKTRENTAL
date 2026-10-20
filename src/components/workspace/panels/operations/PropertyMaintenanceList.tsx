@@ -6,7 +6,11 @@ import {
   MaintenanceFilters,
   MaintenanceListFooter,
 } from '@/components/maintenance/MaintenanceListControls';
-import type { MaintenanceBoardRequest, MaintenanceListQuery } from '@/lib/maintenance';
+import {
+  maintenanceQueryString,
+  type MaintenanceBoardRequest,
+  type MaintenanceListQuery,
+} from '@/lib/maintenance';
 import { workspaceTabHref } from '@/components/workspace/routes';
 import styles from './operations.module.css';
 
@@ -155,7 +159,12 @@ export function PropertyMaintenanceList({
                     {actions && (
                       <tr>
                         <td colSpan={6} className={styles.detailCell}>
-                          <RequestDetails request={request} vendors={vendors} actions={actions} />
+                          <RequestDetails
+                            returnTo={`/properties/${propertyId}/maintenance${maintenanceQueryString(query, { unit: unitId })}`}
+                            request={request}
+                            vendors={vendors}
+                            actions={actions}
+                          />
                         </td>
                       </tr>
                     )}

@@ -1,3 +1,5 @@
+import Link from 'next/link';
+import { maintenanceFormHref } from '@/lib/maintenance/navigation';
 import type { MaintenanceBoardRequest } from '@/lib/maintenance';
 import { FileUploader } from '@/components/upload';
 import { RequestActionForm, type RequestAction } from './RequestActionForm';
@@ -15,17 +17,31 @@ export function RequestDetails({
   request,
   vendors,
   actions,
+  returnTo = '/maintenance',
+  expanded = false,
+  hideEdit = false,
 }: {
   request: MaintenanceBoardRequest;
   vendors: { id: string; name: string }[];
   actions: RequestActions;
+  returnTo?: string;
+  expanded?: boolean;
+  hideEdit?: boolean;
 }) {
   return (
-    <details className={styles.details}>
+    <details className={styles.details} open={expanded}>
       <summary>
         Manage request<span className={styles.screenReaderOnly}>: {request.title}</span>
       </summary>
       <div className={styles.detailBody}>
+        {!hideEdit && (
+          <Link
+            className="btn btn-secondary"
+            href={maintenanceFormHref(request.propertyId, request.unit.id, returnTo, request.id)}
+          >
+            Edit request
+          </Link>
+        )}
         <p className={styles.description}>{request.description || 'No description provided.'}</p>
         <div className={styles.controlGrid}>
           <RequestActionForm action={actions.assign} label={`Assign vendor for ${request.title}`}>

@@ -196,8 +196,15 @@ export function ComboChart({
 }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(660);
-  const [active, setActive] = useState<number | null>(null);
+  const [selected, setActive] = useState<number | null>(null);
   const id = useId();
+  const n = years.length;
+  // A selection from a longer horizon, property or scenario never reaches the
+  // readout, `details` or the plot: it is cleared once the data no longer has it.
+  const active = selected != null && selected >= 0 && selected < n ? selected : null;
+  useEffect(() => {
+    if (selected != null && active == null) setActive(null);
+  }, [selected, active]);
   useEffect(() => {
     if (!wrap.current || typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(([entry]) => {
@@ -212,7 +219,6 @@ export function ComboChart({
   const m = { top: 18, right: 12, bottom: 30, left: narrow ? 52 : 64 };
   const innerW = Math.max(1, width - m.left - m.right);
   const innerH = h - m.top - m.bottom;
-  const n = years.length;
   const band = innerW / Math.max(1, n);
   const cx = (i: number) => m.left + band * (i + 0.5);
 
@@ -250,7 +256,7 @@ export function ComboChart({
 
   function pick(clientX: number) {
     const box = wrap.current?.querySelector('svg')?.getBoundingClientRect();
-    if (!box || !n) return;
+    if (!box || !box.width || !n) return;
     const x = ((clientX - box.left) / box.width) * width;
     setActive(Math.min(n - 1, Math.max(0, Math.floor((x - m.left) / band))));
   }

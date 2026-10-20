@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
+import { fixedDomainScale } from '@/lib/analysis/chart-data';
 import { rentDistribution } from '@/lib/comps/distribution';
 import c from '@/components/analysis/roi-chart.module.css';
 import s from './rent-distribution.module.css';
@@ -52,7 +53,11 @@ export function RentDistribution({
     .map((p, i) => `${i ? 'L' : 'M'}${x(p.rent).toFixed(1)},${y(p.density).toFixed(1)}`)
     .join('');
   const area = `${line}L${x(d.max)},${y(0)}L${x(d.min)},${y(0)}Z`;
-  const ticks = Array.from({ length: 5 }, (_, i) => d.min + ((d.max - d.min) * i) / 4);
+  // Recharts' ticks for the reference's [dataMin, dataMax] domain, minus a step tick
+  // that would print the same `$x.xk` as the closing one.
+  const ticks = fixedDomainScale(d.min, d.max).ticks.filter(
+    (t, i, all) => i === all.length - 1 || k(t) !== k(all.at(-1)!),
+  );
   const points = [
     ...d.comps.map((p) => ({ ...p, you: false })),
     ...(d.subject ? [{ ...d.subject, you: true }] : []),

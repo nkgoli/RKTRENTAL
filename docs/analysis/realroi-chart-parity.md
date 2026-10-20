@@ -146,7 +146,7 @@ open on Equity; Exit is labelled "Exit Analysis".
 | C22 | Annualized Returns Comparison (Compare)                                   | Bar per asset                                | compare-annualized-bars-{default,tooltip}-1440                                                                                                        | `CompareView` bar chart (`ComboChart` with per-bar `colors`)                | **Delivered** (§11.2)                              |
 | C23 | Multi-Dimensional Comparison (Compare)                                    | Radar                                        | compare-radar-{default,hover-no-tooltip}-1440                                                                                                         | `RadarChart` (`RoiCompareCharts.tsx`)                                       | **Delivered** (§11.2)                              |
 | C24 | Compare side-by-side table (Compare)                                      | Table, Best/Worst badges                     | compare-side-by-side-vs-property-1440, compare-tab-full-1440                                                                                          | `CompareView` side-by-side table, winners, asset cards                      | **Delivered** (§11.2)                              |
-| C25 | Rental Distribution bell curve (Search)                                   | Area + reference dots                        | **not renderable**: needs RentCast/Google keys; see search-manual-entry-no-chart-1440                                                                 | `RentDistribution` on the comps workbench                                   | **Delivered** (§11.2), source-only reference       |
+| C25 | Rental Distribution bell curve (Search)                                   | Area + reference dots                        | live keys absent (search-manual-entry-no-chart-1440); **fixture render** in `final/c25/` (§12.3)                                                      | `RentDistribution` on the comps workbench                                   | **Delivered** (§11.2), fixture-paired (§12.3)      |
 
 **Not rendered anywhere in the reference** (dead code, so no parity is needed):
 
@@ -875,13 +875,11 @@ Summary, Charts → Equity and Charts → Cash Flow. The reference's is 583.
    C7 starts from after-repair value minus the original loan. Every RocketRental
    figure comes from its own projection rows.
 
-2. **Axes.** Nice 1/2/2.5/5 steps rather than Recharts auto domains (C6 tops out
-   at $1000k, not $950k). Negative ticks read `-$9k`, not `$-9k`, matching the
-   tables.
-3. **Fonts.** Numbers use a `JetBrains Mono, ui-monospace, Cascadia Mono,
-Consolas` stack. JetBrains Mono is not bundled (no font download was added),
-   so Windows shows Cascadia Mono or Consolas. Titles use the app's design font,
-   not Inter.
+2. **Axes.** _Superseded by §12:_ domains and ticks now follow the reference's
+   Recharts rules (C6 $950k). Negative ticks still read `-$9k`, not `$-9k`,
+   matching the tables.
+3. **Fonts.** _Superseded by §12:_ JetBrains Mono is bundled and Inter was
+   already the bundled design font (the same Google Fonts file as the reference).
 4. **Contrast.**
    - Header subtitles are #526174, not #64748b, so 10 px text keeps 4.5:1.
    - Pressed teal-500 pills get a #0d9488 inset.
@@ -1056,8 +1054,8 @@ Browser interactions checked:
 1. Engine definitions (§9.5): OpEx excludes reserves (33.3% against 38.4%), and the
    heatmap cells and IRR are true engine values, so they differ from the reference's
    shortcuts.
-2. Nice axis steps: the Exit axis tops out at $1500k in $500k steps, against the
-   reference's $1400k in $350k steps.
+2. _Superseded by §12:_ the Exit axis now reads $0k…$1400k in $350k steps, as in
+   the reference.
 3. The "Initial: $…" label sits above the line at the right end inside the plot,
    rather than outside it.
 4. The amortization x labels approximate Recharts' automatic thinning with a fixed rule.
@@ -1188,7 +1186,8 @@ Benchmarks, Compare and the comps page. The earlier C1–C17 charts were re-chec
    yield, selection limit, Benchmarks fixed market set, what-if never saved).
 3. Key Metrics rows use RocketRental metrics (NOI, cap rate, cash flow, equity,
    cumulative cash, IRR, equity multiple) rather than the reference's "Total Return".
-4. C25 has no rendered reference to pair with; it follows the source.
+4. _Superseded by §12.3:_ C25 is paired with the reference component rendered
+   from a labelled fixture.
 
 ### 11.5 Live delivery (2026-10-20)
 
@@ -1213,5 +1212,192 @@ Benchmarks, Compare and the comps page. The earlier C1–C17 charts were re-chec
   `.data/postgres-5434` are both kept; nothing was reseeded, reset or switched.
 - Open item for the owner: the scheduled task `RocketRentalLive3100` still runs
   `start.ps1 -Port 3100 -DbPort 5433` at logon, so after the next sign-in it would serve
-  the other dataset. It was not changed here. To pin it to this dataset, run
-  `scripts/register-live-task.ps1 -DbPort 5434 -Restart`.
+  the other dataset. It was not changed here. _Resolved in §12.5._
+
+## 12. Final fidelity, startup and launcher (2026-10-20)
+
+Evidence lives in `docs/analysis/realroi-chart-parity/final/` (palette PNGs).
+Every capture was taken on isolated runtimes: the reference on 3300 (and a fixture
+instance on 3301), and this branch's production build on 3191 against a new
+isolated database `.data/postgres-5541`. The live 3100 / 5434 app was not used for
+matched inputs, so no live draft could be saved.
+
+### 12.1 Fonts
+
+- **Inter** was already bundled (`public/fonts/inter-latin-wght-normal.woff2`). It is
+  byte-identical to the reference's Google Fonts file (SHA-256 `3100E775…4C62`).
+- **JetBrains Mono** is now bundled from the same Google Fonts file the reference loads
+  (`jetbrains-mono-latin-wght-normal.woff2`, 31 KB, OFL licence beside it). It is
+  declared for weights 400–500 only, like the reference's stylesheet, so bold figures
+  are synthesised from 500 in both apps.
+- Rendered check (`final/pairs/pairs-report.json`): both pages report
+  `document.fonts.check` true for `600 14px Inter` and `700 18px "JetBrains Mono"`.
+  The loaded faces are Inter and JetBrains Mono 400–500. Card titles compute to
+  Inter, and chart figures compute to the JetBrains Mono stack.
+- Chart card headings had been inheriting the app's Space Grotesk heading face. They
+  now use Inter (`roi-chart.module.css`, `rent-distribution.module.css`).
+- At 390 px, `scrollWidth` equals 390 on Summary, all six Charts sub-tabs, Scenarios,
+  Benchmarks, Compare and the comps page (`final/pairs/rr-mobile-390-*`).
+
+### 12.2 Domains, ticks and layout
+
+The value axes now use the reference's own rules, ported from recharts-scale into
+`chart-data.ts`:
+
+- `referenceScale`: Recharts' default `[0, auto]` domain with five nice ticks.
+- `fixedDomainScale`: an explicit `[min, max]` domain.
+- `equityAxisMax`: C6's `ceil(max × 1.1 / 50k) × 50k` rule, or `/ 50` when indexed.
+
+Zero always stays on the axis. A chart whose tick labels would repeat falls back to
+the earlier plain steps. On desktop the label band is at least Recharts' 60 px. The
+mobile 390 layout is unchanged.
+
+Paired at the same 800 px card width, with the §1 sample on isolated Elm Street
+(`tests/analysis/realroi-pairs-runtime.mjs`):
+
+| Chart | Reference ticks                 | RocketRental ticks                                           |
+| ----- | ------------------------------- | ------------------------------------------------------------ |
+| C1    | `$-2k … $2k` (1k)               | `-$2k … $2k`                                                 |
+| C6    | `$0k $250k $500k $950k`         | same                                                         |
+| C7    | `$0k … $1000k` (250k)           | same                                                         |
+| C8    | `$-9k $0k $9k $17k $26k`        | `-$8.5k $0k $8.5k $17k $25.5k`                               |
+| C9    | `$-15k … $45k` (15k)            | `-$15k … $45k`                                               |
+| C11   | `$0k … $400k` (100k)            | same                                                         |
+| C14   | `$0k $350k $700k $1050k $1400k` | same                                                         |
+| C18   | `$0k … $1400k` (350k)           | same (with the unsaved Optimistic and Conservative examples) |
+| C19   | `0 900 1800 2700 3600`          | same                                                         |
+| C20   | x `0…24`, y `0%…16%`            | same                                                         |
+| C22   | `0.0% … 16.0%`                  | same                                                         |
+
+The domains and steps are now the same. C8's labels differ only in precision: the
+reference prints $8,500 as `$9k`, while RocketRental keeps the exact `$8.5k`.
+
+C25's x axis uses the fixed `[dataMin, dataMax]` rule. A step tick that would print
+the same `$x.xk` as the final tick is dropped.
+
+Unit tests:
+
+- `tests/analysis/realroi-charts.test.tsx` checks these tick sets and that C6 draws
+  `$950k`, not `$1000k`.
+- The Y1 all-negative case keeps five distinct ticks (`-$1.2k … $0k`).
+
+### 12.3 C25 with a deterministic fixture
+
+The reference chart is inline in `SearchPanel.tsx` and needs Google Places and RentCast.
+To render it without either service, `tests/analysis/realroi-c25-fixture.mjs`:
+
+- Starts the reference with **placeholder, non-secret** `VITE_GOOGLE_MAPS_API_KEY` and
+  `VITE_RENTCAST_API_KEY` strings. Its source is not modified.
+- Answers every Google Maps and RentCast request in Playwright: a Places stub with an
+  inert map, plus RentCast property, rent, value and listing JSON.
+- Aborts any other external host. Only the reference's Google Fonts are allowed.
+  The run log shows 5 intercepted calls and 0 external API calls.
+
+**Fixture:** RocketRental's sandbox comps for Maple Court unit 3A. These are
+deterministic demo data, not market data:
+
+- Comps: $1,700, $1,800, $1,850, $1,825, $2,025 and $2,025.
+- Subject (listed rent): $1,600.
+- Range: $1,805–$1,980.
+
+The fixture feeds both apps, and both cards are captured at 800 px:
+
+- `final/c25/ref-fixture-search-rental-distribution-1440.png`
+- `final/c25/ref-fixture-search-rental-distribution-tooltip-1440.png`
+- `final/c25/rr-fixture-rent-comps-rental-distribution-1440.png`
+
+Remaining C25 differences, all from the reference's source:
+
+1. The reference averages the subject into the statistics: Low $1,600, Average
+   $1,832. RocketRental excludes it: Low $1,700, Average $1,871.
+2. The reference subtitle counts curve points ("compared to 60 comparable rentals").
+   RocketRental counts comps (6).
+3. The reference rounds the density to whole numbers, so its curve is slightly
+   stepped. Its x domain is `avg ± 2.5 sd`. RocketRental widens the domain to keep
+   the subject and every comp on the axis.
+
+There is no remaining blocker for C25. It is still a fixture comparison, not live
+RentCast data.
+
+### 12.4 Startup seeding (fresh and repeat)
+
+The real `scripts/start.ps1 -Port 3191 -DbPort 5541 -SkipInstall` was run on an empty
+`.data/postgres-5541`. Logs are in `final/startup/fresh-start.log`. It:
+
+1. Created `.env` from the sandbox block.
+2. Built the app.
+3. Initialised Postgres and applied the migrations.
+4. Ran `prisma/seed.ts`, then `load-roi-examples.ts --seed-inputs-only`. All four
+   properties were "populated seed-roi-inputs-v1".
+5. Wrote `.demo-seeded` and served the app.
+
+`tests/analysis/startup-charts-runtime.mjs` then signed in and opened every chart
+(`final/startup/fresh-charts-report.json`):
+
+- All of C1–C25 render on Maple Court.
+- The notice reads "28 assumptions are fictional demo values (seed-roi-inputs-v1)".
+- No console errors.
+- C25 uses the sandbox comps for unit 3A, from the "Demo comps · not live market
+  data" banner.
+
+What the seed provides, and what it deliberately does not:
+
+- Scenarios (C18) start with Base Case only; the preset chips add unsaved examples.
+- Compare (C21–C24) starts with "Choose at least one reference asset". Scenarios
+  and the Compare selection are saved-analysis state, and the seed never writes a
+  saved analysis: a saved snapshot would take precedence over the property's demo
+  inputs. The harness picks S&P 500 and Nasdaq 100 in an unsaved draft, and all four
+  Compare charts render. No seed wiring was missing for C1–C25.
+
+**Preservation test.** `tests/analysis/startup-preservation-edits.mts` made these
+changes through the app's own write paths:
+
+- Edited Maple's rent to $23,456.
+- Cleared Cedar's insurance.
+- Saved a Harbor draft at 7% vacancy.
+- Deleted one seeded Maple expense.
+
+A real repeat `start.ps1 … -StopExisting` then ran:
+
+- It reused the build, applied no migrations and logged "Demo seed is up to date".
+- The `.demo-seeded` timestamp was unchanged (`2026-10-20T22:26:20Z`).
+- The digest over all 33 tables' row hashes was identical before and after:
+  `70990f93…4122` (`final/startup/hash-after-edits.json` and `hash-after-repeat-start.json`).
+- Semantic check (`semantic-after-repeat-start.json`):
+  - Maple rent is still $23,456, with no demo label.
+  - 27 demo values remain.
+  - Cedar insurance is still cleared and unlabelled.
+  - The Harbor draft is still revision 1.
+  - The deleted expense is still absent (239 expenses).
+  - There are no duplicate properties (4) or units (45).
+- The chart run after the repeat start rendered all 25 charts again
+  (`repeat-charts-report.json`).
+
+### 12.5 Persistent launcher
+
+`scripts/register-live-task.ps1` now defaults to `-DbPort 5434`, the preserved
+dataset, and registers `start.ps1 … -SkipInstall -StopExisting`. A restart therefore
+takes over a detached copy on 3100/5434. `start.ps1 -StopExisting` stops the
+`RocketRentalPreview` task only when that task holds one of the requested ports.
+`.data/postgres-5433` is kept but not served.
+
+### 12.6 Evidence index (all 25 charts)
+
+| Charts                                       | Rendered reference                                                           | RocketRental                                                                  |
+| -------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| C1, C6–C9, C11, C14, C18–C20, C22            | `final/pairs/ref-pair-*` (matched width) plus the §9.4, §10.4 and §11.3 sets | `final/pairs/rr-pair-*` plus the earlier `rr-*` sets                          |
+| C2–C5, C10, C12, C13, C15–C17, C21, C23, C24 | §9.4, §10.4 and §11.3 `ref-*` (domains unchanged or not value axes)          | §9.4, §10.4 and §11.3 `rr-*`                                                  |
+| C25                                          | `final/c25/ref-fixture-*` (fixture, not live data)                           | `final/c25/rr-fixture-*`, `final/startup/repeat-rental-distribution-1440.png` |
+| C1–C25 on fresh startup                      | n/a                                                                          | `final/startup/fresh-*.png` and `*-charts-report.json`                        |
+
+Earlier captures were re-checked against the new rules. C2, C5, C10, C12, C13, C15–C17,
+C23 and C24 have no Recharts value axis, or their tick rule did not change. C21's USD
+lines use the same automatic rule as C19, but they were not re-captured here.
+
+To make room in the repository:
+
+- Three byte-identical duplicates in `roi-graphs/fix/` were removed:
+  `1440-equity-card3`, `-exit-card2` and `-expenses-card2`. These are the same images
+  as card2, card1 and card1.
+- The superseded `roi-graphs/fix/` captures were re-encoded as palette PNGs
+  (4.76 MB → 1.73 MB).

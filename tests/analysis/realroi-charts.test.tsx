@@ -5,12 +5,14 @@ import {
   amortizationTicks,
   breakevenContour,
   breakevenYear,
+  equityAxisMax,
   equityLandmarks,
   equityYears,
   exitLandmarks,
   exitRows,
   expenseYear,
   firstPositiveAfterNegative,
+  fixedDomainScale,
   heatColor,
   heatPalette,
   loanMilestones,
@@ -20,6 +22,7 @@ import {
   miniBarWidth,
   monotonePath,
   niceScale,
+  referenceScale,
   referenceTickIndexes,
   thousands,
   wealthAt,
@@ -82,6 +85,34 @@ describe('RealROI chart adapters', () => {
     expect(wholeDollars(-1133.28)).toBe('-$1,133');
     expect(wholeDollars(-0.2)).toBe('$0');
     expect(wholeDollars(null)).toBe('Unavailable');
+  });
+
+  it('reproduces the reference Recharts domains and ticks', () => {
+    // Exit Analysis: [0, auto] with five nice ticks reads $0k…$1400k in $350k steps.
+    expect(referenceScale([0, 278478, 1279793]).ticks).toEqual([
+      0, 350000, 700000, 1050000, 1400000,
+    ]);
+    // Cash Flow & Cumulative Y10: the step widens until five ticks cover both signs.
+    expect(referenceScale([-1133, 6464, 24997]).ticks).toEqual([-8500, 0, 8500, 17000, 25500]);
+    // All-negative Y1 keeps zero and distinct ticks instead of "$-1k" five times.
+    const y1 = referenceScale([-1133.28]).ticks;
+    expect(y1).toEqual([-1200, -900, -600, -300, 0]);
+    expect(new Set(y1.map((t) => thousands(t, 300))).size).toBe(5);
+    // Equity Composition: explicit [0, ceil(max × 1.1 / 50k) × 50k], Recharts' fixed-domain ticks.
+    expect(equityAxisMax(834860, false)).toBe(950000);
+    expect(fixedDomainScale(0, 950000).ticks).toEqual([0, 250000, 500000, 950000]);
+    expect(equityAxisMax(2100, true)).toBe(2350);
+    expect(fixedDomainScale(0, 2350).ticks).toEqual([0, 600, 1200, 2350]);
+    // Rent curve: [dataMin, dataMax] steps from the minimum, then the maximum.
+    expect(fixedDomainScale(1500, 2500).ticks).toEqual([1500, 1750, 2000, 2250, 2500]);
+  });
+
+  it('draws Equity Composition on the reference $950k domain', () => {
+    charts();
+    const plot = screen.getByRole('img', { name: /Equity composition and loan balance/i });
+    const labels = [...plot.querySelectorAll('text')].map((t) => t.textContent);
+    for (const tick of ['$0k', '$250k', '$500k', '$950k']) expect(labels).toContain(tick);
+    expect(labels).not.toContain('$1000k');
   });
 
   it('uses the reference year ticks and a non-overshooting monotone curve', () => {

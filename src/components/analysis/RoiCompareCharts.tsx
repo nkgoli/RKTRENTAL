@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import { niceScale } from '@/lib/analysis/chart-data';
+import { referenceScale } from '@/lib/analysis/chart-data';
 import c from './roi-chart.module.css';
 
 function useWidth(initial = 660) {
@@ -70,8 +70,11 @@ export function ScatterChart({
   const [active, setActive] = useState<number | null>(null);
   const id = useId();
   const narrow = width < 480;
-  const xs = niceScale([0, ...points.map((p) => p.x)], narrow ? 4 : 5);
-  const ys = niceScale([0, ...points.map((p) => p.y), ...refLines.map((r) => r.value)], 5);
+  const xs = referenceScale(
+    points.map((p) => p.x),
+    narrow ? 4 : 5,
+  );
+  const ys = referenceScale([...points.map((p) => p.y), ...refLines.map((r) => r.value)]);
   const m = { top: 20, right: narrow ? 12 : 30, bottom: 44, left: 58 };
   const iw = Math.max(1, width - m.left - m.right);
   const ih = height - m.top - m.bottom;

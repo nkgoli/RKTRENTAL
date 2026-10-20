@@ -377,7 +377,8 @@ if ($holders.Count -gt 0) {
 
     Info 'Stopping existing copy (-StopExisting)...'
     $task = Get-PreviewTask
-    if ($task -and $task.State -eq 'Running') {
+    # Only when that copy holds one of these ports; a Preview on other ports keeps running.
+    if ($task -and $task.State -eq 'Running' -and @($holders | Where-Object { $_.ViaTask }).Count) {
         Info "Stopping scheduled task '$TaskName'"
         Stop-ScheduledTask -TaskName $TaskName
     }

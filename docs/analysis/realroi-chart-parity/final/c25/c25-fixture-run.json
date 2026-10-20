@@ -1,0 +1,68 @@
+{
+  "fixture": {
+    "label": "FIXTURE - RocketRental sandbox comps, Maple Court unit 3A (not market data)",
+    "subject": {
+      "address": "214 Maple Ave",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78704",
+      "rent": 1600
+    },
+    "range": [
+      1805,
+      1980
+    ],
+    "comps": [
+      [
+        "210 Oltorf St",
+        1700
+      ],
+      [
+        "222 Lamar Blvd",
+        1800
+      ],
+      [
+        "234 Barton Hills Dr",
+        1850
+      ],
+      [
+        "246 Congress Ave",
+        1825
+      ],
+      [
+        "258 Riverside Dr",
+        2025
+      ],
+      [
+        "270 Cesar Chavez St",
+        2025
+      ]
+    ]
+  },
+  "at": "2026-10-20T22:47:44.937Z",
+  "external": [],
+  "intercepted": [
+    "https://maps.googleapis.com/maps/api/js?key=<placeholder>&libraries=places",
+    "https://api.rentcast.io/v1/properties?address=214%20Maple%20Ave&city=Austin&state=TX&zipCode=78704",
+    "https://api.rentcast.io/v1/avm/rent/long-term?address=214%20Maple%20Ave%2C%20Austin%2C%20TX%2078704&propertyType=Apartment&bedrooms=1&bathrooms=1&squareFootage=850",
+    "https://api.rentcast.io/v1/avm/value?address=214%20Maple%20Ave%2C%20Austin%2C%20TX%2078704&propertyType=Apartment&bedrooms=1&bathrooms=1&squareFootage=850",
+    "https://api.rentcast.io/v1/listings/rental/long-term?latitude=30.25&longitude=-97.76&radius=3&bedrooms=1&status=Active&limit=10"
+  ],
+  "referenceSubtitle": "Your property compared to 60 comparable rentals",
+  "referenceTiles": "LOW\n\n$1,600\n\nAVERAGE\n\n$1,832\n\nHIGH\n\n$2,025",
+  "rocketRentalText": [
+    "Rental Distribution",
+    "",
+    "Your unit (listed rent) compared to 6 comparable rentals",
+    "",
+    "LOW",
+    "$1,700",
+    "AVERAGE",
+    "$1,871",
+    "HIGH"
+  ],
+  "widths": {
+    "reference": 800,
+    "rocketRental": 800
+  }
+}

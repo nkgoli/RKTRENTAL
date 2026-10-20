@@ -21,6 +21,71 @@ export function niceScale(values: ChartValue[], count = 5) {
   return { min, max, ticks };
 }
 
+// Float noise from repeated division (0.25 / 0.05 = 5.000000000000001) must not move a ceil.
+const clean = (v: number) => Math.round(v * 1e9) / 1e9;
+
+/** recharts-scale `getFormatStep`: the rough step rounded up on 0.05 × 10^k (0.1 below 10). */
+function formatStep(rough: number, correction: number) {
+  if (!(rough > 0)) return 0;
+  const digits = Math.floor(clean(Math.log10(rough))) + 1;
+  const unit = 10 ** digits;
+  const ratio = digits !== 1 ? 0.05 : 0.1;
+  return clean((Math.ceil(clean(rough / unit / ratio)) + correction) * ratio * unit);
+}
+
+/** recharts-scale `calculateStep`: widen the step until `count` ticks cover the domain. */
+function rechartsStep(min: number, max: number, count: number, correction = 0): number[] {
+  const step = formatStep((max - min) / (count - 1), correction);
+  if (!step) return [min, max];
+  let middle = 0;
+  if (!(min <= 0 && max >= 0)) {
+    const mid = (min + max) / 2;
+    middle = clean(mid - (mid % step));
+  }
+  let below = Math.ceil(clean((middle - min) / step));
+  let up = Math.ceil(clean((max - middle) / step));
+  const total = below + up + 1;
+  if (total > count) return rechartsStep(min, max, count, correction + 1);
+  if (total < count) {
+    if (max > 0) up += count - total;
+    else below += count - total;
+  }
+  return Array.from({ length: below + up + 1 }, (_, i) => clean(middle + (i - below) * step));
+}
+
+/**
+ * The reference's value axis: Recharts' automatic `[0, auto]` domain with its
+ * default five nice ticks (`$0k…$1400k` in `$350k` steps for Exit, `-$8.5k…$25.5k`
+ * for Cash Flow Y10). Zero is always included, so an all-negative series keeps
+ * distinct ticks (the reference collapses to `$-1k` ×5 there).
+ */
+export function referenceScale(values: ChartValue[], count = 5) {
+  const finite = values.filter((v): v is number => v != null && Number.isFinite(v));
+  const lo = Math.min(0, ...finite);
+  const hi = Math.max(0, ...finite);
+  if (lo === hi) return { min: 0, max: 1, ticks: [0, 1] };
+  const ticks = rechartsStep(lo, hi, Math.max(2, count));
+  return { min: ticks[0], max: ticks.at(-1)!, ticks };
+}
+
+/**
+ * Recharts' ticks for an explicit `[min, max]` domain (`getTickValuesFixedDomain`):
+ * steps from `min`, then `max` itself, e.g. `$0k $250k $500k $950k` for Equity
+ * Composition's `[0, 950k]` and `$1.7k…$2.5k` for the rent curve.
+ */
+export function fixedDomainScale(min: number, max: number, count = 5) {
+  if (!(max > min)) return { min, max: min + 1, ticks: [min, min + 1] };
+  const step = formatStep((max - min) / (Math.max(2, count) - 1), 0);
+  const ticks: number[] = [];
+  for (let t = min; t < max - 0.99 * step; t = clean(t + step)) ticks.push(t);
+  ticks.push(max);
+  return { min, max, ticks };
+}
+
+/** Equity Composition's shared axis top: 10% over the larger of equity and debt, rounded up. */
+export const equityAxisMax = (largest: number, indexed: boolean) =>
+  Math.ceil((largest * 1.1) / (indexed ? 50 : 50000)) * (indexed ? 50 : 50000);
+
 /** Year labels that never crowd: every year when they fit, else round steps plus the last year. */
 export function xTickIndexes(length: number, width: number, minGap = 44) {
   if (length <= 0) return [];

@@ -7,6 +7,7 @@ import {
   PAID_OFF_BELOW,
   breakevenYear,
   cashFlowLandmarks,
+  equityAxisMax,
   equityLandmarks,
   equityYears,
   indexAgainst,
@@ -605,6 +606,7 @@ function EquityComposition({ all, result }: { all: EquityYear[]; result: Project
         label="Equity composition and loan balance"
         unit={indexed ? 'Index' : 'USD'}
         years={rows.map((r) => r.year)}
+        domainMax={(largest) => equityAxisMax(largest, indexed)}
         axes={{
           left: indexed ? 'Index' : withPurchase ? 'Equity' : 'Equity Growth',
           right: financed ? (indexed ? 'Index' : 'Debt') : undefined,

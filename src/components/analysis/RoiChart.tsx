@@ -2,10 +2,12 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import {
+  fixedDomainScale,
   horizonChoices,
   miniBarWidth,
   monotonePath,
   niceScale,
+  referenceScale,
   referenceTickIndexes,
   segments,
   stackExtents,
@@ -720,6 +722,7 @@ export function ComboChart({
   onSelect,
   xTicks,
   tickFormat,
+  domainMax,
 }: {
   label: string;
   years: (number | string)[];
@@ -757,6 +760,8 @@ export function ComboChart({
   xTicks?: number[];
   /** Y tick text override (e.g. `10.5%`); defaults to `$Nk` or the index. */
   tickFormat?: (value: number, step: number) => string;
+  /** Explicit `[0, max]` domain from the largest plotted value (C6's rule); auto otherwise. */
+  domainMax?: (largest: number) => number;
 }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(660);
@@ -785,22 +790,33 @@ export function ComboChart({
   const loose = series.filter((s) => s.kind === 'bar' && !s.stack);
   const lines = series.filter((s) => s.kind !== 'bar');
   const extents = stackExtents(stacked.map((s) => s.values));
-  const scale = niceScale(
-    [
-      ...lines.flatMap((s) => s.values),
-      ...loose.flatMap((s) => s.values),
-      ...areas.flatMap((a) => [...a.upper, ...a.lower]),
-      ...extents.top,
-      ...extents.bottom,
-      ...refLines.map((r) => r.value),
-    ],
-    narrow ? 4 : 5,
-  );
-  const step = scale.ticks.length > 1 ? scale.ticks[1] - scale.ticks[0] : 1;
-  const axis = (v: number) =>
-    tickFormat ? tickFormat(v, step) : unit === 'USD' ? thousands(v, step) : v.toFixed(0);
+  const plotted = [
+    ...lines.flatMap((s) => s.values),
+    ...loose.flatMap((s) => s.values),
+    ...areas.flatMap((a) => [...a.upper, ...a.lower]),
+    ...extents.top,
+    ...extents.bottom,
+    ...refLines.map((r) => r.value),
+  ].filter((v): v is number => v != null && Number.isFinite(v));
+  const largest = Math.max(0, ...plotted);
+  // The reference's Recharts domains: automatic nice ticks, or an explicit [0, max] rule
+  // when it never clips the data. Ticks whose labels would repeat fall back to plain steps.
+  const fixedTop = domainMax && Math.min(0, ...plotted) >= 0 ? domainMax(largest) : 0;
+  const preferred =
+    fixedTop >= largest && fixedTop > 0 ? fixedDomainScale(0, fixedTop) : referenceScale(plotted);
+  const stepOf = (ticks: number[]) => (ticks.length > 1 ? ticks[1] - ticks[0] : 1);
+  const tickText = (v: number, s: number) =>
+    tickFormat ? tickFormat(v, s) : unit === 'USD' ? thousands(v, s) : v.toFixed(0);
+  const distinct =
+    new Set(preferred.ticks.map((t) => tickText(t, stepOf(preferred.ticks)))).size ===
+    preferred.ticks.length;
+  const scale = distinct ? preferred : niceScale(plotted, 5);
+  const step = stepOf(scale.ticks);
+  const axis = (v: number) => tickText(v, step);
   // Margins fit the widest tick label so rotated axis titles never overlap it.
-  const labelW = Math.max(...scale.ticks.map((t) => axis(t).length)) * (narrow ? 6 : 6.6) + 10;
+  // On desktop the label band is at least Recharts' default 60 px y-axis width, as in the reference.
+  const fitted = Math.max(...scale.ticks.map((t) => axis(t).length)) * (narrow ? 6 : 6.6) + 10;
+  const labelW = narrow ? fitted : Math.max(fitted, 60);
   const m = {
     top: 20,
     right: axes?.right ? labelW + 22 : narrow ? 8 : 16,

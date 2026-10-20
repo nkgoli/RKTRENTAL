@@ -18,6 +18,7 @@
   align-items: center;
   gap: 8px;
   margin: 0;
+  font-family: var(--design-font), Inter, system-ui, sans-serif;
   font-size: 14px;
   font-weight: 600;
   color: #1e293b;

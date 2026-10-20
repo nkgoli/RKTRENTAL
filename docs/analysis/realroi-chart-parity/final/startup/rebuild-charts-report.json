@@ -1,0 +1,195 @@
+{
+  "base": "http://localhost:3191",
+  "propertyId": "seed-property-maple",
+  "at": "2026-10-20T22:47:50.199Z",
+  "steps": {
+    "summary": {
+      "plots": 83,
+      "found": [
+        [
+          "C1",
+          "Net Cash Flow by Year",
+          true
+        ],
+        [
+          "C2",
+          "Outcome",
+          true
+        ],
+        [
+          "C3",
+          "Deal Snapshot",
+          true
+        ],
+        [
+          "C4",
+          "Fix My Deal",
+          true
+        ],
+        [
+          "C5",
+          "Cash Flow & Equity Projections",
+          true
+        ]
+      ]
+    },
+    "Equity": {
+      "plots": 83,
+      "found": [
+        [
+          "C6",
+          "Equity Composition vs Debt Paydown",
+          true
+        ],
+        [
+          "C7",
+          "Value vs Mortgage Balance",
+          true
+        ]
+      ]
+    },
+    "Cash Flow": {
+      "plots": 83,
+      "found": [
+        [
+          "C8",
+          "Cash Flow & Cumulative",
+          true
+        ],
+        [
+          "C9",
+          "Income to Cash Flow Bridge",
+          true
+        ]
+      ]
+    },
+    "Expenses": {
+      "plots": 83,
+      "found": [
+        [
+          "C10",
+          "Operating Expenses",
+          true
+        ]
+      ]
+    },
+    "Amortization": {
+      "plots": 83,
+      "found": [
+        [
+          "C11",
+          "Principal vs Interest Over Time",
+          true
+        ],
+        [
+          "C12",
+          "Loan Payoff Breakdown",
+          true
+        ],
+        [
+          "C13",
+          "Loan Amortization Schedule",
+          true
+        ],
+        [
+          "C17",
+          "Balance at",
+          true
+        ]
+      ]
+    },
+    "Exit Analysis": {
+      "plots": 83,
+      "found": [
+        [
+          "C14",
+          "Exit Analysis & Comparison",
+          true
+        ]
+      ]
+    },
+    "Sensitivity": {
+      "plots": 83,
+      "found": [
+        [
+          "C15",
+          "Sensitivity",
+          true
+        ],
+        [
+          "C16",
+          "Break-even",
+          true
+        ]
+      ]
+    },
+    "scenarios": {
+      "plots": 83,
+      "found": [
+        [
+          "C18",
+          "Equity Growth by Scenario",
+          true
+        ]
+      ]
+    },
+    "benchmarks": {
+      "plots": 83,
+      "found": [
+        [
+          "C19",
+          "Investment Growth Over Time",
+          true
+        ],
+        [
+          "C20",
+          "Risk vs Return",
+          true
+        ]
+      ]
+    },
+    "compare": {
+      "plots": 94,
+      "found": [
+        [
+          "C21",
+          "Investment Growth Over Time",
+          true
+        ],
+        [
+          "C22",
+          "Annualized Returns Comparison",
+          true
+        ],
+        [
+          "C23",
+          "Multi-Dimensional Comparison",
+          true
+        ],
+        [
+          "C24",
+          "Side-by-Side Comparison",
+          true
+        ]
+      ]
+    },
+    "listing": {
+      "plots": 6,
+      "found": [
+        [
+          "C25",
+          "Rental Distribution",
+          true
+        ]
+      ]
+    }
+  },
+  "notes": [
+    "Compare had no saved selection; picked S&P 500 and Nasdaq 100 in an unsaved draft."
+  ],
+  "demoNotice": true,
+  "loadMessage": "New analysis - saved property details are filled in. Add any missing assumptions below.",
+  "listingUrl": "http://localhost:3191/properties/seed-property-maple/listing?unit=seed-unit-maple-7",
+  "consoleErrors": [],
+  "missing": []
+}

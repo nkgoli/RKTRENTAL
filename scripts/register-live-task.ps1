@@ -10,11 +10,14 @@ keep running after that shell, an editor or an agent session exits. The task
 also starts at logon and restarts if start.ps1 exits with an error.
 
 start.ps1 rebuilds only when sources are newer than the build, never reseeds
-an initialised data dir (.demo-seeded marker) and never resets it here.
+an initialised data dir (.demo-seeded marker) and never resets it here. Each run
+passes -StopExisting, so it takes over a detached RocketRental copy on the same
+ports (only RocketRental node/postgres listeners are stopped).
 
 .EXAMPLE
 powershell -ExecutionPolicy Bypass -File scripts\register-live-task.ps1
-Run on http://localhost:3100 with Postgres 5433 (data in .data\postgres-5433).
+Run on http://localhost:3100 with the preserved Postgres 5434 dataset (.data\postgres-5434,
+see docs\analysis\roi-dataset-repair.md). .data\postgres-5433 is kept but not served.
 
 .EXAMPLE
 powershell -ExecutionPolicy Bypass -File scripts\register-live-task.ps1 -Restart
@@ -27,7 +30,7 @@ Stop the copy and delete the scheduled task.
 [CmdletBinding()]
 param(
     [int]$Port = 3100,
-    [int]$DbPort = 5433,
+    [int]$DbPort = 5434,
     [string]$TaskName = '',
     # Checkout to run; defaults to the one holding this script.
     [string]$Root = '',
@@ -57,7 +60,7 @@ if ($Remove) {
 }
 
 $start = Join-Path $Root 'scripts\start.ps1'
-$arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$start`" -Port $Port -DbPort $DbPort -SkipInstall"
+$arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$start`" -Port $Port -DbPort $DbPort -SkipInstall -StopExisting"
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arguments -WorkingDirectory $Root
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew `

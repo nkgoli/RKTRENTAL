@@ -1,0 +1,393 @@
+{
+  "at": "2026-10-20T22:47:03.264Z",
+  "ref": "http://127.0.0.1:3300",
+  "app": "http://localhost:3191",
+  "propertyId": "seed-property-elm",
+  "cards": {
+    "C1": {
+      "reference": {
+        "width": 800,
+        "titleFont": "Inter, system-ui, sans-serif",
+        "figureFont": null,
+        "ticks": [
+          "$-2k",
+          "$-1k",
+          "$0k",
+          "$1k",
+          "$2k"
+        ]
+      },
+      "rocketRental": {
+        "width": 800,
+        "titleFont": "Inter, Inter, system-ui, sans-serif",
+        "figureFont": null,
+        "ticks": [
+          "-$2k",
+          "-$1k",
+          "$0k",
+          "$1k",
+          "$2k"
+        ]
+      }
+    },
+    "C6": {
+      "reference": {
+        "width": 800,
+        "titleFont": "Inter, system-ui, sans-serif",
+        "figureFont": "\"JetBrains Mono\", Consolas, monospace",
+        "ticks": [
+          "1",
+          "5",
+          "10",
+          "15",
+          "20",
+          "25",
+          "30",
+          "$0k",
+          "$250k",
+          "$500k",
+          "$950k"
+        ]
+      },
+      "rocketRental": {
+        "width": 800,
+        "titleFont": "Inter, Inter, system-ui, sans-serif",
+        "figureFont": "\"JetBrains Mono\", ui-monospace, SFMono-Regular, \"Cascadia Mono\", Consolas, Menlo, monospace",
+        "ticks": [
+          "$0k",
+          "$250k",
+          "$500k",
+          "$950k",
+          "1",
+          "5",
+          "10",
+          "15",
+          "20",
+          "25",
+          "30"
+        ]
+      }
+    },
+    "C7": {
+      "reference": {
+        "width": 800,
+        "titleFont": "Inter, system-ui, sans-serif",
+        "figureFont": "\"JetBrains Mono\", Consolas, monospace",
+        "ticks": [
+          "0",
+          "5",
+          "10",
+          "15",
+          "20",
+          "25",
+          "30",
+          "$0k",
+          "$250k",
+          "$500k",
+          "$750k",
+          "$1000k"
+        ]
+      },
+      "rocketRental": {
+        "width": 800,
+        "titleFont": "Inter, Inter, system-ui, sans-serif",
+        "figureFont": "\"JetBrains Mono\", ui-monospace, SFMono-Regular, \"Cascadia Mono\", Consolas, Menlo, monospace",
+        "ticks": [
+          "$0k",
+          "$250k",
+          "$500k",
+          "$750k",
+          "$1000k",
+          "0",
+          "5",
+          "10",
+          "15",
+          "20",
+          "25",
+          "30"
+        ]
+      }
+    },
+    "C8": {
+      "reference": {
+        "width": 800,
+        "titleFont": "Inter, system-ui, sans-serif",
+        "figureFont": "\"JetBrains Mono\", Consolas, monospace",
+        "ticks": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "$-9k",
+          "$0k",
+          "$9k",
+          "$17k",
+          "$26k"
+        ]
+      },
+      "rocketRental": {
+        "width": 800,
+        "titleFont": "Inter, Inter, system-ui, sans-serif",
+        "figureFont": "\"JetBrains Mono\", ui-monospace, SFMono-Regular, \"Cascadia Mono\", Consolas, Menlo, monospace",
+        "ticks": [
+          "-$8.5k",
+          "$0k",
+          "$8.5k",
+          "$17k",
+          "$25.5k",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10"
+        ]
+      }
+    },
+    "C9": {
+      "reference": {
+        "width": 800,
+        "titleFont": "Inter, system-ui, sans-serif",
+        "figureFont": "\"JetBrains Mono\", Consolas, monospace",
+        "ticks": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "$-15k",
+          "$0k",
+          "$15k",
+          "$30k",
+          "$45k"
+        ]
+      },
+      "rocketRental": {
+        "width": 800,
+        "titleFont": "Inter, Inter, system-ui, sans-serif",
+        "figureFont": "\"JetBrains Mono\", ui-monospace, SFMono-Regular, \"Cascadia Mono\", Consolas, Menlo, monospace",
+        "ticks": [
+          "-$15k",
+          "$0k",
+          "$15k",
+          "$30k",
+          "$45k",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10"
+        ]
+      }
+    },
+    "C11": {
+      "reference": {
+        "width": 800,
+        "titleFont": "Inter, system-ui, sans-serif",
+        "figureFont": null,
+        "ticks": [
+          "$0k",
+          "$100k",
+          "$200k",
+          "$300k",
+          "$400k"
+        ]
+      },
+      "rocketRental": {
+        "width": 800,
+        "titleFont": "Inter, Inter, system-ui, sans-serif",
+        "figureFont": null,
+        "ticks": [
+          "$0k",
+          "$100k",
+          "$200k",
+          "$300k",
+          "$400k"
+        ]
+      }
+    },
+    "C14": {
+      "reference": {
+        "width": 800,
+        "titleFont": "Inter, system-ui, sans-serif",
+        "figureFont": "\"JetBrains Mono\", Consolas, monospace",
+        "ticks": [
+          "$0k",
+          "$350k",
+          "$700k",
+          "$1050k",
+          "$1400k"
+        ]
+      },
+      "rocketRental": {
+        "width": 800,
+        "titleFont": "Inter, Inter, system-ui, sans-serif",
+        "figureFont": "\"JetBrains Mono\", ui-monospace, SFMono-Regular, \"Cascadia Mono\", Consolas, Menlo, monospace",
+        "ticks": [
+          "$0k",
+          "$350k",
+          "$700k",
+          "$1050k",
+          "$1400k"
+        ]
+      }
+    },
+    "C18": {
+      "reference": {
+        "width": 800,
+        "titleFont": "Inter, system-ui, sans-serif",
+        "figureFont": "\"JetBrains Mono\", Consolas, monospace",
+        "ticks": [
+          "$0k",
+          "$350k",
+          "$700k",
+          "$1050k",
+          "$1400k"
+        ]
+      },
+      "rocketRental": {
+        "width": 800,
+        "titleFont": "Inter, Inter, system-ui, sans-serif",
+        "figureFont": "\"JetBrains Mono\", ui-monospace, SFMono-Regular, \"Cascadia Mono\", Consolas, Menlo, monospace",
+        "ticks": [
+          "$0k",
+          "$350k",
+          "$700k",
+          "$1050k",
+          "$1400k"
+        ]
+      }
+    },
+    "C19": {
+      "reference": {
+        "width": 800,
+        "titleFont": "Inter, system-ui, sans-serif",
+        "figureFont": "\"JetBrains Mono\", Consolas, monospace",
+        "ticks": [
+          "0",
+          "900",
+          "1800",
+          "2700",
+          "3600"
+        ]
+      },
+      "rocketRental": {
+        "width": 800,
+        "titleFont": "Inter, Inter, system-ui, sans-serif",
+        "figureFont": "\"JetBrains Mono\", ui-monospace, SFMono-Regular, \"Cascadia Mono\", Consolas, Menlo, monospace",
+        "ticks": [
+          "0",
+          "900",
+          "1800",
+          "2700",
+          "3600"
+        ]
+      }
+    },
+    "C20": {
+      "reference": {
+        "width": 800,
+        "titleFont": "Inter, system-ui, sans-serif",
+        "figureFont": "\"JetBrains Mono\", Consolas, monospace",
+        "ticks": [
+          "0",
+          "6",
+          "12",
+          "18",
+          "24",
+          "0%",
+          "4%",
+          "8%",
+          "12%",
+          "16%"
+        ]
+      },
+      "rocketRental": {
+        "width": 800,
+        "titleFont": "Inter, Inter, system-ui, sans-serif",
+        "figureFont": "\"JetBrains Mono\", ui-monospace, Consolas, monospace",
+        "ticks": [
+          "0",
+          "6",
+          "12",
+          "18",
+          "24",
+          "0%",
+          "4%",
+          "8%",
+          "12%",
+          "16%"
+        ]
+      }
+    },
+    "C22": {
+      "reference": {
+        "width": 800,
+        "titleFont": "Inter, system-ui, sans-serif",
+        "figureFont": null,
+        "ticks": [
+          "0.0%",
+          "4.0%",
+          "8.0%",
+          "12.0%",
+          "16.0%"
+        ]
+      },
+      "rocketRental": {
+        "width": 800,
+        "titleFont": "Inter, Inter, system-ui, sans-serif",
+        "figureFont": null,
+        "ticks": [
+          "0.0%",
+          "4.0%",
+          "8.0%",
+          "12.0%",
+          "16.0%"
+        ]
+      }
+    }
+  },
+  "fonts": {
+    "reference": {
+      "inter": true,
+      "mono": true,
+      "loaded": [
+        "Inter 400",
+        "Inter 500",
+        "Inter 600",
+        "Inter 700",
+        "JetBrains Mono 400",
+        "JetBrains Mono 500"
+      ]
+    },
+    "rocketRental": {
+      "inter": true,
+      "mono": true,
+      "loaded": [
+        "Inter 100 900",
+        "Space Grotesk 300 700",
+        "JetBrains Mono 400 500"
+      ]
+    }
+  }
+}

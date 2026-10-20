@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
 import {
   STEP,
@@ -70,7 +69,6 @@ const SUBTITLES: Record<number, string> = {
 const idle: WizardActionState = {};
 
 export function LeaseBuilder(props: LeaseBuilderProps) {
-  const router = useRouter();
   const { tenants } = props;
   const [draft, setDraft] = useState<WizardDraft>(props.draft);
   const draftRef = useRef<WizardDraft>(props.draft);
@@ -83,9 +81,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState<WizardActionState>(idle);
-  const [saving, startTransition] = useTransition();
-  const [exitRequested, setExitRequested] = useState(false);
-  const pending = saving || exitRequested;
+  const [pending, startTransition] = useTransition();
   const [signState, signAction, signing] = useActionState(completeSigningAction, idle);
   const top = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -103,13 +99,6 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
   useEffect(() => {
     if (message) errorSummary.current?.focus();
   }, [message, errors]);
-
-  useEffect(() => {
-    // The action result can resolve before Next commits its router update. Navigating
-    // inside that save transition can discard the update and leave it pending forever.
-    // Wait for the save to settle; keep controls disabled until navigation unmounts us.
-    if (exitRequested && !saving) router.push(props.exitHref);
-  }, [exitRequested, saving, router, props.exitHref]);
 
   const update = (patch: Partial<WizardDraft>) => {
     draftRef.current = withResolvedEnd({ ...draftRef.current, ...patch });
@@ -177,7 +166,10 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
 
   function saveAndExit() {
     startTransition(async () => {
-      if (await save(step, step, false)) setExitRequested(true);
+      // Leave the wizard with a document navigation after persistence succeeds.
+      // A client-router push can interrupt the action's pending router update and
+      // strand the wizard in Saving, even though the draft was already persisted.
+      if (await save(step, step, false)) window.location.assign(props.exitHref);
     });
   }
 

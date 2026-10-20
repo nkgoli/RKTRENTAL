@@ -33,18 +33,17 @@ async function createThroughTenants(page: Page) {
   await page.goto('/leases/new?unit=seed-unit-maple-7&fresh=1');
   await page.getByLabel(/^Start date/).fill('2037-01-15');
   await page.locator('#custom-end-date').fill('2037-11-20');
-  const created = page.waitForResponse(
-    (response) => response.request().method() === 'POST' && response.url().includes('/leases/new'),
-  );
   await page.getByRole('button', { name: 'Next', exact: true }).click();
-  const result = await (await created).text();
-  const leaseId = result.match(/"leaseId":"([^"]+)"/)?.[1];
-  expect(leaseId, 'The real save action must return a persisted draft ID').toBeTruthy();
   await expect(page.getByRole('heading', { name: 'Rent, deposit & fees' })).toBeVisible();
   await page.getByLabel(/^Monthly rent/).fill('1681');
   await page.getByLabel(/^Security deposit/).fill('1500');
   await page.getByLabel(/^Rent due day/).selectOption('5');
+  const rentSave = page.waitForRequest(
+    (request) => request.method() === 'POST' && request.url().includes('/leases/new'),
+  );
   await page.getByRole('button', { name: 'Next', exact: true }).click();
+  const leaseId = (await rentSave).postDataJSON()[0]?.leaseId as string | undefined;
+  expect(leaseId, 'The next save must address the draft persisted by the Term step').toBeTruthy();
   await expect(page.getByRole('heading', { name: 'Tenants', exact: true })).toBeFocused();
   return leaseId!;
 }
@@ -96,8 +95,9 @@ test('failed exit keeps values, releases pending controls and permits an exit re
   await expect(page.getByRole('button', { name: 'Save and exit', exact: true })).toBeDisabled();
   await expect(page.getByLabel(/^Monthly rent/)).toBeDisabled();
   release();
-  await expect(page.getByRole('alert')).toBeFocused();
-  await expect(page.getByRole('alert')).toContainText('They are still here; try again.');
+  const summary = page.getByRole('region', { name: 'Create lease' }).getByRole('alert');
+  await expect(summary).toBeFocused();
+  await expect(summary).toContainText('They are still here; try again.');
   await expect(page.getByLabel(/^Monthly rent/)).toHaveValue('1893');
   await expect(page.getByRole('button', { name: 'Save and exit', exact: true })).toBeEnabled();
   await page.unroute('**/leases/new?*');

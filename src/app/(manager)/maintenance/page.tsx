@@ -1,6 +1,6 @@
 ﻿import Link from 'next/link';
 import { RequestDetails } from '@/components/maintenance/RequestDetails';
-import { NewMaintenanceRequestDialog } from '@/components/workspace/panels/operations/NewMaintenanceRequestDialog';
+import { maintenanceFormHref } from '@/lib/maintenance/navigation';
 import { withRequestPhotos } from '@/components/maintenance/request-photos';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
@@ -25,7 +25,6 @@ import {
 import {
   assignMaintenanceAction,
   commentMaintenanceAction,
-  createMaintenanceAction,
   setMaintenanceStatusAction,
   uploadMaintenancePhotoAction,
 } from './actions';
@@ -51,7 +50,9 @@ function initials(name: string) {
 function RequestTicket({
   request,
   vendors,
+  returnTo,
 }: {
+  returnTo: string;
   request: MaintenanceBoardRequest;
   vendors: { id: string; name: string }[];
 }) {
@@ -87,6 +88,7 @@ function RequestTicket({
           </span>
         )}
         <RequestDetails
+          returnTo={returnTo}
           request={request}
           vendors={vendors}
           actions={{
@@ -108,13 +110,18 @@ export default async function MaintenancePage({
   const [session, params] = await Promise.all([requireManagerRole(), searchParams]);
   const scope = scopeFilterFrom(params);
   const query = parseMaintenanceQuery(params);
-  const [list, { properties, vendors }] = await Promise.all([
+  const [list, { vendors }] = await Promise.all([
     listMaintenancePage(session.organizationId, scope, query),
     listMaintenanceOptions(session.organizationId),
   ]);
   const { summary, statusCounts } = list;
   const requests = await withRequestPhotos(session.organizationId, list.requests);
   const hidden = { propertyId: scope.propertyId, unitId: scope.unitId };
+  const createHref = maintenanceFormHref(
+    scope.propertyId,
+    scope.unitId,
+    `/maintenance${maintenanceQueryString(query, hidden)}`,
+  );
   return (
     <>
       <ScopedWorkspace
@@ -124,7 +131,7 @@ export default async function MaintenancePage({
       />
       <PageHeader
         title="Maintenance"
-        actions={[{ label: 'New request', href: '#new-request', primary: true }]}
+        actions={[{ label: 'New request', href: createHref, primary: true }]}
       />
       <div className="kpis">
         <KpiCard
@@ -153,7 +160,7 @@ export default async function MaintenancePage({
           title="No repair requests yet"
           description="Create a repair request to track work from start to finish."
           action="Create a request"
-          href="#new-request"
+          href={createHref}
         />
       )}
       {!list.isEmpty && list.total === 0 && (
@@ -178,7 +185,12 @@ export default async function MaintenancePage({
                     count={statusCounts[column.status] ?? 0}
                   >
                     {items.map((request) => (
-                      <RequestTicket key={request.id} request={request} vendors={vendors} />
+                      <RequestTicket
+                        key={request.id}
+                        request={request}
+                        vendors={vendors}
+                        returnTo={`/maintenance${maintenanceQueryString(query, hidden)}`}
+                      />
                     ))}
                     {items.length === 0 && (
                       <p className="muted" style={{ fontSize: 13 }}>
@@ -199,26 +211,6 @@ export default async function MaintenancePage({
         pageCount={list.pageCount}
         total={list.total}
       />
-      <section id="new-request" className={`card ${styles.newRequest}`}>
-        <div>
-          <h2>New repair request</h2>
-          <p className="muted">
-            Choose a unit, set a priority and add photos to help the vendor prepare.
-          </p>
-        </div>
-        <NewMaintenanceRequestDialog
-          action={createMaintenanceAction}
-          propertyName="Portfolio"
-          units={properties
-            .filter((property) => !scope.propertyId || property.id === scope.propertyId)
-            .flatMap((property) =>
-              property.units
-                .filter((unit) => !scope.unitId || unit.id === scope.unitId)
-                .map((unit) => ({ id: unit.id, number: `${property.name} · ${unit.number}` })),
-            )}
-          selectedUnitId={scope.unitId}
-        />
-      </section>
     </>
   );
 }

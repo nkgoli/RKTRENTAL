@@ -61,7 +61,7 @@ For prefix `RR_REMINDER_ORG_EMAIL`, supply server environment variables ending i
 
 For prefix `RR_REMINDER_ORG_SMS`, supply `_TWILIO_ACCOUNT_SID`, `_TWILIO_AUTH_TOKEN`, `_TWILIO_FROM` (an E.164 SMS-capable sender). Use a separately configured prefix for each organization's account when required. Supply global `REMINDERS_TWILIO_CALLBACK_URL` as the exact public HTTPS URL ending `/api/webhooks/notifications/twilio`, without query/hash or credentials. The service appends `attemptId`; the SDK validates callbacks against this external URL, independent of reverse-proxy Host headers. Forward URL-encoded bodies and `X-Twilio-Signature` unchanged. Account, sender, recipient and message SID are checked before state updates. Terminal states resist replay and out-of-order updates. An authenticated 21610 opt-out failure disables that tenant's SMS reminders locally. Configure Twilio's opt-out handling, sender registration and required permissions externally. Automatic SDK request retries are disabled.
 
-The checked-in `.env.example` uses unusable synthetic values. This task created no accounts and performed no live sends. Configuration enables the real adapters; deployment credentials and deliverability remain external setup requirements.
+Store the variables above only in your private deployment environment. Environment files stay out of the committed deliverable. This task created no accounts and performed no live sends. Configuration enables the real adapters; deployment credentials and deliverability remain external setup requirements.
 
 Official references checked during implementation:
 

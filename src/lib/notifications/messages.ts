@@ -25,6 +25,21 @@ export type TenantRecipient = {
 const DAY = 86_400_000;
 const dateText = (date: Date) => date.toISOString().slice(0, 10);
 
+/** Aggregated RENT_LATE template for a manager-reviewed lease balance. */
+export function overdueReminderMessage(input: {
+  name: string;
+  propertyName: string;
+  unitNumber: string;
+  amountCents: number;
+  pendingCents: number;
+  asOf: Date;
+}) {
+  return {
+    subject: `Overdue payment reminder for ${input.propertyName}`,
+    body: `Hello ${input.name},\n\n${formatUsd(input.amountCents)} remains overdue for ${input.propertyName}, unit ${input.unitNumber} as of ${dateText(input.asOf)}. This is the shared lease balance, including assessed charges only. Pending payments: ${formatUsd(input.pendingCents)}. Please contact your property manager if you have already paid.\n\nRocketRental`,
+  };
+}
+
 export function eligibleRecipients(tenants: TenantRecipient[]) {
   const recipients = new Map<string, { name: string; email: string }>();
   for (const tenant of tenants) {

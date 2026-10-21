@@ -40,9 +40,15 @@ export function Dialog({
     if (!el) return;
     if (open && !el.open) {
       el.showModal();
+      const firstAvailable = (selector: string) =>
+        Array.from(el.querySelectorAll<HTMLElement>(selector)).find(
+          (control) =>
+            !control.matches(':disabled, input[type="hidden"]') &&
+            !control.closest('[hidden], [inert]'),
+        );
       const target =
-        el.querySelector<HTMLElement>('[data-autofocus], [autofocus]') ??
-        el.querySelector<HTMLElement>('input, select, textarea') ??
+        firstAvailable('[data-autofocus], [autofocus]') ??
+        firstAvailable('input, select, textarea') ??
         el.querySelector<HTMLElement>('.dialog-close');
       target?.focus();
     } else if (!open && el.open) {

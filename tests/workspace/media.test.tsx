@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PropertyDetail } from '@/lib/properties/data';
 import { WorkspaceMedia } from '@/components/workspace/WorkspaceMedia';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 const photos = [{
   id: 'exterior', name: 'exterior.png', kind: 'PHOTO', mimeType: 'image/png',
@@ -32,5 +32,19 @@ describe('Overview media card', () => {
     expect(screen.getByText('Unit documents')).toBeTruthy();
     fireEvent.error(screen.getByAltText('missing.png'));
     expect(screen.getByRole('img', { name: 'Preview unavailable for missing.png' })).toBeTruthy();
+  });
+  it('does not remove a photo until its named confirmation is accepted', async () => {
+    HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); };
+    HTMLDialogElement.prototype.close = function () { this.removeAttribute('open'); };
+    const request = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', request);
+    render(<WorkspaceMedia target={{ kind: 'property', id: 'elm' }} photos={photos} files={[]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Remove missing.png' }));
+    const dialog = screen.getByRole('dialog', { name: 'Remove missing.png?' });
+    expect(request).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(within(dialog).getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Remove photo' }));
+    await waitFor(() => expect(request).toHaveBeenCalledWith('/api/files/missing', expect.objectContaining({ method: 'DELETE' })));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 });

@@ -1,10 +1,19 @@
 import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { Icon } from '@/components/shell/Icons';
-import { Avatar, Badge, Button, Card, cx } from '@/components/ui';
+import {
+  Avatar,
+  Badge,
+  Card,
+  cx,
+  Table,
+  RowMenu,
+  SearchField,
+  AutoSubmitSelect,
+} from '@/components/ui';
 import { requireManagerRole } from '@/lib/auth/access';
 import { formatDate, formatMoney, initials } from '@/lib/tenants/format';
-import { organizationTenants, PAGE_SIZE } from '@/lib/tenants/queries';
+import { organizationTenants } from '@/lib/tenants/queries';
 import {
   parseStatusFilter,
   STATUS_FILTERS,
@@ -21,6 +30,7 @@ import styles from './tenants.module.css';
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+const PAGE_SIZE = 10;
 
 const STATUS_CHIP: Record<StatusFilter, string> = {
   all: 'All',
@@ -47,23 +57,25 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
   const property = first(raw.property) || undefined;
   const status = parseStatusFilter(first(raw.status));
   const page = Math.max(1, Number.parseInt(first(raw.page) ?? '1', 10) || 1);
-  const view = first(raw.view) === 'directory' ? 'directory' : 'status';
+  const view = first(raw.view) === 'status' ? 'status' : 'directory';
   const period = first(raw.period) === 'upcoming' ? 'upcoming' : 'current';
 
   const tenants = organizationTenants(session.organizationId);
   const [listing, stats, properties, setupRows] = await Promise.all([
-    tenants.list({ q, propertyId: property, status, page }),
+    tenants.list({ q, propertyId: property, status, page, pageSize: PAGE_SIZE }),
     tenants.stats(),
     tenants.formOptions(),
     view === 'status' ? tenants.setupRows() : Promise.resolve([]),
   ]);
   const pages = Math.max(1, Math.ceil(listing.total / PAGE_SIZE));
   const { rows, total } =
-    page > pages ? await tenants.list({ q, propertyId: property, status, page: pages }) : listing;
+    page > pages
+      ? await tenants.list({ q, propertyId: property, status, page: pages, pageSize: PAGE_SIZE })
+      : listing;
   const returnTo =
     view === 'directory'
       ? href({ q, property, status, page: Math.min(page, pages) })
-      : `/tenants?${new URLSearchParams({ ...(q ? { q } : {}), ...(property ? { property } : {}), period })}`;
+      : `/tenants?${new URLSearchParams({ view: 'status', ...(q ? { q } : {}), ...(property ? { property } : {}), ...(first(raw.needsPaymentMethod) === '1' ? { needsPaymentMethod: '1' } : {}), period })}`;
   const detailHref = (id: string) => `/tenants/${id}?${new URLSearchParams({ returnTo })}`;
   const filtered = Boolean(q || property || status !== 'all');
 
@@ -72,9 +84,7 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
       <PageHeader
         eyebrow="Workspace / People"
         title="Tenants"
-        actions={[
-          { label: '+ Add tenant', href: `${href({ property })}#add-tenant`, primary: true },
-        ]}
+        actions={[{ label: '+ Add tenant', href: `${returnTo}&add=1`, primary: true }]}
       />
 
       <nav className={styles.tabs} aria-label="Tenant views">
@@ -86,7 +96,7 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
           Directory
         </Link>
         <Link
-          href={`/tenants?${new URLSearchParams({ ...(q ? { q } : {}), ...(property ? { property } : {}) })}`}
+          href={`/tenants?${new URLSearchParams({ view: 'status', ...(q ? { q } : {}), ...(property ? { property } : {}) })}`}
           aria-current={view === 'status' ? 'page' : undefined}
           className={view === 'status' ? styles.selectedTab : undefined}
         >
@@ -102,6 +112,7 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
           property={property}
           period={period}
           page={first(raw.page)}
+          needsPaymentMethod={first(raw.needsPaymentMethod) === '1'}
         />
       ) : (
         <>
@@ -155,27 +166,19 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
               {status !== 'all' && <input type="hidden" name="status" value={status} />}
               <label className={styles.filterField}>
                 <span>Search tenants</span>
-                <input
-                  type="search"
-                  name="q"
-                  defaultValue={q}
-                  placeholder="Name, email, phone or unit"
-                />
+                <SearchField name="q" defaultValue={q} placeholder="Name, email, phone or unit" />
               </label>
               <label className={styles.filterField}>
                 <span>Property</span>
-                <select name="property" defaultValue={property ?? ''}>
+                <AutoSubmitSelect name="property" defaultValue={property ?? ''}>
                   <option value="">All properties</option>
                   {properties.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
                     </option>
                   ))}
-                </select>
+                </AutoSubmitSelect>
               </label>
-              <Button type="submit" variant="secondary">
-                Apply filters
-              </Button>
             </form>
             <nav className={styles.chips} aria-label="Filter by status">
               {STATUS_FILTERS.map((s) => (
@@ -203,13 +206,13 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
                 </p>
                 <Link
                   className="btn btn-secondary"
-                  href={filtered ? href({}) : '#add-tenant'}
+                  href={filtered ? href({}) : `${returnTo}&add=1`}
                 >
                   {filtered ? 'Clear filters' : 'Add a tenant'}
                 </Link>
               </div>
             ) : (
-              <table className={styles.table}>
+              <Table mobile="cards" className={cx(styles.table, styles.directoryTable)}>
                 <thead>
                   <tr>
                     <th scope="col">Tenant</th>
@@ -222,9 +225,9 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={row.id}>
-                      <th scope="row">
-                        <Link className={styles.person} href={detailHref(row.id)}>
+                    <tr key={row.id} className="row-link">
+                      <th scope="row" data-cell="title">
+                        <Link className={cx(styles.person, 'row-anchor')} href={detailHref(row.id)}>
                           <Avatar initials={initials(row.name)} />
                           <span>
                             <strong>{row.name}</strong>
@@ -232,22 +235,16 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
                           </span>
                         </Link>
                       </th>
-                      <td data-label="Property / unit">
+                      <td data-cell="meta" className={styles.muted}>
                         <span>
                           {row.property && row.unit ? (
                             <>
-                              <Link href={`/properties/${row.property.id}`}>
-                                {row.property.name}
-                              </Link>
+                              {row.property.name}
                               <small>
                                 {row.property.isImplicit ? (
                                   'Single-unit'
                                 ) : (
-                                  <Link
-                                    href={`/properties/${row.property.id}?unit=${encodeURIComponent(row.unit.id)}`}
-                                  >
-                                    Unit {row.unit.number}
-                                  </Link>
+                                  <>Unit {row.unit.number}</>
                                 )}
                               </small>
                             </>
@@ -256,44 +253,42 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
                           )}
                         </span>
                       </td>
-                      <td data-label="Lease end">
+                      <td data-cell="hide" className={styles.muted}>
                         {row.lease ? (
-                          <Link href={`/leases/${row.lease.id}`}>
-                            {formatDate(row.lease.endDate)}
-                          </Link>
+                          <>{formatDate(row.lease.endDate)}</>
                         ) : (
                           <span className={styles.muted}>—</span>
                         )}
                       </td>
-                      <td
-                        data-label="Balance"
-                        className={cx(styles.num, row.balanceCents > 0 && styles.dangerText)}
-                      >
-                        {formatMoney(row.balanceCents / 100)}
+                      <td data-cell="amount" className={styles.num}>
+                        {row.balanceCents ? formatMoney(row.balanceCents / 100) : '—'}
                       </td>
-                      <td data-label="Status">
+                      <td data-cell="status">
                         <Badge tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</Badge>
                       </td>
-                      <td className={styles.rowActions}>
-                        <div className={styles.actions}>
+                      <td data-cell="actions" className={styles.rowActions}>
+                        <RowMenu label={`Actions for ${row.name}`}>
                           <Link
                             className={styles.link}
                             href={detailHref(row.id)}
                             aria-label={`View ${row.name}`}
                           >
-                            View
+                            Open profile
                           </Link>
                           {row.lease && (
                             <Link className={styles.link} href={`/leases/${row.lease.id}`}>
-                              Lease
+                              Open lease
                             </Link>
                           )}
-                        </div>
+                          {row.lease && (
+                            <Link href={`/leases/${row.lease.id}?tab=payments`}>Open ledger</Link>
+                          )}
+                        </RowMenu>
                       </td>
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </Table>
             )}
             <TenantPager
               page={Math.min(page, pages)}
@@ -303,14 +298,15 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
               href={(n) => href({ q, property, status, page: n })}
             />
           </Card>
-
-          <AddTenantForm
-            properties={properties}
-            initialPropertyId={property}
-            returnTo={returnTo}
-            action={addTenantAction}
-          />
         </>
+      )}
+      {first(raw.add) === '1' && (
+        <AddTenantForm
+          properties={properties}
+          initialPropertyId={property}
+          returnTo={returnTo}
+          action={addTenantAction}
+        />
       )}
     </div>
   );

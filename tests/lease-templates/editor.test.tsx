@@ -47,6 +47,7 @@ it('exposes every condition and all six fees, with linked validation and retaine
   render(<TemplateEditor initial={initial} properties={[]} />);
   await user.click(screen.getByRole('button', { name: /1. Long wording/ }));
   expect(screen.getAllByRole('option')).toHaveLength(INCLUDE_WHEN.length);
+  await user.click(screen.getByRole('button', { name: 'Default fees' }));
   expect(screen.getAllByRole('spinbutton')).toHaveLength(6);
   const grace = screen.getByLabelText('Grace days');
   await user.clear(grace);
@@ -61,6 +62,7 @@ it('exposes every condition and all six fees, with linked validation and retaine
   mocks.save.mockRejectedValueOnce(new Error('offline'));
   await user.click(screen.getByRole('button', { name: 'Save template' }));
   await screen.findByText('The template could not be saved. Your edits are still here; try again.');
+  await user.click(screen.getByRole('button', { name: /^Clauses / }));
   expect((screen.getByLabelText('Long wording wording') as HTMLTextAreaElement).value).toBe(
     initial.items[0].body,
   );
@@ -68,12 +70,14 @@ it('exposes every condition and all six fees, with linked validation and retaine
 
 it('saves a version in the editor and duplicates to the returned identity', async () => {
   const user = userEvent.setup();
-  mocks.save
-    .mockResolvedValueOnce({ template: { ...initial, version: 4 } })
-    .mockResolvedValueOnce({
-      template: { ...initial, id: 'copy', name: 'Fixture terms copy', version: 1 },
-    });
+  mocks.save.mockResolvedValueOnce({ template: { ...initial, version: 4 } }).mockResolvedValueOnce({
+    template: { ...initial, id: 'copy', name: 'Fixture terms copy', version: 1 },
+  });
   render(<TemplateEditor initial={initial} properties={[]} />);
+  expect(
+    (screen.getByRole('button', { name: 'Save template' }) as HTMLButtonElement).disabled,
+  ).toBe(true);
+  await user.type(screen.getByRole('textbox', { name: 'Template name' }), ' revised');
   await user.click(screen.getByRole('button', { name: 'Save template' }));
   await screen.findByText('Saved version 4.');
   expect(mocks.push).not.toHaveBeenCalled();
@@ -96,9 +100,11 @@ it('sets property defaults and preserves deletion denial before an unused deleti
       properties={[{ id: 'home', name: 'Fixture home', defaultLeaseTemplateId: null }]}
     />,
   );
+  await user.click(screen.getByRole('button', { name: 'Property defaults' }));
   await user.click(screen.getByRole('button', { name: 'Set as default for Fixture home' }));
   await screen.findByText('Property default updated.');
   expect(mocks.property).toHaveBeenCalledWith('home', 'fixture');
+  await user.click(screen.getByRole('button', { name: /^Clauses / }));
   await user.click(screen.getByRole('button', { name: 'Delete when unused' }));
   await screen.findByText('This template is used by a lease.');
   expect(mocks.push).not.toHaveBeenCalled();

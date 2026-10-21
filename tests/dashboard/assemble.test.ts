@@ -75,8 +75,8 @@ describe('dashboard lease signals', () => {
       now,
     );
     expect(signals.pastDueTenants).toEqual([{ leaseId: 'late', name: 'Alex Rivera', initials: 'AR' }]);
-    // Nov 30 is 47 days out and today counts; Dec 31 is beyond 60 days; Oct 1 is already past.
-    expect(signals.expiringSoonCount).toBe(2);
+    // Nov 30, Dec 31 and today are within the shared 90-day window; Oct 1 is already past.
+    expect(signals.expiringSoonCount).toBe(3);
   });
 
   it('falls back to a generic name when a lease has no tenant', () => {

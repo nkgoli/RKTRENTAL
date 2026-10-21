@@ -122,7 +122,7 @@
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 16px;
   align-items: start;
 }
@@ -144,7 +144,7 @@
   justify-content: center;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(120deg, var(--rr-primary-tint), var(--design-background));
+  background: var(--rr-primary-tint);
   border-bottom: 1px solid var(--rr-border);
   color: var(--design-primary);
 }
@@ -159,6 +159,7 @@
   right: -72px;
   top: -70px;
 }
+.cover::before, .cover::after { display: none; }
 .cover::after {
   width: 220px;
   height: 220px;
@@ -166,12 +167,12 @@
   top: -90px;
 }
 .cover.teal {
-  background: linear-gradient(120deg, #f1fafc, var(--design-background));
-  color: var(--design-accent);
+  background: var(--rr-primary-tint);
+  color: var(--design-primary);
 }
 .cover > svg {
-  width: 64px;
-  height: 64px;
+  width: 40px;
+  height: 40px;
   position: relative;
   z-index: 1;
 }
@@ -267,6 +268,7 @@
 .rowLink {
   display: inline-flex;
   align-items: center;
+  gap: 10px;
   min-height: 36px;
   color: var(--design-primary);
   font-weight: 600;
@@ -275,6 +277,7 @@
 .rowLink:hover {
   text-decoration: underline;
 }
+.rowLink > span { width: 40px; height: 40px; }
 .dialog {
   width: min(640px, calc(100vw - 32px));
   max-height: calc(100dvh - 32px);
@@ -309,6 +312,7 @@
 .propertyForm {
   display: grid;
   gap: 16px;
+  padding-bottom: 80px;
 }
 .propertyForm :global(.form-row) {
   align-items: start;
@@ -364,9 +368,11 @@
   position: sticky;
   bottom: 0;
   z-index: 2;
-  background: var(--design-surface);
+  background: color-mix(in srgb, var(--design-surface) 92%, transparent);
+  backdrop-filter: blur(6px);
   border-top: 1px solid var(--rr-border);
-  padding: 16px;
+  padding: 12px 16px;
+  justify-content: flex-end;
 }
 .formActions {
   display: flex;
@@ -401,7 +407,7 @@
 }
 .roiGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   padding: 12px 0;
 }
@@ -446,7 +452,11 @@
   font-size: 12px;
   color: var(--rr-warn);
 }
+.mobileGrid { display: none; }
 @media (max-width: 640px) {
+  .mobileGrid { display: grid; }
+  .desktopList, .viewToggle { display: none; }
+  .cover { height: 80px; }
   .grid {
     grid-template-columns: minmax(0, 1fr);
   }

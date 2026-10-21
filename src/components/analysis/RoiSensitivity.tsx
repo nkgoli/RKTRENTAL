@@ -56,7 +56,7 @@ function ink(hex: string) {
 
 /**
  * C15 · visx-style heatmap: rent across, vacancy up, a continuous 3-stop scale,
- * the base cell outlined with a ★ corner and a dashed break-even contour. Cells
+ * the base cell outlined with a ● corner and a dashed break-even contour. Cells
  * come from the engine; unavailable cells stay grey and say why.
  */
 function Heatmap({
@@ -184,13 +184,7 @@ function Heatmap({
                     />
                     {base && (
                       <g aria-hidden="true">
-                        <polygon
-                          points={`${x(c)},${y(r)} ${x(c) + 12},${y(r)} ${x(c)},${y(r) + 12}`}
-                          fill={chartColors.primary}
-                        />
-                        <text x={x(c) + 1.5} y={y(r) + 7.5} className={d.star}>
-                          ★
-                        </text>
+                        <circle cx={x(c) + 7} cy={y(r) + 7} r={3} fill={chartColors.primary} />
                       </g>
                     )}
                     {(showValues || v == null) && (
@@ -299,7 +293,7 @@ function Heatmap({
         {baseRow >= 0 && baseCol >= 0 && (
           <li>
             <i data-kind="base" aria-hidden="true">
-              ★
+              ●
             </i>
             Your saved assumptions
           </li>
@@ -370,7 +364,7 @@ export function Sensitivity({
   const [applied, setApplied] = useState(() => sensitivityControls(payload));
   const [metric, setMetric] = useState<Metric>('cashOnCash');
   const [timeframe, setTimeframe] = useState<Timeframe>('year1');
-  const [showValues, setShowValues] = useState(false);
+  const [showValues, setShowValues] = useState(true);
   const [colorblind, setColorblind] = useState(false);
   const [ranges, setRanges] = useState(false);
   const rangesId = useId();

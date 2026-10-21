@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { EmptyState } from '@/components/RouteStates';
 import { Avatar, Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { SearchField, AutoSubmitSelect, NoticeToast } from '@/components/ui';
+import { applicationStatusLabels as labels, applicationStatusTone } from './status';
 import { Pagination, PAGE_SIZE, pageFrom } from '@/components/ui/Pagination';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
@@ -25,20 +27,6 @@ type SearchParams = {
   page?: string;
 };
 const statuses: ApplicationStatus[] = ['SUBMITTED', 'SCREENING', 'REVIEW', 'APPROVED', 'DECLINED'];
-const labels: Record<ApplicationStatus, string> = {
-  SUBMITTED: 'Awaiting consent',
-  SCREENING: 'Screening in progress',
-  REVIEW: 'Ready for review',
-  APPROVED: 'Approved',
-  DECLINED: 'Declined',
-};
-const tones: Record<ApplicationStatus, 'neutral' | 'success' | 'warning' | 'danger' | 'info'> = {
-  SUBMITTED: 'neutral',
-  SCREENING: 'warning',
-  REVIEW: 'success',
-  APPROVED: 'success',
-  DECLINED: 'danger',
-};
 function initials(name: string) {
   return name
     .trim()
@@ -216,8 +204,7 @@ export default async function ApplicationsPage({
           <label className={styles.filterField}>
             <span>Search applicants</span>
             <span className={styles.search}>
-              <input
-                type="search"
+              <SearchField
                 maxLength={100}
                 aria-label="Search applicants or units"
                 name="q"
@@ -228,20 +215,21 @@ export default async function ApplicationsPage({
           </label>
           <label className={styles.filterField}>
             <span>Application status</span>
-            <select aria-label="Filter by status" name="status" defaultValue={status ?? ''}>
+            <AutoSubmitSelect
+              aria-label="Filter by status"
+              name="status"
+              defaultValue={status ?? ''}
+            >
               <option value="">All statuses</option>
               {statuses.map((item) => (
                 <option key={item} value={item}>
                   {labels[item]}
                 </option>
               ))}
-            </select>
+            </AutoSubmitSelect>
           </label>
           {scope.propertyId && <input type="hidden" name="propertyId" value={scope.propertyId} />}
           {scope.unitId && <input type="hidden" name="unitId" value={scope.unitId} />}
-          <Button type="submit" variant="secondary">
-            Apply filters
-          </Button>
           {(q || status) && (
             <Link href={clearHref} className="btn btn-ghost btn-sm">
               Clear filters
@@ -250,19 +238,13 @@ export default async function ApplicationsPage({
         </form>
       </div>
       {params.notice === 'screening' && (
-        <p className={styles.notice} role="status">
-          Screening request sent. The report status updates when the provider returns a result.
-        </p>
+        <NoticeToast message="Screening request sent. The report status updates when the provider returns a result." />
       )}
       {params.notice === 'approved' && (
-        <p className={styles.notice} role="status">
-          Applicant approved. You can create a lease from this review.
-        </p>
+        <NoticeToast message="Applicant approved. You can create a lease from this review." />
       )}
       {params.notice === 'declined' && (
-        <p className={styles.notice} role="status">
-          Decision recorded for this application.
-        </p>
+        <NoticeToast message="Decision recorded for this application." />
       )}
 
       <section className={styles.summaryStrip} aria-label="Applications at a glance">
@@ -330,7 +312,11 @@ export default async function ApplicationsPage({
                         </small>
                         <span className={styles.metaLine}>
                           <Badge
-                            tone={!hasConsent && !decided ? 'neutral' : tones[application.status]}
+                            tone={
+                              !hasConsent && !decided
+                                ? 'neutral'
+                                : applicationStatusTone(application.status)
+                            }
                           >
                             {decided
                               ? labels[application.status]
@@ -344,11 +330,7 @@ export default async function ApplicationsPage({
                                       : 'Ready'
                                     : labels[application.status]}
                           </Badge>
-                          <span>
-                            {application.reports[0]?.status === 'complete'
-                              ? 'Report complete'
-                              : formatDate(application.appliedAt)}
-                          </span>
+                          <span>{formatDate(application.appliedAt)}</span>
                         </span>
                       </span>
                     </Link>
@@ -418,7 +400,7 @@ export default async function ApplicationsPage({
                   </p>
                 </div>
               </div>
-              <Badge tone={tones[selected.status]}>
+              <Badge tone={applicationStatusTone(selected.status)}>
                 {selected.status === 'SUBMITTED' && consent
                   ? 'Ready to screen'
                   : labels[selected.status]}
@@ -445,11 +427,13 @@ export default async function ApplicationsPage({
                     : 'No screening report yet'}
                 </small>
               </div>
-              <Badge tone={providerReady ? 'info' : 'warning'}>
+              <span className={styles.providerState}>
                 {process.env.NODE_ENV === 'production'
-                  ? (connection?.status ?? 'Not connected')
+                  ? connection?.status === 'CONNECTED'
+                    ? 'Connected'
+                    : 'Not connected'
                   : 'Connected · development mock'}
-              </Badge>
+              </span>
             </div>
             <div className={styles.reportHeading}>
               <h3>Applicant review</h3>
@@ -521,7 +505,7 @@ export default async function ApplicationsPage({
                       ? 'Screening report received'
                       : 'Run applicant screening'}
                 </strong>
-                <p>
+                <p id="screening-help">
                   {selected.status === 'APPROVED' || selected.status === 'DECLINED'
                     ? 'This application has a recorded decision.'
                     : !providerReady
@@ -572,16 +556,16 @@ export default async function ApplicationsPage({
                 </div>
               ) : (
                 <>
-                  <p className={styles.decisionHelp}>
+                  <p className={styles.decisionHelp} id="decision-help">
                     {selected.status === 'DECLINED'
                       ? 'This application was declined. The recorded decision is retained in its history.'
                       : 'A completed report and current consent are required before a decision.'}
                   </p>
                   <div className={styles.decisionButtons}>
-                    <Button variant="secondary" disabled>
+                    <Button variant="secondary" disabled aria-describedby="decision-help">
                       Decline
                     </Button>
-                    <Button variant="secondary" disabled>
+                    <Button variant="primary" disabled aria-describedby="decision-help">
                       Approve
                     </Button>
                   </div>

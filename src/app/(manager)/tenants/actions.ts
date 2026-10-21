@@ -42,11 +42,12 @@ function failure(error: unknown, formData: FormData): FormState {
 function resultHref(
   tenantId: string,
   returnTo: string,
-  options: { error?: string; note?: boolean } = {},
+  options: { error?: string; note?: boolean; notice?: string } = {},
 ) {
   const query = new URLSearchParams({ tenantId, returnTo });
   if (options.error) query.set('error', options.error);
   if (options.note) query.set('note', '1');
+  if (options.notice) query.set('notice', options.notice);
   return `/tenants/result?${query}`;
 }
 
@@ -62,7 +63,7 @@ export async function addTenantAction(_prev: FormState, formData: FormData): Pro
     return failure(error, formData);
   }
   revalidatePath('/tenants');
-  redirect(resultHref(tenantId, tenantReturnHref(formData.get('returnTo'))));
+  redirect(resultHref(tenantId, tenantReturnHref(formData.get('returnTo')), { notice: 'added' }));
 }
 
 export async function updateTenantAction(
@@ -80,7 +81,7 @@ export async function updateTenantAction(
     return failure(error, formData);
   }
   revalidatePath('/tenants');
-  redirect(resultHref(tenantId, tenantReturnHref(formData.get('returnTo'))));
+  redirect(resultHref(tenantId, tenantReturnHref(formData.get('returnTo')), { notice: 'updated' }));
 }
 
 export async function addNoteAction(
@@ -116,7 +117,12 @@ async function leaseAction(
   }
   revalidatePath('/tenants');
   revalidatePath(`/tenants/${tenantId}`);
-  redirect(resultHref(tenantId, tenantReturnHref(formData.get('returnTo')), { error: message }));
+  redirect(
+    resultHref(tenantId, tenantReturnHref(formData.get('returnTo')), {
+      error: message,
+      notice: message ? undefined : 'lease-updated',
+    }),
+  );
 }
 
 export async function moveInAction(tenantId: string, formData: FormData): Promise<void> {

@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
   const query = new URLSearchParams({ returnTo });
   if (error) query.set('error', error);
   if (note) query.set('note', '1');
+  const notice = request.nextUrl.searchParams.get('notice');
+  if (notice && ['added', 'updated', 'lease-updated'].includes(notice)) query.set('notice', notice);
   const location = tenantId
     ? `/tenants/${encodeURIComponent(tenantId)}?${query}`
     : `/tenants?view=directory`;

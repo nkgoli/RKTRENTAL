@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LeaseDocumentGrid } from '@/app/(manager)/leases/[id]/LeaseDocumentGrid';
+import { ToastProvider } from '@/components/ui/Toast';
 
 const document = {
   id: 'file-1',
@@ -14,6 +15,14 @@ const document = {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+});
+beforeEach(() => {
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute('open', '');
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute('open');
+  };
 });
 
 describe('confirmed lease document feedback', () => {
@@ -56,11 +65,31 @@ describe('confirmed lease document feedback', () => {
     render(<LeaseDocumentGrid leaseId="lease-1" documents={[document]} />);
     await user.click(screen.getByText('More actions'));
     await user.click(screen.getByRole('button', { name: /^Delete$/ }));
+    expect(screen.getByRole('dialog', { name: 'Delete Original.pdf?' })).toBeTruthy();
+    expect(globalThis.document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }));
     await user.click(screen.getByRole('button', { name: 'Confirm delete' }));
     expect((await screen.findByRole('alert')).textContent).toContain('Please try again.');
     expect(screen.getByRole('article')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Confirm delete' }));
     await waitFor(() => expect(screen.queryByRole('article')).toBeNull());
     expect(screen.getByRole('status').textContent).toBe('Original.pdf deleted.');
+  });
+  it('announces deletion by toast only after the server confirms removal', async () => {
+    const fetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetch);
+    const user = userEvent.setup();
+    const { container } = render(
+      <ToastProvider>
+        <LeaseDocumentGrid leaseId="lease-1" documents={[document]} />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByText('More actions'));
+    await user.click(screen.getByRole('button', { name: /^Delete$/ }));
+    expect(fetch).not.toHaveBeenCalled();
+    expect(container.querySelector('.toast')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Confirm delete' }));
+    await waitFor(() =>
+      expect(container.querySelector('.toast')?.textContent).toContain('Original.pdf deleted.'),
+    );
   });
 });

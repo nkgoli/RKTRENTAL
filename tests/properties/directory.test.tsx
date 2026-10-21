@@ -1,14 +1,16 @@
 ﻿// @vitest-environment jsdom
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PropertiesPage from '@/app/(manager)/properties/page';
 const mocks = vi.hoisted(() => ({
+  replace: vi.fn(),
   list: vi.fn(),
   counts: vi.fn(),
   owners: vi.fn(),
   db: vi.fn(),
   auth: vi.fn(),
 }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: mocks.replace }), redirect: vi.fn() }));
 vi.mock('@/lib/auth/access', () => ({ requireManagerRole: mocks.auth }));
 vi.mock('@/lib/properties/data', () => ({
   propertiesDb: mocks.db,
@@ -62,7 +64,7 @@ describe('property directory presentation', () => {
     expect(
       screen
         .getByRole('region', { name: 'Properties in this view' })
-        .compareDocumentPosition(screen.getByRole('search')) & Node.DOCUMENT_POSITION_FOLLOWING,
+        .compareDocumentPosition(screen.getByRole('searchbox')) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
   it('preserves query and filter when switching Grid/List and all query fields in search', async () => {
@@ -73,9 +75,10 @@ describe('property directory presentation', () => {
     expect(screen.getByRole('link', { name: 'Multi-unit 1' }).getAttribute('href')).toBe(
       '/properties?view=list&filter=multi&q=Test+%26+Co',
     );
-    const form = screen.getByRole('search');
-    expect(form.querySelector<HTMLInputElement>('[name=filter]')?.value).toBe('vacancies');
-    expect(form.querySelector<HTMLInputElement>('[name=view]')?.value).toBe('list');
+    window.history.replaceState(null, '', '/properties?view=list&filter=vacancies&q=Test+%26+Co');
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Oak' } });
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/properties?view=list&filter=vacancies&q=Oak', { scroll: false }));
+    expect(screen.queryByRole('button', { name: 'Search' })).toBeNull();
     const region = screen.getByRole('region', { name: /Property directory table/ });
     expect(region.tabIndex).toBe(0);
     expect(within(region).getAllByRole('columnheader')).toHaveLength(6);

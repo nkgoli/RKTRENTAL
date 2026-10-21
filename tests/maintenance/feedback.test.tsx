@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
 const refresh = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
@@ -7,11 +7,21 @@ import { RequestPhoto } from '@/components/maintenance/RequestPhoto';
 import { RequestActionForm } from '@/components/maintenance/RequestActionForm';
 import { OperationsError } from '@/components/maintenance/OperationsError';
 afterEach(cleanup);
+beforeEach(() => {
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute('open', '');
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute('open');
+  };
+});
 describe('maintenance recovery', () => {
   it('replaces a failed image with useful copy while keeping file actions', () => {
     render(<RequestPhoto documentId="photo-1" title="Leak" />);
     fireEvent.error(screen.getByRole('img'));
     expect(screen.getByText('Photo preview unavailable')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Open Leak photo' }));
+    expect(screen.getByRole('dialog', { name: 'Leak photo' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Download' }).getAttribute('href')).toBe(
       '/api/files/photo-1/download',
     );

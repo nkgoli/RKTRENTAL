@@ -1,7 +1,18 @@
 'use client';
 
-import { useActionState, useEffect, useId, useRef, useState } from 'react';
-import { Badge, Button, Card, Field, FormRow, Input, Select, cx } from '@/components/ui';
+import { useActionState, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Button,
+  Card,
+  Field,
+  FormRow,
+  Input,
+  Select,
+  Dialog,
+  ConfirmButton,
+  cx,
+} from '@/components/ui';
 import type { FormState } from './actions';
 import styles from './tenants.module.css';
 
@@ -37,6 +48,7 @@ export function AddTenantForm({
   returnTo?: string;
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
 }) {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(action, empty);
   const formRef = useErrorFocus(state);
   const v = state.values ?? {};
@@ -45,11 +57,12 @@ export function AddTenantForm({
   const units = properties.find((p) => p.id === propertyId)?.units ?? [];
 
   return (
-    <Card id="add-tenant" className={cx(styles.tenantForm, styles.pad)}>
-      <div className="card-header">
-        <h2>Add tenant</h2>
-        <Badge tone="info">New contact</Badge>
-      </div>
+    <Dialog
+      open
+      onClose={() => router.replace(returnTo ?? '/tenants', { scroll: false })}
+      title="Add tenant"
+      className={styles.tenantForm}
+    >
       <p className={styles.formHint}>
         Full name is required. Add a contact now, or select a vacant unit to draft a lease.
       </p>
@@ -60,7 +73,7 @@ export function AddTenantForm({
             {state.message}
           </div>
         )}
-        <FormRow columns={3}>
+        <FormRow columns={2}>
           <Field label="Full name">
             <Input
               name="name"
@@ -95,7 +108,7 @@ export function AddTenantForm({
             <FieldError id="add-phone-error" message={state.errors.phone} />
           </Field>
         </FormRow>
-        <FormRow columns={3}>
+        <FormRow columns={2}>
           <Field label="Property">
             <Select
               name="propertyId"
@@ -171,7 +184,7 @@ export function AddTenantForm({
           </Button>
         </div>
       </form>
-    </Card>
+    </Dialog>
   );
 }
 
@@ -367,66 +380,15 @@ export function MoveOutDialog({
   returnTo: string;
   action: (formData: FormData) => Promise<void>;
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const cancelRef = useRef<HTMLButtonElement>(null);
-  const headingId = useId();
-  const copyId = useId();
-
   return (
-    <>
-      <button
-        ref={triggerRef}
-        type="button"
-        className="btn btn-danger btn-block"
-        onClick={() => {
-          dialogRef.current?.showModal();
-          cancelRef.current?.focus();
-        }}
-      >
-        Move out
-      </button>
-      <dialog
-        ref={dialogRef}
-        className={styles.dialog}
-        aria-labelledby={headingId}
-        aria-describedby={copyId}
-        onClose={() => triggerRef.current?.focus()}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') {
-            event.preventDefault();
-            dialogRef.current?.close();
-          }
-        }}
-        onClick={(event) => {
-          if (event.target === dialogRef.current) dialogRef.current?.close();
-        }}
-      >
-        <p className={styles.eyebrow}>{unitLabel}</p>
-        <h2 id={headingId}>Move {tenantName} out?</h2>
-        <p id={copyId}>
-          This ends the active lease today and marks {unitLabel} vacant unless another active lease
-          holds it. Tenant details, notes and payment history remain available.
-        </p>
-        <p className="alert warning">
-          This changes the lease for everyone on it. Review any co-tenants before continuing.
-        </p>
-        <form action={action} className={styles.dialogActions}>
-          <input type="hidden" name="leaseId" value={leaseId} />
-          <input type="hidden" name="returnTo" value={returnTo} />
-          <button
-            ref={cancelRef}
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => dialogRef.current?.close()}
-          >
-            Cancel
-          </button>
-          <button type="submit" className={cx('btn', styles.dangerSolid)}>
-            Confirm move out
-          </button>
-        </form>
-      </dialog>
-    </>
+    <ConfirmButton
+      label="Record move-out"
+      title={`Move ${tenantName} out?`}
+      eyebrow={unitLabel}
+      description={`This ends the active lease today for everyone on it and marks ${unitLabel} vacant unless another active lease holds it. Tenant details, notes and payment history remain available.`}
+      confirmLabel="Record move-out"
+      action={action}
+      fields={{ leaseId, returnTo }}
+    />
   );
 }

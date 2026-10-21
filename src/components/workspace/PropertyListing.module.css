@@ -6,3 +6,8 @@
 .intro { margin: 0; padding: 0 16px 12px; color: var(--design-muted); font-size: 13px; }
 .rentKind { display: block; margin-top: 3px; color: var(--design-muted); font-size: 11px; }
 .note { margin: 0; padding: 12px 20px 17px; color: var(--design-muted); font-size: 12px; }
+.positive { color: var(--design-accent); }
+.negative { color: var(--design-danger); }
+@media (max-width: 640px) {
+  .tableWrap table { min-width: 0; }
+}

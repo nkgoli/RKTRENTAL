@@ -5,7 +5,8 @@
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: var(--design-background);
   color: var(--design-text);
   font-family: var(--design-font);
@@ -183,7 +184,7 @@
   width: 100%;
   max-width: 1152px;
   margin: 0 auto;
-  padding: 0 32px 40px;
+  padding: 24px 32px 40px;
   scroll-margin-top: 72px;
 }
 .phoneHint {
@@ -310,11 +311,14 @@ button.step:hover .stepLabel {
   border-radius: var(--rr-card-radius);
   box-shadow: var(--rr-card-shadow);
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 .cardBody {
   padding: 24px;
   display: grid;
   gap: 20px;
+  min-width: 0;
 }
 .cardHead {
   display: flex;
@@ -1146,5 +1150,120 @@ button.step:hover .stepLabel {
   }
   .page :where(input, select, textarea) {
     font-size: 16px;
+  }
+}
+
+/* Keep intrinsic select widths and long unit labels inside the focused flow. */
+.page *,
+.page *::before,
+.page *::after {
+  box-sizing: border-box;
+}
+.pickerLayout {
+  grid-template-columns: minmax(0, 640px);
+}
+.pickerLayout .card {
+  max-width: 640px;
+}
+.cardBody > *,
+.cardHead,
+.cardHead > div,
+.field,
+.field select {
+  min-width: 0;
+  max-width: 100%;
+}
+.cardHead h2:focus {
+  outline: none;
+}
+.saveStatus,
+.topProgress {
+  color: var(--design-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.topProgress {
+  display: block;
+  margin-top: 3px;
+}
+.saveStatus {
+  white-space: nowrap;
+}
+.selectedTenants {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.selectedTenants .btn {
+  min-width: 0;
+  font-size: 12px;
+}
+.draftChoice {
+  padding: 16px;
+  border: 1px solid var(--rr-border);
+  border-radius: var(--design-radius);
+  background: var(--design-background);
+}
+.draftChoice p {
+  font-size: 13px;
+  color: var(--design-muted);
+}
+@media (max-width: 640px) {
+  .pickerLayout {
+    padding: 20px 16px;
+  }
+  .pickerFooter {
+    flex-direction: column-reverse;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .pickerFooter .btn {
+    width: 100%;
+  }
+  .topbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .saveStatus {
+    width: 100%;
+    padding-left: 48px;
+  }
+}
+
+.templateItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: 0;
+  gap: 0 10px;
+}
+.templateItemTop {
+  grid-column: 1;
+  align-self: center;
+  gap: 4px;
+  padding: 8px 0 8px 12px;
+}
+.termToggle {
+  grid-column: 2;
+  min-height: 48px;
+  padding: 10px 12px 10px 0;
+}
+.termExpanded,
+.templateItem > .termReason {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 12px;
+}
+.templateHelp button {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+@media (max-width: 640px) {
+  .templateItemTop .termBadge {
+    display: none;
+  }
+  .termToggle strong {
+    font-size: 13px;
   }
 }

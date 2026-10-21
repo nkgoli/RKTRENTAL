@@ -56,7 +56,7 @@ function ActualValue({ row }: { row: ComparisonRow }) {
   return (
     <>
       <strong>{actual.status === 'unavailable' ? 'Not recorded' : usd(actual.cents)}</strong>
-      <span className={styles[actual.status]}>
+      <span className={styles[actual.status]} title={actual.notes.join(' ')}>
         {actual.status === 'recorded'
           ? 'Recorded'
           : actual.status === 'zero'
@@ -65,9 +65,6 @@ function ActualValue({ row }: { row: ComparisonRow }) {
               ? 'Partial'
               : 'Unavailable'}
       </span>
-      {actual.notes.map((note) => (
-        <small key={note}>{note}</small>
-      ))}
     </>
   );
 }
@@ -423,8 +420,8 @@ export function RoiActuals({
               </div>
             </dl>
           </section>
-          <section className={styles.card} aria-labelledby="actuals-sources">
-            <h2 id="actuals-sources">Sources and coverage</h2>
+          <details className={styles.card}>
+            <summary id="actuals-sources">Sources and coverage</summary>
             <dl className={styles.list}>
               <CoverageLine label="Rent records" coverage={data.income.confirmedRent.coverage} />
               <CoverageLine label="Expense records" coverage={data.expenses.total.coverage} />
@@ -489,7 +486,7 @@ export function RoiActuals({
                 appreciation; they are estimates, not recorded results.
               </p>
             </MoreDetail>
-          </section>
+          </details>
         </div>
       )}
     </div>

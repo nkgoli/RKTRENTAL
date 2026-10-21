@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import Link from 'next/link';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -50,9 +51,9 @@ describe('Table card mode and row links', () => {
         <tbody>
           <tr className="row-link">
             <td data-cell="title">
-              <a className="row-anchor" href="/leases/1">
+              <Link className="row-anchor" href="/leases/1">
                 Alex
-              </a>
+              </Link>
             </td>
             <td data-cell="amount" className="num">
               $1,850
@@ -115,13 +116,47 @@ describe('Field', () => {
 });
 
 describe('Dialog and ConfirmDialog', () => {
-  it('opens as a modal with title, close button and focused Cancel, and closes on cancel', async () => {
+  beforeEach(() => {
     HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
       this.setAttribute('open', '');
     });
     HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
       this.removeAttribute('open');
     });
+  });
+
+  it('focuses the first available field after hidden and disabled controls', () => {
+    render(
+      <Dialog open onClose={() => {}} title="Record payment">
+        <input type="hidden" name="propertyId" value="property-1" data-autofocus />
+        <select aria-label="Unavailable lease" disabled data-autofocus>
+          <option>Unit 1A</option>
+        </select>
+        <fieldset disabled>
+          <input aria-label="Disabled reference" data-autofocus />
+        </fieldset>
+        <div hidden>
+          <input aria-label="Hidden reference" />
+        </div>
+        <input aria-label="Amount" />
+      </Dialog>,
+    );
+    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Amount' }));
+  });
+
+  it('focuses Close when every field is unavailable', () => {
+    render(
+      <Dialog open onClose={() => {}} title="Payment details">
+        <input type="hidden" name="paymentId" value="payment-1" />
+        <fieldset disabled>
+          <textarea aria-label="Notes" />
+        </fieldset>
+      </Dialog>,
+    );
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close' }));
+  });
+
+  it('opens as a modal with title, close button and focused Cancel, and closes on cancel', async () => {
     const onClose = vi.fn();
     const onConfirm = vi.fn();
     render(
@@ -312,7 +347,7 @@ describe('RowMenu, Tabs, EmptyState, LoadingState', () => {
 
 describe('PageHeader meta and back link in the manager shell', () => {
   it('renders the meta line and breadcrumb back link under one h1', () => {
-    pathname.value = '/roi-analysis';
+    pathname.value = '/returns';
     render(
       <ManagerShell>
         <PageHeader

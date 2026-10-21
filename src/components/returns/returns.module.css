@@ -169,3 +169,99 @@
     align-items: center;
   }
 }
+
+.method {
+  font-size: 12px;
+  color: var(--design-muted);
+}
+.method summary {
+  width: fit-content;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.method p {
+  max-width: 85ch;
+  line-height: 1.6;
+}
+.chart {
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .tableScroll {
+    width: 100%;
+  }
+  .tableScroll table {
+    min-width: 0;
+    font-size: 11px;
+  }
+  .tableScroll th,
+  .tableScroll td {
+    padding: 8px 4px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 640px) {
+  .mobileReturns thead,
+  .mobileYearly thead {
+    display: none;
+  }
+  .mobileReturns tbody,
+  .mobileYearly tbody {
+    display: block;
+  }
+  .mobileReturns tr,
+  .mobileYearly tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+    padding: 16px;
+    border-bottom: 1px solid var(--rr-border);
+  }
+  .mobileReturns td,
+  .mobileYearly td {
+    display: block;
+    padding: 0;
+    border: 0;
+    text-align: left;
+    font-size: 13px;
+  }
+  .mobileReturns td:first-child,
+  .mobileYearly td:first-child {
+    grid-column: 1 / -1;
+  }
+  .mobileReturns td::before,
+  .mobileYearly td::before {
+    display: block;
+    color: var(--design-muted);
+    font-size: 11px;
+  }
+  .mobileReturns td:nth-child(2)::before,
+  .mobileYearly td:nth-child(2)::before {
+    content: 'Income';
+  }
+  .mobileReturns td:nth-child(3)::before,
+  .mobileYearly td:nth-child(3)::before {
+    content: 'Expenses';
+  }
+  .mobileReturns td:nth-child(4)::before,
+  .mobileYearly td:nth-child(4)::before {
+    content: 'NOI';
+  }
+  .mobileReturns td:nth-child(5)::before {
+    content: 'Cap rate';
+  }
+  .mobileReturns td:nth-child(6)::before {
+    content: 'Cash-on-cash (estimate)';
+  }
+  .mobileReturns td:nth-child(7)::before {
+    content: 'ROI (estimate)';
+  }
+  .mobileReturns td:nth-child(8)::before {
+    content: 'Yield (scheduled)';
+  }
+  .mobileYearly td:nth-child(5)::before {
+    content: 'Year-over-year change';
+  }
+}

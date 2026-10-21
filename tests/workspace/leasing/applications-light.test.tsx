@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { cleanup, render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import ApplicationsPage from '@/app/(manager)/applications/page';
 import { ApplicationsPanel } from '@/components/workspace/panels/leasing/ApplicationsPanel';
+import { ReviewDecisionForm } from '@/app/(manager)/applications/ReviewForms';
 
 const mocks = vi.hoisted(() => ({
   findMany: vi.fn(),
@@ -30,6 +30,7 @@ vi.mock('@/lib/auth/access', () => ({
 vi.mock('@/lib/integrations/service', () => ({ loadIntegrations: mocks.integrations }));
 vi.mock('@/components/workspace/ScopedWorkspace', () => ({ ScopedWorkspace: () => null }));
 vi.mock('@/components/shell/PageHeader', () => ({ PageHeader: () => null }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn() }) }));
 vi.mock('@/app/(manager)/applications/actions', () => ({
   recordDecision: vi.fn(),
   requestScreening: vi.fn(),
@@ -73,6 +74,12 @@ const application = () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute('open', '');
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute('open');
+  };
   window.matchMedia = vi
     .fn()
     .mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() });
@@ -89,6 +96,32 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('light application review preserves eligibility and context', () => {
+  it('requires a written reason and confirmation before recording a decline', async () => {
+    const action = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ReviewDecisionForm
+        action={action}
+        applicationId="app"
+        propertyId="property"
+        unitId="unit"
+      />,
+    );
+    expect((screen.getByRole('button', { name: 'Decline' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    fireEvent.change(screen.getByLabelText('Decision reason'), {
+      target: { value: 'credit-below-criteria' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Decline' }));
+    expect(action).not.toHaveBeenCalled();
+    const dialog = screen.getByRole('dialog', { name: 'Decline this application?' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Decline application' }));
+    await waitFor(() => expect(action).toHaveBeenCalledOnce());
+    const data = action.mock.calls[0][0] as FormData;
+    expect(data.get('decision')).toBe('DECLINED');
+    expect(data.get('reason')).toBe('credit-below-criteria');
+    expect(data.get('unitId')).toBe('unit');
+  });
   it.each(['consent', 'report', 'status'])(
     'blocks decisions when %s is unavailable',
     async (gate) => {
@@ -187,7 +220,7 @@ describe('property applicants', () => {
     );
   });
 
-  it('keeps separate households sharing a unit and updates the package readout', async () => {
+  it('distinguishes households sharing a unit and links to organization screening settings', async () => {
     const app = application();
     mocks.findMany.mockResolvedValue([
       {
@@ -211,13 +244,13 @@ describe('property applicants', () => {
       }),
     );
     expect(container.querySelectorAll('[data-application-group]').length).toBe(2);
-    expect(screen.getByRole('link', { name: /Nina Park/ }).getAttribute('href')).toBe(
-      '/applications?propertyId=property&unitId=unit&applicant=app#selected-applicant',
+    expect(
+      screen.getByRole('link', { name: /Nina Parknina@example.com/ }).getAttribute('href'),
+    ).toBe('/applications?propertyId=property&unitId=unit&applicant=app#selected-applicant');
+    expect(screen.getByRole('heading', { name: 'Nina Park · Unit 3A' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Olivia Reed · Unit 3A' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Application settings/ }).getAttribute('href')).toBe(
+      '/integrations#screening-providers',
     );
-    const form = container.querySelector('form')!;
-    expect(new FormData(form).get('applicantConsent')).toBe('required-before-report');
-    await userEvent.setup().selectOptions(screen.getByRole('combobox'), 'checkr-background');
-    expect(screen.getByText('Checkr · background check', { selector: 'small' })).toBeTruthy();
-    expect(new FormData(form).get('defaultPackage')).toBe('checkr-background');
   });
 });

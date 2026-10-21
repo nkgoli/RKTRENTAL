@@ -11,14 +11,15 @@ import {
   PAYOUT_SCHEDULES,
   SCREENING_PACKAGES,
 } from '@/lib/integrations/settings';
-import { Alert, Badge, Button } from '@/components/ui';
+import { Badge, Button, ConfirmButton, NoticeToast } from '@/components/ui';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { providerActivityAt, providerSyncState } from '@/components/integrations/sync-state';
 import styles from '@/components/integrations/integrations.module.css';
 import { ProviderLogo } from '@/components/integrations/ProviderLogo';
-import { connectAction, disconnectAction, saveSettingsAction } from './actions';
+import { connectAction, disconnectAction } from './actions';
 import { FeeSwitch } from './FeeSwitch';
+import { AutoSaveSettings } from './AutoSaveSettings';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,7 +57,7 @@ function ProviderCard({ provider }: { provider: ProviderView }) {
             {provider.status === 'ERROR'
               ? 'Error'
               : provider.mode === 'mock'
-                ? 'Sandbox connected'
+                ? 'Sandbox'
                 : 'Connected'}
           </Badge>
         ) : (
@@ -110,12 +111,7 @@ function ProviderCard({ provider }: { provider: ProviderView }) {
                 </>
               )}
             </dl>
-            <form action={disconnectAction} style={{ marginTop: 12 }}>
-              <Hidden provider={provider} />
-              <Button type="submit" variant="danger" size="sm">
-                Disconnect
-              </Button>
-            </form>
+            <ConfirmButton label="Disconnect" variant="danger" size="sm" title={`Disconnect ${provider.name}?`} description="New requests will stop using this provider until you reconnect. Existing records stay saved." confirmLabel="Disconnect" action={disconnectAction} fields={{ kind: provider.kind, provider: provider.provider, name: provider.name }} />
           </details>
         </>
       ) : (
@@ -160,41 +156,6 @@ function SelectField({
       </select>
       {hint && <span className="hint">{hint}</span>}
     </label>
-  );
-}
-
-function SettingsCard({
-  group,
-  title,
-  description,
-  children,
-}: {
-  group: string;
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
-  return (
-    <form
-      action={saveSettingsAction}
-      className={`card ${styles.settings}`}
-      aria-label={title}
-      id={`${group}-settings`}
-    >
-      <input type="hidden" name="group" value={group} />
-      <div className="card-header">
-        <div>
-          <h3>{title}</h3>
-          <p className="muted">{description}</p>
-        </div>
-      </div>
-      <div className="form">{children}</div>
-      <div className={styles.footer}>
-        <Button type="submit" variant="primary" size="sm">
-          Save settings
-        </Button>
-      </div>
-    </form>
   );
 }
 
@@ -274,16 +235,8 @@ export default async function Page({
           note={attention.length ? 'Check sync errors below' : 'No reported errors'}
         />
       </section>
-      {error && (
-        <Alert tone="warning">
-          <div role="alert">{error}</div>
-        </Alert>
-      )}
-      {notice && (
-        <Alert tone="success">
-          <div>{notice}</div>
-        </Alert>
-      )}
+      {error && <NoticeToast message={error} tone="error" />}
+      {notice && <NoticeToast message={notice} />}
       {view.outages.map((provider) => (
         <div
           className="alert warning"
@@ -315,7 +268,7 @@ export default async function Page({
             <ProviderCard key={provider.provider} provider={provider} />
           ))}
         </div>
-        <SettingsCard
+        <AutoSaveSettings
           group="payments"
           title="Payment settings"
           description="Applied to connected payment providers."
@@ -347,7 +300,7 @@ export default async function Page({
               label="Pass processing fees to tenant"
             />
           </div>
-        </SettingsCard>
+        </AutoSaveSettings>
       </Section>
 
       <Section
@@ -360,7 +313,7 @@ export default async function Page({
             <ProviderCard key={provider.provider} provider={provider} />
           ))}
         </div>
-        <SettingsCard
+        <AutoSaveSettings
           group="screening"
           title="Screening settings"
           description="Choose the package for new applications."
@@ -380,7 +333,7 @@ export default async function Page({
               hint="Reports are requested only after consent."
             />
           </div>
-        </SettingsCard>
+        </AutoSaveSettings>
       </Section>
 
       <Section
@@ -393,7 +346,7 @@ export default async function Page({
             <ProviderCard key={provider.provider} provider={provider} />
           ))}
         </div>
-        <SettingsCard
+        <AutoSaveSettings
           group="comps"
           title="Rent comps settings"
           description="Defaults for rental comparisons."
@@ -412,7 +365,7 @@ export default async function Page({
               value={comps.refresh}
             />
           </div>
-        </SettingsCard>
+        </AutoSaveSettings>
       </Section>
     </div>
   );

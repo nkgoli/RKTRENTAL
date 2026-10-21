@@ -226,7 +226,12 @@ describe('ManagerShell navigation', () => {
     ] as const) {
       pathname = path;
       rerender(ui());
-      expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(title);
+      if (path === '/roi-analysis') {
+        // The ROI workspace owns its property-specific heading.
+        expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+      } else {
+        expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(title);
+      }
       expect(sidebar().querySelectorAll('[aria-current="page"]')).toHaveLength(activeCount);
     }
   });

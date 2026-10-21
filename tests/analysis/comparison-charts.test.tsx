@@ -99,19 +99,25 @@ describe('Fix My Deal levers (C4)', () => {
   });
   it('renders the what-if card and resets without saving', () => {
     render(<FixMyDeal result={base} payload={sample} />);
-    fireEvent.click(screen.getByRole('button', { name: /Best Fix/ }));
-    expect(screen.getByText('Applied adjustments')).toBeTruthy();
-    fireEvent.click(screen.getAllByRole('button', { name: /Reset/ })[0]);
-    expect(screen.queryByText('Applied adjustments')).toBeNull();
+    const initial = screen.getByRole('status').textContent;
+    fireEvent.click(screen.getAllByRole('checkbox')[0]);
+    expect(screen.getByRole('status').textContent).toBe(initial);
+    fireEvent.click(screen.getByRole('button', { name: 'Apply selected' }));
+    expect(screen.getByRole('status').textContent).not.toBe(initial);
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(screen.getByRole('status').textContent).toBe(initial);
   });
   it('renders the snapshot with one risk score on ring and gauge', () => {
     render(<DealSnapshot result={base} payload={sample} />);
     const band = screen.getByRole('region', { name: 'Deal Snapshot' });
-    const ring = within(band).getByText('Risk score').parentElement!.textContent!;
-    fireEvent.click(within(band).getByRole('button', { expanded: false, name: /Risk/ }));
-    expect(within(band).getByText(/\/ 100 risk/).parentElement!.textContent).toContain(
-      ring.replace('Risk score', '').trim(),
-    );
+    const risk = within(band)
+      .getByText(/^Risk [0-9]+/)
+      .closest('details')!;
+    expect(risk.open).toBe(false);
+    fireEvent.click(risk.querySelector('summary')!);
+    expect(risk.open).toBe(true);
+    expect(within(risk).getAllByRole('progressbar')).toHaveLength(6);
+    expect(within(band).getAllByRole('button', { expanded: false })).toHaveLength(4);
   });
 });
 

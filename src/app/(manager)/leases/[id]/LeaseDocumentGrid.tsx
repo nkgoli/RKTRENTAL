@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useActionState, useEffect, useRef, useState } from 'react';
-import { Alert, Button } from '@/components/ui';
+import { Alert, Button, ConfirmDialog, useToast } from '@/components/ui';
 import { FileUploader, type UploadedDocument } from '@/components/upload';
 import { formatDate } from '@/lib/properties/format';
 import styles from './lease-detail.module.css';
@@ -26,6 +26,7 @@ function DocumentCard({
   onRemoved: (name: string) => void;
   onRenamed: (name: string) => void;
 }) {
+  const toast = useToast();
   const [renameState, rename, renaming] = useActionState(
     async (_previous: DocumentActionState, form: FormData): Promise<DocumentActionState> => {
       try {
@@ -35,7 +36,10 @@ function DocumentCard({
         });
         if (!response.ok) throw new Error('Rename failed');
         const state: DocumentActionState = await response.json();
-        if (state.ok && state.name) onRenamed(state.name);
+        if (state.ok && state.name) {
+          onRenamed(state.name);
+          toast.success(state.message ?? 'Document renamed.');
+        }
         return state;
       } catch {
         return { message: 'The file could not be renamed. Please try again.' };
@@ -47,11 +51,6 @@ function DocumentCard({
   const [name, setName] = useState(document.name);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
-  const confirmation = useRef<HTMLDivElement>(null);
-  const removeButton = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (confirming) confirmation.current?.focus();
-  }, [confirming]);
   useEffect(() => setName(document.name), [document.name]);
 
   async function remove() {
@@ -120,51 +119,28 @@ function DocumentCard({
             <Button type="button" disabled title="Document sharing is not available">
               Share with tenant
             </Button>
-            <button
-              className="btn btn-danger"
-              type="button"
-              ref={removeButton}
-              onClick={() => setConfirming(true)}
-            >
+            <button className="btn btn-danger" type="button" onClick={() => setConfirming(true)}>
               Delete
             </button>
-            {confirming && (
-              <div
-                ref={confirmation}
-                className={styles.confirmation}
-                role="group"
-                aria-label={`Delete ${document.name}`}
-                tabIndex={-1}
-              >
-                <p>Delete {document.name}? This cannot be undone.</p>
-                <div>
-                  <Button
-                    type="button"
-                    disabled={deleting}
-                    onClick={() => {
-                      setConfirming(false);
-                      setError('');
-                      removeButton.current?.focus();
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="danger"
-                    disabled={deleting}
-                    aria-busy={deleting}
-                    onClick={() => void remove()}
-                  >
-                    {deleting ? 'Deleting…' : 'Confirm delete'}
-                  </Button>
-                </div>
-              </div>
-            )}
-            {error && <Alert tone="error">{error}</Alert>}
           </div>
         </details>
       </div>
+      <ConfirmDialog
+        open={confirming}
+        onClose={() => {
+          if (!deleting) {
+            setConfirming(false);
+            setError('');
+          }
+        }}
+        title={`Delete ${document.name}?`}
+        description="This permanently removes the document. This cannot be undone."
+        confirmLabel={deleting ? 'Deleting…' : 'Confirm delete'}
+        pending={deleting}
+        onConfirm={() => void remove()}
+      >
+        {error && <Alert tone="error">{error}</Alert>}
+      </ConfirmDialog>
     </article>
   );
 }
@@ -178,6 +154,7 @@ export function LeaseDocumentGrid({
   documents: LeaseDocumentItem[];
   withUploader?: boolean;
 }) {
+  const toast = useToast();
   const [items, setItems] = useState(documents);
   const [message, setMessage] = useState('');
   useEffect(() => setItems(documents), [documents]);
@@ -198,6 +175,7 @@ export function LeaseDocumentGrid({
     // Each completed file updates independently; concurrent uploads and failed
     // items keep their progress/retry controls instead of navigating away.
     setItems((current) => [item, ...current.filter((entry) => entry.id !== item.id)]);
+    toast.success(`${item.name} uploaded.`);
   }
   return (
     <>
@@ -230,6 +208,7 @@ export function LeaseDocumentGrid({
             }
             onRemoved={(name) => {
               setMessage(`${name} deleted.`);
+              toast.success(`${name} deleted.`);
               setItems((current) => current.filter((entry) => entry.id !== document.id));
             }}
           />

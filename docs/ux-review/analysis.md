@@ -6,23 +6,23 @@ This is the area the human called cramped and busy, and the captures agree: the 
 
 | ID | Route | Severity | Finding | Status |
 | --- | --- | :-: | --- | :-: |
-| AN-01 | /roi-analysis?property= | P0 | Three stacked headers (page title, analysis title + 3 buttons, Assumptions card + 2 buttons) before the tabs | Open |
-| AN-02 | /roi-analysis Summary | P0 | Deal Snapshot card holds 15 numbers, a risk gauge, 3 chips and 3 rainbow sliders | Open |
-| AN-03 | /roi-analysis Summary | P1 | Seven stacked cards with their own Y1/Y5/Y10 toggles and repeated basis badges; 3,589px | Open |
-| AN-04 | /roi-analysis Summary "Fix My Deal" | P1 | Rainbow lever sliders, teal "+$929/yr" gains, two "Apply All" buttons, sparkle "Best Fix" | Open |
-| AN-05 | /roi-analysis (390) | P1 | 5,076px page; three header buttons across; six tabs overflow with no fade | Open |
-| AN-06 | /roi-analysis | P2 | "Edit assumptions" appears twice; "Show details" vs "Edit assumptions" ambiguous | Open |
-| AN-07 | /roi-analysis Actual vs projected | P2 | Each cell carries 2–3 lines of qualifiers; "Not recorded / Unavailable / loan payments are not recorded" three times | Open |
-| AN-08 | /roi-analysis Benchmarks | P2 | Seven blocks (alert, 4 tiles, table, chart, 3 cards, scatter, insight) say the same thing | Open |
-| AN-09 | /roi-analysis Compare | P2 | Tab opens empty ("No reference selected") | Open |
-| AN-10 | /roi-analysis Sensitivity | P2 | Values hidden by default; saved cell is only an outline; hint box in the middle of the chart | Open |
-| AN-11 | /roi-analysis Exit | P2 | "Select Exit Year" is two 440px buttons plus a Clear link; probe form sits above the result | Open |
-| AN-12 | /roi-analysis Charts | P2 | Axis labels "$2000k"; basis badges under every chart title | Open |
-| AN-13 | /rent-analysis?property= | P2 | Raw "OCCUPIED/VACANT" enum text; gap signs uncoloured; eyebrow "Analysis" | Open |
-| AN-14 | /properties/:id/listing?unit= | P2 | Three provenance/legal boxes (amber demo banner, blue data-source box, amber fair-housing box) on one page | Open |
-| AN-15 | /properties/:id/returns | P2 | Workspace "Returns" tab leaves the workspace and lands on ROI "Actual vs projected" | Open |
-| AN-16 | /returns | P1 | Three-line amber method disclaimer above the KPIs; sparkline stubs; YoY column "—" | Open |
-| AN-17 | /returns (390) | P2 | Chart and two tables overflow the card | Open |
+| AN-01 | /roi-analysis?property= | P0 | Three stacked headers (page title, analysis title + 3 buttons, Assumptions card + 2 buttons) before the tabs | Fixed |
+| AN-02 | /roi-analysis Summary | P0 | Deal Snapshot card holds 15 numbers, a risk gauge, 3 chips and 3 rainbow sliders | Fixed |
+| AN-03 | /roi-analysis Summary | P1 | Seven stacked cards with their own Y1/Y5/Y10 toggles and repeated basis badges; 3,589px | Fixed |
+| AN-04 | /roi-analysis Summary "Fix My Deal" | P1 | Rainbow lever sliders, teal "+$929/yr" gains, two "Apply All" buttons, sparkle "Best Fix" | Fixed |
+| AN-05 | /roi-analysis (390) | P1 | 5,076px page; three header buttons across; six tabs overflow with no fade | Fixed |
+| AN-06 | /roi-analysis | P2 | "Edit assumptions" appears twice; "Show details" vs "Edit assumptions" ambiguous | Fixed |
+| AN-07 | /roi-analysis Actual vs projected | P2 | Each cell carries 2–3 lines of qualifiers; "Not recorded / Unavailable / loan payments are not recorded" three times | Fixed |
+| AN-08 | /roi-analysis Benchmarks | P2 | Seven blocks (alert, 4 tiles, table, chart, 3 cards, scatter, insight) say the same thing | Deferred |
+| AN-09 | /roi-analysis Compare | P2 | Tab opens empty ("No reference selected") | Fixed |
+| AN-10 | /roi-analysis Sensitivity | P2 | Values hidden by default; saved cell is only an outline; hint box in the middle of the chart | Fixed |
+| AN-11 | /roi-analysis Exit | P2 | "Select Exit Year" is two 440px buttons plus a Clear link; probe form sits above the result | Deferred |
+| AN-12 | /roi-analysis Charts | P2 | Axis labels "$2000k"; basis badges under every chart title | Deferred |
+| AN-13 | /rent-analysis?property= | P2 | Raw "OCCUPIED/VACANT" enum text; gap signs uncoloured; eyebrow "Analysis" | Fixed |
+| AN-14 | /properties/:id/listing?unit= | P2 | Three provenance/legal boxes (amber demo banner, blue data-source box, amber fair-housing box) on one page | Fixed |
+| AN-15 | /properties/:id/returns | P2 | Workspace "Returns" tab leaves the workspace and lands on ROI "Actual vs projected" | Fixed |
+| AN-16 | /returns | P1 | Three-line amber method disclaimer above the KPIs; sparkline stubs; YoY column "—" | Fixed |
+| AN-17 | /returns (390) | P2 | Chart and two tables overflow the card | Fixed |
 
 ---
 
@@ -33,7 +33,7 @@ This is the area the human called cramped and busy, and the captures agree: the 
 - **Premium looks like:** Mercury/Stripe analytics: one header row — eyebrow "Returns & ROI", h1 "Maple Court", meta "Whole property · Revision 0 · Unsaved changes", actions Save ▾ and ⋯ — then tabs, then content. Total chrome ≤ 160px.
 - **Fix:** Remove the generic page h1 on this route (`PageHeader` gets `title={property.name}` and `eyebrow="Returns & ROI"`); fold "Revision 0 · New analysis" into a 13px meta line; merge "Save draft / Save ready" into one split button `Save ▾` (Save as draft / Save as ready) with the dirty state in the meta line; move "More actions" into ⋯. Replace the Assumptions card with one line directly under the tabs: "Assumptions: from property details · 28 demo values · Edit" (`Edit` opens a side drawer, AN-06). Put the sample-data warning inside that drawer, not on the page.
 - **Files:** `src/components/analysis/RoiWorkspace.tsx` (header block before `AnalysisTabs`, ~lines 700–810), `src/components/analysis/analysis.module.css`, `src/app/(manager)/roi-analysis/page.tsx`, `src/components/shell/PageHeader.tsx`.
-- **Status:** Open
+- **Status:** Fixed - One property header with Save menu and one compact link to Edit Property replaces stacked headers.
 
 ### AN-02
 - **Route:** `/roi-analysis?property=…` Summary, "Deal Snapshot". Screenshots: [roi-summary-fold-1280.jpg](screenshots/roi-summary-fold-1280.jpg), [roi-summary-1280.jpg](screenshots/roi-summary-1280.jpg).
@@ -42,7 +42,7 @@ This is the area the human called cramped and busy, and the captures agree: the 
 - **Premium looks like:** A 4-tile KPI row (Cash flow / Cash-on-cash / Cap rate / DSCR) with value, one-word basis ("Year 1, monthly") and a small delta or risk chip; secondary facts in the header meta; risk detail behind a popover.
 - **Fix:** Rebuild `RoiDealPanels` snapshot as: header "Year 1 · Monthly ▾ · Marginal" ; KPI row of four `KpiCard`s (value 24px, caption 12px, one ⓘ tooltip each); below it a single line "Price $2.83M · Rent $23,000/mo · Appreciation 3% · 5-yr return $588,602" in 13px muted; the risk score becomes a `Badge tone="warning"` "Risk 67 · Elevated" that opens a popover with the three gauges as plain progress bars (`--rr-subtle` track, cobalt fill, no gradients). Delete the duplicate chips and the sparkle link (keep "Increase rent…" as the first item in "Fix my deal").
 - **Files:** `src/components/analysis/RoiDealPanels.tsx`, `src/components/analysis/deal-panels.module.css`, `src/components/dashboard/KpiCard.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Four KPI tiles lead; exact breakdowns and a single risk disclosure replace the dense snapshot.
 
 ### AN-03
 - **Route:** `/roi-analysis?property=…` Summary. Screenshot: [roi-summary-1280.jpg](screenshots/roi-summary-1280.jpg) (3,589px).
@@ -51,7 +51,7 @@ This is the area the human called cramped and busy, and the captures agree: the 
 - **Premium looks like:** Summary = KPIs, one chart, one table, links to the deep tabs; one horizon control in the tab bar.
 - **Fix:** Summary keeps: KPI row (AN-02), "Net cash flow by year" chart, "Milestones" table (Y1/Y5/Y10 columns only), and a "Go deeper" row of three link cards (Actual vs projected · Scenarios · Exit analysis). Move "Outcome" into Charts → Equity, "Fix My Deal" into Scenarios (as "Suggested changes"), "More detail" disclosures into the assumptions drawer. Hoist the Y1/Y5/Y10 control to the tab bar right side (`AnalysisTabs` slot) and read it from URL `?horizon=`. Show the basis badges once, under the tabs.
 - **Files:** `src/components/analysis/RoiSummaryCharts.tsx`, `src/components/analysis/RoiWorkspace.tsx`, `src/components/analysis/summary-charts.module.css`, `src/components/analysis/RoiScenarios.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Summary now contains KPIs, one chart, a five-row milestone table and deep-view links; advanced content moved to Charts and Scenarios.
 
 ### AN-04
 - **Route:** `/roi-analysis?property=…` Summary, "Fix My Deal". Screenshot: [roi-summary-1280.jpg](screenshots/roi-summary-1280.jpg) (y ≈ 2,700–3,300).
@@ -60,7 +60,7 @@ This is the area the human called cramped and busy, and the captures agree: the 
 - **Premium looks like:** A plain list of suggested changes with a neutral slider, the resulting Year-1 cash flow, and one "Apply selected" action.
 - **Fix:** Rename "Suggested changes"; slider track `--rr-subtle`, fill `--design-primary`, thumb white with cobalt border; show "Year 1 cash flow: −$2,555 → +$1,200" as the headline that updates live; one `Apply selected` secondary button and a "Reset" link; delete "Best Fix" and the sparkle glyphs. Move the panel to Scenarios (AN-03).
 - **Files:** `src/components/analysis/RoiDealPanels.tsx`, `src/components/analysis/deal-panels.module.css`.
-- **Status:** Open
+- **Status:** Fixed - Suggested changes lives in Scenarios with neutral checkboxes, one Apply selected action, cash-flow result and Reset; temporary calculations preserve saved data.
 
 ### AN-05
 - **Route:** `/roi-analysis?property=…` at 390px. Screenshots: [roi-summary-390.jpg](screenshots/roi-summary-390.jpg), [roi-summary-fold-390.jpg](screenshots/roi-summary-fold-390.jpg).
@@ -69,7 +69,7 @@ This is the area the human called cramped and busy, and the captures agree: the 
 - **Premium looks like:** The design's phone reference: selected property, four tabs, one KPI pair, a short alert, an "Assumptions & exact amounts" disclosure.
 - **Fix:** On ≤ 640px: sticky 56px header (property name + Save button); tabs as a `<select>` or scrollable strip with right fade (MC-19); KPI row as 2 × 2; every secondary card becomes a collapsed `details` ("Net cash flow by year ▸") so the page lands under 1,800px; sliders hidden behind "Suggested changes ▸".
 - **Files:** `src/components/analysis/RoiWorkspace.tsx`, `src/components/analysis/analysis.module.css`, `src/components/analysis/RoiSummaryCharts.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Compact sticky phone heading, locally scrolling faded tabs and two-by-two KPI grid; browser summary measured below 1800px.
 
 ### AN-06
 - **Route:** `/roi-analysis` header and Charts. Screenshots: [roi-charts-equity-1280.jpg](screenshots/roi-charts-equity-1280.jpg).
@@ -78,7 +78,7 @@ This is the area the human called cramped and busy, and the captures agree: the 
 - **Premium looks like:** One "Assumptions" entry point that opens a right-side drawer (480px) with the editable grouped fields and a "View as table" toggle.
 - **Fix:** Single `Assumptions` button in the header (AN-01) opening a drawer (`<dialog>` positioned right, full height); remove the per-tab buttons; the drawer shows the 28 values grouped (Purchase, Income, Expenses, Growth) with inline edit and the sample-data note.
 - **Files:** `src/components/analysis/RoiWorkspace.tsx`, `src/components/analysis/AssumptionsSummary.tsx`, `src/components/analysis/RoiProjections.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Property assumptions are not repeated on ROI; the single Edit property assumptions link preserves return context and unsaved-change guarding. Human direction takes precedence over the proposed drawer.
 
 ### AN-07
 - **Route:** `/roi-analysis?…&view=actual`. Screenshot: [roi-actual-1280.jpg](screenshots/roi-actual-1280.jpg).
@@ -87,7 +87,7 @@ This is the area the human called cramped and busy, and the captures agree: the 
 - **Premium looks like:** One coverage chip per row ("Partial · 325/355 days") with a tooltip; one callout listing the three missing inputs with their actions; sources in a collapsed footnote.
 - **Fix:** Cell = value + `Badge tone="neutral"` chip ("Partial", "Not recorded") with `title` text; remove the sentence lines. Keep the amber panel as the single explanation (three rows, each with its action link). Collapse "Sources and coverage" into a `details` under the table. Difference column shows the number when both sides exist, otherwise "—".
 - **Files:** `src/components/analysis/RoiActuals.tsx`, `src/components/analysis/actuals.module.css`.
-- **Status:** Open
+- **Status:** Fixed - Cells show value plus one coverage badge; explanatory notes are available on the badge and Sources and coverage is collapsed.
 
 ### AN-08
 - **Route:** `/roi-analysis?…&view=benchmarks`. Screenshot: [roi-benchmarks-1280.jpg](screenshots/roi-benchmarks-1280.jpg).
@@ -96,7 +96,7 @@ This is the area the human called cramped and busy, and the captures agree: the 
 - **Premium looks like:** Headline sentence, one comparison table (with the market descriptions as a tooltip on the name), one chart with a Dollars/Index toggle, and the scatter as an optional disclosure.
 - **Fix:** Keep: headline (plain, not amber — it is information, not a warning), the comparison table with "Annual return used / Volatility" as extra columns, the growth chart. Move the four risk tiles to Summary's risk popover (AN-02), fold the three market cards into the table, make "Risk vs return" a `details`, delete the duplicate "Insight" bar and the inner table under the chart (the "Exact growth" disclosure already provides it).
 - **Files:** `src/components/analysis/RoiBenchmarks.tsx`, `src/components/analysis/benchmark-charts.module.css`.
-- **Status:** Open
+- **Status:** Deferred - Benchmark charts remain fully functional; consolidating their overlapping comparison, risk and market-card presentations needs a separate information-hierarchy pass beyond the required summary work.
 
 ### AN-09
 - **Route:** `/roi-analysis?…&view=compare`. Screenshot: [roi-compare-1280.jpg](screenshots/roi-compare-1280.jpg).
@@ -105,7 +105,7 @@ This is the area the human called cramped and busy, and the captures agree: the 
 - **Premium looks like:** A default comparison (S&P 500) already rendered; chips act as toggles with a selected style.
 - **Fix:** Preselect `S&P 500` when the URL has no `refs=`; chips become toggle buttons (`aria-pressed`, filled when active); show the comparison immediately; keep "Add custom reference" as a dashed chip.
 - **Files:** `src/components/analysis/RoiCompareCharts.tsx`, `src/components/analysis/RoiBenchmarks.tsx` (shared panel), `src/components/analysis/RoiWorkspace.tsx` (URL state).
-- **Status:** Open
+- **Status:** Fixed - New analyses preselect S&P 500; explicitly saved reference selections, including an empty selection, remain intact.
 
 ### AN-10
 - **Route:** `/roi-analysis?…&view=charts&chart=sensitivity`. Screenshot: [roi-charts-sensitivity-1280.jpg](screenshots/roi-charts-sensitivity-1280.jpg).
@@ -114,7 +114,7 @@ This is the area the human called cramped and busy, and the captures agree: the 
 - **Premium looks like:** Values printed in cells at desktop, the saved cell marked with a dot and label "Saved", selection details in a side panel.
 - **Fix:** Default `showValues=true` at ≥ 1024px; mark the saved cell with a 6px cobalt dot + "Saved" caption under the grid; move the hint into the chart caption (12px muted); keep the diverging legend but use the token pair (`--design-danger` → `--rr-subtle` → `--design-accent`).
 - **Files:** `src/components/analysis/RoiSensitivity.tsx`, `src/components/analysis/detail-charts.module.css`.
-- **Status:** Open
+- **Status:** Fixed - Heatmap values start visible and the saved cell has a cobalt dot; accessible keyboard readouts and exact table remain available.
 
 ### AN-11
 - **Route:** `/roi-analysis?…&view=charts&chart=exit`. Screenshot: [roi-charts-exit-1280.jpg](screenshots/roi-charts-exit-1280.jpg).
@@ -123,7 +123,7 @@ This is the area the human called cramped and busy, and the captures agree: the 
 - **Premium looks like:** The chart first, with Y5 · Y10 · Custom as chips in its header; probe inputs behind "Try another exit ▸"; one table.
 - **Fix:** Reorder: comparison card first; exit-year as a segmented chip group in the card header; probe form as a `details` under the chart; drop the summary tile row (the table carries the same values) or drop the table on phone.
 - **Files:** `src/components/analysis/RoiExit.tsx`, `src/components/analysis/detail-charts.module.css`.
-- **Status:** Open
+- **Status:** Deferred - Exit-year buttons are compact and the probe now sits in a disclosure below results; consolidation of selected-year tiles with the exact comparison table remains for a later chart pass.
 
 ### AN-12
 - **Route:** `/roi-analysis?…&view=charts` (all sub-charts). Screenshots: [roi-charts-equity-1280.jpg](screenshots/roi-charts-equity-1280.jpg), [roi-charts-cashflow-1280.jpg](screenshots/roi-charts-cashflow-1280.jpg).
@@ -132,7 +132,7 @@ This is the area the human called cramped and busy, and the captures agree: the 
 - **Premium looks like:** "$2.0M / $1.5M"; the basis stated once per tab; footnotes only where they add something.
 - **Fix:** Axis formatter: `≥ 1e6 → $x.xM`, `≥ 1e3 → $xxxk`; render the basis badges once under the sub-tabs and pass `basis` as a tooltip on each chart's ⓘ; remove the repeated footer.
 - **Files:** `src/components/analysis/RoiChart.tsx` (tick formatter), `src/components/analysis/RoiProjections.tsx`, `src/components/analysis/projections.module.css`.
-- **Status:** Open
+- **Status:** Deferred - Million-scale axes now use M notation and the duplicate Edit assumptions control is gone; per-chart basis qualifiers remain because they distinguish year-end equity, cash flow and sale proceeds.
 
 ### AN-13
 - **Route:** `/rent-analysis?property=seed-property-maple`. Screenshots: [rent-analysis-maple-1280.jpg](screenshots/rent-analysis-maple-1280.jpg), [rent-analysis-maple-390.jpg](screenshots/rent-analysis-maple-390.jpg).
@@ -141,7 +141,7 @@ This is the area the human called cramped and busy, and the captures agree: the 
 - **Premium looks like:** Badges for status, signed/coloured gaps, consistent eyebrow, table rows that link to comps.
 - **Fix:** Use `Badge` ("Occupied" success, "Vacant" info); colour gaps teal (+) / danger (−) with a leading sign; eyebrow "Money / Rent Analysis"; remove the disclosure wrapper; rows link to `/properties/:id/listing?unit=`; card mode on phone.
 - **Files:** `src/app/(manager)/rent-analysis/page.tsx`, `src/app/(manager)/rent-analysis/rent.module.css`.
-- **Status:** Open
+- **Status:** Fixed - Sentence-case status badges, signed colored gaps, consistent heading and labeled mobile unit cards.
 
 ### AN-14
 - **Route:** `/properties/:id/listing?unit=…` (rent comps). Screenshot: [property-unit-listing-1280.jpg](screenshots/property-unit-listing-1280.jpg).
@@ -150,7 +150,7 @@ This is the area the human called cramped and busy, and the captures agree: the 
 - **Premium looks like:** One provenance chip in the card header ("Sandbox data · updated 6:25 AM") and a single footnote; the map is optional and collapsed by default.
 - **Fix:** Replace the banner with a `Badge tone="warning"` "Sandbox data" + "Updated 6:25 AM" meta in the Rent comps card header; drop the Source column when all rows share one source; make the map a `details` ("Show map"); merge fair-housing into a one-line footnote with a "Learn more" link.
 - **Files:** `src/components/rent-comps/RentCompsPanel.tsx`, `src/app/(manager)/rent-comps/comps.module.css`, `src/components/rent-comps/RentDistribution.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Compact provenance metadata replaces duplicate source banners; the map starts collapsed and the Source column appears only for mixed providers. Fair-housing context remains available.
 
 ### AN-15
 - **Route:** `/properties/:id/returns` → `/roi-analysis?property=…&view=actual`. Screenshot: [property-returns-1280.jpg](screenshots/property-returns-1280.jpg).
@@ -159,7 +159,7 @@ This is the area the human called cramped and busy, and the captures agree: the 
 - **Premium looks like:** Tabs stay inside the workspace; cross-app jumps are labelled with an arrow.
 - **Fix:** Either embed `RoiActuals` inside the workspace Returns tab (property pre-selected, no header stack) or rename the tab "Returns & ROI ↗" and open the ROI page with a "← Back to Maple Court" link in its header.
 - **Files:** `src/app/(manager)/properties/[id]/returns/page.tsx`, `src/components/workspace/WorkspaceTabs.tsx`, `src/components/workspace/ReturnsWorkspace.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Property tab explicitly says Returns & ROI with an outward arrow; ROI provides a Property overview backlink.
 
 ### AN-16
 - **Route:** `/returns`. Screenshot: [returns-1280.jpg](screenshots/returns-1280.jpg).
@@ -168,7 +168,7 @@ This is the area the human called cramped and busy, and the captures agree: the 
 - **Premium looks like:** Range picker → KPI row → chart. Method notes live behind an ⓘ "How these are calculated" popover; sparklines only with ≥ 6 points; columns that cannot be computed are hidden.
 - **Fix:** Collapse both paragraphs into a single ⓘ popover on the "Portfolio returns" title (and an "Estimates" chip on the tiles that are estimates); remove the sparkline stubs; hide YoY until two full years exist; move the estimate note on "Returns by property" into column-header tooltips.
 - **Files:** `src/app/(manager)/returns/page.tsx`, `src/components/returns/returns.module.css`, `src/components/returns/RangePicker.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Method disclosure replaces the warning block, short/flat sparklines are omitted and unavailable YoY columns are hidden; estimate notes move to relevant headings.
 
 ### AN-17
 - **Route:** `/returns` at 390px. Screenshot: [returns-390.jpg](screenshots/returns-390.jpg).
@@ -177,4 +177,4 @@ This is the area the human called cramped and busy, and the captures agree: the 
 - **Premium looks like:** Chart fits the container; tables become per-property cards.
 - **Fix:** See MC-18 for the chart; "Returns by property" rows → cards (name, units, NOI, cap rate; the rest behind a tap); "Year over year" as two stacked rows.
 - **Files:** `src/components/returns/IncomeExpenseChart.tsx`, `src/app/(manager)/returns/page.tsx`, `src/components/ui/Table.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Income chart fits the card; portfolio and yearly tables become labeled stacked rows on phones.

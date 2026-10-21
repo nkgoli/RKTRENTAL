@@ -60,7 +60,8 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
     : null;
   const requestedUnitId = source?.unitId ?? unitParam ?? applicant?.unitId;
 
-  // Coming back to a unit (or renewal) that already has an open draft resumes it.
+  // Only an explicit draft link resumes work. Unit selection presents the choice first.
+  let existingDraftId: string | null = null;
   let snapshot: DraftSnapshot | null = null;
   if (draftId) {
     snapshot = await loadLeaseDraft(organizationId, draftId);
@@ -78,7 +79,7 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
       renewId: renewId || undefined,
       unitId: renewId ? undefined : requestedUnitId,
     });
-    if (existing) redirect(`/leases/new?draft=${existing}`);
+    existingDraftId = existing;
   }
 
   const applicantTenant = applicant
@@ -86,19 +87,45 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
     : undefined;
   const unitId = snapshot?.unitId ?? requestedUnitId;
   const unit = unitId ? options.units.find((u) => u.id === unitId) : undefined;
-  if (!unit) {
+  if (!unit || existingDraftId) {
+    const drafts = await db.lease.findMany({
+      where: { organizationId, status: 'DRAFT', draft: { isNot: null } },
+      select: { id: true, unitId: true, updatedAt: true, draft: { select: { step: true } } },
+      orderBy: { updatedAt: 'desc' },
+    });
     return (
       <UnitPicker
+        initialUnit={existingDraftId ? requestedUnitId : undefined}
         backHref={
           propertyParam ? `/properties/${encodeURIComponent(propertyParam)}/leases` : '/leases'
         }
-        context={{ applicant: applicantId, tenant: tenantParam }}
+        context={{ applicant: applicantId, tenant: tenantParam, renew: renewId }}
         units={options.units
-          .filter((u) => !propertyParam || u.propertyId === propertyParam)
+          .filter(
+            (u) =>
+              (!propertyParam || u.propertyId === propertyParam) &&
+              (!renewId || u.id === requestedUnitId),
+          )
           .map((u) => ({
             id: u.id,
             label: unitLabel(u.property, u),
             status: u.status,
+            draft: (() => {
+              const saved =
+                drafts.find((draft) => draft.unitId === u.id && draft.id === existingDraftId) ??
+                drafts.find((draft) => draft.unitId === u.id);
+              return saved
+                ? {
+                    id: saved.id,
+                    saved: saved.updatedAt.toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      timeZone: 'UTC',
+                    }),
+                    step: (saved.draft?.step ?? 0) + 1,
+                  }
+                : undefined;
+            })(),
           }))}
       />
     );
@@ -204,11 +231,25 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
     : [];
 
   const renewSource = snapshot?.renewId && !source ? await data.detail(snapshot.renewId) : source;
+  const applications = await db.application.findMany({
+    where: { organizationId, unitId: unit.id, status: { in: ['APPROVED', 'REVIEW'] } },
+    select: { id: true, applicantName: true, applicantEmail: true, status: true },
+    orderBy: { appliedAt: 'desc' },
+  });
   return (
     <LeaseBuilder
       key={snapshot?.leaseId ?? 'new'}
       placeLabel={unitLabel(unit.property, unit)}
       tenants={options.tenants.map((t) => ({ id: t.id, name: t.name, email: t.email }))}
+      applicants={applications.map((application) => ({
+        id: application.id,
+        name: application.applicantName,
+        email: application.applicantEmail,
+        status: application.status === 'APPROVED' ? 'Approved' : 'Ready for review',
+        tenantId: options.tenants.find(
+          (tenant) => tenant.email?.toLowerCase() === application.applicantEmail.toLowerCase(),
+        )?.id,
+      }))}
       leaseId={snapshot?.leaseId ?? null}
       renewId={snapshot?.renewId ?? renewId ?? null}
       draft={initial}

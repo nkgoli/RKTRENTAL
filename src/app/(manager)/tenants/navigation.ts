@@ -7,7 +7,7 @@ export function tenantReturnHref(value: unknown): string {
       return '/tenants?view=directory';
     }
     const query = new URLSearchParams();
-    for (const key of ['view', 'q', 'property', 'status', 'period', 'page']) {
+    for (const key of ['view', 'q', 'property', 'status', 'period', 'page', 'needsPaymentMethod']) {
       const item = url.searchParams.get(key);
       if (item) query.set(key, item);
     }

@@ -53,7 +53,9 @@ describe('property and unit workspace render', () => {
     />);
 
     expect(html).toContain('<h1>Maple Court</h1>');
-    expect(html).not.toContain('Edit property');
+    expect(html).toContain('Edit property');
+    expect(html).toContain('href="/properties/property-1/media"');
+    expect(html).toContain('Returns &amp; ROI ↗');
     expect(html).not.toContain('Property workspace');
     expect(html).toContain('214 Maple Ave, Austin, TX');
     expect(html).toContain('aria-current="page"');
@@ -109,8 +111,8 @@ describe('property and unit workspace render', () => {
 
     expect(html).toContain('Property details');
     expect(html).toContain('Next steps');
-    expect(html).toContain('Photos &amp; documents');
-    expect(html).toContain('Property documents');
+    expect(html).not.toContain('Photos &amp; documents');
+    expect(html).not.toContain('Property documents');
     expect(html).not.toContain('Lease timeline');
     expect(html).not.toContain('Returns at a glance');
     expect(html).not.toContain('Payments by the numbers');
@@ -129,8 +131,8 @@ describe('property and unit workspace render', () => {
     expect(html).toContain('Unit facts');
     expect(html).toContain('Balcony');
     expect(html).toContain('Create a lease for this unit');
-    expect(html).toContain('Photos &amp; documents');
-    expect(html).toContain('Unit documents');
+    expect(html).not.toContain('Photos &amp; documents');
+    expect(html).not.toContain('Unit documents');
     expect(html).toContain('No active lease on this unit.');
   });
 });

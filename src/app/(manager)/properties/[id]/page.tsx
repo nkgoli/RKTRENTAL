@@ -1,14 +1,11 @@
 import { notFound, redirect } from 'next/navigation';
-import { Alert } from '@/components/ui';
+import { Alert, NoticeToast } from '@/components/ui';
 import { UnitOverview, PropertyOverview } from '@/components/workspace/WorkspaceOverview';
-import { AddUnitForm } from '../_components/UnitForm';
-import Link from 'next/link';
 import { requireManagerRole } from '@/lib/auth/access';
 import { propertiesDb } from '@/lib/properties/data';
 import { listWorkspacePhotos } from '@/lib/storage/service';
 import { loadPaymentsMonth, loadWorkspaceTimeline } from '@/lib/workspace/timeline-data';
 import { first, legacyTabDestination, type WorkspaceSearch } from './routing';
-import styles from './workspace.module.css';
 
 export default async function PropertyOverviewPage({
   params,
@@ -58,7 +55,8 @@ export default async function PropertyOverviewPage({
   const notice = first(query.notice);
   return (
     <>
-      {notice === 'unit-deleted' && <Alert tone="success">Unit deleted.</Alert>}
+      {notice === 'property-saved' && <NoticeToast message="Property saved" />}
+      {notice === 'unit-deleted' && <NoticeToast message="Unit deleted" />}
       {notice === 'unit-delete-blocked' && (
         <Alert tone="warning">
           This unit has linked records or is the single-family home unit, so it could not be
@@ -72,19 +70,6 @@ export default async function PropertyOverviewPage({
         payments={payments}
         unitsPage={first(query.unitsPage)}
       />
-      <section className={styles.forms} aria-label="Property planning">
-        <Link className="btn btn-secondary" href={`/properties/${property.id}/edit`}>
-          Edit property & ROI details
-        </Link>
-        <Link className="btn btn-secondary" href={`/roi-analysis?property=${property.id}`}>
-          Open ROI Analysis
-        </Link>
-      </section>
-      {!property.archived && property.type !== 'SINGLE_UNIT' && (
-        <section className={styles.forms}>
-          <AddUnitForm propertyId={property.id} />
-        </section>
-      )}
     </>
   );
 }

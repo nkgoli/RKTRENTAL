@@ -15,12 +15,8 @@ export default async function NewPropertyPage({
   const cancelHref = directoryReturn((await searchParams).returnTo);
   return (
     <>
-      <PageHeader title="Add property" eyebrow="Portfolio / Properties" actions={[]} />
+      <PageHeader title="Add property" eyebrow="Properties" back={{ href: cancelHref, label: 'Properties' }} actions={[]} />
       <div className={styles.formPage}>
-        <h1 className={styles.formTitle}>Add property</h1>
-        <a href={cancelHref} className={styles.backLink}>
-          ← Back to properties
-        </a>
         <PropertyForm owners={owners} cancelHref={cancelHref} />
       </div>
     </>

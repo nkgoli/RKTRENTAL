@@ -16,7 +16,7 @@ function segmentTitle(segment: TimelineSegment) {
 }
 
 /** Leases and vacant gaps on one date axis with a today marker; one row per unit in scope. */
-export function LeaseTimeline({ timeline, propertyId, linkUnits = false, limit = 10 }: {
+export function LeaseTimeline({ timeline, propertyId, linkUnits = false, limit = 5 }: {
   timeline: Timeline;
   propertyId: string;
   /** Link each row's label to that unit (property view only). */

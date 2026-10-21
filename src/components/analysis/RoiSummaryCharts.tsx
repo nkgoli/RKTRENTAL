@@ -436,3 +436,46 @@ export function ProjectionMilestones({ result }: { result: ProjectionResult }) {
     </ChartCard>
   );
 }
+
+/** Summary keeps the decision rows; the full statement remains in Charts. */
+export function SummaryMilestones({ result }: { result: ProjectionResult }) {
+  const rows = projectionRows(result);
+  const years = [...new Set([1, Math.min(5, rows.length), Math.min(10, rows.length)])];
+  const metrics = [
+    ['Effective income', (y: number) => rows[y - 1].effectiveGrossIncome],
+    ['Operating expenses', (y: number) => rows[y - 1].operatingExpenses],
+    ['Net operating income', (y: number) => rows[y - 1].noi],
+    ['Debt service', (y: number) => rows[y - 1].debtService],
+    ['Cash flow', (y: number) => rows[y - 1].cashFlow],
+  ] as const;
+  return (
+    <ChartCard title="Milestones" subtitle="Projected annual amounts, USD before tax.">
+      <div className={s.scroll} role="region" tabIndex={0} aria-label="Milestones">
+        <table className={`${s.table} ${s.compact}`}>
+          <thead>
+            <tr>
+              <th scope="col">Metric</th>
+              {years.map((y) => (
+                <th scope="col" key={y}>
+                  Year {y}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {metrics.map(([label, value]) => (
+              <tr key={label}>
+                <th scope="row">{label}</th>
+                {years.map((y) => (
+                  <td key={y} data-tone={value(y) < 0 ? 'loss' : undefined}>
+                    {wholeDollars(value(y))}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </ChartCard>
+  );
+}

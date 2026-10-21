@@ -76,21 +76,33 @@ afterEach(cleanup);
 async function open() {
   render(<RoiWorkspace selection={{ ok: true, data: properties }} />);
   fireEvent.click(screen.getByRole('button', { name: /Property a/ }));
-  await screen.findByRole('button', { name: 'Save draft' });
+  await screen.findByLabelText('Save analysis');
 }
 const summaryCard = () => within(screen.getByRole('region', { name: 'Baseline assumptions' }));
-// The headline figures; the same values repeat in the card's "How Year 1 adds up" statement,
-// and with no debt or reserves NOI equals cash flow, so `glance` reads the cash-flow metric.
-const glanceMetrics = () =>
-  within(
-    within(screen.getByRole('region', { name: 'Year 1 at a glance' })).getByRole('group', {
-      name: 'Year 1 metrics',
-    }),
+// Monthly is the initial basis; annual checks explicitly switch the displayed metric.
+const glance = () => {
+  const snapshot = within(screen.getByRole('region', { name: 'Deal Snapshot' }));
+  const annual = snapshot.getByRole('button', { name: 'Annual' });
+  if (annual.getAttribute('aria-pressed') !== 'true') fireEvent.click(annual);
+  return within(snapshot.getByRole('button', { name: /^Cash flow/ }));
+};
+function toolbarButton(name: string) {
+  const summary = screen.getByLabelText(
+    name.startsWith('Save ') ? 'Save analysis' : 'More actions',
+    { selector: 'summary' },
   );
-const glance = () => within(glanceMetrics().getByText('Annual cash flow').parentElement!);
+  const menu = summary.closest('details')!;
+  if (!menu.open) fireEvent.click(summary);
+  return within(menu).getByRole('button', { name });
+}
 const href = (link: HTMLElement) => new URL(link.getAttribute('href')!, 'http://local.test');
 // Analysis-level edits that remain on the dashboard: the optional tax estimate and scenarios.
-const taxBox = () => screen.getByLabelText('Include explicit tax assumptions') as HTMLInputElement;
+const taxBox = () => {
+  fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
+  const toggle = screen.getByText(/^Optional tax estimate/, { selector: 'summary' });
+  if (!toggle.closest('details')!.open) fireEvent.click(toggle);
+  return screen.getByLabelText('Include explicit tax assumptions') as HTMLInputElement;
+};
 const taxField = () => document.getElementById('options.tax.marginalTaxRate') as HTMLInputElement;
 const scenarioName = () => document.getElementById('scenarios.0.name') as HTMLInputElement;
 function addScenario(name: string) {
@@ -117,27 +129,26 @@ describe('property autofill and calculation sufficiency', () => {
     });
     await open();
     expect(glance().getByText('$10,800')).toBeTruthy();
-    // Headline figures carry their basis; the statement and exact years open on demand.
-    const card = within(screen.getByRole('region', { name: 'Year 1 at a glance' }));
+    const card = within(screen.getByRole('region', { name: 'Deal Snapshot' }));
+    expect(card.getByText('Projected, before tax')).toBeTruthy();
+    expect(card.getByRole('button', { name: 'Annual' }).getAttribute('aria-pressed')).toBe('true');
+    expect(card.getByText('Year 1, annual')).toBeTruthy();
+    expect(within(card.getByRole('button', { name: /^DSCR/ })).getByText('No debt')).toBeTruthy();
+    fireEvent.click(card.getByRole('button', { name: /^Cash flow/ }));
     expect(
-      within(card.getByRole('list', { name: 'Data basis' }))
-        .getAllByRole('listitem')
-        .map((li) => li.textContent),
-    ).toEqual(['Projected', 'USD per year', 'Before tax']);
-    const statement = card.getByText('How Year 1 adds up').closest('details')!;
-    expect(statement.open).toBe(false);
-    expect(within(statement).getByText('Annual cash flow')).toBeTruthy();
-    expect(screen.getByText(/^Exact annual cash flow, all \d+ years$/)).toBeTruthy();
-    expect(screen.getByRole('region', { name: 'Annual cash flow' })).toBeTruthy();
-    expect(summaryCard().getByText('All cash')).toBeTruthy();
-    expect(summaryCard().getByText('From property details · not saved yet')).toBeTruthy();
-    expect(
-      summaryCard().getByText('Calculated automatically from your current assumptions.'),
+      within(card.getByRole('dialog', { name: 'Cash flow breakdown' })).getByText(
+        'Annual cash flow',
+      ),
     ).toBeTruthy();
+    fireEvent.click(screen.getByText(/^Exact annual cash flow, all \d+ years$/));
+    expect(screen.getByRole('region', { name: 'Annual cash flow' })).toBeTruthy();
+    expect(summaryCard().getByText('Assumptions from property details')).toBeTruthy();
+    expect(screen.getByText('Revision 0')).toBeTruthy();
+    expect(summaryCard().queryByRole('definition')).toBeNull();
     // No inline baseline editor remains on the dashboard.
     expect(document.getElementById('input.income.monthlyRent')).toBeNull();
     expect(screen.queryByRole('button', { name: /Switch to cash purchase/ })).toBeNull();
-    const edit = summaryCard().getByRole('link', { name: 'Edit assumptions' });
+    const edit = summaryCard().getByRole('link', { name: 'Edit property assumptions' });
     expect(href(edit).pathname).toBe('/properties/a/edit');
     expect(href(edit).searchParams.get('returnTo')).toBe('/roi-analysis?property=a');
     expect(href(edit).hash).toBe('#roi-details');
@@ -152,12 +163,12 @@ describe('property autofill and calculation sufficiency', () => {
       data: { payload: p, missing: [], facts },
     });
     await open();
-    expect(glance().queryByText('$10,800')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Deal Snapshot' })).toBeNull();
     // Missing projections read as not calculated, never as zero, and one empty state explains why.
-    expect(glanceMetrics().getAllByText('Not calculated').length).toBe(4);
+    expect(within(screen.getByRole('tabpanel', { name: 'Summary' })).queryByText('$0')).toBeNull();
     expect(screen.getByRole('heading', { name: 'No projection yet' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Net Cash Flow by Year' })).toBeNull();
-    expect(summaryCard().getByText('1 input needed to calculate.')).toBeTruthy();
+    expect(summaryCard().getByText(/1 input needed to calculate\./)).toBeTruthy();
     const complete = summaryCard().getByRole('link', { name: 'Complete assumptions' });
     expect(href(complete).searchParams.get('field')).toMatch(/^input\.expenses\.maintenance/);
     // The full field-level list belongs to the editor, not the dashboard.
@@ -178,7 +189,7 @@ describe('property autofill and calculation sufficiency', () => {
     });
     await open();
     expect(glance().getByText('$10,800')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
+    fireEvent.click(toolbarButton('Save ready'));
     await waitFor(() => expect(saveRoiAnalysisAction).toHaveBeenCalledOnce());
     expect(vi.mocked(saveRoiAnalysisAction).mock.calls[0][0]).toMatchObject({
       payload: {
@@ -210,7 +221,8 @@ describe('property autofill and calculation sufficiency', () => {
         maximumFractionDigits: 0,
       }).format(expected);
       expect(glance().getByText(formatted)).toBeTruthy();
-      expect(summaryCard().getByText('$1,000/mo')).toBeTruthy();
+      expect(summaryCard().queryByText('$1,000/mo')).toBeNull();
+      expect(summaryCard().getByRole('link', { name: 'Edit property assumptions' })).toBeTruthy();
       expect(document.body.textContent).not.toContain('Required');
     },
   );
@@ -222,8 +234,7 @@ describe('property autofill and calculation sufficiency', () => {
       data: { payload: p, missing: [], facts },
     });
     await open();
-    expect(summaryCard().getByText('1 input needed to calculate.')).toBeTruthy();
-    expect(summaryCard().getByText('Missing', { selector: 'dd' })).toBeTruthy();
+    expect(summaryCard().getByText(/1 input needed to calculate\./)).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Actual vs projected' }));
     const complete = () => summaryCard().getByRole('link', { name: 'Complete assumptions' });
     expect(href(complete()).searchParams.get('field')).toBe('input.income.monthlyRent');
@@ -262,17 +273,24 @@ describe('property autofill and calculation sufficiency', () => {
       },
     });
     await open();
-    expect(summaryCard().getByText('$0/mo')).toBeTruthy();
-    expect(summaryCard().getByText('Saved analysis · revision 3')).toBeTruthy();
+    expect(summaryCard().queryByText('$0/mo')).toBeNull();
+    expect(screen.getByText('Revision 3')).toBeTruthy();
     expect(
       href(summaryCard().getByRole('link', { name: 'Complete assumptions' })).searchParams.get(
         'field',
       ),
     ).toBe('input.expenses.insurance');
-    fireEvent.click(screen.getByRole('button', { name: 'Reload saved analysis' }));
-    await screen.findByText('Loaded draft - revision 3');
-    expect(summaryCard().getByText('$0/mo')).toBeTruthy();
+    fireEvent.click(toolbarButton('Reload saved analysis'));
+    await screen.findByLabelText('Save analysis');
+    expect(summaryCard().queryByText('$0/mo')).toBeNull();
     expect(screen.queryByText('$10,800')).toBeNull();
+    fireEvent.click(toolbarButton('Save draft'));
+    await waitFor(() => expect(saveRoiAnalysisAction).toHaveBeenCalledOnce());
+    const savedInput = (
+      vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as { payload: ReturnType<typeof make> }
+    ).payload.input;
+    expect(savedInput.income?.monthlyRent).toBe(0);
+    expect(savedInput.expenses?.insurance).toBeUndefined();
   });
   it('expands missing sections into real editor targets and keeps a recorded price', async () => {
     const p = make();
@@ -283,12 +301,12 @@ describe('property autofill and calculation sufficiency', () => {
       data: { payload: p, missing: [], facts },
     });
     await open();
-    expect(summaryCard().getByText('$250,000')).toBeTruthy();
+    expect(summaryCard().queryByText('$250,000')).toBeNull();
     expect(summaryCard().getByText(/\d+ inputs needed to calculate\./)).toBeTruthy();
     const complete = summaryCard().getByRole('link', { name: 'Complete assumptions' });
     const field = href(complete).searchParams.get('field');
     expect(allFields.some((f) => f.path === field)).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
+    fireEvent.click(toolbarButton('Save ready'));
     expect(saveRoiAnalysisAction).not.toHaveBeenCalled();
     await waitFor(() => expect(document.activeElement).toBe(complete));
     expect(browser.assign).not.toHaveBeenCalled();
@@ -304,14 +322,14 @@ describe('ROI summary workspace', () => {
     await user.keyboard('Property a');
     await user.tab();
     await user.keyboard('{Enter}');
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByLabelText('Save analysis');
     fireEvent.click(taxBox());
     const disclosure = taxField().closest('details')!;
     disclosure.open = false;
-    fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+    fireEvent.click(toolbarButton('Recalculate'));
     await waitFor(() => expect(document.activeElement).toBe(taxField()));
     expect(disclosure.open).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
+    fireEvent.click(toolbarButton('Change property'));
     const keep = screen.getByRole('button', { name: 'Keep editing' });
     expect(document.activeElement).toBe(keep);
     await user.tab({ shift: true });
@@ -343,19 +361,18 @@ describe('ROI summary workspace', () => {
       data: { payload: p, missing: [], facts },
     });
     await open();
-    expect(
-      screen.getByText('Calculated automatically from your current assumptions.'),
-    ).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Deal Snapshot' })).toBeTruthy();
     expect(glance().getByText('-$1,200')).toBeTruthy();
     fireEvent.click(taxBox());
     expect(screen.queryByText('-$1,200')).toBeNull();
-    expect(screen.getByText(/No valid projection is available yet/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    expect(screen.queryByRole('region', { name: 'Deal Snapshot' })).toBeNull();
+    fireEvent.click(toolbarButton('Save ready'));
+    fireEvent.click(toolbarButton('Save draft'));
     expect(saveRoiAnalysisAction).not.toHaveBeenCalled();
     fireEvent.click(taxBox());
+    fireEvent.click(screen.getByRole('tab', { name: 'Summary' }));
     expect(glance().getByText('-$1,200')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    fireEvent.click(toolbarButton('Save draft'));
     await waitFor(() => expect(saveRoiAnalysisAction).toHaveBeenCalled());
     const saved = (
       vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as { payload: ReturnType<typeof make> }
@@ -371,9 +388,9 @@ describe('ROI summary workspace', () => {
       data: { payload: p, missing: [], facts },
     });
     await open();
-    fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
+    fireEvent.click(toolbarButton('Save ready'));
     expect(saveRoiAnalysisAction).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    fireEvent.click(toolbarButton('Save draft'));
     await screen.findByText('Saved draft - revision 1');
     expect(
       (vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as { payload: ReturnType<typeof make> })
@@ -382,7 +399,7 @@ describe('ROI summary workspace', () => {
   });
   it('saves ready, reloads revisions, and keeps edits on conflict and transport failure', async () => {
     await open();
-    fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
+    fireEvent.click(toolbarButton('Save ready'));
     await screen.findByText('Saved ready - revision 1');
     addScenario('Kept case');
     vi.mocked(saveRoiAnalysisAction).mockResolvedValueOnce({
@@ -390,15 +407,15 @@ describe('ROI summary workspace', () => {
       code: 'CONFLICT',
       currentRevision: 2,
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    fireEvent.click(toolbarButton('Save draft'));
     await screen.findByText(/A newer revision exists/);
     expect(scenarioName().value).toBe('Kept case');
-    fireEvent.click(screen.getByRole('button', { name: 'Reload saved analysis' }));
+    fireEvent.click(toolbarButton('Reload saved analysis'));
     fireEvent.click(screen.getByRole('button', { name: 'Discard and continue' }));
-    await screen.findByText(/New analysis/);
+    await screen.findByLabelText('Save analysis');
     vi.mocked(saveRoiAnalysisAction).mockRejectedValueOnce(Error('offline'));
     addScenario('Offline case');
-    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    fireEvent.click(toolbarButton('Save draft'));
     await screen.findByText(/Could not save/);
     expect(scenarioName().value).toBe('Offline case');
   });
@@ -412,13 +429,13 @@ describe('ROI summary workspace', () => {
     );
     render(<RoiWorkspace selection={{ ok: true, data: properties }} />);
     fireEvent.click(screen.getByRole('button', { name: /Property a/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
+    fireEvent.click(toolbarButton('Change property'));
     fireEvent.click(screen.getByRole('button', { name: /Property b/ }));
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByLabelText('Save analysis');
     await act(async () => resolve({ ok: true, data: { payload: make('a'), missing: [], facts } }));
     expect(window.location.search).toBe('?property=b');
     addScenario('Case b');
-    fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
+    fireEvent.click(toolbarButton('Change property'));
     expect(screen.getByRole('alertdialog')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
     await screen.findByRole('searchbox');
@@ -430,7 +447,7 @@ describe('ROI summary workspace', () => {
     const view = render(
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="a" />,
     );
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByLabelText('Save analysis');
     let resolve!: (v: Awaited<ReturnType<typeof loadRoiDraftAction>>) => void;
     vi.mocked(loadRoiDraftAction).mockImplementationOnce(
       () =>
@@ -441,21 +458,21 @@ describe('ROI summary workspace', () => {
     view.rerender(
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="b" />,
     );
-    expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull();
-    expect(screen.getByText('Property b', { selector: 'strong' })).toBeTruthy();
+    expect(screen.queryByLabelText('Save analysis')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Property b', level: 1 })).toBeTruthy();
     view.rerender(
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="foreign" />,
     );
     await screen.findByText(/unavailable or archived/);
     await act(async () => resolve({ ok: true, data: { payload: make('b'), missing: [], facts } }));
-    expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull();
+    expect(screen.queryByLabelText('Save analysis')).toBeNull();
     view.rerender(<RoiWorkspace selection={{ ok: true, data: properties }} />);
     expect(screen.getByRole('searchbox')).toBeTruthy();
     act(() => {
       window.history.replaceState(null, '', '/roi-analysis?property=a');
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByLabelText('Save analysis');
     act(() => {
       window.history.replaceState(null, '', '/roi-analysis');
       window.dispatchEvent(new PopStateEvent('popstate'));
@@ -466,7 +483,7 @@ describe('ROI summary workspace', () => {
     const view = render(
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="a" />,
     );
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByLabelText('Save analysis');
     addScenario('');
     scenarioName().focus();
     view.rerender(
@@ -476,7 +493,7 @@ describe('ROI summary workspace', () => {
     expect(window.location.search).toBe('?property=a&view=scenarios');
     fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
     await waitFor(() => expect(document.activeElement).toBe(scenarioName()));
-    const change = screen.getByRole('button', { name: 'Change property' });
+    const change = toolbarButton('Change property');
     change.focus();
     fireEvent.click(change);
     fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
@@ -498,18 +515,18 @@ describe('ROI summary workspace', () => {
     const view = render(
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="a" />,
     );
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByLabelText('Save analysis');
     addScenario('');
     view.rerender(
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="b" />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Discard and continue' }));
-    await screen.findByRole('button', { name: 'Save draft' });
-    expect(screen.getByText('Property b', { selector: 'strong' })).toBeTruthy();
+    await screen.findByLabelText('Save analysis');
+    expect(screen.getByRole('heading', { name: 'Property b', level: 1 })).toBeTruthy();
     expect(scenarioName()).toBeNull();
     view.rerender(<RoiWorkspace selection={{ ok: true, data: [] }} initialPropertyId="b" />);
     await screen.findByText(/unavailable or archived/);
-    expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull();
+    expect(screen.queryByLabelText('Save analysis')).toBeNull();
   });
   it('keeps failed draft focus visible and resumes navigation after correction', async () => {
     const user = userEvent.setup();
@@ -517,7 +534,7 @@ describe('ROI summary workspace', () => {
     fireEvent.click(taxBox());
     const disclosure = taxField().closest('details')!;
     disclosure.open = false;
-    await user.click(screen.getByRole('button', { name: 'Change property' }));
+    await user.click(toolbarButton('Change property'));
     await user.click(screen.getByRole('button', { name: 'Save draft and continue' }));
     const dialog = screen.getByRole('alertdialog');
     expect(dialog.contains(document.activeElement)).toBe(true);
@@ -534,7 +551,7 @@ describe('ROI summary workspace', () => {
     const view = render(
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="a" />,
     );
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByLabelText('Save analysis');
     addScenario('');
     view.rerender(
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="b" />,
@@ -544,8 +561,8 @@ describe('ROI summary workspace', () => {
     fireEvent.change(scenarioName(), { target: { value: 'Named case' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue property change' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
-    await screen.findByText('Property b', { selector: 'strong' });
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByRole('heading', { name: 'Property b', level: 1 });
+    await screen.findByLabelText('Save analysis');
     expect(window.location.search).toBe('?property=b');
     expect(saveRoiAnalysisAction).toHaveBeenCalledWith(
       expect.objectContaining({ propertyId: 'a' }),
@@ -555,7 +572,7 @@ describe('ROI summary workspace', () => {
     const view = render(
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="a" />,
     );
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByLabelText('Save analysis');
     let resolve!: (v: Awaited<ReturnType<typeof saveRoiAnalysisAction>>) => void;
     vi.mocked(saveRoiAnalysisAction).mockImplementationOnce(
       () =>
@@ -563,32 +580,32 @@ describe('ROI summary workspace', () => {
           resolve = r;
         }),
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    fireEvent.click(toolbarButton('Save draft'));
     view.rerender(
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="b" />,
     );
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByLabelText('Save analysis');
     await act(async () => resolve({ ok: false, code: 'CONFLICT', currentRevision: 7 }));
     expect(screen.queryByText(/A newer revision exists/)).toBeNull();
-    expect(screen.getByText('Property b', { selector: 'strong' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Save draft' }).hasAttribute('disabled')).toBe(false);
+    expect(screen.getByRole('heading', { name: 'Property b', level: 1 })).toBeTruthy();
+    expect(toolbarButton('Save draft').hasAttribute('disabled')).toBe(false);
   });
   it('uses live router queries even when the server initial property prop is unchanged', async () => {
     const selection = { ok: true as const, data: properties };
     routeQuery.value = new URLSearchParams('property=a');
     const view = render(<RoiWorkspace selection={selection} initialPropertyId="a" />);
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByLabelText('Save analysis');
     routeQuery.value = new URLSearchParams('property=b');
     view.rerender(<RoiWorkspace selection={selection} initialPropertyId="a" />);
-    await screen.findByText('Property b', { selector: 'strong' });
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByRole('heading', { name: 'Property b', level: 1 });
+    await screen.findByLabelText('Save analysis');
     routeQuery.value = new URLSearchParams();
     view.rerender(<RoiWorkspace selection={selection} initialPropertyId="a" />);
     expect(screen.getByRole('searchbox')).toBeTruthy();
     routeQuery.value = new URLSearchParams('property=foreign');
     view.rerender(<RoiWorkspace selection={selection} initialPropertyId="a" />);
     await screen.findByText(/unavailable or archived/);
-    expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull();
+    expect(screen.queryByLabelText('Save analysis')).toBeNull();
   });
   it('guards ordinary same-route sidebar links while preserving modified-click gestures', async () => {
     render(
@@ -598,7 +615,7 @@ describe('ROI summary workspace', () => {
         <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="a" />
       </>,
     );
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByLabelText('Save analysis');
     addScenario('bad');
     const link = screen.getByRole('link', { name: 'ROI sidebar entry' });
     expect(fireEvent.click(link, { ctrlKey: true })).toBe(true);
@@ -610,7 +627,7 @@ describe('ROI summary workspace', () => {
     expect(scenarioName().value).toBe('bad');
     fireEvent.click(screen.getByRole('link', { name: 'Other property route' }));
     fireEvent.click(screen.getByRole('button', { name: 'Discard and continue' }));
-    await screen.findByText('Property b', { selector: 'strong' });
+    await screen.findByRole('heading', { name: 'Property b', level: 1 });
     fireEvent.click(link);
     expect(screen.getByRole('searchbox')).toBeTruthy();
   });
@@ -671,12 +688,14 @@ describe('ROI projection interactions', () => {
       screen.getByRole('heading', { name: 'Complete your assumptions to see charts' }),
     ).toBeTruthy();
     expect(screen.queryByRole('table', { name: /Year 1 cash-on-cash/ })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+    fireEvent.click(toolbarButton('Recalculate'));
     await waitFor(() => expect(document.activeElement).toBe(taxField()));
-    expect(screen.getByRole('tab', { name: 'Summary' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Scenarios' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
     expect(taxBox().checked).toBe(true);
     fireEvent.click(taxBox());
-    fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+    fireEvent.click(toolbarButton('Recalculate'));
     tab('Charts');
     expect(screen.getByRole('tab', { name: 'Sensitivity' }).getAttribute('aria-selected')).toBe(
       'true',
@@ -710,8 +729,11 @@ describe('ROI projection interactions', () => {
     expect(screen.getByRole('table', { name: /Year 1 cash-on-cash/ })).toBeTruthy();
     change('Sensitivity metric', 'irr');
     expect(screen.getByRole('table', { name: /Hold-period leveraged IRR/ })).toBeTruthy();
+    const initialShowValues = (screen.getByLabelText('Show values') as HTMLInputElement).checked;
     fireEvent.click(screen.getByLabelText('Show values'));
-    expect((screen.getByLabelText('Show values') as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByLabelText('Show values') as HTMLInputElement).checked).toBe(
+      !initialShowValues,
+    );
     tab('Exit Analysis');
     change('Probe exit year', '2.5');
     fireEvent.click(screen.getByRole('button', { name: 'Update exit comparison' }));
@@ -723,9 +745,9 @@ describe('ROI projection interactions', () => {
     const exit = screen.getByRole('table', { name: /Exit horizon comparison/ });
     expect(within(exit).getByText('$75,200.00')).toBeTruthy();
     expect(within(exit).getByText('$29,200.00')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    fireEvent.click(toolbarButton('Save draft'));
     await screen.findByText('Saved draft - revision 1');
-    fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
+    fireEvent.click(toolbarButton('Save ready'));
     await screen.findByText('Saved ready - revision 2');
     for (const [call] of vi.mocked(saveRoiAnalysisAction).mock.calls) {
       expect((call as { payload: ReturnType<typeof make> }).payload.input.appreciationExit).toEqual(
@@ -738,8 +760,8 @@ describe('ROI projection interactions', () => {
     expect(screen.getByRole('tab', { name: 'Exit Analysis' }).getAttribute('aria-selected')).toBe(
       'true',
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Reload saved analysis' }));
-    await screen.findByText(/New analysis/);
+    fireEvent.click(toolbarButton('Reload saved analysis'));
+    await screen.findByLabelText('Save analysis');
     expect(screen.getByRole('tab', { name: 'Charts' }).getAttribute('aria-selected')).toBe('true');
     expect(
       (screen.getByLabelText('Probe exit year', { exact: true }) as HTMLInputElement).value,
@@ -776,12 +798,15 @@ describe('ROI projection interactions', () => {
       data: { payload: overflow, missing: [], facts },
     });
     await open();
-    fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+    fireEvent.click(toolbarButton('Recalculate'));
     expect(screen.getAllByText(/safe monetary precision/).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    fireEvent.click(toolbarButton('Save draft'));
     await screen.findByText('Saved draft - revision 1');
     expect(screen.getAllByText(/safe monetary precision/).length).toBeGreaterThan(0);
-    expect(summaryCard().getByText('$10,000,000,000/mo')).toBeTruthy();
+    expect(
+      (vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as { payload: ReturnType<typeof make> })
+        .payload.input.income?.monthlyRent,
+    ).toBe(10000000000);
   });
   it('keeps chart edits guarded and clears all panels on accepted property history changes', async () => {
     await open();
@@ -796,11 +821,11 @@ describe('ROI projection interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
     expect(window.location.search).toBe('?property=a&view=charts');
     expect(screen.getByRole('tab', { name: 'Equity' }).getAttribute('aria-selected')).toBe('true');
-    fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
+    fireEvent.click(toolbarButton('Change property'));
     fireEvent.click(screen.getByRole('button', { name: 'Discard and continue' }));
     expect(screen.queryByRole('tab', { name: 'Charts' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /Property b/ }));
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByLabelText('Save analysis');
     tab('Charts');
     expect(screen.getByRole('tab', { name: 'Equity' }).getAttribute('aria-selected')).toBe('true');
     tab('Cash Flow');
@@ -838,7 +863,7 @@ describe('scenario examples and merged failure recovery', () => {
     expect(field('overrides.expenses.maintenance').value).toBe('');
     fireEvent.change(field('name'), { target: { value: 'My best case' } });
     fireEvent.change(field('overrides.income.vacancyRate'), { target: { value: '4' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
+    fireEvent.click(toolbarButton('Save ready'));
     await screen.findByText('Saved ready - revision 1');
     const saved = vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as {
       payload: ReturnType<typeof make>;
@@ -863,8 +888,8 @@ describe('scenario examples and merged failure recovery', () => {
         updatedAt: '',
       },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Reload saved analysis' }));
-    await screen.findByText('Loaded ready - revision 1');
+    fireEvent.click(toolbarButton('Reload saved analysis'));
+    await screen.findByLabelText('Save analysis');
     expect(field('name').value).toBe('My best case');
     expect(field('overrides.income.vacancyRate').value).toBe('4');
   });
@@ -881,7 +906,7 @@ describe('scenario examples and merged failure recovery', () => {
         });
       }
       fireEvent.click(screen.getByRole('tab', { name: 'Charts' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+      fireEvent.click(toolbarButton('Recalculate'));
       const target =
         kind === 'loan'
           ? field('overrides.financing.loanAmount')
@@ -905,7 +930,7 @@ describe('scenario examples and merged failure recovery', () => {
       }
       expect(field('overrides.expenses.maintenance').value).toBe('0');
       expect(field('name').value).toBe('Stress case');
-      fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+      fireEvent.click(toolbarButton('Recalculate'));
       expect(screen.getByRole('region', { name: 'Scenario metrics' })).toBeTruthy();
     },
   );
@@ -926,9 +951,11 @@ describe('scenario examples and merged failure recovery', () => {
         throw Error('Expected invalid merged scenario');
       });
       fireEvent.click(screen.getByRole('tab', { name: 'Summary' }));
-      if (guarded) fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
+      if (guarded) fireEvent.click(toolbarButton('Change property'));
       fireEvent.click(
-        screen.getByRole('button', { name: guarded ? 'Save draft and continue' : 'Save draft' }),
+        guarded
+          ? screen.getByRole('button', { name: 'Save draft and continue' })
+          : toolbarButton('Save draft'),
       );
       if (guarded) {
         const correct = await screen.findByRole('button', {
@@ -951,7 +978,7 @@ describe('scenario examples and merged failure recovery', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
         await screen.findByRole('searchbox');
       } else {
-        fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+        fireEvent.click(toolbarButton('Save draft'));
         await screen.findByText('Saved draft - revision 1');
       }
       const saved = vi.mocked(saveRoiAnalysisAction).mock.calls[1][0] as {
@@ -981,7 +1008,7 @@ describe('scenario examples and merged failure recovery', () => {
     expect(screen.getByText('Discount rate', { selector: 'dt' })).toBeTruthy();
     expect(screen.getByRole('tabpanel', { name: 'Scenarios' }).querySelector('pre')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Use base calculation options' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
+    fireEvent.click(toolbarButton('Save ready'));
     await screen.findByText('Saved ready - revision 1');
     const saved = vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as {
       payload: ReturnType<typeof make>;
@@ -1001,13 +1028,13 @@ it('creates, validates, saves and removes named scenarios through shared state',
     'scenarios.0.overrides.income.monthlyRent',
   ) as HTMLInputElement;
   fireEvent.change(override, { target: { value: 'invalid' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+  fireEvent.click(toolbarButton('Save draft'));
   await waitFor(() => expect(document.activeElement).toBe(override));
   expect(override.closest('details')?.open).toBe(true);
   expect(override.value).toBe('invalid');
   expect(saveRoiAnalysisAction).not.toHaveBeenCalled();
   fireEvent.change(override, { target: { value: '1200' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+  fireEvent.click(toolbarButton('Recalculate'));
   expect(screen.getByRole('region', { name: 'Scenario metrics' }).textContent).toContain(
     'Rent case',
   );
@@ -1017,7 +1044,7 @@ it('creates, validates, saves and removes named scenarios through shared state',
   expect(screen.getByRole('region', { name: 'Scenario metrics' }).textContent).toContain(
     '$2,400.00',
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
+  fireEvent.click(toolbarButton('Save ready'));
   await screen.findByText('Saved ready - revision 1');
   const saved = vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as {
     payload: ReturnType<typeof make>;
@@ -1027,7 +1054,7 @@ it('creates, validates, saves and removes named scenarios through shared state',
   expect(saved.payload.scenarios[0].name).toBe('Rent case');
   fireEvent.click(screen.getByRole('button', { name: 'Remove Rent case' }));
   expect(screen.queryByLabelText('Scenario name')).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
+  fireEvent.click(toolbarButton('Change property'));
   expect(screen.getByRole('alertdialog')).toBeTruthy();
 });
 
@@ -1056,7 +1083,7 @@ it('retains scenario edits through conflicts and invalid navigation recovery, th
   const name = () => document.getElementById('scenarios.0.name') as HTMLInputElement;
   expect(name().value).toBe('Saved case');
   fireEvent.change(name(), { target: { value: '' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
+  fireEvent.click(toolbarButton('Change property'));
   fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
   expect(screen.getByRole('alertdialog').contains(document.activeElement)).toBe(true);
   fireEvent.click(screen.getByRole('button', { name: 'Correct highlighted assumption' }));
@@ -1065,19 +1092,19 @@ it('retains scenario edits through conflicts and invalid navigation recovery, th
   fireEvent.change(name(), { target: { value: 'Kept case' } });
   fireEvent.click(screen.getByRole('button', { name: 'Cancel property change' }));
   vi.mocked(saveRoiAnalysisAction).mockResolvedValue({ ok: false, code: 'CONFLICT' });
-  fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+  fireEvent.click(toolbarButton('Save draft'));
   await screen.findByText(/A newer revision exists/);
   expect(name().value).toBe('Kept case');
   expect(vi.mocked(saveRoiAnalysisAction).mock.calls[0][0]).toMatchObject({
     expectedRevision: 4,
     payload: { scenarios: [{ name: 'Kept case', overrides: { expenses: { maintenance: 0 } } }] },
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Reload saved analysis' }));
+  fireEvent.click(toolbarButton('Reload saved analysis'));
   fireEvent.click(screen.getByRole('button', { name: /Discard/ }));
   await waitFor(() => expect(name().value).toBe('Saved case'));
-  fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
+  fireEvent.click(toolbarButton('Change property'));
   fireEvent.click(screen.getByRole('button', { name: /Property b/ }));
-  await screen.findByText(/New analysis/);
+  await screen.findByLabelText('Save analysis');
   fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
   expect(screen.queryByLabelText('Scenario name')).toBeNull();
 });
@@ -1086,17 +1113,17 @@ it('saves benchmark selections across panels and restores them by property', asy
   await open();
   fireEvent.click(screen.getByRole('tab', { name: 'Compare' }));
   let panel = within(screen.getByRole('tabpanel', { name: 'Compare' }));
-  fireEvent.click(panel.getByRole('checkbox', { name: 'S&P 500' }));
+  expect((panel.getByRole('checkbox', { name: 'S&P 500' }) as HTMLInputElement).checked).toBe(true);
   fireEvent.click(panel.getByRole('checkbox', { name: 'US Bonds' }));
   fireEvent.click(panel.getByRole('checkbox', { name: 'Nasdaq 100' }));
   expect(panel.getByText(/Selection limit/)).toBeTruthy();
   expect((panel.getByRole('checkbox', { name: 'Nasdaq 100' }) as HTMLInputElement).checked).toBe(
     false,
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+  fireEvent.click(toolbarButton('Recalculate'));
   expect(panel.getByRole('region', { name: 'Same-capital asset comparison' })).toBeTruthy();
   fireEvent.click(screen.getByRole('tab', { name: 'Summary' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+  fireEvent.click(toolbarButton('Save draft'));
   await waitFor(() => expect(saveRoiAnalysisAction).toHaveBeenCalled());
   const request = vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as {
     payload: ReturnType<typeof make>;
@@ -1115,8 +1142,8 @@ it('saves benchmark selections across panels and restores them by property', asy
       missing: [],
     },
   } as never);
-  fireEvent.click(screen.getByRole('button', { name: 'Reload saved analysis' }));
-  await screen.findByText(/Loaded draft/);
+  fireEvent.click(toolbarButton('Reload saved analysis'));
+  await screen.findByLabelText('Save analysis');
   // Benchmarks shows the fixed RealROI market set; the saved selection lives on Compare.
   fireEvent.click(screen.getByRole('tab', { name: 'Benchmarks' }));
   panel = within(screen.getByRole('tabpanel', { name: 'Benchmarks' }));
@@ -1129,10 +1156,10 @@ it('saves benchmark selections across panels and restores them by property', asy
   expect((panel.getByRole('checkbox', { name: 'US Bonds' }) as HTMLInputElement).checked).toBe(
     true,
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
+  fireEvent.click(toolbarButton('Change property'));
   vi.mocked(loadSavedRoiAnalysisAction).mockResolvedValue({ ok: true, data: null });
   fireEvent.click(screen.getByRole('button', { name: /Property b/ }));
-  await screen.findByText(/New analysis/);
+  await screen.findByLabelText('Save analysis');
   fireEvent.click(screen.getByRole('tab', { name: 'Compare' }));
   expect(
     (
@@ -1151,8 +1178,8 @@ it('keeps invalid custom text across sections, focuses correction and saves expl
   fireEvent.change(panel.getByLabelText('Custom name'), { target: { value: 'My reference' } });
   fireEvent.change(panel.getByLabelText(/Custom total return/), { target: { value: 'oops' } });
   fireEvent.click(screen.getByRole('tab', { name: 'Summary' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
-  await waitFor(() => expect(document.activeElement?.id).toBe('benchmarks.0.historicalCAGR'));
+  fireEvent.click(toolbarButton('Save draft'));
+  await waitFor(() => expect(document.activeElement?.id).toBe('benchmarks.1.historicalCAGR'));
   panel = within(screen.getByRole('tabpanel', { name: 'Compare' }));
   expect((panel.getByLabelText(/Custom total return/) as HTMLInputElement).value).toBe('oops');
   fireEvent.change(panel.getByLabelText(/Custom total return/), { target: { value: '-5' } });
@@ -1161,22 +1188,24 @@ it('keeps invalid custom text across sections, focuses correction and saves expl
   fireEvent.change(panel.getByLabelText(/Custom source/), {
     target: { value: 'Manager reference period 2000-2024; unverified' },
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+  fireEvent.click(toolbarButton('Save draft'));
   await waitFor(() => expect(saveRoiAnalysisAction).toHaveBeenCalledTimes(1));
   const request = vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as {
     payload: ReturnType<typeof make>;
   };
-  expect(request.payload.benchmarks[0]).toMatchObject({
-    name: 'My reference',
-    historicalCAGR: -5,
-    averageYield: 0,
-    volatility: 12,
-  });
+  expect(request.payload.benchmarks.find((benchmark) => benchmark.type === 'custom')).toMatchObject(
+    {
+      name: 'My reference',
+      historicalCAGR: -5,
+      averageYield: 0,
+      volatility: 12,
+    },
+  );
 });
 
 describe('compact header and section-preserving assumptions round trip', () => {
   const returnTo = () =>
-    href(summaryCard().getByRole('link', { name: 'Edit assumptions' })).searchParams.get(
+    href(summaryCard().getByRole('link', { name: 'Edit property assumptions' })).searchParams.get(
       'returnTo',
     );
   const selected = (name: string) =>
@@ -1184,7 +1213,7 @@ describe('compact header and section-preserving assumptions round trip', () => {
   it('reopens the section, chart sub-tab and period named by the address', async () => {
     routeQuery.value = new URLSearchParams('property=a&view=charts&chart=sensitivity&period=YTD');
     render(<RoiWorkspace selection={{ ok: true, data: properties }} />);
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByLabelText('Save analysis');
     expect(selected('Charts') && selected('Sensitivity')).toBe(true);
     expect(returnTo()).toBe('/roi-analysis?property=a&view=charts&chart=sensitivity&period=YTD');
     fireEvent.click(screen.getByRole('tab', { name: 'Amortization' }));
@@ -1203,7 +1232,7 @@ describe('compact header and section-preserving assumptions round trip', () => {
   it('ignores unsupported sections and sub-tabs in the address', async () => {
     routeQuery.value = new URLSearchParams('property=a&view=evil&chart=nope');
     render(<RoiWorkspace selection={{ ok: true, data: properties }} />);
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByLabelText('Save analysis');
     expect(selected('Summary')).toBe(true);
     expect(returnTo()).toBe('/roi-analysis?property=a');
   });
@@ -1212,7 +1241,7 @@ describe('compact header and section-preserving assumptions round trip', () => {
     addScenario('Kept case');
     fireEvent.click(screen.getByRole('tab', { name: 'Charts' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Sensitivity' }));
-    fireEvent.click(summaryCard().getByRole('link', { name: 'Edit assumptions' }));
+    fireEvent.click(summaryCard().getByRole('link', { name: 'Edit property assumptions' }));
     expect(screen.getByRole('alertdialog')).toBeTruthy();
     expect(browser.assign).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
@@ -1225,19 +1254,16 @@ describe('compact header and section-preserving assumptions round trip', () => {
       expect.objectContaining({ status: 'DRAFT', propertyId: 'a' }),
     );
   });
-  it('keeps assumptions compact with keyboard-reachable details and secondary actions', async () => {
+  it('keeps assumptions as one keyboard-reachable edit link and secondary actions', async () => {
     const user = userEvent.setup();
     await open();
-    const toggle = summaryCard().getByRole('button', { name: 'Show details' });
-    const details = document.getElementById(toggle.getAttribute('aria-controls')!)!;
-    expect(toggle.getAttribute('aria-expanded')).toBe('false');
-    expect(details.hidden).toBe(true);
-    toggle.focus();
-    await user.keyboard('{Enter}');
-    expect(toggle.getAttribute('aria-expanded')).toBe('true');
-    expect(details.hidden).toBe(false);
-    expect(summaryCard().getByRole('button', { name: 'Hide details' })).toBe(toggle);
-    const menu = screen.getByText('More actions', { selector: 'summary' });
+    const edit = summaryCard().getByRole('link', { name: 'Edit property assumptions' });
+    expect(summaryCard().queryByRole('button', { name: /details/ })).toBeNull();
+    edit.focus();
+    expect(document.activeElement).toBe(edit);
+    await user.tab();
+    expect(document.activeElement).not.toBe(edit);
+    const menu = screen.getByLabelText('More actions', { selector: 'summary' });
     const disclosure = menu.closest('details')!;
     menu.focus();
     expect(document.activeElement).toBe(menu);

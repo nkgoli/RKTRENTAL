@@ -1,4 +1,4 @@
-import { Alert } from '@/components/ui/Feedback';
+import { NoticeToast } from '@/components/ui/Toast';
 import { activeIntegration } from '@/lib/integrations/active';
 import { findProvider } from '@/lib/integrations/catalog';
 import { db } from '@/lib/db/client';
@@ -97,9 +97,10 @@ export async function PaymentsPanel({
   return (
     <section className={styles.panel} aria-label="Payments">
       {message && (
-        <Alert tone={message.tone}>
-          <div>{message.text}</div>
-        </Alert>
+        <NoticeToast
+          tone={message.tone === 'warning' ? 'error' : 'success'}
+          message={message.text}
+        />
       )}
       <PaymentsBoard
         key={`${scope.propertyId}:${scope.unitId ?? 'all'}`}

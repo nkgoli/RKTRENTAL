@@ -71,8 +71,13 @@
   padding-top: 4px;
   margin: 0 0 16px;
   border-bottom: 1px solid var(--rr-border);
-  scrollbar-width: thin;
+  max-width: 100%;
+  min-width: 0;
+  scrollbar-width: none;
 }
+.tabs::-webkit-scrollbar { display: none; }
+.tabsFade { mask-image: linear-gradient(90deg, #000 88%, transparent); }
+.headerActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .tab {
   flex: 0 0 auto;
   display: flex;
@@ -109,9 +114,9 @@
     aspect-ratio: auto;
     width: 100%;
   }
-  .tabs { gap: 18px; }
+  .tabs { gap: 8px; }
   .tab {
-    padding: 8px 1px;
+    padding: 8px;
     font-size: 13px;
   }
 }

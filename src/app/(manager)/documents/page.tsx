@@ -29,6 +29,8 @@ import {
   type LibraryDocumentKind,
 } from '@/lib/documents/library';
 import { UploadDocumentForm } from './UploadDocumentForm';
+import { UploadDialog } from './UploadDialog';
+import { Icon } from '@/components/shell/Icons';
 import { DocumentFilters } from './DocumentFilters';
 import styles from './documents.module.css';
 
@@ -119,20 +121,20 @@ function DocumentRow({
             </Link>
           )}
           <a
-            className="btn btn-ghost btn-sm"
+            className="icon-btn"
             href={`/api/files/${file.id}/preview`}
             target="_blank"
             rel="noreferrer"
             aria-label={`Preview ${file.name} (opens in a new tab)`}
           >
-            Preview
+            <Icon name="eye" />
           </a>
           <a
-            className="btn btn-secondary btn-sm"
+            className="icon-btn"
             aria-label={`Download ${file.name}`}
             href={`/api/files/${file.id}/download`}
           >
-            Download
+            <Icon name="download" />
           </a>
         </div>
       }
@@ -271,7 +273,7 @@ export default async function DocumentsPage({
         filter={scopeFilterFrom(params)}
         activeTab="documents"
       />
-      <PageHeader title="Documents and photos" eyebrow="Files" actions={[]} />
+      <PageHeader title="Documents and photos" eyebrow="Files" actions={[{ label: 'Upload files', href: '#upload', primary: true }]} />
       <div className={`stack ${styles.library}`}>
         <div className={styles.libraryIntro}>
           <p className="muted">
@@ -281,11 +283,7 @@ export default async function DocumentsPage({
             {libraryFiles.length} files · {formatBytes(usedBytes)} stored
           </span>
         </div>
-        <details id="upload" className={styles.uploadPanel}>
-          <summary>
-            Upload files <span className="muted">Choose a destination, then select files</span>
-          </summary>
-          <div className={styles.uploadBody}>
+        <UploadDialog>
             <UploadDocumentForm
               leases={leaseOptions}
               properties={propertyOptions}
@@ -293,8 +291,7 @@ export default async function DocumentsPage({
               propertyId={params.propertyId}
               unitId={params.unitId}
             />
-          </div>
-        </details>
+        </UploadDialog>
 
         <section className={styles.documentToolbar}>
           <div className="stack" style={{ gap: 12, flex: 1 }}>
@@ -318,7 +315,7 @@ export default async function DocumentsPage({
               ))}
             </Chips>
             <DocumentFilters
-              key={`${params.propertyId ?? ''}:${params.unitId ?? ''}:${query}:${kind}:${sort}`}
+              key={`${params.propertyId ?? ''}:${params.unitId ?? ''}`}
               query={query}
               kind={kind}
               sort={sort}
@@ -331,7 +328,7 @@ export default async function DocumentsPage({
                 label: `${unit.property.name} · ${unit.isImplicit ? 'Whole property' : `Unit ${unit.number}`}`,
               }))}
             />
-            <p className="muted">{matchingFiles.length} matching files</p>
+            <div className="row between"><span className="muted">{matchingFiles.length} matching files</span><Link href={documentsHref(filters, { sort: sort === 'newest' ? 'oldest' : 'newest' })} scroll={false}>{sort === 'newest' ? 'Newest first' : 'Oldest first'} ↕</Link></div>
           </div>
         </section>
 
@@ -497,13 +494,14 @@ export default async function DocumentsPage({
                           </div>
                           <div className={styles.documentPhotoActions}>
                             <a
+                              className="icon-btn" aria-label={`Preview ${photo.name} (opens in a new tab)`}
                               href={`/api/files/${photo.id}/preview`}
                               target="_blank"
                               rel="noreferrer"
                             >
-                              Preview
+                              <Icon name="eye" />
                             </a>
-                            <a href={`/api/files/${photo.id}/download`}>Download</a>
+                            <a className="icon-btn" aria-label={`Download ${photo.name}`} href={`/api/files/${photo.id}/download`}><Icon name="download" /></a>
                           </div>
                         </div>
                       );

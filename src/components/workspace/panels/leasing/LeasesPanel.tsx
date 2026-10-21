@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Avatar, Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { RowMenu } from '@/components/ui/RowMenu';
 import { Pagination, pageFrom, paginate } from '@/components/ui/Pagination';
 import { leaseName, signLabel, statusLabel, term } from '@/lib/leases/format';
 import { leasesDb, type LeaseListItem } from '@/lib/leases/queries';
@@ -35,11 +36,20 @@ function LeaseCard({
   setupContext.set('property', lease.unit.property.id);
   if (scope.unitId) setupContext.set('unit', scope.unitId);
   return (
-    <li className={styles.leaseCard} data-lease={lease.id}>
+    <li className={`${styles.leaseCard} row-link`} data-lease={lease.id}>
       <Avatar initials={initials(name)} size="sm" />
       <div className={styles.leaseMain}>
         <strong>
-          <Link href={href}>{name}</Link>
+          <Link
+            className="row-anchor"
+            href={
+              lease.status === 'DRAFT'
+                ? `/leases/new?${setupContext}&draft=${encodeURIComponent(lease.id)}`
+                : href
+            }
+          >
+            {name}
+          </Link>
         </strong>
         <small>
           {showUnit && `${unit} · `}
@@ -63,20 +73,23 @@ function LeaseCard({
           >
             Continue setup
           </Button>
-        ) : (
-          <Button href={href} size="sm" variant="ghost">
-            View
-          </Button>
-        )}
-        {lease.status === 'ACTIVE' && (
-          <Button
-            href={`/leases/new?${setupContext}&renew=${encodeURIComponent(lease.id)}`}
-            size="sm"
-            variant="ghost"
-          >
-            Renew
-          </Button>
-        )}
+        ) : null}
+        {lease.status === 'ACTIVE' &&
+          (lease.endDate >= new Date() && lease.endDate.getTime() - Date.now() <= 90 * 86400000 ? (
+            <Button
+              href={`/leases/new?${setupContext}&renew=${encodeURIComponent(lease.id)}`}
+              size="sm"
+              variant="ghost"
+            >
+              Renew
+            </Button>
+          ) : (
+            <RowMenu label={`More actions for ${name}`}>
+              <Link href={`/leases/new?${setupContext}&renew=${encodeURIComponent(lease.id)}`}>
+                Prepare renewal
+              </Link>
+            </RowMenu>
+          ))}
       </div>
     </li>
   );

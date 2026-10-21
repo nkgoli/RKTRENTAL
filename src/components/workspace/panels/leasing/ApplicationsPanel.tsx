@@ -1,41 +1,20 @@
 import Link from 'next/link';
+import {
+  applicationStatusLabels as labels,
+  applicationStatusTone,
+} from '@/app/(manager)/applications/status';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Feedback';
 import { Pagination, pageFrom, paginate } from '@/components/ui/Pagination';
 import { db } from '@/lib/db/client';
-import { loadIntegrations } from '@/lib/integrations/service';
-import { SCREENING_PACKAGES } from '@/lib/integrations/settings';
-import { SelectionField } from '@/app/(manager)/applications/SelectionField';
 import { ApplicationArrow } from '@/app/(manager)/applications/ApplicationArrow';
 import type { ApplicationStatus } from '@/lib/screening/policy';
 import { unitScopeWhere, scopeQuery, type ScopeFilter } from '@/lib/workspace/scope';
-import { saveApplicationSettingsAction } from './actions';
 import { withUnit } from './scope';
 import styles from './leasing.module.css';
 import ux from './applications-ux.module.css';
 
-const labels: Record<ApplicationStatus, string> = {
-  SUBMITTED: 'Awaiting consent',
-  SCREENING: 'Screening in progress',
-  REVIEW: 'Ready for review',
-  APPROVED: 'Approved',
-  DECLINED: 'Declined',
-};
-const tones: Record<ApplicationStatus, 'neutral' | 'success' | 'warning' | 'danger'> = {
-  SUBMITTED: 'neutral',
-  SCREENING: 'warning',
-  REVIEW: 'success',
-  APPROVED: 'success',
-  DECLINED: 'danger',
-};
-const collected = [
-  'Contact details',
-  'Employment and income',
-  'Rental history',
-  'Photo ID',
-  'Consent to screening',
-];
 const notices: Record<string, { tone: 'success' | 'warning'; text: string }> = {
   'settings-saved': { tone: 'success', text: 'Application settings saved.' },
   'settings-invalid': { tone: 'warning', text: 'Those screening settings are not supported.' },
@@ -63,15 +42,11 @@ export async function ApplicationsPanel({
   notice?: string;
   page?: string;
 }) {
-  const [applications, integrations] = await Promise.all([
-    db.application.findMany({
-      where: { organizationId, ...unitScopeWhere(scope) },
-      include: { unit: true, applicationGroup: true },
-      orderBy: { appliedAt: 'desc' },
-    }),
-    loadIntegrations(organizationId, db.providerConnection),
-  ]);
-  const screening = integrations.settings.screening;
+  const applications = await db.application.findMany({
+    where: { organizationId, ...unitScopeWhere(scope) },
+    include: { unit: true, applicationGroup: true },
+    orderBy: { appliedAt: 'desc' },
+  });
   const archivedCount = new Set(
     applications.filter((a) => a.applicationGroup?.archivedAt).map((a) => a.applicationGroupId),
   ).size;
@@ -129,45 +104,13 @@ export async function ApplicationsPanel({
           <div>{message.text}</div>
         </Alert>
       )}
-      <details className={ux.settings} open={Boolean(message)}>
-        <summary>
+      <Link className="link-row" href="/integrations#screening-providers">
+        <span>
           <strong>Application settings</strong>
-          <span>Organization-wide defaults · Review or edit</span>
-        </summary>
-        <form
-          action={saveApplicationSettingsAction}
-          className="card"
-          aria-label="Application settings"
-        >
-          <input type="hidden" name="propertyId" value={scope.propertyId} />
-          <input type="hidden" name="unitId" value={scope.unitId ?? ''} />
-          <input type="hidden" name="applicantConsent" value={screening.applicantConsent} />
-          <div className="card-header">
-            <h2>Application settings</h2>
-            <Button type="submit" variant="secondary" size="sm">
-              Save settings
-            </Button>
-          </div>
-          <div className={`${styles.settings} ${ux.settingsGrid}`}>
-            <div>
-              <p className={styles.settingLabel}>What we collect</p>
-              <ul className={`${styles.chips} ${ux.chips}`}>
-                {collected.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-            <SelectionField
-              className={styles.settingField}
-              label="Screening reports"
-              name="defaultPackage"
-              defaultValue={screening.defaultPackage}
-              options={SCREENING_PACKAGES}
-              help="Applicants consent before each report is ordered. Applies to every property."
-            />
-          </div>
-        </form>
-      </details>
+          <small className="muted">Organization-wide screening defaults</small>
+        </span>
+        <ApplicationArrow />
+      </Link>
 
       <div className={`${styles.pageHeader} ${ux.pageHeader}`}>
         <div>
@@ -223,11 +166,11 @@ export async function ApplicationsPanel({
                       <Link
                         href={`/properties/${scope.propertyId}?unit=${encodeURIComponent(group.unitId)}`}
                       >
-                        {group.label}
+                        {group.items.map((item) => item.applicantName).join(' & ')} · {group.label}
                       </Link>
                     </h3>
                     <small className="muted">
-                      {group.items.length} applicant{group.items.length === 1 ? '' : 's'} · latest{' '}
+                      {group.items.length > 1 ? `${group.items.length} applicants · ` : ''}Applied{' '}
                       {date(group.items[0].appliedAt)}
                     </small>
                   </div>
@@ -254,7 +197,7 @@ export async function ApplicationsPanel({
                     ))}
                   </ul>
                   <div className={`${styles.groupActions} ${ux.groupActions}`}>
-                    <Badge tone={tones[status]}>{labels[status]}</Badge>
+                    <Badge tone={applicationStatusTone(status)}>{labels[status]}</Badge>
                     {approved && (
                       <Link
                         className="btn btn-primary btn-sm"

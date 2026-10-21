@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
     throw Error(url);
   }),
 }));
+vi.mock('@/components/shell/PageHeader', () => ({ PageHeader: ({ title, back }: { title: string; back: { href: string; label: string } }) => <header><h1>{title}</h1><a href={back.href}>Back to {back.label}</a></header> }));
 vi.mock('@/lib/auth/access', () => ({
   requireManagerRole: async () => ({ organizationId: 'own' }),
 }));
@@ -47,7 +48,7 @@ it('renders dedicated Add and Edit forms with appropriate return navigation', as
   mocks.get.mockResolvedValue({ id: 'a', name: 'Existing home', units: [], owner: null });
   render(await EditPropertyPage({ params: Promise.resolve({ id: 'a' }) }));
   expect(screen.getByRole('heading', { name: 'Edit property' })).toBeTruthy();
-  expect(screen.getByText('Existing home')).toBeTruthy();
+  expect(screen.getByText('Existing home', { selector: 'span' })).toBeTruthy();
   expect(screen.getByRole('link', { name: 'Cancel' }).getAttribute('href')).toBe('/properties/a');
 });
 it('resolves all legacy add links to the dedicated page without a dialog', async () => {

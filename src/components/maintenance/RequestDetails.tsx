@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { maintenanceFormHref } from '@/lib/maintenance/navigation';
 import type { MaintenanceBoardRequest } from '@/lib/maintenance';
-import { FileUploader } from '@/components/upload';
+import { RequestPhotoUpload } from './RequestPhotoUpload';
 import { RequestActionForm, type RequestAction } from './RequestActionForm';
 import { RequestPhoto } from './RequestPhoto';
 import styles from './maintenance.module.css';
@@ -18,7 +18,6 @@ export function RequestDetails({
   vendors,
   actions,
   returnTo = '/maintenance',
-  expanded = false,
   hideEdit = false,
   documentActions = false,
 }: {
@@ -31,10 +30,7 @@ export function RequestDetails({
   documentActions?: boolean;
 }) {
   return (
-    <details className={styles.details} open={expanded}>
-      <summary>
-        Manage request<span className={styles.screenReaderOnly}>: {request.title}</span>
-      </summary>
+    <div className={styles.details}>
       <div className={styles.detailBody}>
         {!hideEdit && (
           <Link
@@ -83,6 +79,7 @@ export function RequestDetails({
           </RequestActionForm>
           <RequestActionForm
             action={actions.status}
+            confirmCancellation
             transport={
               documentActions
                 ? { operation: 'status', propertyId: request.propertyId, unitId: request.unit.id }
@@ -108,37 +105,33 @@ export function RequestDetails({
         </div>
         <section className={styles.section} aria-label="Request photos">
           <h3>Photos</h3>
-          {request.photos.length ? (
-            <div className={styles.photos}>
-              {request.photos.map(
-                (photo) =>
-                  photo.documentId && (
-                    <RequestPhoto
-                      key={photo.documentId}
-                      documentId={photo.documentId}
-                      title={request.title}
-                    />
-                  ),
-              )}
-            </div>
-          ) : (
+          {request.photos.length === 0 && (
             <p className="muted">No photos attached. Add one to help the vendor prepare.</p>
           )}
-          <RequestActionForm
-            action={actions.photo}
-            transport={
-              documentActions
-                ? { operation: 'photo', propertyId: request.propertyId, unitId: request.unit.id }
-                : undefined
-            }
-            label={`Add photo to ${request.title}`}
-          >
-            <input type="hidden" name="requestId" value={request.id} />
-            <FileUploader kind="photo" formField="photo" multiple={false} label="Add photo" />
-            <button className="btn btn-secondary btn-sm" type="submit">
-              Upload photo
-            </button>
-          </RequestActionForm>
+          <div className={styles.photos}>
+            {request.photos.map(
+              (photo) =>
+                photo.documentId && (
+                  <RequestPhoto
+                    key={photo.documentId}
+                    documentId={photo.documentId}
+                    title={request.title}
+                  />
+                ),
+            )}
+            <RequestActionForm
+              action={actions.photo}
+              transport={
+                documentActions
+                  ? { operation: 'photo', propertyId: request.propertyId, unitId: request.unit.id }
+                  : undefined
+              }
+              label={`Add photo to ${request.title}`}
+            >
+              <input type="hidden" name="requestId" value={request.id} />
+              <RequestPhotoUpload />
+            </RequestActionForm>
+          </div>
         </section>
         <section className={styles.section} aria-label="Request comments">
           <h3>Recent comments</h3>
@@ -176,6 +169,6 @@ export function RequestDetails({
           </RequestActionForm>
         </section>
       </div>
-    </details>
+    </div>
   );
 }

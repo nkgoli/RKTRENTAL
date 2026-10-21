@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 const mocks = vi.hoisted(() => ({ properties: vi.fn(), facts: vi.fn(), leases: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/lib/auth/access', () => ({
   requireManagerRole: async () => ({ organizationId: 'org', role: 'MANAGER' }),
 }));
@@ -36,7 +37,7 @@ beforeEach(() => {
 const render = async (q: Record<string, string | undefined>) =>
   renderToStaticMarkup(await Page({ searchParams: Promise.resolve(q) }));
 it('shows explicit searchable selection without choosing the first property', async () => {
-  expect(await render({})).toContain('Find a property');
+  expect(await render({})).toContain('aria-label="Search properties"');
   expect(await render({ q: 'absent' })).toContain('No matching properties');
 });
 it('rejects missing property and mismatched units without a panel', async () => {

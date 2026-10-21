@@ -25,16 +25,22 @@ import {
   TenantsStep,
   TermStep,
   type AttachmentFile,
+  type ApplicantOption,
 } from './steps';
 import styles from './lease-builder.module.css';
 import { TemplateTermsStep } from './TemplateTermsStep';
-import type { TemplateDefinition } from '@/lib/lease-create/templates';
+import {
+  contextFromDraft,
+  resolveTerms,
+  type TemplateDefinition,
+} from '@/lib/lease-create/templates';
 import { useBuilderShell } from './useBuilderShell';
 
 export type LeaseBuilderProps = {
   /** Property and unit shown in the top bar. */
   placeLabel: string;
   tenants: TenantOption[];
+  applicants?: ApplicantOption[];
   leaseId: string | null;
   renewId: string | null;
   draft: WizardDraft;
@@ -147,7 +153,11 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
     const local = validateStep(step, draftRef.current, validationOptions);
     if (Object.keys(local).length) {
       setErrors(local);
-      setMessage('Please fix the highlighted fields.');
+      setMessage(
+        step === STEP.tenants
+          ? 'Select at least one tenant and choose the primary tenant.'
+          : 'Please fix the highlighted fields.',
+      );
       return;
     }
     startTransition(async () => {
@@ -203,6 +213,14 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
 
   const created = Boolean(sent.ok && sent.leaseId);
   const esignStatus = signState.esignStatus ?? sent.esignStatus;
+  const unresolvedTerms = draft.template
+    ? resolveTerms(
+        draft.template,
+        contextFromDraft(draft),
+        draft.termOverrides,
+        draft.renewalTerms,
+      ).filter((item) => item.included && /\{\{[a-z_]+\}\}/.test(item.body))
+    : [];
   const body = [
     <TermStep key="term" draft={draft} update={update} errors={errors} />,
     <RentStep key="rent" draft={draft} update={update} errors={errors} />,
@@ -212,6 +230,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
       update={update}
       errors={errors}
       tenants={tenants}
+      applicants={props.applicants}
       sourceLabel={props.sourceLabel}
       notice={props.notice}
     />,
@@ -227,6 +246,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
     <TemplateTermsStep
       key="rules"
       section="RULE"
+      onChangeTemplate={() => jump(STEP.clauses)}
       draft={draft}
       update={update}
       templates={props.templates}
@@ -235,6 +255,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
     <TemplateTermsStep
       key="disclosures"
       section="DISCLOSURE"
+      onChangeTemplate={() => jump(STEP.clauses)}
       draft={draft}
       update={update}
       templates={props.templates}
@@ -285,34 +306,11 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
           </span>
           {props.placeLabel}
           {props.renewId && <small>Renewal</small>}
+          <span className={styles.topProgress} aria-live="polite">
+            Step {step + 1} of {STEP_COUNT} · {WIZARD_STEPS[step]}
+          </span>
         </div>
-        <button
-          type="button"
-          className={styles.exit}
-          onClick={saveAndExit}
-          disabled={pending || created}
-        >
-          Save and exit
-        </button>
-      </header>
-
-      <div className={styles.intro}>
-        <div>
-          <p className={styles.introKicker}>
-            Leasing workspace / {props.renewId ? 'Renewal' : 'New lease'}
-          </p>
-          <h1>{props.renewId ? 'Renew lease' : 'Create lease'}</h1>
-          <p>Build the agreement for {props.placeLabel}, one step at a time.</p>
-        </div>
-        <span
-          className={`${styles.introDraft} ${!created && !pending && !dirty && !leaseId ? styles.draftNeutral : ''} ${!created && !pending && dirty ? styles.draftUnsaved : ''}`}
-          role="status"
-        >
-          {pending ? (
-            <span className={styles.spinner} aria-hidden="true" />
-          ) : (
-            <span aria-hidden="true" />
-          )}
+        <span className={styles.saveStatus} role="status">
           {created
             ? 'Lease sent'
             : pending
@@ -323,7 +321,15 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
                   ? 'Draft saved'
                   : 'Not saved yet'}
         </span>
-      </div>
+        <button
+          type="button"
+          className={styles.exit}
+          onClick={saveAndExit}
+          disabled={pending || created}
+        >
+          Save and exit
+        </button>
+      </header>
 
       <div className={styles.layout} ref={top}>
         <nav aria-label="Lease steps">
@@ -459,6 +465,24 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
                   aria-label={WIZARD_STEPS[step]}
                 >
                   {body}
+                  {step === STEP.review && unresolvedTerms.length > 0 && (
+                    <div className={styles.alert} role="alert">
+                      <strong>Complete the agreement before sending</strong>
+                      <ul>
+                        {unresolvedTerms.map((item) => (
+                          <li key={item.id}>
+                            {item.title}: fill the remaining blanks in{' '}
+                            {item.section === 'CLAUSE'
+                              ? 'Clauses'
+                              : item.section === 'RULE'
+                                ? 'Rules'
+                                : 'Disclosures'}
+                            .
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </fieldset>
                 <div className={styles.footer}>
                   <button
@@ -505,7 +529,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
                     <button
                       type="button"
                       className={`${styles.btn} ${styles.primary}`}
-                      disabled={pending}
+                      disabled={pending || unresolvedTerms.length > 0}
                       onClick={send}
                     >
                       {pending ? 'Sending…' : 'Send for e-signature'}

@@ -9,7 +9,7 @@ import type { Timeline } from '@/lib/workspace/timeline';
 import type { PaymentsMonth } from '@/lib/workspace/timeline-data';
 import { PropertyFactsCard, UnitFactsCard } from './InlineFacts';
 import { LeaseTimeline } from './LeaseTimeline';
-import { WorkspaceMedia } from './WorkspaceMedia';
+import { AddUnitDialog } from '@/app/(manager)/properties/_components/AddUnitDialog';
 import styles from './WorkspaceOverview.module.css';
 
 function statusTone(status: string): 'success' | 'warning' | 'info' | undefined {
@@ -63,7 +63,7 @@ function PropertyUnits({ property, page: pageParam }: { property: PropertyDetail
   const units = paginate(all, page);
   return (
     <Card flush id="units">
-      <CardHeader title="Units" action={<div className={styles.unitActions}><span className="muted">{all.length} total · {property.stats.occupied} occupied</span>{!property.archived && <a className="btn btn-secondary btn-sm" href="#add-unit">+ Add unit</a>}</div>} />
+      <CardHeader title="Units" action={<div className={styles.unitActions}><span className="muted">{all.length} total · {property.stats.occupied} occupied</span>{!property.archived && <AddUnitDialog propertyId={property.id} />}</div>} />
       <div className={styles.unitCards}>
         {units.length === 0 && <p className="muted">No active units yet.</p>}
         {units.map((unit) => (
@@ -73,7 +73,7 @@ function PropertyUnits({ property, page: pageParam }: { property: PropertyDetail
               <Badge tone={statusTone(unit.status)}>{unit.status === 'OCCUPIED' ? 'Occupied' : unit.status === 'VACANT' ? 'Vacant' : 'Turnover'}</Badge>
             </div>
             <div className={styles.unitCardFacts}>
-              <div><small>Configuration</small>{bedBath(unit)}{unit.squareFeet ? ` · ${unit.squareFeet.toLocaleString('en-US')} sqft` : ''}</div>
+              <div><small>Configuration</small>{unit.bedrooms == null && unit.bathrooms == null ? <Link href={`/properties/${property.id}?unit=${unit.id}`}>Add details</Link> : bedBath(unit)}{unit.squareFeet ? ` · ${unit.squareFeet.toLocaleString('en-US')} sqft` : ''}</div>
               <div><small>Rent / month</small><strong>{formatMoney(unit.rent ?? unit.listedRent)}</strong></div>
               <div><small>Tenant</small>{unit.tenant ? <Link href={`/tenants/${unit.tenant.id}`}>{unit.tenant.name}</Link> : 'No tenant'}</div>
             </div>
@@ -88,7 +88,7 @@ function PropertyUnits({ property, page: pageParam }: { property: PropertyDetail
             {units.length === 0 && <tr><td colSpan={5} className="muted">No active units yet.</td></tr>}
             {units.map((unit) => (
               <tr key={unit.id}>
-                <td><Link href={`/properties/${property.id}?unit=${unit.id}`}><strong>{unit.isImplicit ? 'Whole property' : unit.number}</strong></Link><small className={styles.unitConfiguration}>{bedBath(unit)}{unit.squareFeet ? ` · ${unit.squareFeet.toLocaleString('en-US')} sqft` : ''}</small></td>
+                <td><Link href={`/properties/${property.id}?unit=${unit.id}`}><strong>{unit.isImplicit ? 'Whole property' : unit.number}</strong></Link><small className={styles.unitConfiguration}>{unit.bedrooms == null && unit.bathrooms == null ? <Link href={`/properties/${property.id}?unit=${unit.id}`}>Add details</Link> : bedBath(unit)}{unit.squareFeet ? ` · ${unit.squareFeet.toLocaleString('en-US')} sqft` : ''}</small></td>
                 <td>{unit.tenant ? <span className={styles.person}><span className={styles.personMark} aria-hidden="true">{initials(unit.tenant.name)}</span><Link href={`/tenants/${unit.tenant.id}`}>{unit.tenant.name}</Link></span> : <span className="muted">No tenant</span>}</td>
                 <td className="num">{formatMoney(unit.rent ?? unit.listedRent)}</td>
                 <td><Badge tone={statusTone(unit.status)}>{unit.status === 'OCCUPIED' ? 'Occupied' : unit.status === 'VACANT' ? 'Vacant' : 'Turnover'}</Badge></td>
@@ -127,7 +127,6 @@ export function PropertyOverview({ property, owners = [], timeline, payments, un
     ...(property.stats.expiringLeases ? [{ label: `${property.stats.expiringLeases} lease${property.stats.expiringLeases === 1 ? '' : 's'} expiring soon`, href: `/properties/${property.id}/leases` }] : []),
     ...(activeUnits.some((unit) => unit.status === 'VACANT') ? [{ label: 'Review vacant units and pricing', href: `/properties/${property.id}/listing` }] : []),
   ];
-  const target = { kind: 'property' as const, id: property.id };
   const multiUnit = activeUnits.some((unit) => !unit.isImplicit);
 
   const occupancyPct = activeUnits.length ? Math.round((property.stats.occupied / activeUnits.length) * 100) : 0;
@@ -155,14 +154,11 @@ export function PropertyOverview({ property, owners = [], timeline, payments, un
             city: property.city, state: property.state, postalCode: property.postalCode,
             yearBuilt: property.yearBuilt, ownerId: property.owner?.id ?? null,
           }}
-          footer={<ArchiveButton propertyId={property.id} archived={property.archived} />}
+          footer={<ArchiveButton propertyId={property.id} propertyName={property.name} archived={property.archived} />}
         />
         <NextSteps steps={steps} />
       </div>
-      <Card>
-        <CardHeader title="Photos & documents" />
-        <WorkspaceMedia target={target} photos={property.photos} files={property.files} />
-      </Card>
+
     </div>
   );
 }
@@ -196,7 +192,6 @@ export function UnitOverview({ unit, canDelete, timeline, payments }: {
     ...(unit.openRepairs ? [{ label: `${unit.openRepairs} open maintenance request${unit.openRepairs === 1 ? '' : 's'}`, href: `/properties/${unit.property.id}/maintenance?unit=${unit.id}` }] : []),
     ...(rentGap != null && rentGap > 0 ? [{ label: `${formatMoney(rentGap)} below market rent`, href: `/properties/${unit.property.id}/listing?unit=${unit.id}` }] : []),
   ];
-  const target = { kind: 'unit' as const, id: unit.id };
 
   return (
     <div className={styles.page}>
@@ -215,14 +210,11 @@ export function UnitOverview({ unit, canDelete, timeline, payments }: {
             squareFeet: unit.squareFeet, listedRent: unit.listedRent, marketRent: unit.marketRent,
             floor: unit.floor, amenities: unit.amenities,
           }}
-          footer={<DeleteUnitControl propertyId={unit.property.id} unitId={unit.id} disabled={unit.isImplicit || !canDelete} implicit={unit.isImplicit} />}
+          footer={<DeleteUnitControl propertyId={unit.property.id} unitId={unit.id} unitLabel={unit.number} disabled={unit.isImplicit || !canDelete} implicit={unit.isImplicit} />}
         />
         <NextSteps steps={steps} />
       </div>
-      <Card>
-        <CardHeader title="Photos & documents" />
-        <WorkspaceMedia target={target} photos={unit.photos} files={unit.files} />
-      </Card>
+
     </div>
   );
 }

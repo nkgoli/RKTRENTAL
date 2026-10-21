@@ -5,6 +5,8 @@ import { getMaintenanceRequest, listMaintenanceOptions } from '@/lib/maintenance
 import { maintenanceReturn } from '@/lib/maintenance/navigation';
 import { MaintenanceIssueForm } from '@/components/maintenance/MaintenanceIssueForm';
 import { RequestDetails } from '@/components/maintenance/RequestDetails';
+import { PageHeader } from '@/components/shell/PageHeader';
+import { NoticeToast } from '@/components/ui/Toast';
 import {
   assignPropertyMaintenanceAction,
   statusPropertyMaintenanceAction,
@@ -33,19 +35,22 @@ export default async function EditRequestPage({
   const returnTo = maintenanceReturn(query.returnTo);
   return (
     <div className={styles.page}>
-      <a href={returnTo}>Back to repair requests</a>
-      <h1>Edit repair request</h1>
+      <PageHeader
+        title="Edit repair request"
+        eyebrow="Operations / Maintenance"
+        back={{ href: returnTo, label: 'Repair requests' }}
+      />
       {query.notice && ['assign', 'status', 'comment', 'photo'].includes(query.notice) && (
-        <p role="status">
-          {
+        <NoticeToast
+          message={
             {
               assign: 'Vendor assigned.',
               status: 'Status updated.',
               comment: 'Comment added.',
               photo: 'Photo uploaded.',
-            }[query.notice]
+            }[query.notice]!
           }
-        </p>
+        />
       )}
       <MaintenanceIssueForm
         scope={{ requestId: id, propertyId: request.propertyId, unitId: request.unit.id }}

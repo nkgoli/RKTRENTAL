@@ -12,6 +12,8 @@ import { addNoteAction, moveInAction, moveOutAction, updateTenantAction } from '
 import { AddNoteForm, EditTenantForm, MoveOutDialog } from '../TenantForms';
 import { tenantReturnHref } from '../navigation';
 import { TenantPager } from '../Pager';
+import { PaymentHistory } from '../PaymentHistory';
+import { NoticeToast } from '@/components/ui/Toast';
 import styles from '../tenants.module.css';
 
 type Params = Promise<{ id: string }>;
@@ -152,7 +154,11 @@ export default async function TenantDetailPage({
   const noteAdded = raw.note === '1';
   const allPayments = leases
     .flatMap((lease) => lease.payments.map((payment) => ({ payment, lease })))
-    .sort((a, b) => b.payment.createdAt.getTime() - a.payment.createdAt.getTime());
+    .sort(
+      (a, b) =>
+        (b.payment.paidAt ?? b.payment.createdAt).getTime() -
+        (a.payment.paidAt ?? a.payment.createdAt).getTime(),
+    );
   const payPage = pageFrom(
     typeof raw.payPage === 'string' ? raw.payPage : undefined,
     allPayments.length,
@@ -198,6 +204,23 @@ export default async function TenantDetailPage({
       />
 
       {error && <Alert tone="error">{error}</Alert>}
+      {(raw.notice === 'added' ||
+        raw.notice === 'updated' ||
+        raw.notice === 'lease-updated' ||
+        noteAdded) && (
+        <NoticeToast
+          message={
+            raw.notice === 'added'
+              ? `${tenant.name} added.`
+              : raw.notice === 'updated'
+                ? 'Tenant profile updated.'
+                : noteAdded
+                  ? 'Note added.'
+                  : 'Lease updated.'
+          }
+          params={['notice', 'note']}
+        />
+      )}
 
       {editing && (
         <EditTenantForm
@@ -391,44 +414,48 @@ export default async function TenantDetailPage({
                 </Link>
               </div>
             </div>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th scope="col">Date</th>
-                  <th scope="col">Lease / reference</th>
-                  <th scope="col">Amount</th>
-                  <th scope="col">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payments.length === 0 && (
+            <PaymentHistory count={payments.length}>
+              <table className={styles.table}>
+                <thead>
                   <tr>
-                    <td colSpan={4} className={styles.muted}>
-                      No payments recorded.
-                    </td>
+                    <th scope="col">Date</th>
+                    <th scope="col">Description</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col">Status</th>
                   </tr>
-                )}
-                {payments.map(({ payment, lease }) => (
-                  <tr key={payment.id}>
-                    <th scope="row">{formatDate(payment.paidAt ?? payment.createdAt)}</th>
-                    <td data-label="Lease / reference">
-                      <span>
-                        <Link href={`/leases/${lease.id}`}>{unitLabel(lease)}</Link>
-                        <small>{describePaymentReference(payment.providerReference)}</small>
-                      </span>
-                    </td>
-                    <td data-label="Amount" className={styles.num}>
-                      {formatMoney(payment.amount)}
-                    </td>
-                    <td data-label="Status">
-                      <Badge tone={PAYMENT_TONE[payment.status]}>
-                        {PAYMENT_LABEL[payment.status]}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {payments.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className={styles.muted}>
+                        No payments recorded.
+                      </td>
+                    </tr>
+                  )}
+                  {payments.map(({ payment, lease }) => (
+                    <tr key={payment.id}>
+                      <th scope="row">{formatDate(payment.paidAt ?? payment.createdAt)}</th>
+                      <td data-label="Lease / reference">
+                        <span>
+                          {leases.length > 1 && (
+                            <Link href={`/leases/${lease.id}`}>{unitLabel(lease)}</Link>
+                          )}
+                          <span>{describePaymentReference(payment.providerReference)}</span>
+                        </span>
+                      </td>
+                      <td data-label="Amount" className={styles.num}>
+                        {formatMoney(payment.amount)}
+                      </td>
+                      <td data-label="Status">
+                        <Badge tone={PAYMENT_TONE[payment.status]}>
+                          {PAYMENT_LABEL[payment.status]}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </PaymentHistory>
             <TenantPager
               page={payPage}
               total={allPayments.length}
@@ -545,9 +572,9 @@ export default async function TenantDetailPage({
             )}
             {activeLease && (
               <>
-                <Alert tone="success">
+                <p className={styles.muted}>
                   Moved in {formatDate(activeLease.startDate)} · {unitLabel(activeLease)}.
-                </Alert>
+                </p>
                 <MoveOutDialog
                   tenantName={tenant.name}
                   unitLabel={unitLabel(activeLease)}
@@ -570,7 +597,6 @@ export default async function TenantDetailPage({
             <div className={styles.sectionHead}>
               <h2>Notes and history</h2>
             </div>
-            {noteAdded && <Alert tone="success">Note added.</Alert>}
             <AddNoteForm action={addNoteAction.bind(null, tenant.id)} returnTo={returnTo} />
             <ol className={styles.timeline}>
               {events.map((event, i) => (

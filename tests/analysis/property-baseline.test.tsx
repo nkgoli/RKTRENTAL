@@ -152,7 +152,7 @@ describe('ROI assumptions in Edit Property', () => {
     expect((screen.getByLabelText('Scheduled rent ($ / month)') as HTMLInputElement).value).toBe(
       '1000',
     );
-    expect(screen.getByText(/saved ROI analysis \(draft revision 4\)/)).toBeTruthy();
+    expect(screen.getByText(/You are editing draft revision 4/)).toBeTruthy();
     expect(screen.getByText('Analysis value. Property details: 50.')).toBeTruthy();
     expect(screen.getByRole('status').textContent).toMatch(/All required assumptions are complete/);
     expect(submitted()).toEqual({ version: 1, input: {}, options: {} });

@@ -1,10 +1,18 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ReviewDecisionForm } from '@/app/(manager)/applications/ReviewForms';
 
 afterEach(cleanup);
+beforeEach(() => {
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute('open', '');
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute('open');
+  };
+});
 describe('review decision controls', () => {
   it('requires the matching reason and submits the retained application/property/unit context', async () => {
     const user = userEvent.setup();
@@ -53,6 +61,10 @@ describe('review decision controls', () => {
       true,
     );
     await user.click(screen.getByRole('button', { name: 'Decline' }));
+    expect(action).not.toHaveBeenCalled();
+    const dialog = screen.getByRole('dialog', { name: 'Decline this application?' });
+    expect(document.activeElement).toBe(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Decline application' }));
     expect(Object.fromEntries(action.mock.calls[0][0])).toMatchObject({
       applicationId: 'app-2',
       decision: 'DECLINED',

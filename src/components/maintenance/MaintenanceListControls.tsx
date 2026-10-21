@@ -1,3 +1,4 @@
+'use client';
 import Link from 'next/link';
 import styles from './maintenance.module.css';
 import {
@@ -36,6 +37,7 @@ export function MaintenanceFilters({
       className={styles.filters}
       role="search"
       aria-label="Filter requests"
+      onChange={(event) => event.currentTarget.requestSubmit()}
     >
       {Object.entries(hidden).map(([name, value]) =>
         value ? <input key={name} type="hidden" name={name} value={value} /> : null,
@@ -60,9 +62,6 @@ export function MaintenanceFilters({
         Created to
         <input type="date" name="to" defaultValue={query.to ?? ''} />
       </label>
-      <button className="btn btn-secondary btn-sm" type="submit">
-        Apply filters
-      </button>
       {filtered && (
         <Link
           className="btn btn-ghost btn-sm"

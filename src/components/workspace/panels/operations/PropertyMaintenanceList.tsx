@@ -1,7 +1,8 @@
 ﻿import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { Fragment } from 'react';
-import { RequestDetails, type RequestActions } from '@/components/maintenance/RequestDetails';
+import type { RequestActions } from '@/components/maintenance/RequestDetails';
+import { maintenanceFormHref } from '@/lib/maintenance/navigation';
+import { Table } from '@/components/ui/Table';
 import {
   MaintenanceFilters,
   MaintenanceListFooter,
@@ -48,8 +49,6 @@ export function PropertyMaintenanceList({
   query,
   unitId,
   createRequestControl,
-  vendors = [],
-  actions,
 }: {
   propertyId: string;
   list: {
@@ -103,7 +102,7 @@ export function PropertyMaintenanceList({
           aria-label="Repair request list"
           tabIndex={0}
         >
-          <table className="table" aria-label="Repair requests">
+          <Table mobile="cards" aria-label="Repair requests">
             <thead>
               <tr>
                 <th scope="col">Request</th>
@@ -123,56 +122,54 @@ export function PropertyMaintenanceList({
                 </tr>
               ) : (
                 requests.map((request) => (
-                  <Fragment key={request.id}>
-                    <tr id={`request-${request.id}`}>
-                      <td data-label="Request">
-                        <strong>{request.title}</strong>
-                        {request.description && (
-                          <span className={styles.requestDescription}>{request.description}</span>
-                        )}
-                        {request.photos.length > 0 && (
-                          <span className={styles.requestDescription}>Photo attached</span>
-                        )}
-                      </td>
-                      <td data-label="Unit">
+                  <tr key={request.id} id={`request-${request.id}`} className="row-link">
+                    <td data-cell="title">
+                      <strong>
                         <Link
-                          href={`/properties/${propertyId}?unit=${encodeURIComponent(request.unit.id)}`}
+                          className="row-anchor"
+                          href={maintenanceFormHref(
+                            propertyId,
+                            request.unit.id,
+                            `/properties/${propertyId}/maintenance${maintenanceQueryString(query, { unit: unitId })}`,
+                            request.id,
+                          )}
                         >
-                          {request.unit.number}
+                          {request.title}
                         </Link>
-                      </td>
-                      <td data-label="Priority">
-                        <span className={`badge ${priorityTone(request.priority)}`}>
-                          {priorityLabel(request.priority)}
-                        </span>
-                      </td>
-                      <td data-label="Status">
-                        <span className={`badge ${statusTone(request.status)}`}>
-                          {statusLabel(request.status)}
-                        </span>
-                      </td>
-                      <td data-label="Assigned to">
-                        {request.vendor?.name ?? request.vendorName ?? 'Unassigned'}
-                      </td>
-                      <td data-label="Created">{formatDate(request.createdAt)}</td>
-                    </tr>
-                    {actions && (
-                      <tr>
-                        <td colSpan={6} className={styles.detailCell}>
-                          <RequestDetails
-                            returnTo={`/properties/${propertyId}/maintenance${maintenanceQueryString(query, { unit: unitId })}`}
-                            request={request}
-                            vendors={vendors}
-                            actions={actions}
-                          />
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
+                      </strong>
+                      {request.description && (
+                        <span className={styles.requestDescription}>{request.description}</span>
+                      )}
+                      {request.photos.length > 0 && (
+                        <span className={styles.requestDescription}>Photo attached</span>
+                      )}
+                    </td>
+                    <td data-cell="meta">
+                      <Link
+                        href={`/properties/${propertyId}?unit=${encodeURIComponent(request.unit.id)}`}
+                      >
+                        {request.unit.number}
+                      </Link>
+                    </td>
+                    <td data-cell="amount">
+                      <span className={`badge ${priorityTone(request.priority)}`}>
+                        {priorityLabel(request.priority)}
+                      </span>
+                    </td>
+                    <td data-cell="status">
+                      <span className={`badge ${statusTone(request.status)}`}>
+                        {statusLabel(request.status)}
+                      </span>
+                    </td>
+                    <td data-cell="sub">
+                      {request.vendor?.name ?? request.vendorName ?? 'Unassigned'}
+                    </td>
+                    <td data-cell="hide">{formatDate(request.createdAt)}</td>
+                  </tr>
                 ))
               )}
             </tbody>
-          </table>
+          </Table>
         </div>
         <div className={styles.listHeader}>
           <MaintenanceListFooter

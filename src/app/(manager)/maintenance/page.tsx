@@ -1,5 +1,4 @@
 ﻿import Link from 'next/link';
-import { RequestDetails } from '@/components/maintenance/RequestDetails';
 import { maintenanceFormHref } from '@/lib/maintenance/navigation';
 import { withRequestPhotos } from '@/components/maintenance/request-photos';
 import { PageHeader } from '@/components/shell/PageHeader';
@@ -11,7 +10,6 @@ import { KpiCard } from '@/components/dashboard/KpiCard';
 
 import { requireManagerRole } from '@/lib/auth/access';
 import {
-  listMaintenanceOptions,
   listMaintenancePage,
   parseMaintenanceQuery,
   maintenanceQueryString,
@@ -22,12 +20,6 @@ import {
   MaintenanceFilters,
   MaintenanceListFooter,
 } from '@/components/maintenance/MaintenanceListControls';
-import {
-  assignMaintenanceAction,
-  commentMaintenanceAction,
-  setMaintenanceStatusAction,
-  uploadMaintenancePhotoAction,
-} from './actions';
 import styles from './maintenance.module.css';
 
 const columns = [
@@ -49,26 +41,26 @@ function initials(name: string) {
 
 function RequestTicket({
   request,
-  vendors,
   returnTo,
 }: {
   returnTo: string;
   request: MaintenanceBoardRequest;
-  vendors: { id: string; name: string }[];
 }) {
   const priorityTone =
     request.priority === 'URGENT' ? 'danger' : request.priority === 'HIGH' ? 'warning' : 'info';
   return (
     <Ticket>
       <article id={`request-${request.id}`} className={styles.ticketContent}>
-        <h3 className={styles.ticketTitle}>{request.title}</h3>
-        <span className="muted" style={{ fontSize: 12 }}>
-          <Link href={`/properties/${request.property.id}`}>{request.property.name}</Link> ·{' '}
+        <h3 className={styles.ticketTitle}>
           <Link
-            href={`/properties/${request.property.id}?unit=${encodeURIComponent(request.unit.id)}`}
+            className={styles.ticketLink}
+            href={maintenanceFormHref(request.propertyId, request.unit.id, returnTo, request.id)}
           >
-            {request.unit.number}
+            {request.title}
           </Link>
+        </h3>
+        <span className="muted" style={{ fontSize: 12 }}>
+          {request.property.name} · {request.unit.number}
         </span>
         <div className="row between">
           <Badge tone={priorityTone}>
@@ -79,25 +71,23 @@ function RequestTicket({
           </span>
         </div>
         <div className="row" style={{ fontSize: 12 }}>
-          <Avatar initials={request.vendor ? initials(request.vendor.name) : '?'} size="sm" />
-          <span>{request.vendor?.name ?? request.vendorName ?? 'Unassigned'}</span>
+          {request.vendor || request.vendorName ? (
+            <>
+              <Avatar initials={initials(request.vendor?.name ?? request.vendorName!)} size="sm" />
+              <span>{request.vendor?.name ?? request.vendorName}</span>
+            </>
+          ) : (
+            <>
+              <span className={styles.unassigned} aria-hidden="true" />
+              <span>Unassigned · Assign</span>
+            </>
+          )}
         </div>
         {request.photos.length > 0 && (
           <span className="muted" style={{ fontSize: 12 }}>
             {request.photos.length} {request.photos.length === 1 ? 'photo' : 'photos'} attached
           </span>
         )}
-        <RequestDetails
-          returnTo={returnTo}
-          request={request}
-          vendors={vendors}
-          actions={{
-            assign: assignMaintenanceAction,
-            status: setMaintenanceStatusAction,
-            comment: commentMaintenanceAction,
-            photo: uploadMaintenancePhotoAction,
-          }}
-        />
       </article>
     </Ticket>
   );
@@ -110,10 +100,7 @@ export default async function MaintenancePage({
   const [session, params] = await Promise.all([requireManagerRole(), searchParams]);
   const scope = scopeFilterFrom(params);
   const query = parseMaintenanceQuery(params);
-  const [list, { vendors }] = await Promise.all([
-    listMaintenancePage(session.organizationId, scope, query),
-    listMaintenanceOptions(session.organizationId),
-  ]);
+  const list = await listMaintenancePage(session.organizationId, scope, query);
   const { summary, statusCounts } = list;
   const requests = await withRequestPhotos(session.organizationId, list.requests);
   const hidden = { propertyId: scope.propertyId, unitId: scope.unitId };
@@ -188,7 +175,6 @@ export default async function MaintenancePage({
                       <RequestTicket
                         key={request.id}
                         request={request}
-                        vendors={vendors}
                         returnTo={`/maintenance${maintenanceQueryString(query, hidden)}`}
                       />
                     ))}

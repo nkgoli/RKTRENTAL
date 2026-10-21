@@ -1,9 +1,11 @@
 'use client';
 
-import { useActionState, useEffect, type ReactNode } from 'react';
+import { useActionState, useEffect, useState, startTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './maintenance.module.css';
 import { preserveIssueDraft } from './issue-draft';
+import { useToast } from '@/components/ui/Toast';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export type RequestActionResult = {
   error?: string;
@@ -20,14 +22,18 @@ export function RequestActionForm({
   children,
   className,
   label,
+  confirmCancellation = false,
 }: {
   action: RequestAction;
   transport?: { operation: string; propertyId: string; unitId: string };
   children: ReactNode;
   className?: string;
   label: string;
+  confirmCancellation?: boolean;
 }) {
   const router = useRouter();
+  const toast = useToast();
+  const [cancellation, setCancellation] = useState<FormData | null>(null);
   const [result, submit, pending] = useActionState(
     async (_: RequestActionResult, form: FormData): Promise<RequestActionResult> => {
       if (!transport) return action(form);
@@ -64,43 +70,70 @@ export function RequestActionForm({
     {},
   );
   useEffect(() => {
-    if (result.message) router.refresh();
-  }, [result, router]);
+    if (result.message) {
+      toast.success(result.message);
+      router.refresh();
+    }
+  }, [result, router, toast]);
   return (
-    <form
-      action={submit}
-      className={className}
-      aria-label={label}
-      aria-busy={pending}
-      onReset={(event) => event.preventDefault()}
-    >
-      {result.error && (
-        <p className={styles.error} role="alert">
-          {result.error}
-        </p>
-      )}
-      {result.message && (
-        <p className={styles.notice} role="status">
-          {result.message}
-        </p>
-      )}
-      {result.requestId ? (
-        <a
-          className="btn btn-secondary"
-          href={result.requestHref ?? `#request-${result.requestId}`}
-        >
-          Request created
-        </a>
-      ) : (
-        <fieldset className={styles.fields} disabled={pending}>
-          {children}
-        </fieldset>
-      )}
-      {pending && (
-        <p className="muted" role="status">
-          Saving...
-        </p>
-      )}
-    </form>
+    <>
+      <form
+        action={submit}
+        className={className}
+        aria-label={label}
+        aria-busy={pending}
+        onReset={(event) => event.preventDefault()}
+        onSubmit={(event) => {
+          if (!confirmCancellation) return;
+          const data = new FormData(event.currentTarget);
+          if (data.get('status') === 'CANCELLED') {
+            event.preventDefault();
+            setCancellation(data);
+          }
+        }}
+      >
+        {result.error && (
+          <p className={styles.error} role="alert">
+            {result.error}
+          </p>
+        )}
+        {result.message && (
+          <p className={styles.notice} role="status">
+            {result.message}
+          </p>
+        )}
+        {result.requestId ? (
+          <a
+            className="btn btn-secondary"
+            href={result.requestHref ?? `#request-${result.requestId}`}
+          >
+            Request created
+          </a>
+        ) : (
+          <fieldset className={styles.fields} disabled={pending}>
+            {children}
+          </fieldset>
+        )}
+        {pending && (
+          <p className="muted" role="status">
+            Saving...
+          </p>
+        )}
+      </form>
+      <ConfirmDialog
+        open={Boolean(cancellation)}
+        onClose={() => setCancellation(null)}
+        title="Cancel this repair request?"
+        description="This closes the request as cancelled. Its photos, comments and history remain available."
+        confirmLabel="Cancel request"
+        onConfirm={() => {
+          if (cancellation) {
+            const data = cancellation;
+            setCancellation(null);
+            startTransition(() => submit(data));
+          }
+        }}
+      />
+    </>
   );
 }

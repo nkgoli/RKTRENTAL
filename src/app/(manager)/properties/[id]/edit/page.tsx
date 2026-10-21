@@ -47,13 +47,10 @@ export default async function EditPropertyPage({
       <PageHeader
         title={roi ? 'Edit ROI assumptions' : 'Edit property'}
         eyebrow={`Portfolio / ${property.name}`}
+        back={{ href: cancelHref, label: roi ? 'Returns & ROI' : property.name }}
         actions={[]}
       />
       <div className={styles.formPage}>
-        <h1 className={styles.formTitle}>{roi ? 'Edit ROI assumptions' : 'Edit property'}</h1>
-        <a href={cancelHref} className={styles.backLink}>
-          ← Back to {roi ? 'Returns & ROI' : property.name}
-        </a>
         <PropertyForm
           key={property.id}
           owners={owners}

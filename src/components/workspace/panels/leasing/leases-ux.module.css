@@ -1,6 +1,9 @@
 .panel {
   min-width: 0;
 }
+.panel :global(.card.flush) {
+  overflow: visible;
+}
 .panel li {
   min-width: 0;
 }
@@ -54,5 +57,55 @@
   }
   .panel li {
     flex-wrap: wrap;
+  }
+}
+
+.panel li {
+  padding: 10px 16px;
+  position: relative;
+}
+.panel li :global(.row-anchor)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.panel li :global(.row-anchor):focus-visible {
+  outline: none;
+}
+.panel li:has(:global(.row-anchor):focus-visible) {
+  outline: 3px solid var(--design-primary);
+  outline-offset: -3px;
+}
+.panel li :global(.btn) {
+  position: relative;
+  z-index: 1;
+}
+.panel :global(p[class*='sectionEmpty']) {
+  padding: 0;
+  border: 0;
+}
+.panel li :global(.row-menu) {
+  z-index: 2;
+}
+.panel li :global(.row-anchor) {
+  color: var(--design-text);
+}
+@media (max-width: 640px) {
+  .panel li {
+    gap: 8px;
+  }
+  .panel li > :global(div[class*='leaseStatus']) {
+    display: none;
+  }
+  .panel li > :global(div[class*='leaseActions']) {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+  }
+  .panel li > :global(div[class*='leaseActions']) > :global(.btn) {
+    display: none;
+  }
+  .panel li > :global(div[class*='leaseMain']) {
+    padding-right: 32px;
   }
 }

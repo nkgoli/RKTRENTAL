@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CompsWorkbench, type WorkbenchProps } from '@/app/(manager)/rent-comps/CompsWorkbench';
 import { applyRentAction } from '@/app/(manager)/rent-comps/actions';
 import { Component, type ReactNode } from 'react';
+import { ToastProvider } from '@/components/ui/Toast';
 
 vi.mock('@/app/(manager)/rent-comps/actions', () => ({ applyRentAction: vi.fn() }));
 afterEach(cleanup);
@@ -44,6 +45,35 @@ const props: WorkbenchProps = {
 };
 
 describe('rent comparison decisions', () => {
+  it('toasts a confirmed rent update, collapses the map and omits a repeated source column', async () => {
+    vi.mocked(applyRentAction).mockResolvedValueOnce({
+      ok: true,
+      rent: 1800,
+      message: 'Market rent updated.',
+    });
+    const { container } = render(
+      <ToastProvider>
+        <CompsWorkbench {...props} />
+      </ToastProvider>,
+    );
+    expect(screen.getByTestId('comps-map').closest('details')?.open).toBe(false);
+    expect(screen.queryByRole('columnheader', { name: 'Source' })).toBeNull();
+    fireEvent.submit(screen.getByRole('form', { name: 'Apply market rent' }));
+    await waitFor(() =>
+      expect(container.querySelector('.toast')?.textContent).toContain(
+        'Market rent for Example home updated to $1,800 / month.',
+      ),
+    );
+  });
+  it('shows a source column when comparable rentals have different providers', () => {
+    render(
+      <CompsWorkbench
+        {...props}
+        rows={props.rows.map((row, index) => ({ ...row, source: index ? 'rentrange' : 'mock' }))}
+      />,
+    );
+    expect(screen.getByRole('columnheader', { name: 'Source' })).toBeTruthy();
+  });
   it('associates a rejected rent with its field without a real financial submission', async () => {
     vi.mocked(applyRentAction).mockResolvedValueOnce({
       ok: false,

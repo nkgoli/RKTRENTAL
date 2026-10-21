@@ -480,72 +480,6 @@ export function Exit({
       : 'No exit comparison for these values. Correct the probe and update again.';
   return (
     <div className={chartStyles.stack}>
-      <ChartCard
-        title="Exit probe"
-        subtitle="Try another exit year, selling cost or sale price. Probes are temporary and never saved."
-        basis={[probing ? 'Temporary probe' : 'Saved assumptions', 'Before tax']}
-        label="Exit probe"
-      >
-        <div className={d.probeState} data-probe={probing || undefined} role="status">
-          <p>
-            <b>Saved:</b> {describeControls(saved)}
-          </p>
-          {probing && (
-            <p>
-              <b>Showing probe:</b> {describeControls(applied)}
-            </p>
-          )}
-        </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (stale || saving) return;
-            run(controls);
-          }}
-        >
-          <fieldset disabled={stale || saving} className={d.probeFields}>
-            {fields.map(([key, label, hint]) => (
-              <label className={styles.field} key={key}>
-                <span id={`exit-probe-${key}-label`}>{label}</span>
-                <input
-                  aria-labelledby={`exit-probe-${key}-label`}
-                  aria-describedby={`exit-probe-${key}-hint`}
-                  inputMode="decimal"
-                  value={controls[key]}
-                  onChange={(e) => {
-                    setControls({ ...controls, [key]: e.target.value });
-                    setChanged(true);
-                  }}
-                />
-                <small id={`exit-probe-${key}-hint`}>{hint}</small>
-              </label>
-            ))}
-            <div className={d.probeActions}>
-              <button type="submit">Update exit comparison</button>
-              {(probing || changed) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setControls(saved);
-                    run(saved);
-                  }}
-                >
-                  Reset to saved
-                </button>
-              )}
-              <button type="button" onClick={onEdit}>
-                Edit saved exit assumptions
-              </button>
-            </div>
-          </fieldset>
-        </form>
-        {calculation.error && (
-          <p role="alert" className={styles.error}>
-            Could not calculate exit comparison. {calculation.error} Correct the controls and try
-            again.
-          </p>
-        )}
-      </ChartCard>
       {data && rows ? (
         <Comparison
           key={version}
@@ -621,6 +555,75 @@ export function Exit({
           <p className={d.paused}>{paused}</p>
         </ChartCard>
       )}
+      <details className="disclosure">
+        <summary>Try another exit</summary>
+        <ChartCard
+          title="Exit probe"
+          subtitle="Try another exit year, selling cost or sale price. Probes are temporary and never saved."
+          basis={[probing ? 'Temporary probe' : 'Saved assumptions', 'Before tax']}
+          label="Exit probe"
+        >
+          <div className={d.probeState} data-probe={probing || undefined} role="status">
+            <p>
+              <b>Saved:</b> {describeControls(saved)}
+            </p>
+            {probing && (
+              <p>
+                <b>Showing probe:</b> {describeControls(applied)}
+              </p>
+            )}
+          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (stale || saving) return;
+              run(controls);
+            }}
+          >
+            <fieldset disabled={stale || saving} className={d.probeFields}>
+              {fields.map(([key, label, hint]) => (
+                <label className={styles.field} key={key}>
+                  <span id={`exit-probe-${key}-label`}>{label}</span>
+                  <input
+                    aria-labelledby={`exit-probe-${key}-label`}
+                    aria-describedby={`exit-probe-${key}-hint`}
+                    inputMode="decimal"
+                    value={controls[key]}
+                    onChange={(e) => {
+                      setControls({ ...controls, [key]: e.target.value });
+                      setChanged(true);
+                    }}
+                  />
+                  <small id={`exit-probe-${key}-hint`}>{hint}</small>
+                </label>
+              ))}
+              <div className={d.probeActions}>
+                <button type="submit">Update exit comparison</button>
+                {(probing || changed) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setControls(saved);
+                      run(saved);
+                    }}
+                  >
+                    Reset to saved
+                  </button>
+                )}
+                <button type="button" onClick={onEdit}>
+                  Edit saved exit assumptions
+                </button>
+              </div>
+            </fieldset>
+          </form>
+          {calculation.error && (
+            <p role="alert" className={styles.error}>
+              Could not calculate exit comparison. {calculation.error} Correct the controls and try
+              again.
+            </p>
+          )}
+        </ChartCard>
+      </details>
     </div>
   );
 }

@@ -366,12 +366,25 @@
   flex: 1;
   min-width: 0;
 }
+.activityRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 8px;
+}
+.activityRow:hover { background: var(--design-background); }
 
 .activityBody small {
   color: var(--design-muted);
   display: block;
   font-size: 12px;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .activityBody small a {

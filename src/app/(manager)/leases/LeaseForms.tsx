@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useId, useRef, useState } from 'react';
 import { Alert, Button } from '@/components/ui';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { saveLeaseAction, type LeaseFormState } from './actions';
 import {
   activateDetailLeaseAction,
@@ -254,22 +255,19 @@ export function LeaseStatusActions({
   leaseId,
   status,
   returnScope,
+  placeLabel = 'this property',
 }: {
   leaseId: string;
   status: string;
   returnScope?: LeaseReturnScope;
+  placeLabel?: string;
 }) {
   const [activeState, activate, activating] = useActionState(activateDetailLeaseAction, initial);
   const [endState, terminate, terminating] = useActionState(terminateDetailLeaseAction, initial);
   const [confirming, setConfirming] = useState(false);
-  const confirmation = useRef<HTMLFormElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-  const wasConfirming = useRef(false);
   useEffect(() => {
-    if (confirming) confirmation.current?.focus();
-    else if (wasConfirming.current) trigger.current?.focus();
-    wasConfirming.current = confirming;
-  }, [confirming]);
+    if (endState.message) setConfirming(false);
+  }, [endState]);
   return (
     <div className="stack" style={{ gap: 8 }}>
       {status === 'DRAFT' && (
@@ -281,35 +279,23 @@ export function LeaseStatusActions({
           </Button>
         </form>
       )}
-      {status === 'ACTIVE' &&
-        (confirming ? (
-          <form
-            ref={confirmation}
-            action={terminate}
-            className="row"
-            tabIndex={-1}
-            aria-label="Confirm lease termination"
-          >
-            <input type="hidden" name="leaseId" value={leaseId} />
-            <input type="hidden" name="returnScope" value={returnScope ?? ''} />
-            <span>Terminate this lease?</span>
-            <Button type="submit" variant="danger" disabled={terminating} aria-busy={terminating}>
-              {terminating ? 'Terminating…' : 'Confirm terminate'}
-            </Button>
-            <Button type="button" disabled={terminating} onClick={() => setConfirming(false)}>
-              Cancel
-            </Button>
-          </form>
-        ) : (
-          <button
-            ref={trigger}
-            type="button"
-            className="btn btn-danger"
-            onClick={() => setConfirming(true)}
-          >
+      {status === 'ACTIVE' && (
+        <>
+          <Button type="button" variant="danger" onClick={() => setConfirming(true)}>
             Terminate
-          </button>
-        ))}
+          </Button>
+          <ConfirmDialog
+            open={confirming}
+            onClose={() => setConfirming(false)}
+            title={`Terminate lease for ${placeLabel}?`}
+            description="Ends this lease and marks the unit vacant if no other active lease remains. Existing charges, payment history and documents stay available."
+            confirmLabel={terminating ? 'Terminating…' : 'Terminate lease'}
+            pending={terminating}
+            action={terminate}
+            fields={{ leaseId, returnScope: returnScope ?? '' }}
+          />
+        </>
+      )}
       {activeState.message && (
         <Alert tone={activeState.ok ? 'success' : 'error'}>{activeState.message}</Alert>
       )}

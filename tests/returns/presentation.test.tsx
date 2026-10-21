@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest';
-import { act, cleanup, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { hydrateRoot } from 'react-dom/client';
 import { IncomeExpenseChart } from '@/components/returns/IncomeExpenseChart';
@@ -9,6 +9,8 @@ import { propertyReportActivity } from '@/components/returns/report-activity';
 import { computeScopedReturns } from '@/lib/metrics/scoped';
 import { resolvePeriod } from '@/lib/returns/period';
 
+const replace = vi.hoisted(() => vi.fn());
+vi.mock('next/navigation', () => ({ useRouter: () => ({ replace }) }));
 afterEach(cleanup);
 const now = new Date('2026-10-18T12:00:00Z');
 const period = resolvePeriod('MTD', now);
@@ -71,7 +73,12 @@ describe('returns presentation', () => {
     expect(screen.getByRole('link', { name: '2Y' }).getAttribute('href')).toBe(
       '/properties/elm/returns?unit=unit-1&period=2Y',
     );
+    fireEvent.click(screen.getByText('Custom dates'));
     const form = screen.getByRole('form', { name: 'Custom range' });
+    fireEvent.change(screen.getByLabelText('From'), {target:{value:'2026-09'}});
+    fireEvent.blur(screen.getByLabelText('To'));
+    expect(replace).toHaveBeenCalledWith('/properties/elm/returns?unit=unit-1&period=CUSTOM&from=2026-09&to=2026-10', {scroll:false});
+    expect(screen.queryByRole('button', {name:'Apply'})).toBeNull();
     expect(new FormData(form as HTMLFormElement).get('unit')).toBe('unit-1');
     expect(screen.getByRole('link', { name: 'MTD' }).getAttribute('aria-current')).toBe('true');
   });

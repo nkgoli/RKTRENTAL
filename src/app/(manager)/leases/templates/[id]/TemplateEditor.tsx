@@ -46,6 +46,8 @@ export function TemplateEditor({
   }, [message]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [allExpanded, setAllExpanded] = useState(false);
+  const [section, setSection] = useState<TemplateSection | 'fees' | 'properties'>('CLAUSE');
+  const [search, setSearch] = useState('');
   const changed = () => {
     setDirty(true);
     setMessage('');
@@ -56,6 +58,7 @@ export function TemplateEditor({
   };
   const add = (section: TemplateSection) => {
     changed();
+    setSearch('');
     const id = `new-${crypto.randomUUID()}`;
     setExpanded((value) => ({ ...value, [id]: true }));
     setItems((all) => [
@@ -95,6 +98,8 @@ export function TemplateEditor({
       return;
     }
     if (incomplete) {
+      setSection(incomplete.section);
+      setSearch('');
       setExpanded((value) => ({ ...value, [incomplete.id]: true }));
       setMessage(
         `Complete the title and wording for ${incomplete.title || 'the new item'} in ${labels[incomplete.section]}.`,
@@ -107,10 +112,12 @@ export function TemplateEditor({
           key !== 'graceDays' && value && (!Number.isFinite(Number(value)) || Number(value) < 0),
       )
     ) {
+      setSection('fees');
       setMessage('Enter a valid amount of zero or more for each fee.');
       return;
     }
     if (!Number.isInteger(fees.graceDays) || fees.graceDays < 0 || fees.graceDays > 31) {
+      setSection('fees');
       setMessage('Enter 0 to 31 grace days.');
       return;
     }
@@ -200,7 +207,12 @@ export function TemplateEditor({
             {busy ? 'Saving…' : dirty ? 'Unsaved changes' : `Version ${version}`}
           </span>
         </div>
-        <button type="button" className="btn btn-primary" disabled={busy} onClick={() => save()}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={busy || (!dirty && Boolean(initial))}
+          onClick={() => save()}
+        >
           {busy ? 'Saving…' : 'Save template'}
         </button>
       </div>
@@ -216,17 +228,30 @@ export function TemplateEditor({
         </p>
       )}
       <nav className={styles['lt-section-nav']} aria-label="Template sections">
-        {sections.map((section) => (
-          <a key={section} href={`#template-${section.toLowerCase()}`}>
-            {labels[section]} <span>{items.filter((item) => item.section === section).length}</span>
-          </a>
+        {sections.map((key) => (
+          <button
+            type="button"
+            key={key}
+            aria-pressed={section === key}
+            onClick={() => setSection(key)}
+          >
+            {labels[key]} <span>{items.filter((item) => item.section === key).length}</span>
+          </button>
         ))}
-        <a href="#template-fees">Default fees</a>
-        <a href="#template-properties">Property defaults</a>
+        <button type="button" aria-pressed={section === 'fees'} onClick={() => setSection('fees')}>
+          Default fees
+        </button>
+        <button
+          type="button"
+          aria-pressed={section === 'properties'}
+          onClick={() => setSection('properties')}
+        >
+          Property defaults
+        </button>
       </nav>
       <fieldset className={styles.editFields} disabled={busy}>
         <div className={styles['lt-editor-grid']}>
-          <div className={styles['lt-panel']}>
+          <div className={styles['lt-panel']} hidden={section === 'properties'}>
             <div className={styles['lt-panel-head']}>
               <h2>{name || 'Untitled template'}</h2>
               <span className={styles['lt-badge']}>v{version}</span>
@@ -247,7 +272,19 @@ export function TemplateEditor({
                   }}
                 />
               </label>
+              {section !== 'fees' && (
+                <label className={styles['lt-field']}>
+                  Find a term
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search titles and wording"
+                  />
+                </label>
+              )}
               <button
+                hidden={section === 'fees'}
                 type="button"
                 className="btn btn-secondary"
                 onClick={() => {
@@ -257,170 +294,186 @@ export function TemplateEditor({
               >
                 {allExpanded ? 'Collapse all' : 'Expand all'}
               </button>
-              {sections.map((section) => (
-                <section
-                  key={section}
-                  className={styles['lt-section']}
-                  id={`template-${section.toLowerCase()}`}
-                >
-                  <div className={styles['lt-section-heading']}>
-                    <h3>
-                      {labels[section]}{' '}
-                      <span className={styles['lt-badge']}>
-                        {items.filter((item) => item.section === section).length}
-                      </span>
-                    </h3>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      aria-label={`+ Add ${section.toLowerCase()}`}
-                      onClick={() => add(section)}
-                    >
-                      <TemplateIcon name="add" /> Add {section.toLowerCase()}
-                    </button>
-                  </div>
-                  {!items.some((item) => item.section === section) && (
-                    <p className={styles['lt-small']}>
-                      No {labels[section].toLowerCase()} yet. Add reusable wording for future
-                      leases.
-                    </p>
-                  )}
-                  {items
-                    .filter((item) => item.section === section)
-                    .map((item) => (
-                      <article key={item.id} className={styles['lt-item']}>
-                        <button
-                          type="button"
-                          className={styles['lt-item-toggle']}
-                          aria-controls={`template-item-${item.id}`}
-                          aria-expanded={expanded[item.id] ?? allExpanded}
-                          onClick={() =>
-                            setExpanded((value) => ({
-                              ...value,
-                              [item.id]: !(value[item.id] ?? allExpanded),
-                            }))
-                          }
-                        >
-                          <strong>
-                            {items
-                              .filter((entry) => entry.section === section)
-                              .findIndex((entry) => entry.id === item.id) + 1}
-                            . {item.title || 'New item'}
-                          </strong>
-                          <span>{(expanded[item.id] ?? allExpanded) ? 'Collapse' : 'Expand'}</span>
-                        </button>
-                        {!(expanded[item.id] ?? allExpanded) && (
-                          <div className={styles.previewSpacing}>
-                            <p className={styles['lt-item-preview']}>
-                              {item.body.replace(/\{\{([a-z_]+)\}\}/g, '________ ($1)')}
-                            </p>
-                          </div>
-                        )}
-                        {(expanded[item.id] ?? allExpanded) && (
-                          <div className={styles['lt-item-edit']} id={`template-item-${item.id}`}>
-                            <div className={styles['reorder']}>
-                              <span className={styles['lt-small']}>
-                                Order within {labels[section]}
-                              </span>
-                              <div>
+              {sections
+                .filter((key) => key === section)
+                .map((section) => (
+                  <section
+                    key={section}
+                    className={styles['lt-section']}
+                    id={`template-${section.toLowerCase()}`}
+                  >
+                    <div className={styles['lt-section-heading']}>
+                      <h3>
+                        {labels[section]}{' '}
+                        <span className={styles['lt-badge']}>
+                          {items.filter((item) => item.section === section).length}
+                        </span>
+                      </h3>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        aria-label={`+ Add ${section.toLowerCase()}`}
+                        onClick={() => add(section)}
+                      >
+                        <TemplateIcon name="add" /> Add {section.toLowerCase()}
+                      </button>
+                    </div>
+                    {!items.some((item) => item.section === section) && (
+                      <p className={styles['lt-small']}>
+                        No {labels[section].toLowerCase()} yet. Add reusable wording for future
+                        leases.
+                      </p>
+                    )}
+                    {items
+                      .filter(
+                        (item) =>
+                          item.section === section &&
+                          `${item.title} ${item.body}`
+                            .toLowerCase()
+                            .includes(search.trim().toLowerCase()),
+                      )
+                      .map((item) => (
+                        <article key={item.id} className={styles['lt-item']}>
+                          <button
+                            type="button"
+                            className={styles['lt-item-toggle']}
+                            aria-controls={`template-item-${item.id}`}
+                            aria-expanded={expanded[item.id] ?? allExpanded}
+                            onClick={() =>
+                              setExpanded((value) => ({
+                                ...value,
+                                [item.id]: !(value[item.id] ?? allExpanded),
+                              }))
+                            }
+                          >
+                            <strong>
+                              {items
+                                .filter((entry) => entry.section === section)
+                                .findIndex((entry) => entry.id === item.id) + 1}
+                              . {item.title || 'New item'}
+                            </strong>
+                            <span>
+                              {(expanded[item.id] ?? allExpanded) ? 'Collapse' : 'Expand'}
+                            </span>
+                          </button>
+                          {!(expanded[item.id] ?? allExpanded) && (
+                            <div className={styles.previewSpacing}>
+                              <p className={styles['lt-item-preview']}>
+                                {item.body.replace(/\{\{([a-z_]+)\}\}/g, '________ ($1)')}
+                              </p>
+                            </div>
+                          )}
+                          {(expanded[item.id] ?? allExpanded) && (
+                            <div className={styles['lt-item-edit']} id={`template-item-${item.id}`}>
+                              <div className={styles['reorder']}>
+                                <span className={styles['lt-small']}>
+                                  Order within {labels[section]}
+                                </span>
+                                <div>
+                                  <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    aria-label={`Move ${item.title} up`}
+                                    disabled={
+                                      items.filter((entry) => entry.section === section)[0]?.id ===
+                                      item.id
+                                    }
+                                    onClick={() => move(item.id, -1)}
+                                  >
+                                    ↑
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    aria-label={`Move ${item.title} down`}
+                                    disabled={
+                                      items.filter((entry) => entry.section === section).at(-1)
+                                        ?.id === item.id
+                                    }
+                                    onClick={() => move(item.id, 1)}
+                                  >
+                                    ↓
+                                  </button>
+                                </div>
+                              </div>
+                              <label className={styles['lt-field']}>
+                                {item.title || 'New item'} title
+                                <input
+                                  aria-label={`${item.title || 'New item'} title`}
+                                  aria-describedby={message ? 'template-feedback' : undefined}
+                                  aria-invalid={invalid && !item.title.trim()}
+                                  placeholder="Title"
+                                  value={item.title}
+                                  onChange={(e) => edit(item.id, { title: e.target.value })}
+                                />
+                              </label>
+                              <label className={styles['lt-field']}>
+                                {item.title || 'New item'} wording
+                                <textarea
+                                  aria-label={`${item.title || 'New item'} wording`}
+                                  aria-describedby={message ? 'template-feedback' : undefined}
+                                  aria-invalid={invalid && !item.body.trim()}
+                                  placeholder="Write the term in plain language"
+                                  value={item.body}
+                                  onChange={(e) => edit(item.id, { body: e.target.value })}
+                                />
+                              </label>
+                              <label className={styles['lt-field']}>
+                                Include when…{' '}
+                                <select
+                                  aria-label={`${item.title || 'New item'} include when`}
+                                  value={item.includeWhen}
+                                  onChange={(e) =>
+                                    edit(item.id, {
+                                      includeWhen: e.target.value as TemplateItem['includeWhen'],
+                                    })
+                                  }
+                                >
+                                  {INCLUDE_WHEN.map((condition) => (
+                                    <option key={condition} value={condition}>
+                                      {CONDITION_LABELS[condition]}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <div className={styles['lt-item-options']}>
+                                <label>
+                                  <input
+                                    type="checkbox"
+                                    checked={item.required}
+                                    onChange={(e) => edit(item.id, { required: e.target.checked })}
+                                  />{' '}
+                                  Required by template
+                                </label>
                                 <button
                                   type="button"
-                                  className="btn btn-secondary"
-                                  aria-label={`Move ${item.title} up`}
-                                  disabled={
-                                    items.filter((entry) => entry.section === section)[0]?.id ===
-                                    item.id
-                                  }
-                                  onClick={() => move(item.id, -1)}
+                                  className={`btn btn-secondary ${styles.dangerButton}`}
+                                  aria-label={`Remove ${item.title || 'new item'}`}
+                                  onClick={() => {
+                                    changed();
+                                    setItems((all) => all.filter((i) => i.id !== item.id));
+                                  }}
                                 >
-                                  ↑
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn btn-secondary"
-                                  aria-label={`Move ${item.title} down`}
-                                  disabled={
-                                    items.filter((entry) => entry.section === section).at(-1)
-                                      ?.id === item.id
-                                  }
-                                  onClick={() => move(item.id, 1)}
-                                >
-                                  ↓
+                                  Remove
                                 </button>
                               </div>
                             </div>
-                            <label className={styles['lt-field']}>
-                              {item.title || 'New item'} title
-                              <input
-                                aria-label={`${item.title || 'New item'} title`}
-                                aria-describedby={message ? 'template-feedback' : undefined}
-                                aria-invalid={invalid && !item.title.trim()}
-                                placeholder="Title"
-                                value={item.title}
-                                onChange={(e) => edit(item.id, { title: e.target.value })}
-                              />
-                            </label>
-                            <label className={styles['lt-field']}>
-                              {item.title || 'New item'} wording
-                              <textarea
-                                aria-label={`${item.title || 'New item'} wording`}
-                                aria-describedby={message ? 'template-feedback' : undefined}
-                                aria-invalid={invalid && !item.body.trim()}
-                                placeholder="Write the term in plain language"
-                                value={item.body}
-                                onChange={(e) => edit(item.id, { body: e.target.value })}
-                              />
-                            </label>
-                            <label className={styles['lt-field']}>
-                              Include when…{' '}
-                              <select
-                                aria-label={`${item.title || 'New item'} include when`}
-                                value={item.includeWhen}
-                                onChange={(e) =>
-                                  edit(item.id, {
-                                    includeWhen: e.target.value as TemplateItem['includeWhen'],
-                                  })
-                                }
-                              >
-                                {INCLUDE_WHEN.map((condition) => (
-                                  <option key={condition} value={condition}>
-                                    {CONDITION_LABELS[condition]}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <div className={styles['lt-item-options']}>
-                              <label>
-                                <input
-                                  type="checkbox"
-                                  checked={item.required}
-                                  onChange={(e) => edit(item.id, { required: e.target.checked })}
-                                />{' '}
-                                Required by template
-                              </label>
-                              <button
-                                type="button"
-                                className={`btn btn-secondary ${styles.dangerButton}`}
-                                aria-label={`Remove ${item.title || 'new item'}`}
-                                onClick={() => {
-                                  changed();
-                                  setItems((all) => all.filter((i) => i.id !== item.id));
-                                }}
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                        <p className={styles['lt-item-meta']}>
-                          {CONDITION_LABELS[item.includeWhen]} ·{' '}
-                          {item.required ? 'Required by template' : 'Optional'}
-                        </p>
-                      </article>
-                    ))}
-                </section>
-              ))}
-              <section className={styles['lt-section']} id="template-fees">
+                          )}
+                          {(expanded[item.id] ?? allExpanded) && (
+                            <p className={styles['lt-item-meta']}>
+                              {CONDITION_LABELS[item.includeWhen]} ·{' '}
+                              {item.required ? 'Required by template' : 'Optional'}
+                            </p>
+                          )}
+                        </article>
+                      ))}
+                  </section>
+                ))}
+              <section
+                className={styles['lt-section']}
+                id="template-fees"
+                hidden={section !== 'fees'}
+              >
                 <h3>Default fees</h3>
                 <p className="muted">
                   These prefill Rent, deposit &amp; fees. Review amounts for each new lease.
@@ -498,7 +551,11 @@ export function TemplateEditor({
               )}
             </div>
           </div>
-          <aside className={styles['lt-panel']} id="template-properties">
+          <aside
+            className={styles['lt-panel']}
+            id="template-properties"
+            hidden={section !== 'properties'}
+          >
             <div className={`${styles['lt-panel-head']} ${styles.propertyHeading}`}>
               <span className={styles['lt-doc-icon']}>
                 <Icon name="properties" />

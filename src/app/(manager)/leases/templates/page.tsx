@@ -25,7 +25,7 @@ export default async function LeaseTemplatesPage() {
     <div className={styles.page}>
       <PageHeader
         eyebrow="Workspace / Leasing"
-        title="Lease templates ✳"
+        title="Lease templates"
         actions={[
           { label: 'All leases', href: '/leases' },
           { label: 'Create template', href: '/leases/templates/new', primary: true },
@@ -67,17 +67,15 @@ export default async function LeaseTemplatesPage() {
             </div>
             <table>
               <caption className={styles['lt-sr']}>
-                Lease templates, versions, usage and property defaults.
+                Lease templates, versions and property defaults.
               </caption>
               <thead>
                 <tr>
-                  {['Template', 'Version', 'Used by', 'Property defaults', 'Actions'].map(
-                    (label) => (
-                      <th key={label} scope="col">
-                        {label}
-                      </th>
-                    ),
-                  )}
+                  {['Template', 'Version', 'Property defaults', 'Actions'].map((label) => (
+                    <th key={label} scope="col">
+                      {label}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -94,7 +92,6 @@ export default async function LeaseTemplatesPage() {
                     <td>
                       <span className={styles['lt-badge']}>v{template.version}</span>
                     </td>
-                    <td>{template.usageCount} leases</td>
                     <td className={styles['lt-defaults']}>{defaults(template.id) || '—'}</td>
                     <td>{editLink(template.id)}</td>
                   </tr>
@@ -113,10 +110,6 @@ export default async function LeaseTemplatesPage() {
                   <span className={styles['lt-badge']}>v{template.version}</span>
                 </div>
                 <dl>
-                  <div>
-                    <dt>Used by</dt>
-                    <dd>{template.usageCount} leases</dd>
-                  </div>
                   <div>
                     <dt>Property defaults</dt>
                     <dd>{defaults(template.id) || 'None'}</dd>

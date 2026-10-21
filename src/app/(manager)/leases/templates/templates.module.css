@@ -805,3 +805,55 @@
     max-width: 150px;
   }
 }
+
+/* One editable section at a time, with persistent save feedback. */
+.page [hidden] {
+  display: none !important;
+}
+.page .lt-editor-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.page .lt-section-nav {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-block: 10px;
+}
+.page .lt-section-nav button {
+  flex: none;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--design-muted);
+  cursor: pointer;
+}
+.page .lt-section-nav button[aria-pressed='true'] {
+  color: var(--design-primary);
+  background: var(--rr-primary-tint);
+  font-weight: 600;
+}
+.page .lt-item {
+  margin-top: 0;
+  border-bottom: 1px solid var(--rr-border);
+  border-radius: 0;
+}
+.page .lt-item > button {
+  min-height: 44px;
+  padding: 10px 12px 4px;
+}
+.page .previewSpacing {
+  padding: 0 12px 10px;
+}
+.page .lt-item-preview {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.page .lt-panel-head {
+  display: none;
+}
+.page .lt-savebar {
+  top: 0;
+}

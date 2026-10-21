@@ -140,3 +140,58 @@
     flex: 1;
   }
 }
+.photos {
+  grid-template-columns: repeat(auto-fill, 120px);
+  gap: 8px;
+}
+.photoButton {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: var(--design-background);
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.photoButton img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+}
+.photo .fullPhoto {
+  width: 100%;
+  height: auto;
+  max-height: 65vh;
+  object-fit: contain;
+}
+.addPhoto {
+  width: 120px;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px dashed var(--design-muted);
+  border-radius: 8px;
+  color: var(--design-primary);
+  cursor: pointer;
+  position: relative;
+  font-size: 13px;
+}
+.addPhoto > span:first-child {
+  font-size: 24px;
+}
+.addPhoto input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+}
+.addPhoto:focus-within {
+  outline: 2px solid var(--design-primary);
+  outline-offset: 3px;
+}

@@ -6,28 +6,28 @@ What is already good: the dashboard composition (hero collection card + chart, e
 
 | ID | Route | Severity | Finding | Status |
 | --- | --- | :-: | --- | :-: |
-| MC-01 | all manager routes | P1 | Sidebar has its own scrollbar at 1280 × 800 | Open |
-| MC-02 | /dashboard | P1 | "Leases expiring soon" KPI (1) disagrees with the list (6) | Open |
-| MC-03 | /dashboard | P2 | Current-month bar is teal with no legend entry | Open |
-| MC-04 | /dashboard | P2 | Activity rows show "12:00 AM" and mix badges with badge-styled links | Open |
-| MC-05 | /dashboard | P2 | Attention avatars use off-palette coral/pink/navy | Open |
-| MC-06 | /properties | P1 | Property cards spend 180px on decorative icon headers; Maple Court shows a gradient instead | Open |
-| MC-07 | /properties | P2 | Search needs a button; chips reload the page | Open |
-| MC-08 | /payments | P1 | "Refund" is the primary row action on 33 of 41 rows; actions ignore status | Open |
-| MC-09 | /payments | P2 | Rent amounts rendered as links; header not sticky; no page-size | Open |
-| MC-10 | /payments | P2 | Owner payouts "Recent: $1,000 paid · $1,000 paid…" line is noise | Open |
-| MC-11 | /maintenance | P1 | Board has 4 columns in a 3-column grid; "Done" wraps under "New" | Open |
-| MC-12 | /maintenance | P2 | "▸ Manage request" disclosure inside cards; "?" avatar for Unassigned; filters need Apply | Open |
-| MC-13 | /maintenance/new, /maintenance/:id/edit | P2 | Two h1s with a back link squeezed between them | Open |
-| MC-14 | /maintenance/:id/edit | P2 | Photo shown as a full-width grey 140px block with text links under it | Open |
-| MC-15 | /documents | P2 | Filter rail is chips + 3 selects + Apply; thumbnails are gradient placeholders; text-link actions | Open |
-| MC-16 | /integrations | P2 | Three stacked "Save settings" buttons; badge casing differs from Applications | Open |
-| MC-17 | /payments (390) | P1 | Rent roll shows only Tenant and Property columns; the rest need unsignposted sideways scroll | Open |
-| MC-18 | /properties?view=list (390), /returns (390) | P2 | List table and income chart overflow their cards | Open |
-| MC-19 | /properties/:id (390) | P1 | Workspace tab strip overflows; Returns and Maintenance are cut off with only a thin scrollbar | Open |
-| MC-20 | /properties/new, /properties/:id/edit | P2 | "Number of units" defaults to 0 for a multi-unit building; ROI details is four collapsed disclosures under three paragraphs of help | Open |
-| MC-21 | /properties/:id | P2 | Overview page is 3,407px: full units table, 12-row timeline, photos, uploader and an "Add unit" form all expanded | Open |
-| MC-22 | /properties/:id/listing | P2 | Unit configuration prints "— bd · — ba" for every unit; twelve identical "See comps" buttons | Open |
+| MC-01 | all manager routes | P1 | Sidebar has its own scrollbar at 1280 × 800 | Fixed |
+| MC-02 | /dashboard | P1 | "Leases expiring soon" KPI (1) disagrees with the list (6) | Fixed |
+| MC-03 | /dashboard | P2 | Current-month bar is teal with no legend entry | Fixed |
+| MC-04 | /dashboard | P2 | Activity rows show "12:00 AM" and mix badges with badge-styled links | Fixed |
+| MC-05 | /dashboard | P2 | Attention avatars use off-palette coral/pink/navy | Fixed |
+| MC-06 | /properties | P1 | Property cards spend 180px on decorative icon headers; Maple Court shows a gradient instead | Fixed |
+| MC-07 | /properties | P2 | Search needs a button; chips reload the page | Fixed |
+| MC-08 | /payments | P1 | "Refund" is the primary row action on 33 of 41 rows; actions ignore status | Fixed |
+| MC-09 | /payments | P2 | Rent amounts rendered as links; header not sticky; no page-size | Fixed |
+| MC-10 | /payments | P2 | Owner payouts "Recent: $1,000 paid · $1,000 paid…" line is noise | Deferred |
+| MC-11 | /maintenance | P1 | Board has 4 columns in a 3-column grid; "Done" wraps under "New" | Fixed |
+| MC-12 | /maintenance | P2 | "▸ Manage request" disclosure inside cards; "?" avatar for Unassigned; filters need Apply | Fixed |
+| MC-13 | /maintenance/new, /maintenance/:id/edit | P2 | Two h1s with a back link squeezed between them | Fixed |
+| MC-14 | /maintenance/:id/edit | P2 | Photo shown as a full-width grey 140px block with text links under it | Fixed |
+| MC-15 | /documents | P2 | Filter rail is chips + 3 selects + Apply; thumbnails are gradient placeholders; text-link actions | Fixed |
+| MC-16 | /integrations | P2 | Three stacked "Save settings" buttons; badge casing differs from Applications | Fixed |
+| MC-17 | /payments (390) | P1 | Rent roll shows only Tenant and Property columns; the rest need unsignposted sideways scroll | Fixed |
+| MC-18 | /properties?view=list (390), /returns (390) | P2 | List table and income chart overflow their cards | Fixed |
+| MC-19 | /properties/:id (390) | P1 | Workspace tab strip overflows; Returns and Maintenance are cut off with only a thin scrollbar | Fixed |
+| MC-20 | /properties/new, /properties/:id/edit | P2 | "Number of units" defaults to 0 for a multi-unit building; ROI details is four collapsed disclosures under three paragraphs of help | Fixed |
+| MC-21 | /properties/:id | P2 | Overview page is 3,407px: full units table, 12-row timeline, photos, uploader and an "Add unit" form all expanded | Fixed |
+| MC-22 | /properties/:id/listing | P2 | Unit configuration prints "— bd · — ba" for every unit; twelve identical "See comps" buttons | Fixed |
 
 ---
 
@@ -38,7 +38,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** Linear/Mercury sidebars fit a 13-inch laptop with room to spare; the account control is a compact row at the bottom and the nav never scrolls.
 - **Fix:** In `.sidebar` set `height: 100vh; overflow: hidden; display: grid; grid-template-rows: auto 1fr auto` and let only the nav column scroll with `scrollbar-width: thin`. Reduce rhythm: nav item height 36px, item gap 2px, group gap 16px (was ~24px), group labels 11px/16px, padding 12px. Replace the 100px account card with a single 44px row (avatar 28px, name, chevron) that opens `AccountMenu` with "Sign out". Target total height ≤ 640px.
 - **Files:** `src/styles/globals.css` (`.sidebar`, `.nav`, `.sidebar-foot`), `src/components/shell/ManagerShell.tsx`, `src/components/shell/AccountMenu.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Compact navigation and account row fit the 800px desktop viewport.
 
 ### MC-02
 - **Route:** `/dashboard`. Screenshot: [dashboard-1280.jpg](screenshots/dashboard-1280.jpg).
@@ -47,7 +47,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** One number, one definition, repeated consistently ("Expiring within 90 days · 6"), and the card shows exactly that set.
 - **Fix:** Use one constant (`EXPIRING_WINDOW_DAYS = 90`) for both the KPI and the list; relabel the KPI "within 90 days"; order the list by days remaining and colour only ≤ 30d as warning (today Nov 30 shows warning tone, Dec 31 shows info tone; keep that mapping but with the shared constant). Cap the list at 5 with "View all 6 →".
 - **Files:** `src/app/(manager)/dashboard/page.tsx`, `src/components/dashboard/KpiCard.tsx`, `src/lib` dashboard query that computes `expiringSoon`.
-- **Status:** Open
+- **Status:** Fixed - KPI and expiring list share the 90-day window; five rows plus total-count link.
 
 ### MC-03
 - **Route:** `/dashboard`. Screenshot: [dashboard-1280.jpg](screenshots/dashboard-1280.jpg).
@@ -56,7 +56,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** Stripe's "current period" bars are the same hue at 50% opacity or hatched, with "to date" in the axis label and the legend.
 - **Fix:** Render the current month with `fill: var(--design-primary); fill-opacity: .45` and a dashed outline; axis label "Oct · to date"; add a third legend item "Current month (to date)". Reserve teal for the second data series only.
 - **Files:** `src/components/dashboard/CollectionChart.tsx`, `src/components/dashboard/CollectionChart.module.css`.
-- **Status:** Open
+- **Status:** Fixed - Current month has translucent cobalt, a dashed outline and a to-date legend.
 
 ### MC-04
 - **Route:** `/dashboard` Recent activity. Screenshot: [dashboard-1280.jpg](screenshots/dashboard-1280.jpg).
@@ -65,7 +65,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** Relative or date-only stamps ("Oct 11", "3h ago"), one status badge per row, the whole row is the link.
 - **Fix:** Format with `formatRelativeDate()` (today/yesterday/MMM d, no time unless < 24h). Make each `<li>` an anchor to the target (application, lease, payment); drop the "Review" link and show `Badge tone="info"` "Needs review" instead. Wrap long secondary lines: "Marcus Bell · Harbor View Lofts · 21" should truncate at one line with `text-overflow: ellipsis`.
 - **Files:** `src/app/(manager)/dashboard/page.tsx` (activity list), `src/app/(manager)/dashboard/dashboard.module.css`, `src/components/ui/Badge.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Activity rows link as a whole with date-only stamps and consistent status badges.
 
 ### MC-05
 - **Route:** `/dashboard` Needs attention. Screenshot: [dashboard-1280.jpg](screenshots/dashboard-1280.jpg).
@@ -74,7 +74,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** Monochrome initials avatars (cobalt tint background, cobalt text, 1px surface border) stacked with −6px overlap.
 - **Fix:** Replace the hue hashing with the single `ls-avatar` style from the design (`background: var(--rr-primary-tint); color: var(--design-primary)`); the "+4" chip uses `--design-text` on `--rr-subtle`. Remove `--rr-coral*`, `--rr-navy*`, `--rr-warm` from `globals.css` once no consumer remains.
 - **Files:** `src/components/ui/Flair.tsx` (avatar), `src/app/(manager)/dashboard/dashboard.module.css`, `src/styles/globals.css`.
-- **Status:** Open
+- **Status:** Fixed - Attention avatars use the light-system primary tint.
 
 ### MC-06
 - **Route:** `/properties`. Screenshots: [properties-grid-1280.jpg](screenshots/properties-grid-1280.jpg), [properties-grid-390.jpg](screenshots/properties-grid-390.jpg).
@@ -83,7 +83,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** AppFolio/Buildium property cards: 4:3 cover photo (real or a flat tinted placeholder with the building miniature), name, address, two stats, occupancy bar, all inside 220px.
 - **Fix:** Card header 96px (desktop) / 80px (phone) with `object-fit: cover` photo when `coverUrl` exists, otherwise `--rr-primary-tint` background with the approved 40 × 40 building miniature at 29px (not 60px). Body: name 16px/600, address 13px muted, a single meta row "8 units · $11,550/mo", occupancy bar 4px. Grid `repeat(auto-fill, minmax(280px, 1fr))` so 1280px shows three columns. Add the same 40px thumbnail to the list view's first column.
 - **Files:** `src/app/(manager)/properties/page.tsx`, `src/app/(manager)/properties/properties.module.css`, `src/components/dashboard/MiniCover.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Compact covers use stored photos or flat placeholders; desktop grid fits three columns.
 
 ### MC-07
 - **Route:** `/properties`. Screenshot: [properties-grid-1280.jpg](screenshots/properties-grid-1280.jpg).
@@ -92,7 +92,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** Type-to-filter with the URL updated silently; chips toggle instantly.
 - **Fix:** Add a client `SearchField` (debounce 250ms, `router.replace` with `?q=`), keep server rendering for the list. Chips and Grid/List use `router.replace` with `scroll: false`. Remove the Search button; Enter still submits. See FD-01 for the shared pattern.
 - **Files:** `src/app/(manager)/properties/page.tsx`, new `src/components/ui/SearchField.tsx`, `src/components/ui/AutoSubmitSelect.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Debounced search and client filter/view navigation keep shareable URLs.
 
 ### MC-08
 - **Route:** `/payments`. Screenshot: [payments-1280.jpg](screenshots/payments-1280.jpg).
@@ -101,7 +101,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** Stripe payments list: the row opens the detail; the one contextual action is on the right; refunds live behind "⋯" with a confirm dialog.
 - **Fix:** Make the row a link to `/leases/:id?tab=payments`. Action column by status: Late → `Record payment` (secondary) + overflow (Add late fee, Send reminder, Refund); Open → `Record payment`; Autopay → muted text "Scheduled Nov 1" + overflow; Paid → overflow only (View receipt, Refund). Refund opens `ConfirmDialog` (FD-02). Use the `Button size="sm" variant="secondary"` for the visible action, never a bare link.
 - **Files:** `src/app/(manager)/payments/page.tsx`, `src/app/(manager)/payments/payments.module.css`, new `src/components/ui/RowMenu.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Ledger row links, status-specific actions and overflow refund with shared confirmation.
 
 ### MC-09
 - **Route:** `/payments`. Screenshot: [payments-1280.jpg](screenshots/payments-1280.jpg).
@@ -110,7 +110,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** Right-aligned tabular numerals in `--design-text`, sticky header inside the card, 25/50/100 rows.
 - **Fix:** Render amounts as `<td class="num">` text with `font-variant-numeric: tabular-nums`; `thead { position: sticky; top: 0 }` inside the card's scroll container; add a page-size select (25 default); drop the Due column when the month filter is active and show it in the row detail.
 - **Files:** `src/app/(manager)/payments/page.tsx`, `src/components/ui/Table.tsx`, `src/components/ui/Pagination.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Plain amounts, sticky table header and selectable page size.
 
 ### MC-10
 - **Route:** `/payments` Owner payouts. Screenshot: [payments-1280.jpg](screenshots/payments-1280.jpg).
@@ -119,7 +119,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** A three-line "Last payouts" list (date · property · amount) linking to the payout record.
 - **Fix:** Replace the inline string with a list of the last 3 payouts (`Oct 18 · Harbor View Lofts · $38,990`); hide properties with `$0 collected` behind "2 properties with nothing to send".
 - **Files:** `src/app/(manager)/payments/page.tsx`.
-- **Status:** Open
+- **Status:** Deferred - Recent payouts now show three dated amounts and zero totals collapse; property attribution and record links need data and a route that the current payout projection does not provide.
 
 ### MC-11
 - **Route:** `/maintenance`. Screenshot: [maintenance-1280.jpg](screenshots/maintenance-1280.jpg).
@@ -128,7 +128,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** Linear's board: equal columns in one row, horizontal scroll when the viewport is narrow, never a wrapped column.
 - **Fix:** `.board { grid-template-columns: repeat(4, minmax(240px, 1fr)) }` at ≥ 1200px; at 1024–1199px `display: flex; overflow-x: auto; scroll-snap-type: x mandatory` with 280px columns; ≤ 640px stack as a single list grouped by status with sticky group headers. Column header shows count as a `Badge tone="neutral"`.
 - **Files:** `src/components/ui/Kanban.tsx`, `src/app/(manager)/maintenance/maintenance.module.css`.
-- **Status:** Open
+- **Status:** Fixed - Four columns at wide widths, contained board scrolling at medium widths and grouped phone layout.
 
 ### MC-12
 - **Route:** `/maintenance`, `/properties/:id/maintenance`. Screenshots: [maintenance-1280.jpg](screenshots/maintenance-1280.jpg), [property-maintenance-1280.jpg](screenshots/property-maintenance-1280.jpg).
@@ -137,7 +137,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** The card is the click target and opens the request page; assignment shows "Unassigned · Assign" as a link; filters apply on change.
 - **Fix:** Make the whole card a link to `/maintenance/:id/edit?returnTo=…` with a hover lift (`--rr-shadow-lift`); remove the inline disclosure. Replace "?" with a dashed-outline 28px circle and the text "Unassigned" as a link that opens the assign form. Status select and date inputs submit on change (AutoSubmitSelect); drop the Apply button.
 - **Files:** `src/app/(manager)/maintenance/page.tsx`, `src/components/maintenance/MaintenanceListControls.tsx`, `src/components/maintenance/RequestDetails.tsx`, `src/components/workspace/panels/operations/PropertyMaintenanceList.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Requests link to the editor; meaningful unassigned labels and filters apply automatically.
 
 ### MC-13
 - **Route:** `/maintenance/new`, `/maintenance/:id/edit`. Screenshots: [maintenance-new-1280.jpg](screenshots/maintenance-new-1280.jpg), [maintenance-edit-1280.jpg](screenshots/maintenance-edit-1280.jpg).
@@ -146,7 +146,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** Eyebrow "Operations / Maintenance", one h1 "New repair request", breadcrumb back link in the eyebrow.
 - **Fix:** Pass `title="New repair request"` and `eyebrow="Maintenance"` to `PageHeader`; render the back link as the first breadcrumb item; remove the nested `<h1>` from the form card and align the form to the page gutter (`max-width: 760px`, no inset). Same for Edit.
 - **Files:** `src/app/(manager)/maintenance/new/page.tsx`, `src/app/(manager)/maintenance/[id]/edit/page.tsx`, `src/components/shell/PageHeader.tsx`, `src/components/maintenance/MaintenanceIssueForm.tsx`.
-- **Status:** Open
+- **Status:** Fixed - One PageHeader with consistent back navigation and form gutter.
 
 ### MC-14
 - **Route:** `/maintenance/:id/edit`. Screenshot: [maintenance-edit-1280.jpg](screenshots/maintenance-edit-1280.jpg).
@@ -155,7 +155,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** A thumbnail grid (120px squares, 8px gap) with a lightbox on click and a small "+ Add" tile; one upload control.
 - **Fix:** Grid of `RequestPhoto` thumbnails at 120 × 120 (`object-fit: cover`, radius 8px); clicking opens a `<dialog>` lightbox with Download; the dropzone becomes the last tile ("+ Add photos"); delete the separate "Upload photo" button (upload on selection with progress).
 - **Files:** `src/components/maintenance/RequestPhoto.tsx`, `src/components/maintenance/RequestDetails.tsx`, `src/components/upload/FileUploader.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Compact photo thumbnail opens a lightbox; one upload tile applies selection.
 
 ### MC-15
 - **Route:** `/documents`. Screenshots: [documents-1280.jpg](screenshots/documents-1280.jpg), [documents-390.jpg](screenshots/documents-390.jpg).
@@ -164,7 +164,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** Google Drive/Notion file views: one toolbar row (search, type segmented control, property select) that applies itself; a prominent "Upload" button in the header; thumbnails are the actual image; actions appear on hover as icon buttons.
 - **Fix:** Move "Upload files" to the page header as the primary button opening a dialog (destination select + dropzone). Toolbar: search (debounced), type chips, property/unit selects auto-applying; remove Sort select (default newest, header sort instead). Thumbnails `object-fit: cover` of the stored file with icon fallback by MIME; actions as 32px icon buttons (eye, download) visible on hover/focus and always on touch. Group headers keep "Grouped by lease" meta right-aligned.
 - **Files:** `src/app/(manager)/documents/page.tsx`, `src/app/(manager)/documents/documents.module.css`, `src/components/ui/Files.tsx`, `src/components/upload/FileUploader.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Automatic filters, header upload dialog, sort links and icon document actions.
 
 ### MC-16
 - **Route:** `/integrations`. Screenshot: [integrations-1280.jpg](screenshots/integrations-1280.jpg).
@@ -173,7 +173,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** Settings save on change with a toast, or one sticky "Save changes" bar that appears only when dirty; one badge style across the app.
 - **Fix:** Convert the three forms to auto-save on change (`AutoSubmitSelect`, switch) with `Toast` "Payout schedule updated"; remove the per-card buttons. Normalise provider status to `Badge` with sentence case ("Connected", "Sandbox", "Available").
 - **Files:** `src/app/(manager)/integrations/page.tsx`, `src/components/integrations/integrations.module.css`, `src/app/(manager)/applications/page.tsx` (provider badge).
-- **Status:** Open
+- **Status:** Fixed - Settings save on change with success/error toasts and sentence-case badges.
 
 ### MC-17
 - **Route:** `/payments` at 390px. Screenshots: [payments-390.jpg](screenshots/payments-390.jpg), [payments-fold-390.jpg](screenshots/payments-fold-390.jpg).
@@ -182,7 +182,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** Mercury/Stripe mobile: each row becomes a two-line card (name + unit, amount + status chip) with the single action on the right.
 - **Fix:** Add a `Table` responsive mode (`data-mobile="cards"`): below 640px render `tbody tr` as `display: grid; grid-template-columns: 1fr auto; padding: 12px` with cells mapped by `data-label`; hide the Due column; show the status `Badge` under the amount. Until then, at minimum add `overflow-x: auto` scroll shadows (`mask-image` gradient) and `scrollbar-gutter: stable` so the scroll is visible.
 - **Files:** `src/components/ui/Table.tsx`, `src/app/(manager)/payments/page.tsx`, `src/app/(manager)/payments/payments.module.css`.
-- **Status:** Open
+- **Status:** Fixed - Rent roll becomes labeled cards below 640px with amounts, statuses and actions visible.
 
 ### MC-18
 - **Route:** `/properties?view=list` and `/returns` at 390px. Screenshots: [properties-list-390.jpg](screenshots/properties-list-390.jpg), [returns-390.jpg](screenshots/returns-390.jpg).
@@ -191,7 +191,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** Charts resize to their container; tables switch to cards.
 - **Fix:** Properties list: on phone switch to the grid view automatically (hide the Grid/List toggle below 640px). Chart: size the SVG from `ResizeObserver` on the card (`viewBox` + `width: 100%`), reduce ticks to 4 on phone. Returns tables: use the Table card mode from MC-17.
 - **Files:** `src/app/(manager)/properties/properties.module.css`, `src/components/returns/IncomeExpenseChart.tsx`, `src/components/returns/returns.module.css`, `src/app/(manager)/returns/page.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Phone properties use cards; returns SVG scales to its card and financial tables use labeled mobile rows.
 
 ### MC-19
 - **Route:** `/properties/:id` and every workspace tab at 390px. Screenshots: [property-overview-fold-390.jpg](screenshots/property-overview-fold-390.jpg), [property-listing-390.jpg](screenshots/property-listing-390.jpg).
@@ -200,7 +200,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** Tabs scroll horizontally with a fade on the right edge and the current tab scrolled into view (design: "dense tables/tabs scroll locally").
 - **Fix:** Wrap tabs in `overflow-x: auto; scrollbar-width: none` with `mask-image: linear-gradient(90deg, #000 85%, transparent)` when scrollable; on mount `activeTab.scrollIntoView({ inline: 'center' })`; reduce tab padding to 8px and font to 13px on phone. Alternative: wrap to two rows on ≤ 420px.
 - **Files:** `src/components/workspace/WorkspaceTabs.tsx`, `src/components/workspace/Workspace.module.css`, `src/components/ui/Tabs.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Workspace tabs have a scroll affordance and reveal the active tab.
 
 ### MC-20
 - **Route:** `/properties/new`, `/properties/:id/edit`. Screenshots: [properties-new-1280.jpg](screenshots/properties-new-1280.jpg), [property-edit-1280.jpg](screenshots/property-edit-1280.jpg), [property-edit-390.jpg](screenshots/property-edit-390.jpg).
@@ -209,7 +209,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** A short form with sensible defaults (units = 1 for single-family, blank+required for multi-unit), optional sections as cards with their first three fields visible, help text as a 1-line hint plus an "ⓘ" popover.
 - **Fix:** Default units to blank with placeholder "e.g. 12" and `min=1`; derive 1 and disable for single-family. Render the ROI sections as cards, each open by default with its fields in a 3-column grid; move the long explanation to a `details` labelled "How ROI details are used" at the end of the section. Use `PageHeader` (eyebrow "Properties", h1 "Add property") like other pages. The sticky Save bar gets `border-top: 1px solid var(--rr-border)` and a backdrop (FD-16).
 - **Files:** `src/app/(manager)/properties/_components/PropertyRoiFields.tsx`, `src/app/(manager)/properties/_components/PropertyForm.tsx`, `src/app/(manager)/properties/new/page.tsx`, `src/app/(manager)/properties/[id]/edit/page.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Multi-unit count starts blank and must be positive; ROI groups open with concise context.
 
 ### MC-21
 - **Route:** `/properties/:id` overview. Screenshots: [property-overview-1280.jpg](screenshots/property-overview-1280.jpg), [property-overview-390.jpg](screenshots/property-overview-390.jpg) (6,317px).
@@ -218,7 +218,7 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** Overview = header stats, timeline (collapsed to 5 rows + "Show all"), units table with "Add unit" as a button opening a dialog, details card, next steps; media and uploads live on their own tab.
 - **Fix:** Collapse the timeline to 5 rows by default (already has "Show all 12 units"; make it the default collapsed state). Move "Add unit" into a dialog opened from the units card header. Move Photos & documents + uploader to a "Media" workspace tab. Put "Edit property" and "Open ROI analysis" in the header actions (secondary buttons), not as full-width buttons at the bottom. Replace "Details not set" with a muted "—" and an inline "Add details" link.
 - **Files:** `src/components/workspace/WorkspaceOverview.tsx`, `src/components/workspace/LeaseTimeline.tsx`, `src/components/workspace/WorkspaceMedia.tsx`, `src/components/workspace/WorkspaceHeader.tsx`, `src/components/workspace/WorkspaceTabs.tsx`.
-- **Status:** Open
+- **Status:** Fixed - Five-row timeline, separate Media tab and Add Unit dialog reduce the expanded overview.
 
 ### MC-22
 - **Route:** `/properties/:id/listing` (multi-unit). Screenshot: [property-listing-1280.jpg](screenshots/property-listing-1280.jpg).
@@ -227,4 +227,4 @@ What is already good: the dashboard composition (hero collection card + chart, e
 - **Premium looks like:** Empty data is omitted or prompts ("Add beds/baths"), zero gaps render as "—", and the row itself opens the comps.
 - **Fix:** Hide the Configuration column when no unit has bed/bath data and show one banner "Add unit details to improve comps → Edit units". Render gaps with signed colour (teal for +, danger for −) and "—" for zero. Make rows clickable (`href=…/listing?unit=`) and keep a single chevron on the right instead of twelve buttons.
 - **Files:** `src/components/workspace/PropertyListing.tsx`, `src/components/workspace/PropertyListing.module.css`.
-- **Status:** Open
+- **Status:** Fixed - Omit unknown configuration columns, mute zero gaps and use clickable responsive rows.

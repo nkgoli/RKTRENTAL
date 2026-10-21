@@ -2,6 +2,7 @@
 import { db } from '@/lib/db/client';
 import {
   COLLECTION_RANGES,
+  EXPIRING_WINDOW_DAYS,
   loadCollectionSeries,
   loadDashboardData,
   overdueSummary,
@@ -14,7 +15,7 @@ import type { CoverSource } from './MiniCover';
 
 const DAY_MS = 86_400_000;
 /** Matches the window of the Leases "expiring" tab this strip links to. */
-export const EXPIRING_STRIP_DAYS = 60;
+export const EXPIRING_STRIP_DAYS = EXPIRING_WINDOW_DAYS;
 
 export type PastDueTenant = { leaseId: string; name: string; initials: string };
 
@@ -101,7 +102,7 @@ type TenantLease = LedgerLease & {
   tenants: { isPrimary: boolean; tenant: { name: string } }[];
 };
 
-/** Splits active leases into past-due tenants and the 60-day expiring count. */
+/** Splits active leases into past-due tenants and the shared expiring window count. */
 export function assembleLeaseSignals(leases: readonly TenantLease[], now: Date) {
   const day = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const asOf = new Date(day + DAY_MS - 1);

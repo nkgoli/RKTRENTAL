@@ -1,25 +1,26 @@
 'use client';
 
 import { useActionState, useId, useEffect, useRef } from 'react';
-import { Alert, Button, Card, CardHeader, Field, FormRow, Input } from '@/components/ui';
+import { Alert, Button, Card, CardHeader, Field, FormRow, Input, useToast } from '@/components/ui';
 import { createUnitAction, type FormState } from '../actions';
 import { FieldError } from './FieldError';
 
 const empty: FormState = {};
 
-export function AddUnitForm({ propertyId }: { propertyId: string }) {
+export function AddUnitForm({ propertyId, onSaved }: { propertyId: string; onSaved?: () => void }) {
   const [state, action, pending] = useActionState(createUnitAction, empty);
   const ref = useRef<HTMLFormElement>(null);
   const e = state.errors ?? {};
   const formId = useId();
+  const toast = useToast();
 
   useEffect(() => {
-    if (state.ok) ref.current?.reset();
-  }, [state]);
+    if (state.ok) { ref.current?.reset(); toast.success('Unit added'); onSaved?.(); }
+  }, [state, toast, onSaved]);
 
   return (
     <Card id="add-unit">
-      <CardHeader title="Add unit" />
+      {!onSaved && <CardHeader title="Add unit" />}
       <form className="form" action={action} ref={ref} noValidate>
         <input type="hidden" name="propertyId" value={propertyId} />
 

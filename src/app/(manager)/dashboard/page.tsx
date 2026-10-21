@@ -4,8 +4,8 @@ import { Icon } from '@/components/shell/Icons';
 import { loadDashboardView, initialsOf } from '@/components/dashboard/assemble';
 import { trendOf } from '@/components/dashboard/trend';
 import { CollectionChart } from '@/components/dashboard/CollectionChart';
-import { AvatarStack, TrendChip } from '@/components/ui';
-import { collectionRangeFrom } from '@/lib/dashboard/queries';
+import { AvatarStack, Badge, TrendChip } from '@/components/ui';
+import { collectionRangeFrom, EXPIRING_WINDOW_DAYS } from '@/lib/dashboard/queries';
 import { requireManagerRole } from '@/lib/auth/access';
 import { formatUsd } from '@/lib/ledger';
 import styles from './dashboard.module.css';
@@ -16,16 +16,6 @@ const dateFmt = (date: Date, opts: Intl.DateTimeFormatOptions) =>
   date.toLocaleDateString('en-US', { ...opts, timeZone: 'UTC' });
 const shortDate = (date: Date) => dateFmt(date, { month: 'short', day: 'numeric' });
 const fullDate = (date: Date) => dateFmt(date, { month: 'short', day: 'numeric', year: 'numeric' });
-
-function when(date: Date) {
-  return date.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZone: 'UTC',
-  });
-}
 
 export default async function DashboardPage({
   searchParams,
@@ -65,7 +55,7 @@ export default async function DashboardPage({
           <dt>Leases expiring soon</dt>
           <dd>
             <strong>{dashboard.expiringSoonCount}</strong>
-            <span>within 60 days</span>
+            <span>within {EXPIRING_WINDOW_DAYS} days</span>
           </dd>
         </div>
         <div>
@@ -126,13 +116,13 @@ export default async function DashboardPage({
           <div className="card-header">
             <h2>Leases expiring soon</h2>
             <Link href="/leases?tab=expiring" aria-label="View all expiring leases">
-              View all
+              View all {dashboard.expiringSoonCount} →
             </Link>
           </div>
           {dashboard.expiringLeases.length ? (
             <ol className={styles.timeline}>
-              {dashboard.expiringLeases.map((lease) => (
-                <li key={lease.id} className={lease.daysUntil <= 60 ? styles.soon : undefined}>
+              {dashboard.expiringLeases.slice(0, 5).map((lease) => (
+                <li key={lease.id} className={lease.daysUntil <= 30 ? styles.soon : undefined}>
                   <span className={styles.dot} aria-hidden="true">
                     {initialsOf(lease.tenantName)}
                   </span>
@@ -258,22 +248,23 @@ export default async function DashboardPage({
             <ul className={styles.activity}>
               {dashboard.activity.map((item) => (
                 <li key={item.id}>
+                  <Link href={item.href} className={styles.activityRow}>
                   <span className={styles.smallAvatar} aria-hidden="true">
                     {/* Applications describe the person; payments start with the amount, so use the title's name. */}
                     {initialsOf(/^[A-Za-z]/.test(item.description) ? item.description : item.title)}
                   </span>
                   <div className={styles.activityBody}>
-                    <Link className={styles.eventTitle} href={item.href}>
+                    <span className={styles.eventTitle}>
                       {item.title}
-                    </Link>
+                    </span>
                     <small>
-                      {item.description} · <Link href={item.propertyHref}>{item.propertyName}</Link>{' '}
-                      · <Link href={item.unitHref}>{item.unitLabel}</Link> · {when(item.happenedAt)}
+                      {item.description} · {item.propertyName} · {item.unitLabel} · {shortDate(item.happenedAt)}
                     </small>
                   </div>
-                  <span className={`${styles.badge} ${styles[`${item.tone}Badge`]}`}>
-                    {item.status}
-                  </span>
+                  <Badge tone={item.tone === 'success' ? 'success' : 'info'}>
+                    {item.status === 'Review' ? 'Needs review' : item.status}
+                  </Badge>
+                  </Link>
                 </li>
               ))}
             </ul>

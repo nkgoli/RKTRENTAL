@@ -4,6 +4,7 @@ import { FileUploader } from '@/components/upload';
 import type { RequestActionResult, RequestAction } from './RequestActionForm';
 import styles from './issue-form.module.css';
 import { restoreIssueDraft } from './issue-draft';
+import { useToast } from '@/components/ui/Toast';
 export function MaintenanceIssueForm({
   action,
   scope,
@@ -19,6 +20,7 @@ export function MaintenanceIssueForm({
   selectedUnitId?: string;
   request?: { title: string; description: string | null; priority: string; location: string };
 }) {
+  const toast = useToast();
   const [result, submit, pending] = useActionState(
     async (_: RequestActionResult, data: FormData): Promise<RequestActionResult> => {
       if (action) return action(data);
@@ -56,7 +58,8 @@ export function MaintenanceIssueForm({
   }, [scope?.requestId, scope?.propertyId, scope?.unitId]);
   useEffect(() => {
     if (result.error || result.message) feedback.current?.focus();
-  }, [result]);
+    if (result.message) toast.success(result.message);
+  }, [result, toast]);
   return (
     <form
       ref={issueForm}

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileList } from '@/app/(manager)/properties/_components/Media';
 import { FileUploader } from '@/components/upload';
+import { ConfirmDialog, useToast } from '@/components/ui';
 import type { PropertyDetail, UnitDetail } from '@/lib/properties/data';
 import { photoLimitForTarget } from '@/lib/storage/photo-limits';
 import styles from './WorkspaceMedia.module.css';
@@ -44,15 +45,22 @@ export function WorkspaceMedia({ target, photos, files }: { target: Target; phot
   const router = useRouter();
   const [mode, setMode] = useState<'photo' | 'document'>('photo');
   const [error, setError] = useState('');
+  const [removing, setRemoving] = useState<Photo | null>(null);
+  const [pending, setPending] = useState(false);
+  const toast = useToast();
   const max = photoLimitForTarget(target);
 
-  async function persist(action: () => Promise<void>) {
+  async function persist(action: () => Promise<void>, message = 'Photo updated') {
     setError('');
     try {
       await action();
+      toast.success(message);
       router.refresh();
+      return true;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The change could not be saved.');
+      toast.error(cause instanceof Error ? cause.message : 'The change could not be saved.');
+      return false;
     }
   }
 
@@ -76,7 +84,7 @@ export function WorkspaceMedia({ target, photos, files }: { target: Target; phot
               <button type="button" title="Move down" aria-label={`Move ${photo.name} down`} disabled={index === photos.length - 1} onClick={() => reorder(index, 1)}>↓</button>
             </>}
             <button type="button" title="Set as cover" aria-label={`Set ${photo.name} as cover`} disabled={photo.isCover} onClick={() => void persist(() => send('/api/files/cover', 'POST', { targetType: target.kind, targetId: target.id, documentId: photo.id }))}>{photo.isCover ? 'Current cover' : 'Set cover'}</button>
-            <button type="button" title="Remove photo" aria-label={`Remove ${photo.name}`} className={styles.remove} onClick={() => void persist(() => send(`/api/files/${photo.id}`, 'DELETE'))}>Remove</button>
+            <button type="button" title="Remove photo" aria-label={`Remove ${photo.name}`} className={styles.remove} onClick={() => setRemoving(photo)}>Remove</button>
           </div>
         </div>
       </div>) : <p className={styles.empty}>No photos yet.</p>}
@@ -98,10 +106,17 @@ export function WorkspaceMedia({ target, photos, files }: { target: Target; phot
       {mode === 'photo' ? <FileUploader
         key={`photo-${photos.map((photo) => photo.id).join(',')}`}
         kind="photo" target={target} max={max ?? undefined} showCounter={false}
-        existingCount={photos.length} onUploaded={() => router.refresh()}
-      /> : <FileUploader kind="document" target={target} onUploaded={() => router.refresh()} />}
+        existingCount={photos.length} onUploaded={() => { toast.success('Photo uploaded'); router.refresh(); }}
+      /> : <FileUploader kind="document" target={target} onUploaded={() => { toast.success('Document uploaded'); router.refresh(); }} />}
       <p className={styles.note}>Repair photos stay on their maintenance requests and are not shown here.</p>
     </div>
     {error && <p role="alert" className={styles.error}>{error}</p>}
+    <ConfirmDialog open={!!removing} onClose={() => { if (!pending) setRemoving(null); }} title={`Remove ${removing?.caption ?? removing?.name ?? 'photo'}?`} description={removing?.isCover ? 'This will permanently remove the cover photo from this property or unit.' : 'This will permanently remove this photo. It cannot be undone.'} confirmLabel={pending ? 'Removing…' : 'Remove photo'} pending={pending} onConfirm={async () => {
+      if (!removing || pending) return;
+      setPending(true);
+      const removed = await persist(() => send(`/api/files/${removing.id}`, 'DELETE'), 'Photo removed');
+      setPending(false);
+      if (removed) setRemoving(null);
+    }} />
   </div>;
 }

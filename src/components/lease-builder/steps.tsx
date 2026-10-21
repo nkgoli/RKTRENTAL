@@ -29,6 +29,8 @@ import { previewScheduledCharges, prorateFirstMonth } from '@/lib/ledger/lease-s
 import { formatMoney } from '@/lib/ledger/statement';
 import styles from './lease-builder.module.css';
 import { contextFromDraft, resolveTerms } from '@/lib/lease-create/templates';
+import Link from 'next/link';
+import { Badge } from '@/components/ui/Badge';
 
 export type StepProps = {
   draft: WizardDraft;
@@ -540,6 +542,14 @@ export function RentStep({ draft, update, errors }: StepProps) {
 
 // ------------------------------------------------------------------------------------ 3. Tenants
 
+export type ApplicantOption = {
+  id: string;
+  name: string;
+  email: string;
+  status: string;
+  tenantId?: string;
+};
+
 export function TenantsStep({
   draft,
   update,
@@ -547,7 +557,24 @@ export function TenantsStep({
   tenants,
   sourceLabel,
   notice,
-}: StepProps & { tenants: TenantOption[]; sourceLabel?: string; notice?: string }) {
+  applicants = [],
+}: StepProps & {
+  tenants: TenantOption[];
+  sourceLabel?: string;
+  notice?: string;
+  applicants?: ApplicantOption[];
+}) {
+  const [search, setSearch] = useState('');
+  const query = search.trim().toLowerCase();
+  const selected = tenants.filter((tenant) => draft.tenantIds.includes(tenant.id));
+  const matches =
+    query.length >= 2
+      ? tenants.filter(
+          (tenant) =>
+            !draft.tenantIds.includes(tenant.id) &&
+            `${tenant.name} ${tenant.email ?? ''}`.toLowerCase().includes(query),
+        )
+      : [];
   const toggle = (id: string, checked: boolean) => {
     const tenantIds = checked ? [...draft.tenantIds, id] : draft.tenantIds.filter((t) => t !== id);
     update({
@@ -566,14 +593,85 @@ export function TenantsStep({
         </p>
       )}
       {notice && <p className={styles.sub}>{notice}</p>}
-      <div className={styles.checks} role="group" aria-label="Tenants">
-        {tenants.map((t) => {
+      {selected.length > 0 && (
+        <div className={styles.selectedTenants} aria-label="Selected tenants">
+          {selected.map((tenant) => (
+            <button
+              type="button"
+              className={styles.btn}
+              key={tenant.id}
+              onClick={() => toggle(tenant.id, false)}
+              aria-label={`Remove ${tenant.name}`}
+            >
+              {tenant.name}
+              {draft.primaryTenantId === tenant.id ? ' · Primary' : ''}{' '}
+              <span aria-hidden="true">×</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {applicants.length > 0 && (
+        <section aria-label="Applicants for this unit">
+          <h3 className={styles.sectionTitle}>Applicants for this unit</h3>
+          <div className={styles.checks}>
+            {applicants.map((applicant) => (
+              <div key={applicant.id} className={styles.check}>
+                {applicant.tenantId ? (
+                  <label className={styles.checkCopy}>
+                    <input
+                      type="checkbox"
+                      checked={draft.tenantIds.includes(applicant.tenantId)}
+                      onChange={(event) => toggle(applicant.tenantId!, event.target.checked)}
+                    />{' '}
+                    {applicant.name}
+                  </label>
+                ) : (
+                  <span className={styles.checkCopy}>
+                    <strong>{applicant.name}</strong>
+                    <small>{applicant.email}</small>
+                    <Link href="/tenants?add=1" target="_blank" rel="noopener noreferrer">
+                      Add tenant contact (new tab)
+                    </Link>
+                  </span>
+                )}
+                <Badge tone={applicant.status === 'Approved' ? 'success' : 'info'}>
+                  {applicant.status}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+      <label className={styles.field}>
+        Search existing tenants
+        <input
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Name or email (at least 2 characters)"
+          aria-describedby="tenant-search-help"
+        />
+      </label>
+      <p id="tenant-search-help" className={styles.sub}>
+        {query.length < 2
+          ? 'Type at least 2 characters to find a tenant.'
+          : `${matches.length} matching tenants${matches.length > 8 ? ' · Showing the first 8; refine your search.' : ''}`}
+      </p>
+      <div
+        className={styles.checks}
+        role="group"
+        aria-label="Tenants"
+        aria-describedby={errors.tenantIds ? 'tenant-selection-error' : undefined}
+      >
+        {matches.slice(0, 8).map((t) => {
           const on = draft.tenantIds.includes(t.id);
           return (
             <label key={t.id} className={cx(styles.check, on && styles.checkOn)}>
               <input
                 type="checkbox"
                 checked={on}
+                aria-invalid={Boolean(errors.tenantIds)}
+                aria-describedby={errors.tenantIds ? 'tenant-selection-error' : undefined}
                 onChange={(e) => toggle(t.id, e.target.checked)}
               />
               <span className={styles.checkCopy}>
@@ -585,7 +683,14 @@ export function TenantsStep({
         })}
         {!tenants.length && <p className={styles.sub}>No tenants yet. Add a tenant first.</p>}
       </div>
-      <Err errors={errors} name="tenantIds" />
+      {errors.tenantIds && (
+        <p id="tenant-selection-error" className={styles.error} role="alert">
+          {errors.tenantIds}
+        </p>
+      )}
+      <Link href="/tenants?add=1" target="_blank" rel="noopener noreferrer">
+        Add a new tenant (opens in a new tab)
+      </Link>
       <Field label="Primary tenant" error={errors.primaryTenantId}>
         <select
           value={draft.primaryTenantId}

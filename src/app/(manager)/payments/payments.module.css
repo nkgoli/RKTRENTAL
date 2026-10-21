@@ -35,3 +35,55 @@
 .date {
   white-space: nowrap;
 }
+.tableScroll {
+  max-height: 740px;
+  overflow: auto;
+}
+.table thead {
+  position: sticky;
+  top: 0;
+  background: var(--design-surface);
+  z-index: 2;
+}
+.pageSize {
+  font-size: 12px;
+  color: var(--design-muted);
+}
+.pageSize select {
+  margin-left: 8px;
+  padding: 6px;
+  border: 1px solid var(--rr-border);
+  border-radius: 6px;
+}
+.payoutHistory {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: grid;
+  gap: 10px;
+}
+.payoutHistory li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+}
+.payoutHistory strong {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 640px) {
+  .tableScroll {
+    max-height: none;
+    overflow: visible;
+  }
+  .table {
+    min-width: 0;
+  }
+  .table [data-cell='meta'] {
+    font-size: 12px;
+  }
+  .table [data-cell='actions'] {
+    justify-content: flex-end;
+  }
+}

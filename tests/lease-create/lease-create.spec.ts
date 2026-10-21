@@ -16,26 +16,54 @@ async function next(page: import('@playwright/test').Page, heading: string) {
   await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
 }
 
+async function completeVisibleBlanks(page: import('@playwright/test').Page) {
+  // Every included term must be complete before the UI allows sending.
+  const fields = page.getByRole('textbox', { name: /^Fill / });
+  for (let index = 0; index < (await fields.count()); index += 1) {
+    const field = fields.nth(index);
+    if (!(await field.inputValue()).trim()) await field.fill('25');
+  }
+}
+
+test('unit picker fits a 390px phone without clipping its primary action', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page);
+  await page.goto('/leases/new');
+  const start = page.getByRole('button', { name: 'Start lease', exact: true });
+  await expect(start).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+  const bounds = await start.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(390);
+  const shell = page.getByRole('region', { name: 'Create lease' });
+  expect(await shell.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+});
+
 test('manager builds a lease in the wizard, resumes it, and sends it for signing', async ({
   page,
 }) => {
   await signIn(page);
-  await page.goto('/leases/new', { waitUntil: 'domcontentloaded' }).catch(async (error: unknown) => {
-    if (!(error instanceof Error) || !error.message.includes('ERR_ABORTED')) throw error;
-    await page.goto('/leases/new', { waitUntil: 'domcontentloaded' });
-  });
+  await page
+    .goto('/leases/new', { waitUntil: 'domcontentloaded' })
+    .catch(async (error: unknown) => {
+      if (!(error instanceof Error) || !error.message.includes('ERR_ABORTED')) throw error;
+      await page.goto('/leases/new', { waitUntil: 'domcontentloaded' });
+    });
   const option = page.locator('select[name="unit"] option', { hasText: 'Maple Court · Unit 3A' });
   const unitId = (await option.getAttribute('value'))!;
   await page.getByLabel('Property / unit').selectOption(unitId);
-  await page.getByRole('button', { name: 'Start lease' }).click();
+  await page.getByRole('button', { name: /Start (lease|a separate lease)/ }).click();
   await page.goto(`/leases/new?unit=${unitId}&fresh=1`);
 
   await expect(page.getByRole('heading', { name: 'Lease term', exact: true })).toBeVisible();
   // Unique term per run so reruns against a persistent database never overlap.
-  const year = 2100 + Math.floor(Date.now() / 1000) % 3000;
+  const year = 2100 + (Math.floor(Date.now() / 1000) % 3000);
   await page.getByLabel('Start date').fill(`${year}-02-15`);
   await expect(page.getByText(`${year + 1}-02-14`)).toBeVisible();
-  await expect(page.getByText(`${year}-02-${new Date(Date.UTC(year, 2, 0)).getUTCDate()}`)).toBeVisible();
+  await expect(
+    page.getByText(`${year}-02-${new Date(Date.UTC(year, 2, 0)).getUTCDate()}`),
+  ).toBeVisible();
   await next(page, 'Rent, deposit & fees');
 
   await page.getByRole('textbox', { name: 'Monthly rent', exact: true }).fill('1600');
@@ -48,11 +76,16 @@ test('manager builds a lease in the wizard, resumes it, and sends it for signing
   await expect(page.getByText('Scheduled charges preview')).toBeVisible();
   await expect(page.getByText(/Prorated rent.*February/)).toBeVisible();
   await expect(page.getByText(/repeats on the 5th/)).toBeVisible();
-  await page.getByTestId('charges-preview').screenshot({ path: 'tests/lease-create/evidence/charges-preview-day-5.png' });
-  await page.getByRole('region', { name: 'Create lease' }).evaluate((element) => { element.scrollTop = 0; });
+  await page
+    .getByTestId('charges-preview')
+    .screenshot({ path: 'tests/lease-create/evidence/charges-preview-day-5.png' });
+  await page.getByRole('region', { name: 'Create lease' }).evaluate((element) => {
+    element.scrollTop = 0;
+  });
   await page.screenshot({ path: 'tests/lease-create/evidence/rent-day-5.png' });
   await next(page, 'Tenants');
 
+  await page.getByRole('searchbox', { name: 'Search existing tenants' }).fill('Alex Rivera');
   await page.getByRole('checkbox', { name: /Alex Rivera/ }).check();
   await next(page, 'Options');
   await next(page, 'Clauses');
@@ -61,21 +94,36 @@ test('manager builds a lease in the wizard, resumes it, and sends it for signing
   await page.getByRole('button', { name: 'Save and exit' }).click();
   await expect(page).toHaveURL(/\/leases\?tab=drafts/);
   await page.goto(`/leases/new?unit=${unitId}`);
+  await page.getByRole('link', { name: 'Resume draft' }).click();
   await expect(page.getByRole('heading', { name: 'Clauses', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Expand all' }).click();
-  await expect(page.locator('p[class*="termFull"]', { hasText: 'Rent is not considered paid until Lessor actually receives cleared funds.' })).toBeVisible();
+  await expect(
+    page.locator('p[class*="termFull"]', {
+      hasText: 'Rent is not considered paid until Lessor actually receives cleared funds.',
+    }),
+  ).toBeVisible();
   await page.getByRole('textbox', { name: 'Fill returned payment fee' }).fill('$35.00');
   await page.getByRole('textbox', { name: 'Fill deposit institution' }).fill('Example Bank');
+  await completeVisibleBlanks(page);
   await page.screenshot({ path: 'tests/lease-create/evidence/v2-clauses-expanded.png' });
 
   await page.getByRole('button', { name: '+ Add clause' }).click();
   await page.getByRole('textbox', { name: 'New clause title' }).fill('Move-in walkthrough');
-  await page.getByRole('textbox', { name: 'Move-in walkthrough wording' }).fill('The tenant and manager will document the home’s condition at move-in.');
+  await page
+    .getByRole('textbox', { name: 'Move-in walkthrough wording' })
+    .fill('The tenant and manager will document the home’s condition at move-in.');
   await next(page, 'Rules');
   await page.getByRole('button', { name: 'Expand all' }).click();
-  await expect(page.locator('p[class*="termFull"]', { hasText: 'No additional or changed locks on any door without Lessor\'s written consent.' })).toBeVisible();
+  await expect(
+    page.locator('p[class*="termFull"]', {
+      hasText: "No additional or changed locks on any door without Lessor's written consent.",
+    }),
+  ).toBeVisible();
+  await completeVisibleBlanks(page);
   await page.screenshot({ path: 'tests/lease-create/evidence/v2-rules-expanded.png' });
   await next(page, 'Disclosures');
+  await page.getByRole('button', { name: 'Expand all' }).click();
+  await completeVisibleBlanks(page);
   await next(page, 'Attachments');
   await page.getByLabel('Choose files').setInputFiles({
     name: `lease-disclosure-${year}.pdf`,
@@ -83,11 +131,15 @@ test('manager builds a lease in the wizard, resumes it, and sends it for signing
     buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF'),
   });
   await expect(page.getByLabel(`Type for lease-disclosure-${year}.pdf`)).toBeVisible();
-  const typeSaved = page.waitForResponse((response) => response.url().includes('/api/files/') && response.request().method() === 'PATCH');
+  const typeSaved = page.waitForResponse(
+    (response) => response.url().includes('/api/files/') && response.request().method() === 'PATCH',
+  );
   await page.getByLabel(`Type for lease-disclosure-${year}.pdf`).selectOption('DISCLOSURE');
   expect((await typeSaved).ok()).toBe(true);
   await expect(page.getByLabel(`Type for lease-disclosure-${year}.pdf`)).toHaveValue('DISCLOSURE');
-  await page.getByRole('region', { name: 'Create lease' }).evaluate((element) => { element.scrollTop = 0; });
+  await page.getByRole('region', { name: 'Create lease' }).evaluate((element) => {
+    element.scrollTop = 0;
+  });
   await page.screenshot({ path: 'tests/lease-create/evidence/attachment-type.png' });
   await next(page, 'Lessor info');
   await next(page, 'Review & send');
@@ -95,14 +147,20 @@ test('manager builds a lease in the wizard, resumes it, and sends it for signing
   await page.getByRole('button', { name: 'Send for e-signature' }).click();
 
   await expect(page.getByText(/sent for e-signature/)).toBeVisible();
-  await page.getByRole('region', { name: 'Create lease' }).evaluate((element) => { element.scrollTop = 0; });
+  await page.getByRole('region', { name: 'Create lease' }).evaluate((element) => {
+    element.scrollTop = 0;
+  });
   await page.screenshot({ path: 'tests/lease-create/evidence/lease-sent.png' });
-  const leaseId = (await page.getByRole('link', { name: 'View lease detail' }).getAttribute('href'))?.split('/').at(-1);
+  const leaseId = (await page.getByRole('link', { name: 'View lease detail' }).getAttribute('href'))
+    ?.split('/')
+    .at(-1);
   expect(leaseId).toBeTruthy();
   const filesResponse = await page.request.get(`/api/files?targetType=lease&targetId=${leaseId}`);
   expect(filesResponse.ok()).toBe(true);
-  const files = (await filesResponse.json() as { files: { name: string; kind: string }[] }).files;
-  expect(files.find((file) => file.name === `lease-disclosure-${year}.pdf`)?.kind).toBe('DISCLOSURE');
+  const files = ((await filesResponse.json()) as { files: { name: string; kind: string }[] }).files;
+  expect(files.find((file) => file.name === `lease-disclosure-${year}.pdf`)?.kind).toBe(
+    'DISCLOSURE',
+  );
   expect(files.every((file) => file.kind !== 'PHOTO')).toBe(true);
 
   await page.getByRole('button', { name: 'Complete mock signing' }).click();
@@ -137,7 +195,11 @@ test('standard v2 template editor expands full paragraphs', async ({ page }) => 
   await expect(row).toContainText('v2');
   await row.getByRole('link', { name: 'Edit template' }).click();
   await page.getByRole('button', { name: 'Expand all' }).click();
-  await expect(page.locator('p[class*="itemFull"]', { hasText: 'Rent is not considered paid until Lessor actually receives cleared funds.' })).toBeVisible();
+  await expect(
+    page.locator('p[class*="itemFull"]', {
+      hasText: 'Rent is not considered paid until Lessor actually receives cleared funds.',
+    }),
+  ).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Rent wording' })).toBeVisible();
   await page.screenshot({ path: 'tests/lease-create/evidence/v2-template-editor-expanded.png' });
 });
@@ -146,11 +208,15 @@ test('Clauses swap the no-pets clause and the pet agreement when pets change at 
   page,
 }) => {
   await signIn(page);
-  await page.goto('/leases/new', { waitUntil: 'domcontentloaded' }).catch(async (error: unknown) => {
-    if (!(error instanceof Error) || !error.message.includes('ERR_ABORTED')) throw error;
-    await page.goto('/leases/new', { waitUntil: 'domcontentloaded' });
-  });
-  const unitId = (await page.locator('select[name="unit"] option', { hasText: 'Maple Court · Unit 3A' }).getAttribute('value'))!;
+  await page
+    .goto('/leases/new', { waitUntil: 'domcontentloaded' })
+    .catch(async (error: unknown) => {
+      if (!(error instanceof Error) || !error.message.includes('ERR_ABORTED')) throw error;
+      await page.goto('/leases/new', { waitUntil: 'domcontentloaded' });
+    });
+  const unitId = (await page
+    .locator('select[name="unit"] option', { hasText: 'Maple Court · Unit 3A' })
+    .getAttribute('value'))!;
   await page.goto(`/leases/new?unit=${unitId}&fresh=1`);
   await expect(page.getByRole('heading', { name: 'Lease term', exact: true })).toBeVisible();
   await page.getByRole('radio', { name: /Full year/ }).check();
@@ -158,6 +224,7 @@ test('Clauses swap the no-pets clause and the pet agreement when pets change at 
   await page.getByRole('textbox', { name: 'Monthly rent', exact: true }).fill('1600');
   await page.getByLabel('Security deposit').fill('1600');
   await next(page, 'Tenants');
+  await page.getByRole('searchbox', { name: 'Search existing tenants' }).fill('Alex Rivera');
   await page.getByRole('checkbox', { name: /Alex Rivera/ }).check();
   await next(page, 'Options');
   await expect(page.getByRole('checkbox', { name: /Pets allowed/ })).not.toBeChecked();
@@ -165,7 +232,9 @@ test('Clauses swap the no-pets clause and the pet agreement when pets change at 
 
   const titles = page.locator('article button[aria-expanded]:visible strong');
   const noPets = page.locator('article', { has: page.getByRole('button', { name: /No Pets/ }) });
-  const petAgreement = page.locator('article', { has: page.getByRole('button', { name: /Pets — Approved Pets Only/ }) });
+  const petAgreement = page.locator('article', {
+    has: page.getByRole('button', { name: /Pets — Approved Pets Only/ }),
+  });
 
   // Fixed term, no pets: the no-pets clause is in, the pet agreement is not.
   await expect(titles.first()).toBeVisible();
@@ -187,9 +256,13 @@ test('Clauses swap the no-pets clause and the pet agreement when pets change at 
   expect(withPets.some((text) => text.includes('Pets — Approved Pets Only'))).toBe(true);
   expect(withPets.some((text) => text.includes('Early Termination'))).toBe(true);
   expect(withPets.some((text) => text.includes('No Pets'))).toBe(false);
-  await expect(petAgreement.getByText('Added because pets are allowed or a pet fee is set')).toBeVisible();
+  await expect(
+    petAgreement.getByText('Added because pets are allowed or a pet fee is set'),
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Expand all' }).click();
-  await expect(petAgreement.locator('p[class*="termFull"]')).toContainText('Lessee may keep only the following pets:');
+  await expect(petAgreement.locator('p[class*="termFull"]')).toContainText(
+    'Lessee may keep only the following pets:',
+  );
   await page.screenshot({ path: 'tests/lease-create/evidence/fixed-pets-clauses.png' });
   await petAgreement.screenshot({ path: 'tests/lease-create/evidence/v2-pets-clause-reason.png' });
 

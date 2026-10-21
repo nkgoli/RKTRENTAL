@@ -17,6 +17,7 @@ export type TenantFilters = {
   propertyId?: string;
   status?: StatusFilter;
   page?: number;
+  pageSize?: number;
 };
 
 export type TenantRow = {
@@ -210,10 +211,14 @@ export function organizationTenants(
       const status = filters.status ?? 'all';
       const rows = (await loadRows(filters)).filter((r) => matchesStatusFilter(r.status, status));
       const page = Math.max(1, Math.floor(filters.page ?? 1));
+      const size =
+        filters.pageSize === undefined
+          ? PAGE_SIZE
+          : Math.max(1, Math.min(100, Math.floor(filters.pageSize) || PAGE_SIZE));
       return {
         total: rows.length,
         page,
-        rows: rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+        rows: rows.slice((page - 1) * size, page * size),
       };
     },
 
@@ -272,7 +277,10 @@ export function organizationTenants(
                 include: {
                   unit: { include: { property: true } },
                   // Repair photos stay on their maintenance request, not in the lease's documents.
-                  documents: { where: { maintenancePhoto: { is: null } }, orderBy: { createdAt: 'desc' } },
+                  documents: {
+                    where: { maintenancePhoto: { is: null } },
+                    orderBy: { createdAt: 'desc' },
+                  },
                   charges: { where: { dueDate: { lte: today } } },
                   payments: { orderBy: { createdAt: 'desc' } },
                   tenants: { include: { tenant: true } },

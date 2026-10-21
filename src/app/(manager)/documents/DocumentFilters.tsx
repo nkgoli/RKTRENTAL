@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { SearchField } from '@/components/ui';
 import styles from './documents.module.css';
 
 export function DocumentFilters({
   query,
   kind,
-  sort,
   propertyId,
   unitId,
   properties,
@@ -20,26 +22,22 @@ export function DocumentFilters({
   properties: { id: string; name: string }[];
   units: { id: string; propertyId: string; label: string }[];
 }) {
+  const router = useRouter();
+  function apply(changes: Record<string, string>) {
+    const url = new URL(window.location.href);
+    for (const [name, value] of Object.entries(changes)) { if (value) url.searchParams.set(name, value); else url.searchParams.delete(name); }
+    for (const key of ['leasePage', 'filesPage', 'photoPage']) url.searchParams.delete(key);
+    router.replace(`${url.pathname}?${url.searchParams.toString()}`, { scroll: false });
+  }
   const [property, setProperty] = useState(propertyId ?? '');
   const [unit, setUnit] = useState(unitId ?? '');
   return (
-    <form
-      action="/documents"
-      method="get"
+    <div
       role="search"
       aria-label="Filter files"
       className={styles.documentFilters}
     >
-      {kind !== 'ALL' && <input type="hidden" name="kind" value={kind} />}
-      <label className={`field ${styles.fileSearch}`}>
-        Search files
-        <input
-          name="q"
-          defaultValue={query}
-          aria-label="Search files, leases or properties"
-          placeholder="File, lease or property name"
-        />
-      </label>
+      <SearchField defaultValue={query} placeholder="File, lease or property name" aria-label="Search files, leases or properties" resetParams={['leasePage', 'filesPage', 'photoPage']} />
       <label className="field">
         Property
         <select
@@ -48,6 +46,7 @@ export function DocumentFilters({
           onChange={(event) => {
             setProperty(event.target.value);
             setUnit('');
+            apply({ propertyId: event.target.value, unitId: '' });
           }}
         >
           <option value="">All properties</option>
@@ -60,7 +59,7 @@ export function DocumentFilters({
       </label>
       <label className="field">
         Unit
-        <select name="unitId" value={unit} onChange={(event) => setUnit(event.target.value)}>
+        <select name="unitId" value={unit} onChange={(event) => { setUnit(event.target.value); apply({ unitId: event.target.value }); }}>
           <option value="">All units</option>
           {units
             .filter((item) => !property || item.propertyId === property)
@@ -71,21 +70,11 @@ export function DocumentFilters({
             ))}
         </select>
       </label>
-      <label className="field">
-        Sort order
-        <select name="sort" defaultValue={sort}>
-          <option value="newest">Newest first</option>
-          <option value="oldest">Oldest first</option>
-        </select>
-      </label>
-      <button className="btn btn-secondary" type="submit">
-        Apply
-      </button>
       {(query || kind !== 'ALL' || propertyId || unitId) && (
-        <a className="btn btn-ghost" href="/documents">
+        <Link className="btn btn-ghost" href="/documents" scroll={false}>
           Clear filters
-        </a>
+        </Link>
       )}
-    </form>
+    </div>
   );
 }

@@ -1296,9 +1296,9 @@
   color: var(--rr-bad);
 }
 .hint {
-  font-size: 14px !important;
-  font-style: italic !important;
-  color: var(--rr-border-strong) !important;
+  font-size: 12px !important;
+  font-style: normal !important;
+  color: var(--design-muted) !important;
 }
 
 @media (max-width: 760px) {
@@ -1368,4 +1368,16 @@
 .yearPick {
   max-width: 220px;
   margin-bottom: 8px;
+}
+
+.years > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.years > div > button {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 48px;
+  padding: 6px 12px;
 }

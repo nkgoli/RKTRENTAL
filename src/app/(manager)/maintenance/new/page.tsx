@@ -4,6 +4,7 @@ import { requireManagerRole } from '@/lib/auth/access';
 import { listMaintenanceOptions } from '@/lib/maintenance';
 import { maintenanceReturn } from '@/lib/maintenance/navigation';
 import { MaintenanceIssueForm } from '@/components/maintenance/MaintenanceIssueForm';
+import { PageHeader } from '@/components/shell/PageHeader';
 export default async function NewRequestPage({
   searchParams,
 }: {
@@ -22,8 +23,11 @@ export default async function NewRequestPage({
   const returnTo = maintenanceReturn(params.returnTo);
   return (
     <div className={styles.page}>
-      <a href={returnTo}>Back to repair requests</a>
-      <h1>New repair request</h1>
+      <PageHeader
+        title="New repair request"
+        eyebrow="Operations / Maintenance"
+        back={{ href: returnTo, label: 'Repair requests' }}
+      />
       <p className="muted">
         Choose a unit, set a priority and add photos to help the vendor prepare.
       </p>

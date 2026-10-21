@@ -115,13 +115,7 @@ export function PropertyRoiFields({
         {baseline ? (
           <>
             <p className="muted">
-              {saved
-                ? `These are the baseline assumptions of your saved ROI analysis (${saved}).`
-                : 'These details fill your new ROI analysis.'}{' '}
-              Saving updates this property and the assumptions you change in its ROI analysis.
-              Scenarios, comparisons and assumptions you leave unchanged stay as saved. Income is
-              for the whole property, across all units. Blank means unknown; enter 0 only when it
-              applies.
+              Update your property’s ROI assumptions here. Blank means unknown; enter 0 only when it applies.
             </p>
             {needed.length ? (
               <div className={styles.roiNeeded} role="status">
@@ -156,16 +150,7 @@ export function PropertyRoiFields({
           </>
         ) : (
           <p className="muted">
-            Save your property with all of these blank, or enter only what you know. Saved details
-            fill a new ROI analysis automatically. Income is for the whole property, across all
-            units. Blank means unknown; enter 0 only when it applies.
-          </p>
-        )}
-        {original && !baseline && (
-          <p className="muted">
-            Clear a saved field to mark it unknown. Unchanged fields keep their latest saved values.
-            If this property has a saved ROI analysis, the assumptions you change or clear here
-            update it too; its other assumptions and scenarios stay as saved.
+            Enter only what you know. Blank means unknown; enter 0 only when it applies.
           </p>
         )}
         {demoCount > 0 && (
@@ -197,7 +182,7 @@ export function PropertyRoiFields({
         )}
         {errors.roiInputs && <FieldError message="Check your ROI details and try saving again." />}
         {groups.map((group, index) => (
-          <details key={group.title} className={styles.roiGroup} open={!!baseline}>
+          <details key={group.title} className={styles.roiGroup} open>
             <summary>{group.title}</summary>
             {index === 0 && (
               <>
@@ -290,6 +275,16 @@ export function PropertyRoiFields({
             </div>
           </details>
         ))}
+        <details className={styles.roiGroup}>
+          <summary>How ROI details are used</summary>
+          <p className="muted">
+            Saved details fill a new ROI analysis automatically. Income is for the whole property,
+            across all units. Clear a saved field to mark it unknown; unchanged fields keep their
+            latest saved values. Changes update the property and its saved ROI analysis while
+            preserving other assumptions, scenarios and comparisons.
+            {saved ? ` You are editing ${saved}.` : ''}
+          </p>
+        </details>
       </details>
     </div>
   );

@@ -522,7 +522,7 @@ describe('RealROI expense, amortization, exit and sensitivity charts', () => {
     const map = p.getByRole('group', { name: /Cash-on-Cash by monthly rent and vacancy/ });
     const cells = map.querySelectorAll('rect');
     expect(cells).toHaveLength(35);
-    expect(map.querySelector('polygon')).toBeTruthy();
+    expect(map.querySelector('circle')).toBeTruthy();
     expect(map.querySelector('polyline')).toBeTruthy();
     // Keyboard starts on the base cell.
     fireEvent.keyDown(map, { key: 'ArrowRight' });
@@ -546,8 +546,7 @@ describe('RealROI expense, amortization, exit and sensitivity charts', () => {
     const before = cells[0].getAttribute('fill');
     fireEvent.click(p.getByLabelText('Colorblind-safe'));
     expect(map.querySelectorAll('rect')[0].getAttribute('fill')).not.toBe(before);
-    expect(map.textContent).not.toContain('%-');
-    fireEvent.click(p.getByLabelText('Show values'));
+    expect((p.getByLabelText('Show values') as HTMLInputElement).checked).toBe(true);
     expect(map.textContent).toContain(`${((base.cashOnCash ?? 0) * 100).toFixed(1)}%`);
     fireEvent.click(p.getByRole('button', { name: 'Year 5' }));
     expect(p.getByRole('table', { name: /Year 5 cash-on-cash/ })).toBeTruthy();
@@ -677,6 +676,7 @@ describe('Core chart presentation: basis, legends and disclosures', () => {
     const p0 = realRoiSample();
     charts(p0);
     fireEvent.click(screen.getByRole('tab', { name: 'Exit Analysis' }));
+    fireEvent.click(screen.getByText('Try another exit'));
     const probe = within(screen.getByRole('region', { name: 'Exit probe' }));
     expect(probe.getAllByRole('listitem').map((li) => li.textContent)).toContain(
       'Saved assumptions',

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, fireEvent } from '@testing-library/react';
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+const replace = vi.hoisted(() => vi.fn());
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), replace }) }));
 vi.mock('@/components/upload', () => ({
   FileUploader: ({ target }: { target: { id: string } }) => (
     <div data-testid="uploader">{target.id}</div>
@@ -31,7 +32,8 @@ describe('document destinations and filters', () => {
     render(<UploadDocumentForm {...options} unitId="outside" />);
     expect(screen.queryByTestId('uploader')).toBeNull();
   });
-  it('clears the previous unit when changing property', () => {
+  it('clears the previous unit and applies the URL when changing property', () => {
+    window.history.replaceState(null, '', '/documents?q=inspection&kind=INSPECTION&propertyId=p&unitId=u&filesPage=2');
     render(
       <DocumentFilters
         query="inspection"
@@ -53,5 +55,7 @@ describe('document destinations and filters', () => {
     expect((screen.getByLabelText('Unit') as HTMLSelectElement).value).toBe('');
     expect(screen.queryByRole('option', { name: 'Maple 4B' })).toBeNull();
     expect(screen.getByRole('option', { name: 'Elm Home' })).toBeTruthy();
+    expect(replace).toHaveBeenCalledWith('/documents?q=inspection&kind=INSPECTION&propertyId=q', { scroll: false });
+    expect(screen.queryByRole('button', { name: 'Apply' })).toBeNull();
   });
 });

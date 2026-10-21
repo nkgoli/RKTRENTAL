@@ -147,12 +147,8 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
         </form>
       </section>
 
-      <p className={styles.context}>
-        {selected?.propertyName ?? 'Portfolio'} · {period.label}. Income follows settled payments.
-        Returns use the selected period; occupancy is current. Open a property to compare its
-        recorded returns with ROI projections.
-      </p>
-      <Alert tone="warning">
+      <details className={styles.method}>
+        <summary>How returns are calculated · includes estimates</summary>
         <p>
           These portfolio figures are month-based summaries, not recorded-only results. Cash flow
           and cash-on-cash subtract scheduled debt service (loan payments are not recorded), ROI
@@ -160,7 +156,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           records counts as $0 here. For recorded actuals with coverage, open a property&rsquo;s{' '}
           <strong>Actual vs projected</strong>.
         </p>
-      </Alert>
+      </details>
       {overview.properties.length === 0 && (
         <EmptyState
           title="No properties to report"
@@ -177,7 +173,11 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             note="Income less expenses"
             trend={noiTrend?.label}
             trendWarm={noiTrend?.warm}
-            spark={selected ? undefined : noiSeries}
+            spark={
+              selected || noiSeries.length < 6 || new Set(noiSeries).size < 2
+                ? undefined
+                : noiSeries
+            }
             sparkTone="ok"
             sparkLabel="Monthly NOI"
           />
@@ -213,7 +213,11 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             note="Of income"
             trend={expenseTrend?.label}
             trendWarm={expenseTrend?.warm}
-            spark={selected ? undefined : expenseSeries}
+            spark={
+              selected || expenseSeries.length < 6 || new Set(expenseSeries).size < 2
+                ? undefined
+                : expenseSeries
+            }
             sparkTone="warm"
             sparkLabel="Monthly expenses"
           />
@@ -278,10 +282,6 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             <p className="eyebrow">{period.label}</p>
             <h3>Returns by property</h3>
           </div>
-          <span className="muted" style={{ fontSize: 13 }}>
-            Estimates: ROI adds 3%/yr assumed appreciation · cash-on-cash uses scheduled debt
-            service · yield is scheduled rent ÷ value
-          </span>
         </div>
         <div
           className={styles.tableScroll}
@@ -289,7 +289,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           aria-label="Returns by property"
           tabIndex={0}
         >
-          <table className="table" aria-label="Returns by property">
+          <table className={`table ${styles.mobileReturns}`} aria-label="Returns by property">
             <thead>
               <tr>
                 <th scope="col">Property</th>
@@ -305,13 +305,13 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
                 <th scope="col" className="num">
                   Cap rate
                 </th>
-                <th scope="col" className="num">
+                <th scope="col" className="num" title="Uses scheduled debt service">
                   Cash-on-cash (est.)
                 </th>
-                <th scope="col" className="num">
+                <th scope="col" className="num" title="Includes assumed 3% annual appreciation">
                   ROI (est.)
                 </th>
-                <th scope="col" className="num">
+                <th scope="col" className="num" title="Scheduled rent divided by property value">
                   Yield (sched.)
                 </th>
               </tr>

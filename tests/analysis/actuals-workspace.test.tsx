@@ -127,7 +127,7 @@ async function open(query?: string) {
   }
   render(<RoiWorkspace selection={{ ok: true, data: properties }} />);
   if (!query) fireEvent.click(screen.getByRole('button', { name: /Property a/ }));
-  await screen.findByRole('button', { name: 'Save draft' });
+  await screen.findByLabelText('Save analysis');
 }
 
 describe('actual versus projected in the ROI workspace', () => {
@@ -135,10 +135,11 @@ describe('actual versus projected in the ROI workspace', () => {
     await open();
     await waitFor(() => expect(loadActualReturnsAction).toHaveBeenCalled());
     expect(lastRequest()).toMatchObject({ propertyId: 'a' });
-    // The Summary card already pairs recorded and projected income.
+    // Summary links to the dedicated comparison instead of repeating it.
+    fireEvent.click(screen.getByRole('tab', { name: 'Actual vs projected' }));
     expect(await screen.findByRole('heading', { name: 'Actual vs projected' })).toBeTruthy();
     const snapshot = within(
-      await screen.findByRole('table', { name: /^Recorded and projected amounts/ }),
+      await screen.findByRole('table', { name: /^Actual and projected amounts/ }),
     );
     const snapshotIncome = within(snapshot.getByRole('row', { name: /Operating income/ }));
     expect(snapshotIncome.getByText('$1,234')).toBeTruthy();
@@ -182,7 +183,7 @@ describe('actual versus projected in the ROI workspace', () => {
     const qtdFrom = lastRequest().from;
     fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
     fireEvent.click(await screen.findByRole('button', { name: /Property b/ }));
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByLabelText('Save analysis');
     expect(window.location.search).toBe('?property=b&view=actual&period=QTD');
     expect(
       screen.getByRole('tab', { name: 'Actual vs projected' }).getAttribute('aria-selected'),
@@ -233,7 +234,7 @@ describe('actual versus projected in the ROI workspace', () => {
     // Switching property pushes a history entry that keeps the shared view and period.
     fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
     fireEvent.click(await screen.findByRole('button', { name: /Property b/ }));
-    await screen.findByRole('button', { name: 'Save draft' });
+    await screen.findByLabelText('Save analysis');
     expect(window.location.search).toBe('?property=b&view=actual&period=YTD');
 
     // Back to the plain default address: Summary and the default period, not the last tab.
@@ -277,6 +278,7 @@ describe('actual versus projected in the ROI workspace', () => {
     await open('property=a&view=actual&period=CUSTOM&from=2026-01&to=2026-03');
     const table = await panel().findByRole('table');
     expect(within(table).getByRole('row', { name: /Operating income/ })).toBeTruthy();
+    fireEvent.click(panel().getByText('Sources and coverage'));
     fireEvent.click(panel().getByRole('button', { name: 'Export this comparison (CSV)' }));
     expect(create).toHaveBeenCalledTimes(1);
     const csv = await blob!.text();
@@ -300,7 +302,7 @@ describe('actual versus projected in the ROI workspace', () => {
   it('keeps the projection usable when actuals cannot load', async () => {
     vi.mocked(loadActualReturnsAction).mockRejectedValue(new Error('offline'));
     await open();
-    const summary = within(screen.getByRole('region', { name: 'Year 1 at a glance' }));
+    const summary = within(screen.getByRole('region', { name: 'Deal Snapshot' }));
     expect(summary.queryAllByText('Unavailable').length).toBe(0);
     fireEvent.click(screen.getByRole('tab', { name: 'Actual vs projected' }));
     expect(

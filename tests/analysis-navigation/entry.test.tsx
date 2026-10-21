@@ -5,7 +5,10 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { ManagerShell } from '@/components/shell/ManagerShell';
 
 let pathname = '/dashboard';
-vi.mock('next/navigation', () => ({ usePathname: () => pathname }));
+vi.mock('next/navigation', () => ({
+  usePathname: () => pathname,
+  useRouter: () => ({ replace: vi.fn() }),
+}));
 const mocks = vi.hoisted(() => ({ properties: vi.fn(), facts: vi.fn(), leases: vi.fn() }));
 vi.mock('@/lib/auth/access', () => ({
   requireManagerRole: async () => ({ organizationId: 'authorized-org', role: 'MANAGER' }),

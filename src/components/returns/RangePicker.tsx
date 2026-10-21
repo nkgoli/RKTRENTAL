@@ -1,5 +1,6 @@
+'use client';
+import { useRouter } from 'next/navigation';
 import styles from './returns.module.css';
-import { Button } from '@/components/ui/Button';
 import { Field, Input } from '@/components/ui/Forms';
 import {
   PERIOD_KEYS,
@@ -30,6 +31,7 @@ export function RangePicker({
   extra?: Record<string, string>;
   now?: Date;
 }) {
+  const router = useRouter();
   const href = (params: Record<string, string>) =>
     `${basePath}?${new URLSearchParams({ ...extra, ...params })}`;
   const current = periodParams(period);
@@ -48,39 +50,49 @@ export function RangePicker({
           </a>
         ))}
       </div>
-      <form
-        key={new URLSearchParams(current).toString()}
-        method="get"
-        action={basePath}
-        className={styles.custom}
-        aria-label="Custom range"
-      >
-        {Object.entries(extra).map(([name, value]) => (
-          <input key={name} type="hidden" name={name} value={value} />
-        ))}
-        <input type="hidden" name="period" value="CUSTOM" />
-        <Field label="From">
-          <Input
-            name="from"
-            type="month"
-            max={monthBucket(now)}
-            defaultValue={current.from ?? monthBucket(period.start)}
-            required
-          />
-        </Field>
-        <Field label="To">
-          <Input
-            name="to"
-            type="month"
-            max={monthBucket(now)}
-            defaultValue={current.to ?? lastMonth}
-            required
-          />
-        </Field>
-        <Button type="submit" variant={period.key === 'CUSTOM' ? 'primary' : 'secondary'} size="sm">
-          Apply
-        </Button>
-      </form>
+      <details open={period.key === 'CUSTOM'}>
+        <summary className="chip">Custom dates</summary>
+        <form
+          onSubmit={(event) => event.preventDefault()}
+          onBlur={(event) => {
+            const form = event.currentTarget;
+            const data = new FormData(form);
+            const from = String(data.get('from') ?? '');
+            const to = String(data.get('to') ?? '');
+            if (!form.checkValidity() || !from || !to || from > to) return;
+            if (from === current.from && to === current.to) return;
+            router.replace(href({ period: 'CUSTOM', from, to }), { scroll: false });
+          }}
+          key={new URLSearchParams(current).toString()}
+          method="get"
+          action={basePath}
+          className={styles.custom}
+          aria-label="Custom range"
+        >
+          {Object.entries(extra).map(([name, value]) => (
+            <input key={name} type="hidden" name={name} value={value} />
+          ))}
+          <input type="hidden" name="period" value="CUSTOM" />
+          <Field label="From">
+            <Input
+              name="from"
+              type="month"
+              max={monthBucket(now)}
+              defaultValue={current.from ?? monthBucket(period.start)}
+              required
+            />
+          </Field>
+          <Field label="To">
+            <Input
+              name="to"
+              type="month"
+              max={monthBucket(now)}
+              defaultValue={current.to ?? lastMonth}
+              required
+            />
+          </Field>
+        </form>
+      </details>
       <span className={styles.period}>
         {period.label} · by {period.granularity}
       </span>
@@ -91,6 +103,7 @@ export function RangePicker({
 /** Calendar-year income statement for the selected range (shown when it spans several years). */
 export function YearOverYear({ rows }: { rows: YearlyPoint[] }) {
   if (rows.length < 2) return null;
+  const showChange = rows.some((row, index) => yearOverYearChange(row, rows[index - 1]) !== null);
   return (
     <div
       className={styles.tableScroll}
@@ -98,7 +111,7 @@ export function YearOverYear({ rows }: { rows: YearlyPoint[] }) {
       aria-label="Year-over-year totals"
       tabIndex={0}
     >
-      <table className="table" aria-label="Year-over-year totals">
+      <table className={`table ${styles.mobileYearly}`} aria-label="Year-over-year totals">
         <thead>
           <tr>
             <th scope="col">Year</th>
@@ -111,9 +124,11 @@ export function YearOverYear({ rows }: { rows: YearlyPoint[] }) {
             <th scope="col" className="num">
               NOI
             </th>
-            <th scope="col" className="num">
-              YoY
-            </th>
+            {showChange && (
+              <th scope="col" className="num">
+                YoY
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -130,11 +145,13 @@ export function YearOverYear({ rows }: { rows: YearlyPoint[] }) {
                 <td className="num">
                   <strong>{formatUsd(row.noiCents)}</strong>
                 </td>
-                <td className="num muted">
-                  {change === null
-                    ? '—'
-                    : `${change >= 0 ? '+' : '−'}${Math.abs(change * 100).toFixed(1)}%`}
-                </td>
+                {showChange && (
+                  <td className="num muted">
+                    {change === null
+                      ? '—'
+                      : `${change >= 0 ? '+' : '−'}${Math.abs(change * 100).toFixed(1)}%`}
+                  </td>
+                )}
               </tr>
             );
           })}

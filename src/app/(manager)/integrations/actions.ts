@@ -73,3 +73,22 @@ export async function saveSettingsAction(form: FormData) {
     return 'Settings saved';
   });
 }
+
+export async function saveSettingsInlineAction(
+  _previous: { ok: boolean; message: string } | null,
+  form: FormData,
+): Promise<{ ok: boolean; message: string }> {
+  const session = await requireManagerRole();
+  const group = field(form, 'group');
+  if (group !== 'payments' && group !== 'screening' && group !== 'comps')
+    return { ok: false, message: 'Unknown settings group' };
+  try {
+    await saveGroupSettings(session.organizationId, group, Object.fromEntries(form.entries()), store);
+    revalidatePath('/integrations');
+    const label = group === 'payments' ? 'Payment' : group === 'screening' ? 'Screening' : 'Rent comps';
+    return { ok: true, message: `${label} settings updated` };
+  } catch (error) {
+    if (!(error instanceof IntegrationError || error instanceof SettingsError)) throw error;
+    return { ok: false, message: error.message };
+  }
+}

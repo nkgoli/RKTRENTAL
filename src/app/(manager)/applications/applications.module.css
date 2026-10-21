@@ -529,3 +529,29 @@
     min-height: 44px;
   }
 }
+.providerState {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--design-muted);
+  font-size: 12px;
+}
+.providerState::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--design-muted);
+}
+.decisionHelp,
+.screeningAction p {
+  color: var(--design-muted);
+}
+.applications :global(.btn):disabled {
+  background: var(--design-background);
+  color: var(--design-muted);
+  border-color: var(--rr-border);
+  opacity: 0.6;
+  box-shadow: none;
+  cursor: not-allowed;
+}

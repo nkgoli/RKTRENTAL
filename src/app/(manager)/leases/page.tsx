@@ -4,13 +4,18 @@ import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
 import { scopeFilterFrom, scopeQuery, type ScopeFilter } from '@/lib/workspace/scope';
 import { Avatar, Badge, Card, Tabs } from '@/components/ui';
 import { Icon } from '@/components/shell/Icons';
-import { PAGE_SIZE, Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui/Pagination';
 import { requireManagerRole } from '@/lib/auth/access';
 import { formatMoney, initials } from '@/lib/properties/format';
 import { signLabel, term } from '@/lib/leases/format';
 import { leasesDb, type LeaseListItem } from '@/lib/leases/queries';
 import { EmptyState } from '@/components/RouteStates';
 import styles from './leases-ux.module.css';
+import { Table } from '@/components/ui/Table';
+import { SearchField } from '@/components/ui/SearchField';
+import { RowMenu } from '@/components/ui/RowMenu';
+
+const PAGE_SIZE = 10;
 
 type Tab = 'active' | 'expiring' | 'drafts' | 'ended';
 const tabs: Tab[] = ['active', 'expiring', 'drafts', 'ended'];
@@ -146,18 +151,11 @@ export default async function LeasesPage({
                 <input type="hidden" name="propertyId" value={scope.propertyId} />
               )}
               {scope.unitId && <input type="hidden" name="unitId" value={scope.unitId} />}
-              <label className="search">
-                <input
-                  type="search"
-                  name="q"
-                  defaultValue={q}
-                  aria-label="Search leases"
-                  placeholder="Search tenant or property"
-                />
-              </label>
-              <button type="submit" className="btn btn-secondary btn-sm">
-                Search
-              </button>
+              <SearchField
+                defaultValue={q}
+                aria-label="Search leases"
+                placeholder="Search tenant or property"
+              />
               {q && <Link href={tabHref(tab, '', 1, scope)}>Clear search</Link>}
             </form>
           </div>
@@ -175,7 +173,7 @@ export default async function LeasesPage({
           aria-label="Lease portfolio results"
           tabIndex={0}
         >
-          <table className="table">
+          <Table mobile="cards">
             <caption className={styles.caption}>
               {rows.length} {leaseStatusLabel} lease
               {rows.length === 1 ? '' : 's'}
@@ -229,88 +227,78 @@ export default async function LeasesPage({
                   lease.tenants.find((t) => t.isPrimary)?.tenant ?? lease.tenants[0]?.tenant;
                 const property = lease.unit.property;
                 return (
-                  <tr key={lease.id}>
-                    <td data-label="Tenant">
+                  <tr key={lease.id} className="row-link">
+                    <td data-cell="title">
                       <div className="cell-main">
                         <Avatar initials={initials(tenant?.name ?? 'No tenant')} size="sm" />
                         <div>
                           <strong>
-                            {tenant ? (
-                              <Link href={`/tenants/${tenant.id}`} style={{ color: 'inherit' }}>
-                                {tenant.name}
-                              </Link>
-                            ) : (
-                              'No tenant'
-                            )}
+                            <Link
+                              className="row-anchor"
+                              href={
+                                lease.status === 'DRAFT'
+                                  ? setupHref(scope, { draft: lease.id })
+                                  : leaseHref(lease.id, scope)
+                              }
+                              style={{ color: 'inherit' }}
+                            >
+                              {tenant?.name ?? 'No tenant'}
+                            </Link>
                           </strong>
-                          <small>{tenant?.email ?? ''}</small>
                         </div>
                       </div>
                     </td>
-                    <td data-label="Property / unit">
-                      <strong>
-                        <Link href={`/properties/${property.id}`}>{property.name}</Link>
-                      </strong>
-                      {!lease.unit.isImplicit && (
-                        <>
-                          <br />
-                          <small>
-                            <Link href={`/properties/${property.id}/units/${lease.unitId}`}>
-                              Unit {lease.unit.number}
-                            </Link>
-                          </small>
-                        </>
-                      )}
+                    <td data-cell="meta">
+                      <span>
+                        {property.name}
+                        {!lease.unit.isImplicit && ` · Unit ${lease.unit.number}`}
+                      </span>
                     </td>
-                    <td data-label="Lease term">
-                      <Link href={leaseHref(lease.id, scope)}>
-                        {term(lease.startDate, lease.endDate)}
-                      </Link>
-                    </td>
-                    <td className="num" data-label="Rent / month">
+                    <td data-cell="sub">{term(lease.startDate, lease.endDate)}</td>
+                    <td className="num" data-cell="amount">
                       <strong>{formatMoney(Number(lease.monthlyRent))}</strong>
                       <small className="muted">/mo</small>
                     </td>
-                    <td data-label="E-sign status">
-                      <Badge
-                        tone={
-                          lease.eSignStatus === 'SIGNED'
-                            ? 'success'
-                            : lease.eSignStatus === 'DECLINED'
-                              ? 'danger'
-                              : 'info'
-                        }
-                      >
-                        {signLabel(lease.eSignStatus)}
-                      </Badge>
+                    <td data-cell="status">
+                      {lease.eSignStatus !== 'SIGNED' && (
+                        <Badge tone={lease.eSignStatus === 'DECLINED' ? 'danger' : 'info'}>
+                          {signLabel(lease.eSignStatus)}
+                        </Badge>
+                      )}
                     </td>
-                    <td>
+                    <td data-cell="actions">
                       <div className={styles.actions}>
-                        <Link
-                          className={`btn btn-${lease.status === 'DRAFT' ? 'secondary' : 'ghost'} btn-sm`}
-                          href={
-                            lease.status === 'DRAFT'
-                              ? setupHref(scope, { draft: lease.id })
-                              : leaseHref(lease.id, scope)
-                          }
-                        >
-                          {lease.status === 'DRAFT' ? 'Continue setup' : 'View'}
-                        </Link>
-                        {lease.status === 'ACTIVE' && (
+                        {lease.status === 'DRAFT' && (
+                          <Link
+                            className="btn btn-ghost btn-sm"
+                            href={setupHref(scope, { draft: lease.id })}
+                          >
+                            Continue setup
+                          </Link>
+                        )}
+                        {lease.status === 'ACTIVE' &&
+                        lease.endDate >= today &&
+                        lease.endDate.getTime() - today.getTime() <= 90 * 86400000 ? (
                           <Link
                             className="btn btn-ghost btn-sm"
                             href={setupHref(scope, { renew: lease.id })}
                           >
                             Renew
                           </Link>
-                        )}
+                        ) : lease.status === 'ACTIVE' ? (
+                          <RowMenu label={`More actions for ${tenant?.name ?? property.name}`}>
+                            <Link href={setupHref(scope, { renew: lease.id })}>
+                              Prepare renewal
+                            </Link>
+                          </RowMenu>
+                        ) : null}
                       </div>
                     </td>
                   </tr>
                 );
               })}
             </tbody>
-          </table>
+          </Table>
         </div>
         <Pagination
           page={page}

@@ -24,14 +24,15 @@ import {
   type PeriodChoice,
   type ProjectionYear,
 } from '@/lib/analysis/actuals';
-import { ActualSnapshot, RoiActuals, actualFailure, type ActualsState } from './RoiActuals';
+import { RoiActuals, actualFailure, type ActualsState } from './RoiActuals';
 import {
   customDraft,
   applyCustomBenchmarks,
   type CustomBenchmarkDraft,
 } from '@/lib/analysis/benchmarks';
 import { RoiBenchmarks } from './RoiBenchmarks';
-import type { BenchmarkData } from '@/lib/roi';
+import { getAllBenchmarks, type BenchmarkData } from '@/lib/roi';
+import { NoticeToast, useToast } from '@/components/ui/Toast';
 import { RoiScenarios } from './RoiScenarios';
 import { applyScenarios, scenarioDrafts, type ScenarioDraft } from '@/lib/analysis/scenarios';
 import { PropertySelector } from './PropertySelector';
@@ -46,9 +47,14 @@ import {
   type FieldSpec,
   type Values,
 } from './fields';
-import { NetCashFlowCard, OutcomeCard, ProjectionMilestones } from './RoiSummaryCharts';
+import {
+  NetCashFlowCard,
+  OutcomeCard,
+  ProjectionMilestones,
+  SummaryMilestones,
+} from './RoiSummaryCharts';
 import { DealSnapshot, FixMyDeal } from './RoiDealPanels';
-import { Basis, MoreDetail } from './RoiChart';
+import { MoreDetail } from './RoiChart';
 import { AssumptionsSummary, isBaselinePath } from './AssumptionsSummary';
 import {
   assumptionsEditPath,
@@ -89,6 +95,7 @@ export function RoiWorkspace({
   selection: PropertySelectionResult;
   initialPropertyId?: string;
 }) {
+  const toast = useToast();
   const searchParams = useSearchParams();
   const urlProperty = searchParams
     ? (searchParams.get('property') ?? '')
@@ -206,7 +213,11 @@ export function RoiWorkspace({
 
   function install(p: AnalysisPayload, rev: number) {
     setPayload(p);
-    setBenchmarks(p.benchmarks);
+    setBenchmarks(
+      p.benchmarks.length || rev > 0
+        ? p.benchmarks
+        : [getAllBenchmarks().find((b) => b.type === 'sp500')!],
+    );
     setCustomBenchmark(customDraft(p.benchmarks));
     setScenarios(scenarioDrafts(p));
     setValues(valuesFrom(p));
@@ -445,7 +456,7 @@ export function RoiWorkspace({
         ? 'compare'
         : path.startsWith('scenarios')
           ? 'scenarios'
-          : 'summary',
+          : 'scenarios',
     );
     setTimeout(() => {
       const scenario = path.match(/^scenarios\.\d+/)?.[0];
@@ -569,6 +580,7 @@ export function RoiWorkspace({
       }
       install(saved.data.payload, saved.data.revision);
       setMessage(`Saved ${status.toLowerCase()} - revision ${saved.data.revision}`);
+      toast.success(`Analysis saved as ${status.toLowerCase()}.`);
       if (next !== undefined) continueTo(next);
     } catch {
       if (request === token.current)
@@ -641,6 +653,9 @@ export function RoiWorkspace({
     : [];
   return (
     <div className={styles.workspace}>
+      {searchParams?.get('notice') === 'property-saved' && (
+        <NoticeToast message="Property saved." />
+      )}
       <div inert={pending !== null}>
         {recovery !== null && (
           <p className={styles.notice}>
@@ -653,14 +668,18 @@ export function RoiWorkspace({
         <div className={`${styles.heading} ${selected ? styles.headingCompact : ''}`}>
           <div>
             {/* The app shell already titles the page; an open property needs no second label. */}
-            {!selected && <p className={styles.eyebrow}>Returns &amp; ROI</p>}
-            <h1>{selected ? 'ROI Analysis' : 'Choose a property'}</h1>
+            <p className={styles.eyebrow}>
+              {selected && (
+                <>
+                  <a href={`/properties/${selected}`}>Property overview</a> /{' '}
+                </>
+              )}
+              Returns &amp; ROI
+            </p>
+            <h1>{selected ? (property?.name ?? 'Unavailable property') : 'Choose a property'}</h1>
             {selected ? (
               <p className={styles.context}>
-                <strong>{property?.name ?? 'Unavailable property'}</strong>
-                <span>
-                  {property ? `${property.street}, ${property.city} - Whole property` : selected}
-                </span>
+                <span>Whole property</span>
                 <span>{dirty ? 'Unsaved changes' : `Revision ${revision}`}</span>
               </p>
             ) : (
@@ -674,16 +693,17 @@ export function RoiWorkspace({
             <div className={styles.actions}>
               {payload && !loading && (
                 <>
-                  <button disabled={saving || conflict} onClick={() => save('DRAFT')}>
-                    Save draft
-                  </button>
-                  <button
-                    className={styles.primary}
-                    disabled={saving || conflict}
-                    onClick={() => save('READY')}
-                  >
-                    Save ready
-                  </button>
+                  <details className={styles.menu}>
+                    <summary aria-label="Save analysis">{saving ? 'Saving...' : 'Save'}</summary>
+                    <div role="group" aria-label="Save analysis options">
+                      <button disabled={saving || conflict} onClick={() => save('DRAFT')}>
+                        Save draft
+                      </button>
+                      <button disabled={saving || conflict} onClick={() => save('READY')}>
+                        Save ready
+                      </button>
+                    </div>
+                  </details>
                 </>
               )}
               <details
@@ -695,7 +715,7 @@ export function RoiWorkspace({
                   menu.current.querySelector('summary')?.focus();
                 }}
               >
-                <summary>More actions</summary>
+                <summary aria-label="More actions">More</summary>
                 <div role="group" aria-label="More actions">
                   {payload && !loading && (
                     <>
@@ -740,7 +760,7 @@ export function RoiWorkspace({
         ) : (
           <>
             <p className={styles.status} role="status" aria-live="polite">
-              {message}
+              {/^(Loaded|New analysis)/.test(message) ? '' : message}
             </p>
             {loading ? (
               <p>Loading analysis...</p>
@@ -874,6 +894,13 @@ export function RoiWorkspace({
                   aria-labelledby="roi-section-tab-scenarios"
                   hidden={view !== 'scenarios'}
                 >
+                  {result && calculatedPayload && (
+                    <FixMyDeal
+                      key={`fix-${selected}`}
+                      result={result}
+                      payload={calculatedPayload}
+                    />
+                  )}
                   <RoiScenarios
                     key={selected}
                     drafts={scenarios}
@@ -889,6 +916,90 @@ export function RoiWorkspace({
                     base={applyValues(payload, values, tax)}
                     saving={saving}
                   />
+                  <section className={`${styles.card} ${styles.details}`}>
+                    <h2>Analysis details</h2>
+                    {result && (
+                      <MoreDetail summary="Advanced metrics & warnings">
+                        <dl className={styles.statement}>
+                          <div>
+                            <dt>NPV - discount {percent(result.assumptions.discountRate)}</dt>
+                            <dd>{money(metrics?.npv)}</dd>
+                          </div>
+                          <div>
+                            <dt>Debt coverage (DSCR)</dt>
+                            <dd>{metrics?.dscr?.toFixed(2) ?? 'Unavailable'}</dd>
+                          </div>
+                          <div>
+                            <dt>After-tax IRR - simplified estimate</dt>
+                            <dd>{percent(metrics?.afterTaxIrr)}</dd>
+                          </div>
+                        </dl>
+                        {result.warnings.map((w, i) => (
+                          <p key={i}>{w.message}</p>
+                        ))}
+                      </MoreDetail>
+                    )}
+                    <MoreDetail summary={`Optional tax estimate${tax ? ' · on' : ''}`}>
+                      <p>
+                        Tax assumptions belong to this analysis and are saved with it. Leave them
+                        off for before-tax results.
+                      </p>
+                      <fieldset disabled={saving}>
+                        <label className={styles.check}>
+                          <input
+                            type="checkbox"
+                            checked={tax}
+                            onChange={(e) => {
+                              setTax(e.target.checked);
+                              setDirty(true);
+                              setErrors([]);
+                              setCalculationVersion((v) => v + 1);
+                            }}
+                          />
+                          Include explicit tax assumptions
+                        </label>
+                        {tax && <div className={styles.fields}>{taxFields.map(renderField)}</div>}
+                      </fieldset>
+                    </MoreDetail>
+                    {facts && (
+                      <MoreDetail summary="Recorded source facts">
+                        <dl className={styles.statement}>
+                          <div>
+                            <dt>Recorded annual debt service</dt>
+                            <dd>{money(facts.annualDebtService)}</dd>
+                          </div>
+                          <div>
+                            <dt>Recorded down payment</dt>
+                            <dd>{money(facts.downPayment)}</dd>
+                          </div>
+                          <div>
+                            <dt>Scheduled monthly lease rent</dt>
+                            <dd>{money(facts.scheduledMonthlyRent)}</dd>
+                          </div>
+                          <div>
+                            <dt>Dated expense observations</dt>
+                            <dd>
+                              {facts.expenses.length}
+                              {facts.expenseHistoryTruncated ? ' (history truncated)' : ''}
+                            </dd>
+                          </div>
+                        </dl>
+                        <p>
+                          The forecast uses the loan terms you enter, and dated expenses are not
+                          annual budgets.
+                        </p>
+                        <ul className={styles.sources}>
+                          {payload.evidence
+                            .filter((e) => e.source !== 'manager')
+                            .map((e, i) => (
+                              <li key={i}>
+                                <strong>{fieldLabel(e.path)}</strong> - {e.source} - {e.note}
+                              </li>
+                            ))}
+                        </ul>
+                      </MoreDetail>
+                    )}
+                  </section>
                 </div>
                 <div
                   id="roi-section-panel-charts"
@@ -907,6 +1018,12 @@ export function RoiWorkspace({
                     panel={chart}
                     onPanel={changeChart}
                   />
+                  {chart === 'equity' && result && (
+                    <>
+                      <OutcomeCard result={result} />
+                      <ProjectionMilestones result={result} />
+                    </>
+                  )}
                 </div>
                 <div
                   className={styles.layout}
@@ -934,190 +1051,24 @@ export function RoiWorkspace({
                         payload={calculatedPayload}
                       />
                     )}
-                    <div className={styles.pair}>
-                      <section className={styles.card} aria-label="Year 1 at a glance">
-                        <div className={styles.cardHead}>
-                          <h2>Year 1 at a glance</h2>
-                          <Basis
-                            items={[
-                              'Projected',
-                              'USD per year',
-                              'Before tax',
-                              ...(result && stale ? ['Out of date'] : []),
-                            ]}
-                          />
-                        </div>
-                        <div className={styles.metrics} role="group" aria-label="Year 1 metrics">
-                          {(
-                            [
-                              ['Effective income', money(metrics?.effectiveGrossIncome), null],
-                              ['Net operating income', money(metrics?.noi), null],
-                              ['Annual cash flow', money(metrics?.annualCashFlow), 'cash'],
-                              [
-                                'Leveraged IRR',
-                                percent(metrics?.irrLeveraged),
-                                result
-                                  ? `${result.annualCashflows.length}-year hold, incl. sale`
-                                  : null,
-                              ],
-                            ] as const
-                          ).map(([label, value, note]) => (
-                            <div key={label}>
-                              <small>{label}</small>
-                              <strong
-                                data-tone={
-                                  note === 'cash' && metrics
-                                    ? metrics.annualCashFlow < 0
-                                      ? 'bad'
-                                      : 'good'
-                                    : undefined
-                                }
-                                data-missing={!result || undefined}
-                              >
-                                {result ? value : 'Not calculated'}
-                              </strong>
-                              {note && note !== 'cash' && <span>{note}</span>}
-                            </div>
-                          ))}
-                        </div>
-                        {result && (
-                          <MoreDetail summary="How Year 1 adds up">
-                            <dl className={styles.statement}>
-                              {(
-                                [
-                                  ['Gross potential income', metrics?.grossPotentialIncome, ''],
-                                  ['Vacancy loss', result.incomeBreakdown.vacancyLoss, '−'],
-                                  ['Effective gross income', metrics?.effectiveGrossIncome, '='],
-                                  ['Operating expenses', metrics?.totalOperatingExpenses, '−'],
-                                  ['Net operating income', metrics?.noi, '='],
-                                  [
-                                    'Capital reserves (below NOI)',
-                                    result.expenseBreakdown.capex,
-                                    '−',
-                                  ],
-                                  ['Modeled debt service', metrics?.annualDebtService, '−'],
-                                  ['Annual cash flow', metrics?.annualCashFlow, '='],
-                                  ['Total cash required', metrics?.totalCashRequired, ''],
-                                ] as const
-                              ).map(([label, value, op]) => (
-                                <div key={label} data-total={op === '=' || undefined}>
-                                  <dt>
-                                    {op && <span aria-hidden="true">{op}</span>}
-                                    {label}
-                                  </dt>
-                                  <dd>{money(value)}</dd>
-                                </div>
-                              ))}
-                            </dl>
-                          </MoreDetail>
-                        )}
-                      </section>
-                      <ActualSnapshot
-                        window={range}
-                        state={actuals}
-                        projection={projectionYear}
-                        stale={stale}
-                        onOpen={() => changeView('actual')}
-                      />
-                    </div>
                     {result ? (
                       <>
                         <NetCashFlowCard key={`cash-${selected}`} result={result} />
-                        <OutcomeCard key={`outcome-${selected}`} result={result} />
-                        <ProjectionMilestones key={`table-${selected}`} result={result} />
+                        <SummaryMilestones result={result} />
                       </>
                     ) : null}
-                    {result && calculatedPayload && (
-                      <FixMyDeal
-                        key={`fix-${selected}`}
-                        result={result}
-                        payload={calculatedPayload}
-                      />
-                    )}
-                    <section className={`${styles.card} ${styles.details}`}>
-                      <h2>More detail</h2>
-                      {result && (
-                        <MoreDetail summary="Advanced metrics & warnings">
-                          <dl className={styles.statement}>
-                            <div>
-                              <dt>NPV - discount {percent(result.assumptions.discountRate)}</dt>
-                              <dd>{money(metrics?.npv)}</dd>
-                            </div>
-                            <div>
-                              <dt>Debt coverage (DSCR)</dt>
-                              <dd>{metrics?.dscr?.toFixed(2) ?? 'Unavailable'}</dd>
-                            </div>
-                            <div>
-                              <dt>After-tax IRR - simplified estimate</dt>
-                              <dd>{percent(metrics?.afterTaxIrr)}</dd>
-                            </div>
-                          </dl>
-                          {result.warnings.map((w, i) => (
-                            <p key={i}>{w.message}</p>
-                          ))}
-                        </MoreDetail>
-                      )}
-                      <MoreDetail summary={`Optional tax estimate${tax ? ' · on' : ''}`}>
-                        <p>
-                          Tax assumptions belong to this analysis and are saved with it. Leave them
-                          off for before-tax results.
-                        </p>
-                        <fieldset disabled={saving}>
-                          <label className={styles.check}>
-                            <input
-                              type="checkbox"
-                              checked={tax}
-                              onChange={(e) => {
-                                setTax(e.target.checked);
-                                setDirty(true);
-                                setErrors([]);
-                                setCalculationVersion((v) => v + 1);
-                              }}
-                            />
-                            Include explicit tax assumptions
-                          </label>
-                          {tax && <div className={styles.fields}>{taxFields.map(renderField)}</div>}
-                        </fieldset>
-                      </MoreDetail>
-                      {facts && (
-                        <MoreDetail summary="Recorded source facts">
-                          <dl className={styles.statement}>
-                            <div>
-                              <dt>Recorded annual debt service</dt>
-                              <dd>{money(facts.annualDebtService)}</dd>
-                            </div>
-                            <div>
-                              <dt>Recorded down payment</dt>
-                              <dd>{money(facts.downPayment)}</dd>
-                            </div>
-                            <div>
-                              <dt>Scheduled monthly lease rent</dt>
-                              <dd>{money(facts.scheduledMonthlyRent)}</dd>
-                            </div>
-                            <div>
-                              <dt>Dated expense observations</dt>
-                              <dd>
-                                {facts.expenses.length}
-                                {facts.expenseHistoryTruncated ? ' (history truncated)' : ''}
-                              </dd>
-                            </div>
-                          </dl>
-                          <p>
-                            The forecast uses the loan terms you enter, and dated expenses are not
-                            annual budgets.
-                          </p>
-                          <ul className={styles.sources}>
-                            {payload.evidence
-                              .filter((e) => e.source !== 'manager')
-                              .map((e, i) => (
-                                <li key={i}>
-                                  <strong>{fieldLabel(e.path)}</strong> - {e.source} - {e.note}
-                                </li>
-                              ))}
-                          </ul>
-                        </MoreDetail>
-                      )}
-                    </section>
+                    <nav className={styles.deeper} aria-label="Explore analysis">
+                      <button onClick={() => changeView('actual')}>Actual vs projected →</button>
+                      <button onClick={() => changeView('scenarios')}>Scenarios →</button>
+                      <button
+                        onClick={() => {
+                          changeView('charts');
+                          changeChart('exit');
+                        }}
+                      >
+                        Exit analysis →
+                      </button>
+                    </nav>
                   </div>
                 </div>
               </>

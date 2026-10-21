@@ -305,6 +305,12 @@ export default async function LeaseDetailPage({
                     <dd>
                       {signLabel(lease.eSignStatus)}
                       {lease.signedAt && ` · ${formatDate(lease.signedAt)}`}
+                      {!signedTerms && (
+                        <small className="muted">
+                          {' '}
+                          · Signed copy: <Link href={tabHref('documents')}>see Documents →</Link>
+                        </small>
+                      )}
                     </dd>
                     <dt>Notice</dt>
                     <dd>{noticeGiven ? formatDate(lease.noticeGivenAt!) : 'No notice given'}</dd>
@@ -408,16 +414,6 @@ export default async function LeaseDetailPage({
                   </p>
                 </section>
               )}
-              {!signedTerms && (
-                <section className={styles.section}>
-                  <SectionHeader title="Terms as signed" />
-                  <p className="muted">
-                    No agreement snapshot is recorded for this lease. Check Documents for an
-                    uploaded signed agreement.
-                  </p>
-                  <a href={tabHref('documents')}>View lease documents →</a>
-                </section>
-              )}
 
               <section
                 className={`${styles.section} ${styles.amendment}`}
@@ -458,6 +454,7 @@ export default async function LeaseDetailPage({
                 <section className={styles.section}>
                   <SectionHeader title="Lease actions" />
                   <LeaseStatusActions
+                    placeLabel={title}
                     leaseId={lease.id}
                     status={lease.status}
                     returnScope={returnScope}

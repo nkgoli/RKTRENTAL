@@ -24,12 +24,14 @@ export function TemplateTermsStep({
   update,
   templates,
   isRenewal,
+  onChangeTemplate,
 }: {
   section: TemplateSection;
   draft: WizardDraft;
   update: (patch: Partial<WizardDraft>) => void;
   templates: TemplateDefinition[];
   isRenewal: boolean;
+  onChangeTemplate?: () => void;
 }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -99,9 +101,9 @@ export function TemplateTermsStep({
             checked={item.included}
             onChange={(e) => updateItem(item.id, { included: e.target.checked })}
           />{' '}
-          Include
+          <span className="sr-only">Include {item.title}</span>
         </label>
-        {item.required && <span className={styles.termBadge}>Required by template</span>}
+        {item.required && <span className={styles.termBadge}>Required</span>}
         {item.edited && <span className={styles.termBadge}>Edited</span>}
         {item.changed && <span className={styles.termBadge}>Changed</span>}
       </div>
@@ -119,12 +121,24 @@ export function TemplateTermsStep({
         </strong>
         <span>{(expanded[item.id] ?? allExpanded) ? 'Collapse' : 'Expand'}</span>
       </button>
-      <p className={styles.termPreview}>{renderText(item.body)}</p>
       {(expanded[item.id] ?? allExpanded) && (
         <div className={styles.termExpanded} id={`term-${item.id}`}>
           <p className={styles.termFull}>{renderText(item.body)}</p>
-          {[...new Set([...item.body.matchAll(/\{\{([a-z_]+)\}\}/g)].map((match) => match[1]))].map(
-            (key) => (
+          {[
+            ...new Set(
+              [
+                ...(
+                  draft.termOverrides[item.id]?.body ??
+                  selected?.items.find((source) => source.id === item.id)?.body ??
+                  item.body
+                ).matchAll(/\{\{([a-z_]+)\}\}/g),
+              ].map((match) => match[1]),
+            ),
+          ]
+            .filter(
+              (key) => key in draft.placeholderValues || !contextFromDraft(draft).values?.[key],
+            )
+            .map((key) => (
               <label key={key}>
                 Fill {key.replaceAll('_', ' ')}
                 <input
@@ -137,8 +151,7 @@ export function TemplateTermsStep({
                   }
                 />
               </label>
-            ),
-          )}
+            ))}
           <label>
             Title
             <input
@@ -157,7 +170,7 @@ export function TemplateTermsStep({
           </label>
         </div>
       )}
-      <p className={styles.termReason}>{item.reason}</p>
+      {(expanded[item.id] ?? allExpanded) && <p className={styles.termReason}>{item.reason}</p>}
     </article>
   );
   return (
@@ -179,43 +192,52 @@ export function TemplateTermsStep({
             </button>
           </div>
         )}
-        <div className={styles.templateBar}>
-          <label>
-            Lease template
-            <select
-              aria-label="Lease template"
-              value={selected ? `${selected.id}:${selected.version}` : ''}
-              onChange={(e) => {
-                const next = choices.find((t) => `${t.id}:${t.version}` === e.target.value);
-                if (next) update({ template: next, termOverrides: {} });
-              }}
+        {section === 'CLAUSE' ? (
+          <div className={styles.templateBar}>
+            <label>
+              Lease template
+              <select
+                aria-label="Lease template"
+                value={selected ? `${selected.id}:${selected.version}` : ''}
+                onChange={(e) => {
+                  const next = choices.find((t) => `${t.id}:${t.version}` === e.target.value);
+                  if (next) update({ template: next, termOverrides: {} });
+                }}
+              >
+                {choices.map((t) => (
+                  <option key={`${t.id}:${t.version}`} value={`${t.id}:${t.version}`}>
+                    {t.name} · v{t.version}
+                    {t === selected &&
+                    t.version !== templates.find((current) => current.id === t.id)?.version
+                      ? ' (carried over)'
+                      : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className={styles.btn}
+              onClick={() => update({ termOverrides: {} })}
             >
-              {choices.map((t) => (
-                <option key={`${t.id}:${t.version}`} value={`${t.id}:${t.version}`}>
-                  {t.name} · v{t.version}
-                  {t === selected &&
-                  t.version !== templates.find((current) => current.id === t.id)?.version
-                    ? ' (carried over)'
-                    : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            type="button"
-            className={styles.btn}
-            onClick={() => update({ termOverrides: {} })}
-          >
-            Reset to template
-          </button>
-          <button type="button" className={styles.btn} onClick={saveAsTemplate} disabled={saving}>
-            Save as new template
-          </button>
+              Reset to template
+            </button>
+            <button type="button" className={styles.btn} onClick={saveAsTemplate} disabled={saving}>
+              Save as new template
+            </button>
+            <p className={styles.templateHelp}>
+              Edits affect this draft only. Switching or resetting the template replaces edits in
+              Clauses, Rules and Disclosures.
+            </p>
+          </div>
+        ) : (
           <p className={styles.templateHelp}>
-            Edits affect this draft only. Switching or resetting the template replaces edits in
-            Clauses, Rules and Disclosures.
+            Template: {selected?.name ?? 'None'} · v{selected?.version ?? 1}{' '}
+            <button type="button" className={styles.link} onClick={onChangeTemplate}>
+              Change template
+            </button>
           </p>
-        </div>
+        )}
         {message && <p role="status">{message}</p>}
         <div className={styles.templateHeading}>
           <h3>
@@ -228,6 +250,15 @@ export function TemplateTermsStep({
             Conditions use the property and earlier choices. Expand to read or edit the full
             wording; uncheck to exclude an item.
           </p>
+          {sectionTerms.some((item) => item.included && /\{\{[a-z_]+\}\}/.test(item.body)) && (
+            <p className={styles.error}>
+              {
+                sectionTerms.filter((item) => item.included && /\{\{[a-z_]+\}\}/.test(item.body))
+                  .length
+              }{' '}
+              terms have blanks to fill. Expand each term to complete its fields.
+            </p>
+          )}
           <button
             type="button"
             className={styles.btn}

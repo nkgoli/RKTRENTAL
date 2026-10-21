@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AddUnitForm } from '@/app/(manager)/properties/_components/UnitForm';
 import { AddPropertyForm } from '@/app/(manager)/properties/_components/PropertyForm';
 import { createPropertyAction, type FormState } from '@/app/(manager)/properties/actions';
@@ -16,6 +16,12 @@ vi.mock('@/app/(manager)/properties/actions', () => ({
   })),
   setPropertyArchivedAction: vi.fn(),
 }));
+beforeEach(() => {
+  vi.mocked(createPropertyAction).mockReset().mockResolvedValue({
+    errors: { name: 'Enter a property name.' },
+    message: 'Please fix the highlighted fields.',
+  });
+});
 afterEach(cleanup);
 
 describe('property and unit form validation', () => {
@@ -32,14 +38,20 @@ describe('property and unit form validation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(cancel).toHaveBeenCalledOnce();
     const input = screen.getByRole('textbox', { name: 'Property name' });
+    // Reach the server action instead of the local required-unit validation.
+    fireEvent.change(screen.getByRole('spinbutton', { name: /Number of units/ }), {
+      target: { value: '4' },
+    });
     fireEvent.submit(input.closest('form')!);
-    await waitFor(() =>
-      expect((screen.getByRole('button', { name: 'Saving…' }) as HTMLButtonElement).disabled).toBe(
-        true,
-      ),
-    );
-    expect(input.closest('form')?.getAttribute('aria-busy')).toBe('true');
-    finish({ errors: { name: 'Enter a property name.' } });
+    await waitFor(() => expect(createPropertyAction).toHaveBeenCalledOnce());
+    try {
+      await waitFor(() => {
+        expect((screen.getByRole('button', { name: 'Saving…' }) as HTMLButtonElement).disabled).toBe(true);
+        expect(input.closest('form')?.getAttribute('aria-busy')).toBe('true');
+      });
+    } finally {
+      await act(async () => finish({ errors: { name: 'Enter a property name.' } }));
+    }
     await waitFor(() =>
       expect(
         (screen.getByRole('button', { name: 'Save property' }) as HTMLButtonElement).disabled,

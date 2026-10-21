@@ -1087,7 +1087,6 @@ export function RoiProjections({
         ) : (
           <p>No valid projection available</p>
         )}
-        <button onClick={() => onEdit()}>Edit assumptions</button>
       </div>
       <AnalysisTabs
         id="roi-chart"

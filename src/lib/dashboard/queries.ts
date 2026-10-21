@@ -95,6 +95,7 @@ export type DashboardData = {
 };
 
 const DAY_MS = 86_400_000;
+export const EXPIRING_WINDOW_DAYS = 90;
 type DashboardMaintenanceRequest = { status: string; priority: string };
 
 function utcDay(date: Date) {
@@ -277,7 +278,7 @@ export async function loadDashboardData(
 
   const today = utcDay(now);
   const todayEnd = new Date(today.getTime() + DAY_MS - 1);
-  const expiresBy = new Date(today.getTime() + 90 * DAY_MS);
+  const expiresBy = new Date(today.getTime() + EXPIRING_WINDOW_DAYS * DAY_MS);
   const month = monthKey(now);
   const currentMonthStart = monthStart(month);
   const nextMonthStart = monthStart(addMonths(month, 1));

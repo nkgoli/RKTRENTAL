@@ -1,59 +1,42 @@
-import Link from 'next/link';
-import { Alert, Avatar, Badge, Button, Card, cx, pageFrom, paginate } from '@/components/ui';
-import { Icon } from '@/components/shell/Icons';
-import { formatDate, initials } from '@/lib/tenants/format';
+﻿import Link from 'next/link';
+import {
+  Avatar,
+  Badge,
+  Card,
+  SearchField,
+  AutoSubmitSelect,
+  cx,
+  pageFrom,
+  paginate,
+} from '@/components/ui';
+import { initials } from '@/lib/tenants/format';
 import type { organizationTenants } from '@/lib/tenants/queries';
-import type { SetupState } from '@/lib/tenants/status';
 import { TenantPager } from './Pager';
 import styles from './tenants.module.css';
 
 type SetupRow = Awaited<ReturnType<ReturnType<typeof organizationTenants>['setupRows']>>[number];
-
-function href(q?: string, property?: string, period?: string, page?: number) {
-  const params = new URLSearchParams();
+function href(
+  q?: string,
+  property?: string,
+  period?: string,
+  page?: number,
+  needsPaymentMethod = false,
+) {
+  const params = new URLSearchParams({ view: 'status' });
   if (q) params.set('q', q);
   if (property) params.set('property', property);
   if (period === 'upcoming') params.set('period', period);
   if (page && page > 1) params.set('page', String(page));
-  return `/tenants${params.size ? `?${params}` : ''}`;
+  if (needsPaymentMethod) params.set('needsPaymentMethod', '1');
+  return `/tenants?${params}`;
 }
-
-const checklistFields = [
-  'invited',
-  'accepted',
-  'bankAdded',
-  'bankVerified',
-  'autopayOn',
-  'cardOnFile',
-] as const;
-const checklistLabels = [
-  'Invited',
-  'Accepted',
-  'Bank added',
-  'Bank verified',
-  'Autopay on',
-  'Card on file',
-];
-const NOT_TRACKED = new Set<(typeof checklistFields)[number]>([
-  'invited',
-  'accepted',
-  'bankVerified',
-]);
-
-function stateLabel(field: (typeof checklistFields)[number], state: SetupState) {
-  if (NOT_TRACKED.has(field)) return 'Not tracked';
-  if (state === 'complete') return '✓ Complete';
-  if (state === 'incomplete') return '! Incomplete';
-  return '— Not applicable';
+export function needsPaymentSetup(row: SetupRow) {
+  return (
+    row.checklist.autopayOn !== 'complete' &&
+    row.checklist.bankAdded !== 'complete' &&
+    row.checklist.cardOnFile !== 'complete'
+  );
 }
-
-function stateClass(field: (typeof checklistFields)[number], state: SetupState) {
-  if (NOT_TRACKED.has(field)) return styles.unknown;
-  if (state === 'complete') return styles.complete;
-  if (state === 'incomplete') return styles.incomplete;
-  return styles.unknown;
-}
-
 export function StatusView({
   rows,
   properties,
@@ -61,6 +44,7 @@ export function StatusView({
   property,
   period,
   page,
+  needsPaymentMethod = false,
 }: {
   rows: SetupRow[];
   properties: { id: string; name: string }[];
@@ -68,8 +52,9 @@ export function StatusView({
   property?: string;
   period: 'current' | 'upcoming';
   page?: string;
+  needsPaymentMethod?: boolean;
 }) {
-  const shown = rows.filter((row) => {
+  const matching = rows.filter((row) => {
     if (period === 'upcoming' ? row.leaseStatus !== 'DRAFT' : row.leaseStatus !== 'ACTIVE')
       return false;
     if (property && row.property.id !== property) return false;
@@ -80,38 +65,30 @@ export function StatusView({
         .includes(q.toLowerCase())
     );
   });
-  const current = pageFrom(page, shown.length);
-  const paged = paginate(shown, current);
-  const attention = shown.filter(
-    (row) => row.checklist.bankAdded === 'incomplete' || row.checklist.autopayOn === 'incomplete',
-  ).length;
-
+  const attention = matching.filter(needsPaymentSetup).length;
+  const shown = needsPaymentMethod ? matching.filter(needsPaymentSetup) : matching;
+  const current = pageFrom(page, shown.length, 10);
+  const paged = paginate(shown, current, 10);
   return (
     <section className={styles.status} aria-labelledby="tenant-status-title">
       <div className={styles.sectionHead}>
         <div>
-          <h2 id="tenant-status-title">Tenant status</h2>
-          <p>Who has finished setup — and who still needs a nudge.</p>
+          <h2 id="tenant-status-title">Payment setup</h2>
+          <p>Payment methods and autopay for your tenants.</p>
         </div>
       </div>
-
       <div className={styles.period} role="group" aria-label="Lease period">
-        <Link
-          className={cx(styles.periodLink, period === 'current' && styles.periodActive)}
-          aria-current={period === 'current' ? 'true' : undefined}
-          href={href(q, property)}
-        >
-          Current tenants
-        </Link>
-        <Link
-          className={cx(styles.periodLink, period === 'upcoming' && styles.periodActive)}
-          aria-current={period === 'upcoming' ? 'true' : undefined}
-          href={href(q, property, 'upcoming')}
-        >
-          Upcoming tenants
-        </Link>
+        {(['current', 'upcoming'] as const).map((value) => (
+          <Link
+            key={value}
+            className={cx(styles.periodLink, period === value && styles.periodActive)}
+            aria-current={period === value ? 'true' : undefined}
+            href={href(q, property, value)}
+          >
+            {value === 'current' ? 'Current tenants' : 'Upcoming tenants'}
+          </Link>
+        ))}
       </div>
-
       <form
         action="/tenants"
         method="get"
@@ -119,124 +96,91 @@ export function StatusView({
         aria-label="Status filters"
         className={styles.filters}
       >
-        {period === 'upcoming' && <input type="hidden" name="period" value="upcoming" />}
+        <input type="hidden" name="view" value="status" />
+        <input type="hidden" name="period" value={period} />
+        {needsPaymentMethod && <input type="hidden" name="needsPaymentMethod" value="1" />}
         <label className={styles.filterField}>
           <span>Search tenants</span>
-          <input type="search" name="q" defaultValue={q} placeholder="Property, tenant or email" />
+          <SearchField name="q" defaultValue={q} placeholder="Property, tenant or email" />
         </label>
         <label className={styles.filterField}>
           <span>Property</span>
-          <select name="property" defaultValue={property ?? ''}>
+          <AutoSubmitSelect name="property" defaultValue={property ?? ''}>
             <option value="">All properties</option>
             {properties.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
               </option>
             ))}
-          </select>
+          </AutoSubmitSelect>
         </label>
-        <Button type="submit" variant="secondary">
-          Apply filters
-        </Button>
-        {(q || property) && (
+        {(q || property || needsPaymentMethod) && (
           <Link className="btn btn-ghost btn-sm" href={href(undefined, undefined, period)}>
             Clear filters
           </Link>
         )}
       </form>
-
       <div className={styles.actions} style={{ justifyContent: 'space-between' }}>
         <p className={styles.meta}>
-          {period === 'upcoming' ? 'Draft leases' : 'Active leases'} · {shown.length}{' '}
-          {shown.length === 1 ? 'tenant' : 'tenants'} in this view
+          {shown.length} {shown.length === 1 ? 'tenant' : 'tenants'} in this view
         </p>
-        <Badge tone="warning">
-          {attention} need{attention === 1 ? 's' : ''} attention
-        </Badge>
+        <Link
+          className={cx(styles.chip, needsPaymentMethod && styles.chipActive)}
+          href={href(q, property, period, 1, !needsPaymentMethod)}
+          aria-current={needsPaymentMethod ? 'true' : undefined}
+        >
+          Needs payment method · {attention}
+        </Link>
       </div>
-
       <Card flush className={styles.statusCard}>
-        <div role="region" aria-label="Tenant setup checklist">
+        <div role="region" aria-label="Tenant payment setup">
           {paged.length === 0 ? (
             <div className={styles.empty}>
-              <Icon name="tenants" />
               <h3>No tenants match this view</h3>
               <p>Try another property, tenant, or lease period.</p>
-              <Link className="btn btn-secondary" href="/tenants">
-                View current tenants
-              </Link>
+              <Link href={href()}>View current tenants</Link>
             </div>
           ) : (
             paged.map((row) => (
-              <article className={styles.setup} key={`${row.leaseId}:${row.tenant.id}`}>
-                <div className={styles.setupInfo}>
-                  <Link
-                    className={styles.person}
-                    href={`/tenants/${row.tenant.id}?${new URLSearchParams({ returnTo: href(q, property, period, current) })}`}
-                  >
-                    <Avatar initials={initials(row.tenant.name)} />
-                    <span>
-                      <strong>{row.tenant.name}</strong>
-                      <small>{row.tenant.email ?? row.tenant.phone ?? 'No contact on file'}</small>
-                    </span>
-                  </Link>
-                  <div className={styles.setupLinks}>
-                    <Link href={`/properties/${row.property.id}`}>{row.property.name}</Link>
-                    <Link
-                      href={`/properties/${row.property.id}?unit=${encodeURIComponent(row.unit.id)}`}
-                    >
+              <article className={styles.compactSetup} key={`${row.leaseId}:${row.tenant.id}`}>
+                <Link
+                  className={styles.person}
+                  href={`/tenants/${row.tenant.id}?${new URLSearchParams({ returnTo: href(q, property, period, current, needsPaymentMethod) })}`}
+                >
+                  <Avatar initials={initials(row.tenant.name)} size="sm" />
+                  <span>
+                    <strong>{row.tenant.name}</strong>
+                    <small>
+                      {row.property.name} ·{' '}
                       {row.unit.isImplicit ? 'Single-unit' : `Unit ${row.unit.number}`}
-                    </Link>
-                  </div>
-                  <Link className={styles.meta} href={`/leases/${row.leaseId}`}>
-                    {formatDate(row.startDate)} – {formatDate(row.endDate)}
-                  </Link>
-                  {row.leaseStatus === 'DRAFT' && <Badge tone="info">Draft lease</Badge>}
-                </div>
-                <dl className={styles.checks}>
-                  {checklistFields.map((field, index) => {
-                    const state = row.checklist[field];
-                    return (
-                      <div key={field}>
-                        <dt>{checklistLabels[index]}</dt>
-                        <dd className={stateClass(field, state)}>{stateLabel(field, state)}</dd>
-                      </div>
-                    );
-                  })}
-                </dl>
+                    </small>
+                  </span>
+                </Link>
+                {needsPaymentSetup(row) ? (
+                  <Badge tone="warning">No payment method</Badge>
+                ) : (
+                  <span className={styles.setupSummary}>
+                    {[
+                      row.checklist.autopayOn === 'complete' && 'Autopay on',
+                      row.checklist.bankAdded === 'complete' && 'Bank added',
+                      row.checklist.cardOnFile === 'complete' && 'Card on file',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                )}
               </article>
             ))
           )}
           <TenantPager
             page={current}
             total={shown.length}
+            size={10}
             noun="tenants"
-            href={(n) => href(q, property, period, n)}
+            href={(n) => href(q, property, period, n, needsPaymentMethod)}
           />
         </div>
       </Card>
-
-      <Alert tone="warning">
-        <div>
-          <strong>Some setup steps are not tracked yet.</strong>
-          <p>
-            Invitation, acceptance and bank verification are not tracked. Card on file is not
-            applicable when a tenant uses ACH autopay without a card.
-          </p>
-        </div>
-      </Alert>
-
-      <div className={styles.unavailable}>
-        <p>Messaging and invitations are not available.</p>
-        <div className={styles.actions}>
-          <button className="btn btn-sm" type="button" disabled>
-            Message
-          </button>
-          <button className="btn btn-sm" type="button" disabled>
-            Resend invite
-          </button>
-        </div>
-      </div>
     </section>
   );
 }

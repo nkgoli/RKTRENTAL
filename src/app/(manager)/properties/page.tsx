@@ -2,7 +2,8 @@
 import { PageHeader } from '@/components/shell/PageHeader';
 import { redirect } from 'next/navigation';
 import { Icon } from '@/components/shell/Icons';
-import { Card, Progress, Stat, Table, TableHead } from '@/components/ui';
+import { Card, NoticeToast, Progress, SearchField, Stat, Table, TableHead } from '@/components/ui';
+import { MiniCover } from '@/components/dashboard/MiniCover';
 import { requireManagerRole } from '@/lib/auth/access';
 import { propertiesDb, propertyFilterFrom, type PropertyFilter } from '@/lib/properties/data';
 import { formatAddress, formatMoney } from '@/lib/properties/format';
@@ -50,10 +51,10 @@ function href(filter: PropertyFilter, q?: string, view?: View) {
 export default async function PropertiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; filter?: string; view?: string; add?: string }>;
+  searchParams: Promise<{ q?: string; filter?: string; view?: string; add?: string; notice?: string }>;
 }) {
   const session = await requireManagerRole();
-  const { q, filter: filterParam, view: viewParam, add } = await searchParams;
+  const { q, filter: filterParam, view: viewParam, add, notice } = await searchParams;
   const view: View = viewParam === 'list' ? 'list' : 'grid';
   const filter = propertyFilterFrom(filterParam);
   const createHref = `/properties/new?returnTo=${encodeURIComponent(href(filter, q, view))}`;
@@ -67,12 +68,14 @@ export default async function PropertiesPage({
 
   return (
     <>
+      {notice === 'property-archived' && <NoticeToast message="Property archived" />}
       <PageHeader
         title="Properties"
         eyebrow="Portfolio / Properties"
         actions={[
           {
-            label: '+ Add property',
+            label: 'Add property',
+            icon: 'plus',
             href: createHref,
             primary: true,
           },
@@ -115,23 +118,7 @@ export default async function PropertiesPage({
       </section>
 
       <section className={styles.toolbar}>
-        <form role="search" action="/properties" method="get" className={styles.searchForm}>
-          {filter !== 'all' && <input type="hidden" name="filter" value={filter} />}
-          {view === 'list' && <input type="hidden" name="view" value="list" />}
-          <label className={styles.searchLabel}>
-            Search properties
-            <input
-              type="search"
-              name="q"
-              defaultValue={q}
-              placeholder="Search by name or address"
-              aria-label="Search by name or address"
-            />
-          </label>
-          <button className="btn btn-secondary btn-sm" type="submit">
-            Search
-          </button>
-        </form>
+        <SearchField defaultValue={q} placeholder="Search by name or address" />
         <nav className={styles.filters} aria-label="Property filters">
           {FILTERS.map(({ key, label }) => {
             const count =
@@ -139,7 +126,7 @@ export default async function PropertiesPage({
                 ? counts[key]
                 : undefined;
             return (
-              <a
+              <Link scroll={false}
                 key={key}
                 href={href(key, q, view)}
                 aria-current={key === filter ? 'page' : undefined}
@@ -152,10 +139,11 @@ export default async function PropertiesPage({
                     <span className={styles.count}>{count}</span>
                   </>
                 )}
-              </a>
+              </Link>
             );
           })}
         </nav>
+        {properties.length > 0 && (q || filter !== 'all') && <Link href="/properties" scroll={false}>Clear filters</Link>}
       </section>
 
       <section className={styles.viewBar}>
@@ -165,14 +153,14 @@ export default async function PropertiesPage({
         </span>
         <div className={styles.viewToggle} role="group" aria-label="View">
           {(['grid', 'list'] as const).map((v) => (
-            <a
+            <Link scroll={false}
               key={v}
               href={href(filter, q, v)}
               aria-current={v === view ? 'true' : undefined}
               className={v === view ? styles.viewActive : undefined}
             >
               {v === 'grid' ? 'Grid' : 'List'}
-            </a>
+            </Link>
           ))}
         </div>
       </section>
@@ -195,8 +183,8 @@ export default async function PropertiesPage({
         </section>
       )}
 
-      {properties.length > 0 && view === 'grid' && (
-        <section className={styles.grid} aria-label="Property directory">
+      {properties.length > 0 && (
+        <section className={`${styles.grid} ${view === 'list' ? styles.mobileGrid : ''}`} aria-label="Property directory">
           {properties.map((p) => {
             const single = p.type === 'SINGLE_UNIT';
             const occ = occupancyOf(p);
@@ -244,7 +232,7 @@ export default async function PropertiesPage({
       )}
 
       {properties.length > 0 && view === 'list' && (
-        <Card flush>
+        <Card flush className={styles.desktopList}>
           <div
             className={styles.tableWrap}
             role="region"
@@ -263,6 +251,7 @@ export default async function PropertiesPage({
                     <tr key={p.id}>
                       <td>
                         <Link className={styles.rowLink} href={`/properties/${p.id}`}>
+                          <MiniCover cover={{ type: p.type, unitCount: p.unitCount, coverPhotoId: p.coverPhotoId }} />
                           {p.name}
                         </Link>
                       </td>

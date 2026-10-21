@@ -5,6 +5,8 @@ import { db } from '@/lib/db/client';
 import { resolveRentSelection, rentGap, loadRentProperties } from '@/lib/analysis/rent';
 import { RentCompsPanel } from '@/components/rent-comps/RentCompsPanel';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { SearchField } from '@/components/ui/SearchField';
+import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui';
 import { EmptyState } from '@/components/RouteStates';
 import { formatAddress, formatMoney } from '@/lib/properties/format';
@@ -31,7 +33,7 @@ export default async function RentAnalysisPage({
   if (resolved.kind === 'invalid')
     return (
       <>
-        <PageHeader title="Rent Analysis" eyebrow="Analysis" />
+        <PageHeader title="Rent Analysis" eyebrow="Rent Analysis" />
         <EmptyState
           title="Property or unit unavailable"
           description="It may have been archived or your access changed. Choose another property."
@@ -55,16 +57,7 @@ export default async function RentAnalysisPage({
               <h2>Your properties</h2>
               <p className="muted">{properties.length} active properties</p>
               <form action="/rent-analysis" className={styles.search}>
-                <label className="field">
-                  Find a property
-                  <input
-                    type="search"
-                    name="q"
-                    defaultValue={search}
-                    placeholder="Search properties…"
-                  />
-                </label>
-                <button className="btn btn-secondary">Search</button>
+                <SearchField defaultValue={search} placeholder="Search properties" />
               </form>
               {matches.map((p) => (
                 <div className={styles.property} key={p.id}>
@@ -152,7 +145,7 @@ export default async function RentAnalysisPage({
   };
   return (
     <>
-      <PageHeader title="Rent Analysis" eyebrow="Analysis" />
+      <PageHeader title="Rent Analysis" eyebrow="Rent Analysis" />
       <div className={styles.workspace}>
         <Card>
           <div className="row between">
@@ -167,10 +160,7 @@ export default async function RentAnalysisPage({
         </Card>
         {!implicit && (
           <Card>
-            <details open={!subject}>
-              <summary>
-                View all {property.units.length} units in {property.name}
-              </summary>
+            <div>
               <h2>Your units</h2>
               <p className="muted">
                 Choose a unit to compare. A multi-unit property has no blended comparable rent.
@@ -181,7 +171,7 @@ export default async function RentAnalysisPage({
                 aria-label="Saved unit estimates"
                 tabIndex={0}
               >
-                <table className="table">
+                <table className="table" data-mobile="cards">
                   <thead>
                     <tr>
                       <th>Unit</th>
@@ -196,9 +186,10 @@ export default async function RentAnalysisPage({
                     {property.units.map((u) => {
                       const baseline = currentRent(u.id) ?? u.listedRent;
                       return (
-                        <tr key={u.id}>
-                          <th>
+                        <tr key={u.id} className="row-link">
+                          <th data-cell="title">
                             <Link
+                              className="row-anchor"
                               href={buildCompsHref(
                                 rentAnalysisContext(property.id, u.id),
                                 explicitFilters,
@@ -207,12 +198,27 @@ export default async function RentAnalysisPage({
                               Unit {u.number}
                             </Link>
                           </th>
-                          <td>{u.status}</td>
-                          <td>{money(currentRent(u.id))}</td>
-                          <td>{money(u.listedRent)}</td>
-                          <td>{money(u.marketRent)}</td>
-                          <td>
-                            {money(rentGap(u.marketRent, baseline))}
+                          <td data-cell="status">
+                            <Badge tone={u.status === 'OCCUPIED' ? 'success' : 'neutral'}>
+                              {u.status.charAt(0) + u.status.slice(1).toLowerCase()}
+                            </Badge>
+                          </td>
+                          <td data-cell="meta">Current {money(currentRent(u.id))}</td>
+                          <td data-cell="hide">{money(u.listedRent)}</td>
+                          <td data-cell="amount">Market {money(u.marketRent)}</td>
+                          <td data-cell="sub">
+                            <span
+                              className={
+                                (rentGap(u.marketRent, baseline) ?? 0) > 0
+                                  ? styles.positiveGap
+                                  : (rentGap(u.marketRent, baseline) ?? 0) < 0
+                                    ? styles.negativeGap
+                                    : styles.neutralGap
+                              }
+                            >
+                              {(rentGap(u.marketRent, baseline) ?? 0) > 0 ? '+' : ''}
+                              {money(rentGap(u.marketRent, baseline))}
+                            </span>
                             <small className="muted">
                               {' '}
                               vs {currentRent(u.id) === null ? 'listed rent' : 'current lease'}
@@ -227,7 +233,7 @@ export default async function RentAnalysisPage({
               {!property.units.length && (
                 <p>No available units. Add or restore a unit in Properties.</p>
               )}
-            </details>
+            </div>
           </Card>
         )}
         {subject && (

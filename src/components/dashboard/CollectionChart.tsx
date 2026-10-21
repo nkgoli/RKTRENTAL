@@ -19,7 +19,7 @@ export function CollectionChart({
   const height = 124;
   const base = 124;
   const max = Math.max(1, ...months.flatMap((m) => [m.dueCents, m.collectedCents]));
-  const slot = (width - 48) / Math.max(months.length, 1);
+  const slot = width / Math.max(months.length, 1);
   const barWidth = Math.max(2, slot * 0.62);
   const withYear = months.length > 12;
   const labelCount = Math.min(6, months.length);
@@ -51,6 +51,10 @@ export function CollectionChart({
             <i />
             Due
           </span>
+          <span className={styles.currentLegend}>
+            <i />
+            Current month (to date)
+          </span>
         </div>
       </div>
       {!months.length && (
@@ -58,60 +62,68 @@ export function CollectionChart({
           Collection data is unavailable. Choose another range or reload the dashboard.
         </p>
       )}
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        width="100%"
-        height="124"
-        preserveAspectRatio="none"
-        role="img"
-        aria-label={`Rent collected against rent due, last ${months.length} months`}
-      >
-        <g aria-hidden="true" className={styles.grid}>
+      <div className={styles.plot}>
+        <div className={styles.scale} aria-hidden="true">
           {[0, 0.5, 1].map((fraction) => (
-            <g key={fraction}>
-              <path d={`M48 ${base - fraction * 100}H640`} />
-              <text x="0" y={base - fraction * 100 - 4}>
-                {new Intl.NumberFormat('en-US', {
-                  style: 'currency',
-                  currency: 'USD',
-                  notation: 'compact',
-                  maximumFractionDigits: 0,
-                }).format(Math.round(max * fraction) / 100)}
-              </text>
-            </g>
+            <span key={fraction} style={{ top: `${((base - fraction * 100) / height) * 100}%` }}>
+              {new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                notation: 'compact',
+                maximumFractionDigits: 0,
+              }).format(Math.round(max * fraction) / 100)}
+            </span>
           ))}
-        </g>
-        {months.map((month, index) => {
-          const x = 48 + index * slot + (slot - barWidth) / 2;
-          const collected = (month.collectedCents / max) * 100;
-          const due = (month.dueCents / max) * 100;
-          return (
-            <g key={month.key}>
-              <title>{`${bucketLabel(month.key, true)}: ${formatUsd(month.collectedCents)} of ${formatUsd(month.dueCents)}`}</title>
-              <rect
-                x={x}
-                y={base - collected}
-                width={barWidth}
-                height={collected}
-                rx={2}
-                fill={
-                  index === months.length - 1 ? 'var(--design-accent)' : 'var(--design-primary)'
-                }
-              />
-              <path
-                d={`M${48 + index * slot} ${base - due}h${slot}`}
-                stroke="var(--design-muted)"
-                strokeWidth="1.5"
-                strokeDasharray="4 4"
-              />
-            </g>
-          );
-        })}
-      </svg>
-      <div className={styles.labels} aria-hidden="true">
-        {labels.map((month) => (
-          <span key={month.key}>{bucketLabel(month.key, withYear)}</span>
-        ))}
+        </div>
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          width="100%"
+          height="124"
+          preserveAspectRatio="none"
+          role="img"
+          aria-label={`Rent collected against rent due, last ${months.length} months`}
+        >
+          <g aria-hidden="true" className={styles.grid}>
+            {[0, 0.5, 1].map((fraction) => (
+              <path key={fraction} d={`M0 ${base - fraction * 100}H${width}`} />
+            ))}
+          </g>
+          {months.map((month, index) => {
+            const x = index * slot + (slot - barWidth) / 2;
+            const collected = (month.collectedCents / max) * 100;
+            const due = (month.dueCents / max) * 100;
+            return (
+              <g key={month.key}>
+                <title>{`${bucketLabel(month.key, true)}: ${formatUsd(month.collectedCents)} of ${formatUsd(month.dueCents)}`}</title>
+                <rect
+                  x={x}
+                  y={base - collected}
+                  width={barWidth}
+                  height={collected}
+                  rx={2}
+                  fill="var(--design-primary)"
+                  fillOpacity={index === months.length - 1 ? 0.45 : 1}
+                  stroke={index === months.length - 1 ? 'var(--design-primary)' : undefined}
+                  strokeDasharray={index === months.length - 1 ? '3 3' : undefined}
+                />
+                <path
+                  d={`M${index * slot} ${base - due}h${slot}`}
+                  stroke="var(--design-muted)"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 4"
+                />
+              </g>
+            );
+          })}
+        </svg>
+        <div className={styles.labels} aria-hidden="true">
+          {labels.map((month) => (
+            <span key={month.key}>
+              {bucketLabel(month.key, withYear)}
+              {month.key === months.at(-1)?.key ? ' · to date' : ''}
+            </span>
+          ))}
+        </div>
       </div>
       <details className={styles.amounts}>
         <summary>View monthly amounts</summary>

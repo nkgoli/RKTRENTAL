@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { unstable_rethrow } from 'next/navigation';
 import { useActionState, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Alert, Badge, Card, CardHeader } from '@/components/ui';
+import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/RouteStates';
 import { RentDistribution } from '@/components/rent-comps/RentDistribution';
 import { MAP, dollars, mapPins, suggestRent, summarize, type CompRow } from '@/lib/comps/core';
@@ -58,6 +59,7 @@ async function applyWithRecovery(previous: ApplyState, formData: FormData): Prom
 }
 
 export function CompsWorkbench(props: WorkbenchProps) {
+  const toast = useToast();
   const { rows, radiusMiles, subjectSqft, listedRent } = props;
   const baseline = props.currentLeaseRent ?? listedRent;
   const baselineLabel = props.currentLeaseRent != null ? 'current lease' : 'listed rent';
@@ -74,6 +76,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
   const pins = useMemo(() => mapPins(rows, excluded, radiusMiles), [rows, excluded, radiusMiles]);
   const nearest = [...included].sort((a, b) => a.distanceMiles - b.distanceMiles).slice(0, 4);
   const [state, apply, pending] = useActionState(applyWithRecovery, initialApply);
+  const announced = useRef<ApplyState | null>(null);
   const [rentDraft, setRentDraft] = useState<string | null>(null);
   const rentValue = rentDraft ?? String(suggestion?.rent ?? '');
   const rentInput = useRef<HTMLInputElement>(null);
@@ -83,7 +86,13 @@ export function CompsWorkbench(props: WorkbenchProps) {
   const savedRent = state.ok && state.rent !== undefined ? state.rent : props.marketRent;
   useEffect(() => {
     if (!pending && state.ok === false) rentInput.current?.focus();
-  }, [pending, state]);
+    if (!pending && state.ok && state !== announced.current) {
+      announced.current = state;
+      toast.success(
+        `Market rent for ${props.unitLabel} updated to ${usd(state.rent ?? 0)} / month.`,
+      );
+    }
+  }, [pending, state, toast, props.unitLabel]);
 
   const toggle = (id: string) =>
     setExcluded((current) => {
@@ -96,95 +105,106 @@ export function CompsWorkbench(props: WorkbenchProps) {
   const place = (value: number) => (summary ? ((value - summary.lowRent) / spread) * 300 : 0);
   const listPct =
     listedRent !== null && summary ? Math.min(300, Math.max(0, place(listedRent))) : null;
+  const mixedSources =
+    new Set(rows.map((row) => (row.source ?? props.providerName).toLowerCase())).size > 1;
 
   return (
     <>
+      <div className="row muted" style={{ flexWrap: 'wrap', gap: 8, fontSize: 12 }}>
+        <Badge tone="neutral">Demo comps</Badge>
+        <span>
+          {sourceLabel(props.providerName)} · Synced {props.syncedAt}
+          {props.cached ? ' · Cached' : ''}
+        </span>
+        <Link href="/integrations#comps-providers">Manage source</Link>
+      </div>
       <div className={styles.comparison}>
         <Card flush>
-          <CardHeader
-            title="Comparable rentals map"
-            action={<Badge tone="info">{`Within ${radiusMiles} mi`}</Badge>}
-          />
-          <svg
-            viewBox={`0 0 ${MAP.width} ${MAP.height}`}
-            width="100%"
-            style={{ display: 'block' }}
-            role="img"
-            aria-label={`Map of ${pins.length} comparable rentals within ${radiusMiles} miles of ${props.unitLabel}`}
-            data-testid="comps-map"
-          >
-            <rect width={MAP.width} height={MAP.height} fill="var(--rr-subtle)" />
-            <path
-              d="M0 210 C150 170 300 250 640 190"
-              stroke="#cbd5e1"
-              strokeWidth="22"
-              fill="none"
-            />
-            <path
-              d="M0 80H640M0 160H640M120 0V300M300 0V300M470 0V300"
-              stroke="#fff"
-              strokeWidth="6"
-            />
-            <circle
-              cx={MAP.cx}
-              cy={MAP.cy}
-              r={MAP.ringRadius}
-              fill="var(--design-primary)"
-              fillOpacity=".07"
-              stroke="var(--design-primary)"
-              strokeDasharray="6 6"
-            />
-            {pins.map((pin) => (
-              <g key={pin.id} data-testid="comp-pin" data-included={pin.included}>
-                <circle
-                  cx={pin.x}
-                  cy={pin.y}
-                  r="9"
-                  fill={pin.included ? 'var(--design-primary)' : 'var(--design-muted)'}
-                  stroke="#fff"
-                  strokeWidth="2"
-                />
-                <text
-                  x={pin.x + 12}
-                  y={pin.y - 10}
-                  fontSize="11"
-                  fontWeight="700"
-                  fill="var(--design-text)"
-                >
-                  {pin.label}
-                </text>
-              </g>
-            ))}
-            <circle
-              cx={MAP.cx}
-              cy={MAP.cy}
-              r="14"
-              fill="var(--design-text)"
-              stroke="#fff"
-              strokeWidth="3"
-            />
-            <text
-              x={MAP.cx + 22}
-              y={MAP.cy - 4}
-              fontSize="13"
-              fontWeight="700"
-              fill="var(--design-text)"
+          <details className="disclosure">
+            <summary>
+              Comparable rentals map <Badge tone="neutral">Within {radiusMiles} mi</Badge>
+            </summary>
+            <svg
+              viewBox={`0 0 ${MAP.width} ${MAP.height}`}
+              width="100%"
+              style={{ display: 'block' }}
+              role="img"
+              aria-label={`Map of ${pins.length} comparable rentals within ${radiusMiles} miles of ${props.unitLabel}`}
+              data-testid="comps-map"
             >
-              Subject {subjectKind}
-            </text>
-          </svg>
-          <div className={styles.legend}>
-            <span>
-              <span style={{ color: 'var(--design-text)' }}>●</span> Subject {subjectKind}
-            </span>
-            <span>
-              <span style={{ color: 'var(--design-primary)' }}>●</span> Included comp
-            </span>
-            <span>
-              <span style={{ color: 'var(--design-muted)' }}>●</span> Excluded comp
-            </span>
-            <p>Schematic map: distance and direction from the {subjectKind}.</p>
-          </div>
+              <rect width={MAP.width} height={MAP.height} fill="var(--rr-subtle)" />
+              <path
+                d="M0 210 C150 170 300 250 640 190"
+                stroke="#cbd5e1"
+                strokeWidth="22"
+                fill="none"
+              />
+              <path
+                d="M0 80H640M0 160H640M120 0V300M300 0V300M470 0V300"
+                stroke="#fff"
+                strokeWidth="6"
+              />
+              <circle
+                cx={MAP.cx}
+                cy={MAP.cy}
+                r={MAP.ringRadius}
+                fill="var(--design-primary)"
+                fillOpacity=".07"
+                stroke="var(--design-primary)"
+                strokeDasharray="6 6"
+              />
+              {pins.map((pin) => (
+                <g key={pin.id} data-testid="comp-pin" data-included={pin.included}>
+                  <circle
+                    cx={pin.x}
+                    cy={pin.y}
+                    r="9"
+                    fill={pin.included ? 'var(--design-primary)' : 'var(--design-muted)'}
+                    stroke="#fff"
+                    strokeWidth="2"
+                  />
+                  <text
+                    x={pin.x + 12}
+                    y={pin.y - 10}
+                    fontSize="11"
+                    fontWeight="700"
+                    fill="var(--design-text)"
+                  >
+                    {pin.label}
+                  </text>
+                </g>
+              ))}
+              <circle
+                cx={MAP.cx}
+                cy={MAP.cy}
+                r="14"
+                fill="var(--design-text)"
+                stroke="#fff"
+                strokeWidth="3"
+              />
+              <text
+                x={MAP.cx + 22}
+                y={MAP.cy - 4}
+                fontSize="13"
+                fontWeight="700"
+                fill="var(--design-text)"
+              >
+                Subject {subjectKind}
+              </text>
+            </svg>
+            <div className={styles.legend}>
+              <span>
+                <span style={{ color: 'var(--design-text)' }}>●</span> Subject {subjectKind}
+              </span>
+              <span>
+                <span style={{ color: 'var(--design-primary)' }}>●</span> Included comp
+              </span>
+              <span>
+                <span style={{ color: 'var(--design-muted)' }}>●</span> Excluded comp
+              </span>
+              <p>Schematic map: distance and direction from the {subjectKind}.</p>
+            </div>
+          </details>
           <div className={styles.nearest}>
             <div className="row between" style={{ marginBottom: 6 }}>
               <strong style={{ fontSize: 14 }}>Nearest comps</strong>
@@ -402,13 +422,13 @@ export function CompsWorkbench(props: WorkbenchProps) {
                 </th>
                 <th scope="col">Status</th>
                 <th scope="col">Date</th>
-                <th scope="col">Source</th>
+                {mixedSources && <th scope="col">Source</th>}
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={10}>
+                  <td colSpan={mixedSources ? 10 : 9}>
                     <EmptyState
                       title="No comparable rentals match"
                       description="Widen the search filters to see more nearby rentals."
@@ -458,7 +478,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
                       )}
                     </td>
                     <td>{shortDate(row.observedAt)}</td>
-                    <td>{sourceLabel(row.source)}</td>
+                    {mixedSources && <td>{sourceLabel(row.source ?? props.providerName)}</td>}
                   </tr>
                 );
               })}
@@ -468,15 +488,6 @@ export function CompsWorkbench(props: WorkbenchProps) {
       </Card>
 
       <div className={styles.sources}>
-        <Alert>
-          <div>
-            <strong>Data source: {sourceLabel(props.providerName)}</strong>
-            <br />
-            Demo comps · not live market data. Sandbox responses from this build.{' '}
-            <Link href="/integrations">Manage in Integrations</Link>. Last synced {props.syncedAt}
-            {props.cached ? ' (cached for this unit)' : ''}.
-          </div>
-        </Alert>
         <Alert tone="warning">
           <div>
             <strong>Fair housing</strong>

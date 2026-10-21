@@ -34,6 +34,7 @@ function basics() {
   fill('City', 'Austin');
   fill('State', 'TX');
   fill('ZIP', '78701');
+  fireEvent.change(screen.getByLabelText(/Number of units/), { target: { value: '4' } });
 }
 it.each([false, true])(
   'creates with optional ROI inputs (partial: %s) and retains explicit zero',
@@ -130,4 +131,18 @@ it('provides Cancel navigation without submitting the form', () => {
   const cancel = screen.getByRole('link', { name: 'Cancel' });
   expect(cancel.getAttribute('href')).toBe('/properties?filter=multi');
   expect(createPropertyAction).not.toHaveBeenCalled();
+});
+
+it('starts multi-unit count blank, requires a positive count, and opens optional ROI sections', async () => {
+  render(<PropertyForm owners={[]} cancelHref="/properties" />);
+  const units = screen.getByLabelText(/Number of units/) as HTMLInputElement;
+  expect(units.value).toBe('');
+  expect(units.min).toBe('1');
+  expect(screen.getByLabelText('Purchase price ($)').closest('details')?.open).toBe(true);
+  fireEvent.submit(screen.getByRole('button', { name: 'Save property' }).closest('form')!);
+  await waitFor(() => expect(units.getAttribute('aria-invalid')).toBe('true'));
+  expect(createPropertyAction).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'SINGLE_UNIT' } });
+  expect((screen.getByLabelText(/Units/) as HTMLInputElement).value).toBe('1');
+  expect((screen.getByLabelText(/Units/) as HTMLInputElement).disabled).toBe(true);
 });

@@ -57,7 +57,9 @@
 }
 .spark {
   color: var(--design-primary);
-  font: 30px Georgia, serif;
+  font:
+    30px Georgia,
+    serif;
   display: inline-block;
   transform: rotate(-12deg);
   margin-left: 8px;
@@ -888,5 +890,128 @@
   .scope * {
     scroll-behavior: auto !important;
     transition: none !important;
+  }
+}
+/* Compact directory and tracked setup rows. */
+.compactSetup {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--rr-border);
+}
+.setupSummary {
+  font-size: 12px;
+  color: var(--design-muted);
+  text-align: right;
+}
+.sectionNav a {
+  color: var(--design-muted);
+  min-height: 44px;
+  border-bottom: 2px solid transparent;
+}
+.sectionNav a:hover,
+.sectionNav a:focus-visible {
+  color: var(--design-primary);
+  border-color: var(--design-primary);
+}
+@media (max-width: 640px) {
+  .compactSetup {
+    padding: 12px;
+    gap: 8px;
+  }
+  .compactSetup .person {
+    min-width: 0;
+  }
+  .compactSetup :global(.badge) {
+    white-space: normal;
+    max-width: 115px;
+    text-align: center;
+  }
+  .setupSummary {
+    max-width: 115px;
+  }
+  .directoryTable tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 3px 8px;
+    padding: 12px;
+    position: relative;
+  }
+  .directoryTable td,
+  .directoryTable tbody th {
+    display: block;
+    padding: 0;
+    min-width: 0;
+  }
+  .directoryTable [data-cell='title'] {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .directoryTable [data-cell='status'] {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+  }
+  .directoryTable [data-cell='meta'] {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: 12px;
+    padding-left: 40px;
+  }
+  .directoryTable [data-cell='meta'] small {
+    display: inline;
+    margin-left: 4px;
+  }
+  .directoryTable [data-cell='amount'] {
+    grid-column: 2;
+    grid-row: 2;
+    text-align: right !important;
+  }
+  .directoryTable [data-cell='hide'],
+  .directoryTable .person small {
+    display: none;
+  }
+  .directoryTable [data-cell='actions'] {
+    grid-column: 2;
+    grid-row: 3;
+    justify-self: end;
+  }
+  .directoryTable .person {
+    min-height: 32px;
+    gap: 8px;
+  }
+  .directoryTable .person :global(.avatar) {
+    width: 32px;
+    height: 32px;
+    flex: none;
+  }
+  .directoryTable :global(.row-menu) a {
+    min-width: 0;
+  }
+}
+.paymentToggle {
+  display: none;
+}
+@media (max-width: 640px) {
+  .paymentHistory[data-expanded='false'] tbody tr:nth-child(n + 4) {
+    display: none;
+  }
+  .paymentToggle {
+    display: flex;
+    margin: 8px 12px;
+  }
+}
+@media (max-width: 640px) {
+  .directoryTable.directoryTable[data-mobile='cards'] > tbody > tr {
+    padding-right: 60px;
+  }
+  .directoryTable[data-mobile='cards'] td[data-cell='actions'] {
+    position: absolute;
+    grid-area: auto;
+    right: 6px;
+    top: 12px;
+    margin: 0;
   }
 }

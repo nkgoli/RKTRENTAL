@@ -100,10 +100,11 @@ describe('lease workspace', () => {
       'Record lease notice',
       'Terminate',
       '/leases/templates',
-      'No agreement snapshot',
     ])
       expect(html).toContain(value);
     expect(html).not.toContain('Document controls');
+    expect(html).not.toContain('No agreement snapshot');
+    expect(html).not.toContain('Terms as signed');
   });
 
   it('preserves signed wording and template version separately from editable terms', async () => {

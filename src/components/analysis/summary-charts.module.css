@@ -272,3 +272,23 @@
     margin-right: 4px;
   }
 }
+
+.compact {
+  min-width: 0;
+  width: 100%;
+  font-size: 12px;
+}
+.compact th,
+.compact td {
+  padding: 10px 8px;
+  white-space: normal;
+}
+@media (max-width: 640px) {
+  .compact {
+    font-size: 12px;
+  }
+  .compact th,
+  .compact td {
+    padding: 8px 3px;
+  }
+}

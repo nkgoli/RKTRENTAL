@@ -23,7 +23,11 @@ export function ManagerShell({
   user?: ManagerUser;
 }) {
   const pathname = usePathname() ?? '';
-  const workspaceRoute = /^\/properties\/[^/]+(?:\/|$)/.test(pathname);
+  const workspaceRoute =
+    (/^\/properties\/[^/]+(?:\/|$)/.test(pathname) &&
+      pathname !== '/properties/new' &&
+      !pathname.endsWith('/edit')) ||
+      pathname === '/roi-analysis' || pathname === '/leases/new';
   const current = findManagerItem(pathname);
   const [override, setOverride] = useState<PageHeaderConfig | null>(null);
   const eyebrow = override?.eyebrow ?? current?.group.label ?? 'RocketRental';

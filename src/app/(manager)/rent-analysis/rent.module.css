@@ -2,9 +2,6 @@
   display: grid;
   gap: 16px;
   min-width: 0;
-  --design-primary: #1e3a8a;
-  --design-text: #17142b;
-  --design-muted: #64748b;
 }
 .selection {
   display: grid;
@@ -57,3 +54,8 @@
     min-height: 44px;
   }
 }
+
+.positiveGap { color: var(--design-accent); font-weight: 600; }
+.neutralGap { color: var(--design-muted); }
+
+.negativeGap { color: var(--design-danger); font-weight: 600; }

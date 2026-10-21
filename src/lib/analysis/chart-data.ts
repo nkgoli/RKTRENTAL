@@ -143,14 +143,15 @@ export const defaultHorizon = (preferred: number, length: number) =>
  * neighbouring ticks never read the same (the reference repeats `$-1k` at Y1).
  */
 export function thousands(value: number, step: number) {
-  const unit = Math.abs(step) / 1000;
+  const divisor = Math.abs(value) >= 1_000_000 ? 1_000_000 : 1000;
+  const unit = Math.abs(step) / divisor;
   const digits =
     [0, 1, 2, 3].find((d) => Math.abs(unit * 10 ** d - Math.round(unit * 10 ** d)) < 1e-6) ?? 3;
-  const k = Math.abs(value) / 1000;
+  const k = Math.abs(value) / divisor;
   const fixed = k.toFixed(digits);
   // Trim trailing decimal zeros only ($1.50k -> $1.5k); 950 stays 950.
   const text = k === 0 ? '0' : fixed.includes('.') ? fixed.replace(/\.?0+$/, '') : fixed;
-  return `${value < 0 ? '-' : ''}$${text}k`;
+  return `${value < 0 ? '-' : ''}$${text}${divisor === 1_000_000 ? 'M' : 'k'}`;
 }
 
 /** Whole dollars for chart readouts; tables keep cents. */

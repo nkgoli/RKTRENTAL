@@ -20,6 +20,7 @@ vi.mock('@/lib/leases/queries', () => ({
 }));
 import LeasesPage from '@/app/(manager)/leases/page';
 import { LeasesPanel } from '@/components/workspace/panels/leasing/LeasesPanel';
+vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn() }) }));
 const scope = { propertyId: 'property-1', unitId: 'unit-1' };
 beforeEach(() => {
   fixture.leases = Array.from(
@@ -59,11 +60,15 @@ it('filters and pages source rows while retaining scope and lease identity', asy
   expect(first).toContain('/leases/lease-0?propertyId=property-1&amp;unitId=unit-1');
   expect(first).toContain('renew=lease-0');
   expect(first).toContain('property=property-1&amp;unit=unit-1');
-  const second = await list({ page: '2' });
+  const second = await list({ page: '3' });
   expect(second).toContain('Tenant 21');
   expect(second).not.toContain('Tenant 0');
   expect(first).toContain('page=2');
   expect(second).toContain('22 of 22 active leases');
+  expect(first).toContain('data-mobile="cards"');
+  expect(first).not.toContain('Tenant 10');
+  expect(first).not.toContain('>Signed</span>');
+  expect(first).not.toContain('>View</a>');
 });
 it('search and empty reset preserve the selected view and scope', async () => {
   const match = await list({ q: 'Tenant 21' });
@@ -95,4 +100,3 @@ it('scoped current, draft and past sections keep setup, resume and renewal conte
   expect(empty).toContain('No leases yet');
   expect(empty).toContain('unit=unit-1');
 });
-

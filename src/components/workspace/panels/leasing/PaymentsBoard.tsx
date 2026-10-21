@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Avatar, Badge, type BadgeTone } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { Dialog } from '@/components/ui/Dialog';
 import { Field, FormRow, Input, Select } from '@/components/ui/Forms';
 import { formatMoney, type StatementStatus } from '@/lib/ledger/statement';
 import { createPropertyChargeAction, recordPropertyPaymentAction } from './actions';
@@ -113,9 +114,10 @@ export function PaymentsBoard({
   openRecord: boolean;
   today: string;
 }) {
-  const chargeDialog = useRef<HTMLDialogElement>(null);
-  const paymentDialog = useRef<HTMLDialogElement>(null);
-  const detailDialog = useRef<HTMLDialogElement>(null);
+  const [chargeOpen, setChargeOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const chargeFormId = useId();
+  const paymentFormId = useId();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [detail, setDetail] = useState<BoardRow | null>(null);
   const [amount, setAmount] = useState('');
@@ -139,11 +141,8 @@ export function PaymentsBoard({
     pickedOwed > 0;
 
   useEffect(() => {
-    if (openRecord && activeGroups.length) paymentDialog.current?.showModal();
+    if (openRecord && activeGroups.length) setPaymentOpen(true);
   }, [openRecord, activeGroups.length]);
-  useEffect(() => {
-    if (detail) detailDialog.current?.showModal();
-  }, [detail]);
 
   const toggle = (id: string, on: boolean) =>
     setSelected((cur) => {
@@ -157,7 +156,7 @@ export function PaymentsBoard({
   const openPayment = (lease: string, cents: number) => {
     setLeaseId(lease);
     setAmount(cents > 0 ? (cents / 100).toFixed(2) : '');
-    paymentDialog.current?.showModal();
+    setPaymentOpen(true);
   };
   const hidden = (
     <>
@@ -217,7 +216,7 @@ export function PaymentsBoard({
               disabled={activeGroups.length === 0}
               onClick={() => {
                 setLeaseId(defaultLease);
-                chargeDialog.current?.showModal();
+                setChargeOpen(true);
               }}
             >
               Create a charge
@@ -475,18 +474,22 @@ export function PaymentsBoard({
         </>
       )}
 
-      <dialog ref={chargeDialog} className={styles.dialog} aria-labelledby="charge-heading">
-        <div className={styles.dialogHeader}>
-          <h2 id="charge-heading">Create a charge</h2>
-          <button
-            type="button"
-            className="btn btn-sm btn-ghost"
-            onClick={() => chargeDialog.current?.close()}
-          >
-            Close
-          </button>
-        </div>
-        <form action={createPropertyChargeAction} className="form">
+      <Dialog
+        open={chargeOpen}
+        onClose={() => setChargeOpen(false)}
+        title="Create a charge"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setChargeOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" form={chargeFormId} variant="primary">
+              Create charge
+            </Button>
+          </>
+        }
+      >
+        <form id={chargeFormId} action={createPropertyChargeAction} className="form">
           {hidden}
           {!summary && activeGroups.length === 1 && (
             <p className={styles.note}>{groupHeading(activeGroups[0])}</p>
@@ -510,26 +513,25 @@ export function PaymentsBoard({
           <Field label="Amount">
             <Input name="amount" inputMode="decimal" placeholder="150.00" required />
           </Field>
-          <div className="row">
-            <Button type="submit" variant="primary">
-              Create charge
-            </Button>
-          </div>
         </form>
-      </dialog>
+      </Dialog>
 
-      <dialog ref={paymentDialog} className={styles.dialog} aria-labelledby="payment-heading">
-        <div className={styles.dialogHeader}>
-          <h2 id="payment-heading">Record payment</h2>
-          <button
-            type="button"
-            className="btn btn-sm btn-ghost"
-            onClick={() => paymentDialog.current?.close()}
-          >
-            Close
-          </button>
-        </div>
-        <form action={recordPropertyPaymentAction} className="form">
+      <Dialog
+        open={paymentOpen}
+        onClose={() => setPaymentOpen(false)}
+        title="Record payment"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setPaymentOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" form={paymentFormId} variant="primary">
+              Save payment
+            </Button>
+          </>
+        }
+      >
+        <form id={paymentFormId} action={recordPropertyPaymentAction} className="form">
           {hidden}
           {!summary && activeGroups.length === 1 && (
             <p className={styles.note}>{groupHeading(activeGroups[0])}</p>
@@ -548,32 +550,21 @@ export function PaymentsBoard({
               required
             />
           </Field>
-          <div className="row">
-            <Button type="submit" variant="primary">
-              Save payment
-            </Button>
-          </div>
         </form>
-      </dialog>
+      </Dialog>
 
-      <dialog
-        ref={detailDialog}
-        className={styles.dialog}
-        aria-labelledby="detail-heading"
+      <Dialog
+        open={Boolean(detail)}
+        title={detail?.description ?? 'Charge details'}
         onClose={() => setDetail(null)}
+        footer={
+          <Button variant="secondary" onClick={() => setDetail(null)}>
+            Done
+          </Button>
+        }
       >
         {detail && (
           <>
-            <div className={styles.dialogHeader}>
-              <h2 id="detail-heading">{detail.description}</h2>
-              <button
-                type="button"
-                className="btn btn-sm btn-ghost"
-                onClick={() => detailDialog.current?.close()}
-              >
-                Close
-              </button>
-            </div>
             <dl className={styles.facts}>
               <div>
                 <dt>Type</dt>
@@ -624,7 +615,7 @@ export function PaymentsBoard({
             )}
           </>
         )}
-      </dialog>
+      </Dialog>
     </>
   );
 }

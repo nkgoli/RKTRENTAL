@@ -119,7 +119,7 @@ export async function setPropertyArchivedAction(
   );
   if (!result.ok) return failed(result.errors);
   revalidatePath('/properties', 'layout');
-  if (archived) redirect('/properties');
+  if (archived) redirect('/properties?notice=property-archived');
   return { ok: true, message: 'Property restored.' };
 }
 

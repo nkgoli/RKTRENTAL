@@ -12,6 +12,7 @@
 }
 .legend {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   font-size: 12px;
   color: var(--design-muted);
@@ -27,33 +28,54 @@
   border-radius: 2px;
   background: var(--design-primary);
 }
-.legend span:last-child i {
+.legend span:nth-child(2) i {
   background: none;
   height: 0;
   width: 14px;
   border-top: 2px dashed var(--design-muted);
 }
+.legend .currentLegend i {
+  opacity: 0.45;
+  border: 1px dashed var(--design-primary);
+}
 .grid path {
   stroke: #e8edf4;
   stroke-width: 1;
 }
-.grid text {
-  fill: var(--design-muted);
-  font-size: 9px;
+.plot {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 8px;
+}
+.scale {
+  position: relative;
+  width: 5ch;
+  color: var(--design-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.scale span {
+  position: absolute;
+  right: 0;
+  transform: translateY(-100%);
+  white-space: nowrap;
 }
 .empty {
   color: var(--design-muted);
   padding: 16px 0;
 }
-.chart svg {
+.plot svg {
   display: block;
+  width: 100%;
+  min-width: 0;
   height: 160px;
 }
 .labels {
+  grid-column: 2;
   display: flex;
   justify-content: space-between;
   gap: 4px;
-  padding: 6px 4px 0 48px;
+  padding: 6px 4px 0;
   font-size: 12px;
   color: var(--design-muted);
 }
@@ -86,11 +108,7 @@
 }
 
 @media (max-width: 560px) {
-  .grid text {
-    font-size: 16px;
-  }
   .labels {
     font-size: 11px;
-    padding-left: 32px;
   }
 }

@@ -37,6 +37,78 @@
   line-height: 1.4 !important;
   color: var(--design-muted) !important;
 }
+/* Data-basis tags under a title: projected (primary tint), recorded (ok tint), then
+   plain muted tags for unit, period and tax. Shared by every ROI card. */
+.basis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+.basis li {
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: var(--rr-subtle);
+  color: var(--design-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.basis li[data-kind='projected'] {
+  background: var(--rr-primary-tint);
+  color: var(--design-primary);
+  font-weight: 600;
+}
+.basis li[data-kind='actual'] {
+  background: var(--rr-ok-bg);
+  color: var(--rr-ok);
+  font-weight: 600;
+}
+/* Progressive disclosure inside a card: a quiet full-width row with a chevron. */
+.more {
+  border-top: 1px solid var(--rr-subtle);
+  margin: 0;
+}
+.more > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 0 0;
+  list-style: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--design-primary);
+  cursor: pointer;
+}
+.more > summary::-webkit-details-marker {
+  display: none;
+}
+.more > summary::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 150ms ease;
+}
+.more[open] > summary::before {
+  transform: rotate(45deg);
+}
+.more > summary:focus-visible {
+  outline: 2px solid var(--design-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.more > div {
+  padding-top: 8px;
+  min-width: 0;
+}
 .controls {
   flex: none;
   display: flex;

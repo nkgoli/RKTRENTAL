@@ -48,6 +48,7 @@ import {
 } from './fields';
 import { NetCashFlowCard, OutcomeCard, ProjectionMilestones } from './RoiSummaryCharts';
 import { DealSnapshot, FixMyDeal } from './RoiDealPanels';
+import { Basis, MoreDetail } from './RoiChart';
 import { AssumptionsSummary, isBaselinePath } from './AssumptionsSummary';
 import {
   assumptionsEditPath,
@@ -915,6 +916,17 @@ export function RoiWorkspace({
                   hidden={view !== 'summary'}
                 >
                   <div className={styles.stack}>
+                    {!result && (
+                      <section className={`${styles.card} ${styles.empty}`}>
+                        <h2>No projection yet</h2>
+                        <p>
+                          {baselineErrors.length
+                            ? 'Complete the assumptions listed above to see projected returns. Nothing is estimated for missing inputs.'
+                            : 'Review the highlighted entries to calculate projected returns.'}{' '}
+                          Recorded actuals below are unaffected.
+                        </p>
+                      </section>
+                    )}
                     {result && calculatedPayload && (
                       <DealSnapshot
                         key={`snapshot-${selected}`}
@@ -924,24 +936,81 @@ export function RoiWorkspace({
                     )}
                     <div className={styles.pair}>
                       <section className={styles.card} aria-label="Year 1 at a glance">
-                        <h2>Year 1 at a glance</h2>
-                        <div className={styles.metrics}>
-                          {[
-                            ['Annual cash flow', money(metrics?.annualCashFlow)],
-                            ['Cap rate', percent(metrics?.capRate)],
-                            ['Cash-on-cash', percent(metrics?.cashOnCash)],
-                            ['Hold-period leveraged IRR', percent(metrics?.irrLeveraged)],
-                          ].map(([label, value]) => (
+                        <div className={styles.cardHead}>
+                          <h2>Year 1 at a glance</h2>
+                          <Basis
+                            items={[
+                              'Projected',
+                              'USD per year',
+                              'Before tax',
+                              ...(result && stale ? ['Out of date'] : []),
+                            ]}
+                          />
+                        </div>
+                        <div className={styles.metrics} role="group" aria-label="Year 1 metrics">
+                          {(
+                            [
+                              ['Effective income', money(metrics?.effectiveGrossIncome), null],
+                              ['Net operating income', money(metrics?.noi), null],
+                              ['Annual cash flow', money(metrics?.annualCashFlow), 'cash'],
+                              [
+                                'Leveraged IRR',
+                                percent(metrics?.irrLeveraged),
+                                result
+                                  ? `${result.annualCashflows.length}-year hold, incl. sale`
+                                  : null,
+                              ],
+                            ] as const
+                          ).map(([label, value, note]) => (
                             <div key={label}>
                               <small>{label}</small>
-                              <strong>{value}</strong>
+                              <strong
+                                data-tone={
+                                  note === 'cash' && metrics
+                                    ? metrics.annualCashFlow < 0
+                                      ? 'bad'
+                                      : 'good'
+                                    : undefined
+                                }
+                                data-missing={!result || undefined}
+                              >
+                                {result ? value : 'Not calculated'}
+                              </strong>
+                              {note && note !== 'cash' && <span>{note}</span>}
                             </div>
                           ))}
                         </div>
-                        <p>
-                          Forecast estimates - {stale ? 'out of date' : 'current assumptions'} -
-                          before tax
-                        </p>
+                        {result && (
+                          <MoreDetail summary="How Year 1 adds up">
+                            <dl className={styles.statement}>
+                              {(
+                                [
+                                  ['Gross potential income', metrics?.grossPotentialIncome, ''],
+                                  ['Vacancy loss', result.incomeBreakdown.vacancyLoss, '−'],
+                                  ['Effective gross income', metrics?.effectiveGrossIncome, '='],
+                                  ['Operating expenses', metrics?.totalOperatingExpenses, '−'],
+                                  ['Net operating income', metrics?.noi, '='],
+                                  [
+                                    'Capital reserves (below NOI)',
+                                    result.expenseBreakdown.capex,
+                                    '−',
+                                  ],
+                                  ['Modeled debt service', metrics?.annualDebtService, '−'],
+                                  ['Annual cash flow', metrics?.annualCashFlow, '='],
+                                  ['Total cash required', metrics?.totalCashRequired, ''],
+                                ] as const
+                              ).map(([label, value, op]) => (
+                                <div key={label} data-total={op === '=' || undefined}>
+                                  <dt>
+                                    {op && <span aria-hidden="true">{op}</span>}
+                                    {label}
+                                  </dt>
+                                  <dd>{money(value)}</dd>
+                                </div>
+                              ))}
+                            </dl>
+                          </MoreDetail>
+                        )}
                       </section>
                       <ActualSnapshot
                         window={range}
@@ -951,7 +1020,13 @@ export function RoiWorkspace({
                         onOpen={() => changeView('actual')}
                       />
                     </div>
-                    {result && <OutcomeCard key={`outcome-${selected}`} result={result} />}
+                    {result ? (
+                      <>
+                        <NetCashFlowCard key={`cash-${selected}`} result={result} />
+                        <OutcomeCard key={`outcome-${selected}`} result={result} />
+                        <ProjectionMilestones key={`table-${selected}`} result={result} />
+                      </>
+                    ) : null}
                     {result && calculatedPayload && (
                       <FixMyDeal
                         key={`fix-${selected}`}
@@ -959,143 +1034,90 @@ export function RoiWorkspace({
                         payload={calculatedPayload}
                       />
                     )}
-                    <section className={styles.card}>
-                      <h2>From income to cash flow</h2>
-                      <dl className={styles.statement}>
-                        {[
-                          ['Gross potential income', metrics?.grossPotentialIncome],
-                          ['Vacancy loss', result?.incomeBreakdown.vacancyLoss],
-                          ['Effective gross income', metrics?.effectiveGrossIncome],
-                          ['Operating expenses', metrics?.totalOperatingExpenses],
-                          ['Net operating income', metrics?.noi],
-                          ['Capital reserves (below NOI)', result?.expenseBreakdown.capex],
-                          ['Modeled debt service', metrics?.annualDebtService],
-                          ['Annual cash flow', metrics?.annualCashFlow],
-                          ['Total cash required', metrics?.totalCashRequired],
-                        ].map(([label, value]) => (
-                          <div key={String(label)}>
-                            <dt>{label}</dt>
-                            <dd>{money(value as number | undefined)}</dd>
-                          </div>
-                        ))}
-                      </dl>
-                    </section>
-                    {result ? (
-                      <>
-                        <NetCashFlowCard key={`cash-${selected}`} result={result} />
-                        <ProjectionMilestones key={`table-${selected}`} result={result} />
-                      </>
-                    ) : null}
-                    <section className={styles.card}>
-                      <h2>Exact annual cash flow</h2>
-                      <p>Annual operating cash flow, before sale proceeds and tax.</p>
-                      {result ? (
-                        <>
-                          <details>
-                            <summary>Show every year</summary>
-                            <div
-                              className={styles.table}
-                              tabIndex={0}
-                              role="region"
-                              aria-label="Annual cash flow"
-                            >
-                              <table>
-                                <thead>
-                                  <tr>
-                                    <th>Year</th>
-                                    <th>Cash flow</th>
-                                    <th>Cumulative</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {result.annualCashflows.map((y) => (
-                                    <tr key={y.year}>
-                                      <th scope="row">{y.year}</th>
-                                      <td>{money(y.cashFlow)}</td>
-                                      <td>{money(y.cumulativeCashFlow)}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                    <section className={`${styles.card} ${styles.details}`}>
+                      <h2>More detail</h2>
+                      {result && (
+                        <MoreDetail summary="Advanced metrics & warnings">
+                          <dl className={styles.statement}>
+                            <div>
+                              <dt>NPV - discount {percent(result.assumptions.discountRate)}</dt>
+                              <dd>{money(metrics?.npv)}</dd>
                             </div>
-                          </details>
-                        </>
-                      ) : (
-                        <p>Enter complete assumptions to see the cash-flow overview.</p>
+                            <div>
+                              <dt>Debt coverage (DSCR)</dt>
+                              <dd>{metrics?.dscr?.toFixed(2) ?? 'Unavailable'}</dd>
+                            </div>
+                            <div>
+                              <dt>After-tax IRR - simplified estimate</dt>
+                              <dd>{percent(metrics?.afterTaxIrr)}</dd>
+                            </div>
+                          </dl>
+                          {result.warnings.map((w, i) => (
+                            <p key={i}>{w.message}</p>
+                          ))}
+                        </MoreDetail>
+                      )}
+                      <MoreDetail summary={`Optional tax estimate${tax ? ' · on' : ''}`}>
+                        <p>
+                          Tax assumptions belong to this analysis and are saved with it. Leave them
+                          off for before-tax results.
+                        </p>
+                        <fieldset disabled={saving}>
+                          <label className={styles.check}>
+                            <input
+                              type="checkbox"
+                              checked={tax}
+                              onChange={(e) => {
+                                setTax(e.target.checked);
+                                setDirty(true);
+                                setErrors([]);
+                                setCalculationVersion((v) => v + 1);
+                              }}
+                            />
+                            Include explicit tax assumptions
+                          </label>
+                          {tax && <div className={styles.fields}>{taxFields.map(renderField)}</div>}
+                        </fieldset>
+                      </MoreDetail>
+                      {facts && (
+                        <MoreDetail summary="Recorded source facts">
+                          <dl className={styles.statement}>
+                            <div>
+                              <dt>Recorded annual debt service</dt>
+                              <dd>{money(facts.annualDebtService)}</dd>
+                            </div>
+                            <div>
+                              <dt>Recorded down payment</dt>
+                              <dd>{money(facts.downPayment)}</dd>
+                            </div>
+                            <div>
+                              <dt>Scheduled monthly lease rent</dt>
+                              <dd>{money(facts.scheduledMonthlyRent)}</dd>
+                            </div>
+                            <div>
+                              <dt>Dated expense observations</dt>
+                              <dd>
+                                {facts.expenses.length}
+                                {facts.expenseHistoryTruncated ? ' (history truncated)' : ''}
+                              </dd>
+                            </div>
+                          </dl>
+                          <p>
+                            The forecast uses the loan terms you enter, and dated expenses are not
+                            annual budgets.
+                          </p>
+                          <ul className={styles.sources}>
+                            {payload.evidence
+                              .filter((e) => e.source !== 'manager')
+                              .map((e, i) => (
+                                <li key={i}>
+                                  <strong>{fieldLabel(e.path)}</strong> - {e.source} - {e.note}
+                                </li>
+                              ))}
+                          </ul>
+                        </MoreDetail>
                       )}
                     </section>
-                    {result && (
-                      <details className={styles.card}>
-                        <summary>Advanced metrics & warnings</summary>
-                        <dl className={styles.statement}>
-                          <div>
-                            <dt>NPV - discount {percent(result.assumptions.discountRate)}</dt>
-                            <dd>{money(metrics?.npv)}</dd>
-                          </div>
-                          <div>
-                            <dt>Debt coverage</dt>
-                            <dd>{metrics?.dscr?.toFixed(2) ?? 'Unavailable'}</dd>
-                          </div>
-                          <div>
-                            <dt>After-tax IRR - simplified estimate</dt>
-                            <dd>{percent(metrics?.afterTaxIrr)}</dd>
-                          </div>
-                        </dl>
-                        {result.warnings.map((w, i) => (
-                          <p key={i}>{w.message}</p>
-                        ))}
-                      </details>
-                    )}
-                    <details className={styles.card}>
-                      <summary>Optional tax estimate</summary>
-                      <p>
-                        Tax assumptions belong to this analysis and are saved with it. Leave them
-                        off for before-tax results.
-                      </p>
-                      <fieldset disabled={saving}>
-                        <label className={styles.check}>
-                          <input
-                            type="checkbox"
-                            checked={tax}
-                            onChange={(e) => {
-                              setTax(e.target.checked);
-                              setDirty(true);
-                              setErrors([]);
-                              setCalculationVersion((v) => v + 1);
-                            }}
-                          />
-                          Include explicit tax assumptions
-                        </label>
-                        {tax && <div className={styles.fields}>{taxFields.map(renderField)}</div>}
-                      </fieldset>
-                    </details>
-                    {facts && (
-                      <details className={styles.card}>
-                        <summary>Recorded source facts</summary>
-                        <p>
-                          Recorded annual debt service: {money(facts.annualDebtService)}. The
-                          forecast uses the loan terms you enter.
-                        </p>
-                        <p>
-                          Recorded down payment: {money(facts.downPayment)}. Scheduled monthly lease
-                          rent: {money(facts.scheduledMonthlyRent)}.
-                        </p>
-                        <p>
-                          {facts.expenses.length} dated expense observations
-                          {facts.expenseHistoryTruncated ? ' (history truncated)' : ''}; these are
-                          not annual budgets.
-                        </p>
-                        <ul>
-                          {payload.evidence
-                            .filter((e) => e.source !== 'manager')
-                            .map((e, i) => (
-                              <li key={i}>
-                                {fieldLabel(e.path)} - {e.source} - {e.note}
-                              </li>
-                            ))}
-                        </ul>
-                      </details>
-                    )}
                   </div>
                 </div>
               </>

@@ -191,31 +191,85 @@ export type TipRow =
   | { note: string };
 export type ChartTip = { title: string; rows: TipRow[] };
 
-/** App card with a bordered header: title, basis line and right-aligned controls. */
+/**
+ * App card with a bordered header: title, one plain-language subtitle, basis tags and
+ * right-aligned controls. `basis` names what the figures are (projected or recorded,
+ * unit, period, tax) as short tags, so subtitles stay one readable sentence.
+ */
 export function ChartCard({
   title,
   subtitle,
+  basis,
   controls,
   children,
   className,
+  label,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
+  basis?: string[];
   controls?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Accessible name for the card region when the title alone is ambiguous. */
+  label?: string;
 }) {
   return (
-    <section className={`${styles.card} ${c.card} ${className ?? ''}`}>
+    <section className={`${styles.card} ${c.card} ${className ?? ''}`} aria-label={label}>
       <header className={c.head}>
         <div>
           <h2>{title}</h2>
           {subtitle && <p>{subtitle}</p>}
+          {!!basis?.length && <Basis items={basis} />}
         </div>
         {controls && <div className={c.controls}>{controls}</div>}
       </header>
       <div className={c.body}>{children}</div>
     </section>
+  );
+}
+
+/**
+ * Data-basis tags ("Projected", "USD per year", "Before tax"). Tags starting with
+ * "Recorded"/"Actual" or "Projected" take the actual and projected tints everywhere,
+ * so the two kinds of figure never look alike.
+ */
+export function Basis({ items }: { items: string[] }) {
+  return (
+    <ul className={c.basis} aria-label="Data basis">
+      {items.map((item) => (
+        <li
+          key={item}
+          data-kind={
+            /^(recorded|actual)/i.test(item)
+              ? 'actual'
+              : /^projected/i.test(item)
+                ? 'projected'
+                : undefined
+          }
+        >
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Exact figures or method notes kept one click away, below a chart or summary. */
+export function MoreDetail({
+  summary,
+  children,
+  open,
+}: {
+  summary: ReactNode;
+  children: ReactNode;
+  open?: boolean;
+}) {
+  return (
+    <details className={c.more} open={open}>
+      <summary>{summary}</summary>
+      <div>{children}</div>
+    </details>
   );
 }
 
@@ -272,8 +326,7 @@ export function InfoTip({ label, children }: { label: string; children: ReactNod
   );
 }
 
-/** Semantic tones: 	eal = positive/ok, 
-ed = negative, mber = caution (app tokens). */
+/** Semantic tones: `teal` = positive/ok, `red` = negative, `amber` = caution (app tokens). */
 type Tone = 'teal' | 'tealSoft' | 'slate' | 'red' | 'amber' | 'blue' | 'muted' | 'card';
 
 /** Metric tiles in the app KPI style: muted label over a Space Grotesk value. */

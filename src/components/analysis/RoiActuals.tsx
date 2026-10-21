@@ -15,6 +15,7 @@ import {
 } from '@/lib/analysis/actuals';
 import type { ActualAmount, ActualReturns, Coverage, Estimate } from '@/lib/returns/actual';
 import { monthBucket } from '@/lib/returns/period';
+import { Basis, MoreDetail } from './RoiChart';
 import styles from './actuals.module.css';
 
 export type ActualsState =
@@ -272,6 +273,14 @@ export function RoiActuals({
               {propertyName} · Whole property · {range.label}
               {range.throughToday ? ' (through today)' : ''}
             </p>
+            <Basis
+              items={[
+                'Recorded cash',
+                stale ? 'No projection' : 'Projected Year 1, scaled',
+                'USD',
+                ...(comparison ? [comparison.scaleLabel] : []),
+              ]}
+            />
           </div>
           <ActualPeriodPicker
             key={`${choice.key}-${choice.from}-${choice.to}`}
@@ -281,11 +290,8 @@ export function RoiActuals({
             disabled={state.status === 'loading'}
           />
         </div>
-        <p className={styles.basis}>
-          <strong>Actual</strong> is recorded cash: settled rent payments by paid date and expenses
-          by date, in USD. <strong>Projected</strong> is your ROI assumptions at the Year-1 rate,
-          scaled to the same period
-          {comparison ? ` (${comparison.scaleLabel})` : ''}. Neither side fills in the other.
+        <p className={styles.source}>
+          Projection source: {stale ? 'none until assumptions are complete' : projectionBasis}
         </p>
         <p role="status" aria-live="polite" className={styles.status}>
           {state.status === 'loading'
@@ -294,7 +300,7 @@ export function RoiActuals({
               ? state.message
               : stale
                 ? 'Showing recorded actuals. The projection column needs complete, current assumptions.'
-                : 'Recorded actuals and the current projection for the same period.'}
+                : ''}
         </p>
         {state.status === 'error' && (
           <button type="button" onClick={onRetry}>
@@ -367,6 +373,17 @@ export function RoiActuals({
           </div>
         )}
         <Needed items={needed} onReviewAssumptions={onReviewAssumptions} />
+        <MoreDetail summary="How actual and projected are compared">
+          <p className={styles.basis}>
+            <strong>Actual</strong> is recorded cash: settled rent payments by paid date and
+            expenses by date, in USD. <strong>Projected</strong> is your ROI assumptions at the
+            Year-1 rate, scaled to the same period
+            {comparison ? ` (${comparison.scaleLabel})` : ''}. Neither side fills in the other: a
+            missing actual stays <em>Not recorded</em>, never $0, and a missing projection stays{' '}
+            <em>No projection</em>. Difference is actual minus projected; green is better than
+            projected.
+          </p>
+        </MoreDetail>
       </section>
       {data && (
         <div className={styles.grid}>
@@ -428,14 +445,20 @@ export function RoiActuals({
               <div>
                 <dt>Expenses by category</dt>
                 <dd>
-                  {data.expenses.byCategory.length
-                    ? data.expenses.byCategory
-                        .map(
-                          (e) =>
-                            `${e.category.replaceAll('_', ' ').toLowerCase()} ${usd(e.cents)} (${e.count})`,
-                        )
-                        .join(' · ')
-                    : 'None recorded'}
+                  {data.expenses.byCategory.length ? (
+                    <ul className={styles.categories}>
+                      {data.expenses.byCategory.map((e) => (
+                        <li key={e.category}>
+                          <span>{e.category.replaceAll('_', ' ').toLowerCase()}</span>
+                          <span>
+                            {usd(e.cents)} <small>({e.count})</small>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    'None recorded'
+                  )}
                 </dd>
               </div>
             </dl>
@@ -453,17 +476,19 @@ export function RoiActuals({
                 Portfolio returns (estimates)
               </a>
             </p>
-            <p className={styles.fine}>
-              The export matches this table: {propertyName}, {data.period.from} to {data.period.to},
-              with unavailable and partial values kept as shown. Portfolio returns are month-based
-              summaries that use scheduled debt service and 3% assumed appreciation; they are
-              estimates, not recorded results.
-            </p>
             {exported && (
               <p role="status" className={styles.fine}>
                 {exported}
               </p>
             )}
+            <MoreDetail summary="About the export and portfolio returns">
+              <p className={styles.fine}>
+                The export matches this table: {propertyName}, {data.period.from} to{' '}
+                {data.period.to}, with unavailable and partial values kept as shown. Portfolio
+                returns are month-based summaries that use scheduled debt service and 3% assumed
+                appreciation; they are estimates, not recorded results.
+              </p>
+            </MoreDetail>
           </section>
         </div>
       )}
@@ -488,36 +513,52 @@ export function ActualSnapshot({
   const data = state.status === 'ready' ? state.data : null;
   const rows = data ? compareActualToProjection(data, stale ? null : projection).rows : [];
   const pick = (key: ComparisonRow['key']) => rows.find((r) => r.key === key);
+  const partial = rows.some(
+    (r) => ['income', 'expenses', 'noi'].includes(r.key) && r.actual.status === 'partial',
+  );
   return (
-    <section className={styles.card} aria-labelledby="actual-snapshot">
-      <h2 id="actual-snapshot">Actual vs projected</h2>
-      <p>{range.label} · recorded cash beside the projection for the same period.</p>
+    <section className={`${styles.card} ${styles.snapshot}`} aria-labelledby="actual-snapshot">
+      <div>
+        <h2 id="actual-snapshot">Actual vs projected</h2>
+        <Basis items={['Recorded cash', 'Projected', range.label, 'USD']} />
+      </div>
       {state.status === 'loading' && <p role="status">Loading recorded returns…</p>}
       {state.status === 'error' && <p role="status">{state.message}</p>}
       {data && (
-        <dl className={styles.list}>
-          {(['income', 'expenses', 'noi'] as const).map((key) => {
-            const row = pick(key)!;
-            return (
-              <div key={key}>
-                <dt>{row.label}</dt>
-                <dd>
-                  <span>
-                    Actual{' '}
-                    <strong>
-                      {row.actual.status === 'unavailable' ? 'Not recorded' : usd(row.actual.cents)}
-                    </strong>
-                    {row.actual.status === 'partial' ? ' (partial)' : ''}
-                  </span>
-                  <span>
-                    Projected{' '}
-                    <strong>{row.projected.cents == null ? '—' : usd(row.projected.cents)}</strong>
-                  </span>
-                </dd>
-              </div>
-            );
-          })}
-        </dl>
+        <table className={styles.mini}>
+          <caption className={styles.caption}>
+            Recorded and projected amounts, {range.label}
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Line</th>
+              <th scope="col">Actual</th>
+              <th scope="col">Projected</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(['income', 'expenses', 'noi'] as const).map((key) => {
+              const row = pick(key)!;
+              return (
+                <tr key={key}>
+                  <th scope="row">{row.label}</th>
+                  <td data-status={row.actual.status}>
+                    {row.actual.status === 'unavailable' ? 'Not recorded' : usd(row.actual.cents)}
+                    {row.actual.status === 'partial' && <small> (partial)</small>}
+                  </td>
+                  <td data-status={row.projected.cents == null ? 'unavailable' : undefined}>
+                    {row.projected.cents == null ? 'No projection' : usd(row.projected.cents)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+      {partial && (
+        <p className={styles.fine}>
+          Partial: some days in this period have no rent or expense records yet.
+        </p>
       )}
       <button type="button" onClick={onOpen}>
         Open actual vs projected

@@ -67,6 +67,10 @@
   color: var(--rr-ok);
   font-weight: 600;
 }
+.basis li[data-kind='hypothetical'] {
+  background: var(--rr-warn-bg);
+  color: var(--rr-warn);
+}
 /* Progressive disclosure inside a card: a quiet full-width row with a chevron. */
 .more {
   border-top: 1px solid var(--rr-subtle);

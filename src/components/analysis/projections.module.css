@@ -199,6 +199,22 @@
     overflow-x: auto;
     scrollbar-width: none;
   }
+  /* Fade the edge that hides more tabs, so a phone shows there is more to scroll to. */
+  .tabs[data-more='end'] {
+    mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+  }
+  .tabs[data-more='start'] {
+    mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent);
+  }
+  .tabs[data-more='start end'] {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 32px,
+      #000 calc(100% - 32px),
+      transparent
+    );
+  }
   .tabs button {
     flex: none;
     white-space: nowrap;

@@ -112,6 +112,9 @@ export function RoiWorkspace({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  // Load confirmations are announced only; the header retains the revision state.
+  const [announcement, setAnnouncement] = useState('');
+  const [savedStatus, setSavedStatus] = useState<'DRAFT' | 'READY' | null>(null);
   const [requestErrors, setErrors] = useState<ValidationIssue[]>([]);
   const [calculationVersion, setCalculationVersion] = useState(0);
   const [view, setViewState] = useState(() => roiViewFrom(searchParams));
@@ -235,6 +238,7 @@ export function RoiWorkspace({
     setFacts(null);
     setErrors([]);
     setMessage('');
+    setAnnouncement('');
     setDirty(false);
     setConflict(false);
     if (!properties.some((p) => p.id === id)) {
@@ -243,6 +247,10 @@ export function RoiWorkspace({
       return;
     }
     try {
+      // Let the loading state paint before the requests start; Next runs server actions in a
+      // transition that would otherwise hold this render until the analysis arrives.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      if (request !== token.current) return;
       const [saved, draft] = await Promise.all([
         loadSavedRoiAnalysisAction(id),
         loadRoiDraftAction(id),
@@ -258,7 +266,8 @@ export function RoiWorkspace({
       }
       install(saved.data?.payload ?? draft.data.payload, saved.data?.revision ?? 0);
       setFacts(draft.data.facts);
-      setMessage(
+      setSavedStatus(saved.data?.status ?? null);
+      setAnnouncement(
         saved.data
           ? `Loaded ${saved.data.status.toLowerCase()} - revision ${saved.data.revision}`
           : 'New analysis - filled in from saved property details.',
@@ -290,8 +299,11 @@ export function RoiWorkspace({
       } else switchProperty(id, false, true);
     };
   });
+  // False only until the address has been followed once (server render and hydration).
+  const [started, setStarted] = useState(false);
   useEffect(() => {
     navigate.current(urlProperty);
+    setStarted(true);
   }, [urlProperty, selection]);
   useEffect(() => {
     const counter = token;
@@ -579,6 +591,7 @@ export function RoiWorkspace({
         return;
       }
       install(saved.data.payload, saved.data.revision);
+      setSavedStatus(status);
       setMessage(`Saved ${status.toLowerCase()} - revision ${saved.data.revision}`);
       toast.success(`Analysis saved as ${status.toLowerCase()}.`);
       if (next !== undefined) continueTo(next);
@@ -651,6 +664,11 @@ export function RoiWorkspace({
           : [];
       })
     : [];
+  // A property address is open before its first load starts (server render, hydration):
+  // show it loading rather than the chooser.
+  const opening = !started && !selected && !!urlProperty && selection.ok;
+  const shown = opening ? urlProperty : selected;
+  const shownProperty = properties.find((p) => p.id === shown);
   return (
     <div className={styles.workspace}>
       {searchParams?.get('notice') === 'property-saved' && (
@@ -665,22 +683,30 @@ export function RoiWorkspace({
             <button onClick={() => setRecovery(null)}>Cancel property change</button>
           </p>
         )}
-        <div className={`${styles.heading} ${selected ? styles.headingCompact : ''}`}>
+        <div className={`${styles.heading} ${shown ? styles.headingCompact : ''}`}>
           <div>
             {/* The app shell already titles the page; an open property needs no second label. */}
             <p className={styles.eyebrow}>
-              {selected && (
+              {shown && (
                 <>
-                  <a href={`/properties/${selected}`}>Property overview</a> /{' '}
+                  <a href={`/properties/${shown}`}>Property overview</a> /{' '}
                 </>
               )}
               Returns &amp; ROI
             </p>
-            <h1>{selected ? (property?.name ?? 'Unavailable property') : 'Choose a property'}</h1>
-            {selected ? (
+            <h1>{shown ? (shownProperty?.name ?? 'Unavailable property') : 'Choose a property'}</h1>
+            {shown ? (
               <p className={styles.context}>
                 <span>Whole property</span>
-                <span>{dirty ? 'Unsaved changes' : `Revision ${revision}`}</span>
+                {payload && !loading && (
+                  <span>
+                    {dirty
+                      ? 'Unsaved changes'
+                      : revision > 0
+                        ? `Saved ${savedStatus?.toLowerCase() ?? 'analysis'} · revision ${revision}`
+                        : `Revision ${revision}`}
+                  </span>
+                )}
               </p>
             ) : (
               <p>
@@ -689,7 +715,7 @@ export function RoiWorkspace({
               </p>
             )}
           </div>
-          {selected && (
+          {shown && (
             <div className={styles.actions}>
               {payload && !loading && (
                 <>
@@ -739,7 +765,7 @@ export function RoiWorkspace({
           )}
         </div>
         {!selection.ok && <p role="alert">{failure(selection.code)}</p>}
-        {!selected ? (
+        {!shown ? (
           <>
             <PropertySelector properties={properties} onSelect={choose} />
             <section className={styles.card}>
@@ -759,15 +785,42 @@ export function RoiWorkspace({
           </>
         ) : (
           <>
-            <p className={styles.status} role="status" aria-live="polite">
-              {/^(Loaded|New analysis)/.test(message) ? '' : message}
+            <p className={styles.srOnly} role="status">
+              {announcement}
             </p>
-            {loading ? (
-              <p>Loading analysis...</p>
+            {loading || opening ? (
+              <section className={`${styles.card} ${styles.loadingCard}`} role="status">
+                <h2>Loading analysis…</h2>
+                <p>Saved assumptions, projections and recorded actuals for this property.</p>
+                <div className={styles.skeleton} aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </section>
             ) : !payload ? (
-              <button onClick={() => load(selected)}>Retry loading</button>
+              <section className={`${styles.card} ${styles.empty}`} role="alert">
+                <h2>This analysis did not load</h2>
+                <p>
+                  {message || 'Could not load analysis. Retry loading this property.'} Nothing was
+                  changed.
+                </p>
+                <div className={styles.actions}>
+                  {/* An unknown or archived property cannot load on retry. */}
+                  {property && (
+                    <button className={styles.primary} onClick={() => load(selected)}>
+                      Retry loading
+                    </button>
+                  )}
+                  <button onClick={() => choose('')}>Change property</button>
+                </div>
+              </section>
             ) : (
               <>
+                <p className={styles.status} role="status" aria-live="polite">
+                  {message}
+                </p>
                 <AssumptionsSummary
                   payload={calculatedPayload ?? applyValues(payload, values, tax)}
                   result={result}
@@ -780,7 +833,7 @@ export function RoiWorkspace({
                   demoLabel={demoFields[0]?.demo}
                   source={
                     revision > 0
-                      ? `Saved analysis · revision ${revision}`
+                      ? `Saved ${savedStatus === 'READY' ? 'ready' : savedStatus === 'DRAFT' ? 'draft' : 'analysis'} · revision ${revision}`
                       : 'From property details · not saved yet'
                   }
                   editHref={editHref()}

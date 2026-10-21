@@ -745,9 +745,9 @@ describe('Core chart presentation: basis, legends and disclosures', () => {
     const value = screen.getByRole('group', { name: /Property value and mortgage balance/ });
     expect(legend(value)).toEqual(['Property value', 'Equity (shaded)']);
     fireEvent.keyDown(value, { key: 'Home' });
-    // The visual tooltip says "No loan"; the spoken readout keeps the exact $0.00.
+    // The spoken readout says "No loan" as the tooltip does, then keeps the exact $0.00.
     expect(value.textContent).toContain('No loan');
-    expect(live(value)).toContain('− Mortgage Balance $0.00');
+    expect(live(value)).toContain('− Mortgage Balance No loan ($0.00)');
     expect(value.textContent).toContain('Start');
     fireEvent.click(screen.getByRole('tab', { name: 'Amortization' }));
     expect(container.textContent).toMatch(/All-cash purchase · debt service \$0\.00/);

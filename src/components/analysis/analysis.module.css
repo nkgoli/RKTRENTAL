@@ -349,6 +349,46 @@
 .workspace .empty p {
   margin: 0;
 }
+.workspace .empty .actions {
+  justify-content: flex-start;
+  margin-top: 12px;
+}
+/* Loading: the card and the rough shape of the results, without motion. */
+.workspace .loadingCard h2 {
+  margin: 0 0 4px;
+}
+.workspace .loadingCard p {
+  margin: 0;
+  color: var(--design-muted);
+  font-size: 13px;
+}
+.skeleton {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.skeleton span {
+  height: 56px;
+  border-radius: 8px;
+  background: var(--rr-subtle);
+}
+@media (max-width: 640px) {
+  .skeleton {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
 /* Secondary detail rows grouped in one card, each opening on demand. */
 .workspace .details h2 {
   margin-bottom: 4px;

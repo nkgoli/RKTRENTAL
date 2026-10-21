@@ -11,7 +11,7 @@ export function isBaselinePath(path: string) {
   return /^(input|options)(\.|$)/.test(path) && !path.startsWith('options.tax');
 }
 
-/** Read-only digest of the baseline; display rounding only, the calculation keeps full precision. */
+/** Baseline inputs are maintained on Add/Edit Property; the workspace keeps one guarded link. */
 export function AssumptionsSummary({
   missing,
   incomplete,

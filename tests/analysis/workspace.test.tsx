@@ -274,7 +274,8 @@ describe('property autofill and calculation sufficiency', () => {
     });
     await open();
     expect(summaryCard().queryByText('$0/mo')).toBeNull();
-    expect(screen.getByText('Revision 3')).toBeTruthy();
+    expect(screen.getByText('Saved draft · revision 3')).toBeTruthy();
+    expect(screen.getByText('Loaded draft - revision 3').className).toMatch(/srOnly/);
     expect(
       href(summaryCard().getByRole('link', { name: 'Complete assumptions' })).searchParams.get(
         'field',
@@ -419,6 +420,43 @@ describe('ROI summary workspace', () => {
     await screen.findByText(/Could not save/);
     expect(scenarioName().value).toBe('Offline case');
   });
+  it('opens a property address in a loading state, never the chooser, and announces the load', async () => {
+    let resolve!: (v: Awaited<ReturnType<typeof loadRoiDraftAction>>) => void;
+    vi.mocked(loadRoiDraftAction).mockImplementationOnce(
+      () =>
+        new Promise((r) => {
+          resolve = r;
+        }),
+    );
+    routeQuery.value = new URLSearchParams('property=a');
+    render(<RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="a" />);
+    expect(screen.queryByRole('heading', { name: 'Choose a property' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Property a', level: 1 })).toBeTruthy();
+    expect(screen.queryByLabelText('Save analysis')).toBeNull();
+    expect(
+      screen.getAllByRole('status').some((s) => /Loading analysis…/.test(s.textContent ?? '')),
+    ).toBe(true);
+    expect(screen.getByRole('heading', { name: 'Loading analysis…' })).toBeTruthy();
+    await waitFor(() => expect(resolve).toBeDefined());
+    await act(async () => resolve({ ok: true, data: { payload: make('a'), missing: [], facts } }));
+    await screen.findByLabelText('Save analysis');
+    // The load is announced, but not shown again beside the Assumptions source.
+    const note = screen.getByText('New analysis - filled in from saved property details.');
+    expect(note.className).toMatch(/srOnly/);
+    expect(summaryCard().getByRole('link', { name: 'Edit property assumptions' })).toBeTruthy();
+    expect(summaryCard().queryByRole('definition')).toBeNull();
+  });
+  it('explains a failed load in place with Retry and Change property', async () => {
+    vi.mocked(loadRoiDraftAction).mockRejectedValueOnce(Error('offline'));
+    render(<RoiWorkspace selection={{ ok: true, data: properties }} />);
+    fireEvent.click(screen.getByRole('button', { name: /Property a/ }));
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByRole('heading', { name: 'This analysis did not load' })).toBeTruthy();
+    expect(alert.textContent).toMatch(/Could not load analysis\. .*Nothing was changed\./);
+    fireEvent.click(within(alert).getByRole('button', { name: 'Retry loading' }));
+    await screen.findByLabelText('Save analysis');
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
   it('guards property change with save/discard and ignores a late property response', async () => {
     let resolve!: (v: Awaited<ReturnType<typeof loadRoiDraftAction>>) => void;
     vi.mocked(loadRoiDraftAction).mockImplementationOnce(
@@ -429,6 +467,9 @@ describe('ROI summary workspace', () => {
     );
     render(<RoiWorkspace selection={{ ok: true, data: properties }} />);
     fireEvent.click(screen.getByRole('button', { name: /Property a/ }));
+    // Property a's request is in flight (it starts once the loading state has painted).
+    await waitFor(() => expect(resolve).toBeDefined());
+    expect(screen.getByRole('heading', { name: 'Loading analysis…' })).toBeTruthy();
     fireEvent.click(toolbarButton('Change property'));
     fireEvent.click(screen.getByRole('button', { name: /Property b/ }));
     await screen.findByLabelText('Save analysis');
@@ -460,6 +501,8 @@ describe('ROI summary workspace', () => {
     );
     expect(screen.queryByLabelText('Save analysis')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Property b', level: 1 })).toBeTruthy();
+    // The requests start once the loading state has painted.
+    await waitFor(() => expect(resolve).toBeDefined());
     view.rerender(
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="foreign" />,
     );

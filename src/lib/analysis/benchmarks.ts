@@ -3,9 +3,13 @@ import { compareWithBenchmarks } from '../roi';
 
 /** Comparison failures must not suppress a valid base analysis or prevent draft saves. */
 export function benchmarkComparison(snapshot: AnalysisPayload | null) {
-  if (!snapshot) return { comparison: null, error: 'Complete assumptions and recalculate.' };
+  if (!snapshot)
+    return {
+      comparison: null,
+      error: 'Complete the assumptions to compare; results update automatically.',
+    };
   if (!snapshot.benchmarks.length)
-    return { comparison: null, error: 'Choose at least one reference asset and recalculate.' };
+    return { comparison: null, error: 'Choose at least one reference asset to compare.' };
   try {
     const base = calculatePayload({ ...snapshot, benchmarks: [] }).base;
     return { comparison: compareWithBenchmarks(base, snapshot.benchmarks), error: '' };

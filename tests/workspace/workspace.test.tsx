@@ -55,7 +55,7 @@ describe('property and unit workspace render', () => {
     expect(html).toContain('<h1>Maple Court</h1>');
     expect(html).toContain('Edit property');
     expect(html).toContain('href="/properties/property-1/media"');
-    expect(html).toContain('Returns &amp; ROI ↗');
+    expect(html).toContain('Returns &amp; ROI');
     expect(html).not.toContain('Property workspace');
     expect(html).toContain('214 Maple Ave, Austin, TX');
     expect(html).toContain('aria-current="page"');
@@ -125,7 +125,7 @@ describe('property and unit workspace render', () => {
 
     expect(html).toContain('Lease timeline');
     expect(html).not.toContain('Current lease');
-    expect(html).not.toContain('Edit unit');
+    expect(html).toContain('>Edit unit</button>');
     expect(html).not.toContain('Maintenance at a glance');
     expect(html).not.toContain('<dt>Status</dt>');
     expect(html).toContain('Unit facts');

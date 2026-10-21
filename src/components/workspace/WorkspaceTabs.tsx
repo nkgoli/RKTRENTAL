@@ -12,7 +12,7 @@ const tabs: { label: string; key: WorkspaceTab }[] = [
   { label: 'Applications', key: 'applications' },
   { label: 'Leases', key: 'leases' },
   { label: 'Payments', key: 'payments' },
-  { label: 'Returns & ROI ↗', key: 'returns' },
+  { label: 'Returns & ROI', key: 'returns' },
   { label: 'Maintenance', key: 'maintenance' },
   { label: 'Media', key: 'media' },
 ];

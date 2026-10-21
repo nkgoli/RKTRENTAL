@@ -16,8 +16,10 @@ export function UnitSwitcher({ propertyName, units }: { propertyName: string; un
   function change(unitId: string) {
     // Only view-level params carry over; notices and one-shot flags belong to the previous page.
     const next = new URLSearchParams();
-    const period = searchParams.get('period');
-    if (period) next.set('period', period);
+    for (const name of ['period', 'from', 'to']) {
+      const value = searchParams.get(name);
+      if (value) next.set(name, value);
+    }
     if (unitId) next.set('unit', unitId);
     router.push(`${pathname}${next.size ? `?${next}` : ''}`);
   }

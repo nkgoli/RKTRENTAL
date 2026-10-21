@@ -75,7 +75,11 @@ async function main() {
 }
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', (value) => {
-  if (value.includes('q')) app?.kill();
+  if (value.includes('q') && app)
+    spawnSync('taskkill.exe', ['/PID', String(app.pid), '/T', '/F'], {
+      stdio: 'inherit',
+      windowsHide: true,
+    });
 });
 main().catch(async (error) => {
   console.error(error.message);

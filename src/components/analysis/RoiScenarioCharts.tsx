@@ -10,7 +10,16 @@ import {
   type ScenarioDraft,
 } from '@/lib/analysis/scenarios';
 import type { AnalysisPayload } from '@/lib/analysis/contract';
-import { ChartCard, ComboChart, Figure, Icon, Insight, Segmented, useHorizon } from './RoiChart';
+import {
+  Basis,
+  ChartCard,
+  ComboChart,
+  Figure,
+  Icon,
+  Insight,
+  Segmented,
+  useHorizon,
+} from './RoiChart';
 import s from './scenario-charts.module.css';
 
 type Case = { id: string; name: string; result: ProjectionResult };
@@ -187,7 +196,8 @@ export function ScenarioCharts({
         <div className={s.cardHead}>
           <div>
             <h3>Scenario Comparison</h3>
-            <p>Compare your property under different market conditions</p>
+            <p>Choose which cases to show. The Base Case is your saved assumptions.</p>
+            <Basis items={['Projected', 'USD', 'Before tax']} />
           </div>
           <div className={s.view}>
             <span>View:</span>
@@ -227,21 +237,30 @@ export function ScenarioCharts({
               </li>
             );
           })}
-          {missingExamples.map((e) => (
-            <li key={e.name}>
-              <button
-                type="button"
-                aria-pressed={false}
-                disabled={disabled || drafts.length >= 20}
-                title={`Add the ${e.name} example as an editable, unsaved scenario`}
-                onClick={() => onAddExample(e.name, e.values)}
-              >
-                {e.name} <span aria-hidden="true">+</span>
-                <span className={s.srOnly}> (add example)</span>
-              </button>
-            </li>
-          ))}
         </ul>
+        {missingExamples.length > 0 && (
+          <div className={s.addRow}>
+            <span className={s.label} id="scenario-add-examples">
+              Add an example:
+            </span>
+            <ul className={s.chips} aria-labelledby="scenario-add-examples" data-kind="add">
+              {missingExamples.map((e) => (
+                <li key={e.name}>
+                  <button
+                    type="button"
+                    aria-pressed={false}
+                    disabled={disabled || drafts.length >= 20}
+                    title={`Add the ${e.name} example as an editable, unsaved scenario`}
+                    onClick={() => onAddExample(e.name, e.values)}
+                  >
+                    {e.name} <span aria-hidden="true">+</span>
+                    <span className={s.srOnly}> (add example)</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {visible.length > 1 && (
           <div className={s.diffs}>
             <p>Key Differences vs Base</p>
@@ -286,6 +305,11 @@ export function ScenarioCharts({
         )}
       </section>
 
+      <p className={s.hint}>
+        Year 1 figures and hold-period IRR for each case
+        {view === 'delta' ? ', with the change from the Base Case below each value' : ''}. Select a
+        case to highlight its lines in the charts below.
+      </p>
       <div className={s.kpis}>
         {kpis.map((k, i) => {
           const isFocus = focused === k.id;
@@ -358,16 +382,22 @@ export function ScenarioCharts({
 
       <ChartCard
         title="Key Metrics Comparison"
-        subtitle="Compare performance across scenarios · projected · before tax"
+        subtitle="Which case does best on each measure, for Year 1 and over the chosen horizon."
+        basis={[
+          'Projected',
+          `Year 1 and ${shown}-year horizon`,
+          'IRR over the full hold',
+          'Before tax',
+        ]}
         controls={
-          <div>
-            <span className={s.label}>Horizon:</span>
+          <div className={s.view}>
+            <span>Horizon:</span>
             {horizon}
           </div>
         }
       >
         <div className={s.tableWrap} role="region" tabIndex={0} aria-label="Key metrics comparison">
-          <table className={s.table}>
+          <table className={`${s.table} ${s.metricsTable}`}>
             <thead>
               <tr>
                 <th scope="col">
@@ -449,26 +479,49 @@ export function ScenarioCharts({
             </tbody>
           </table>
         </div>
+        {visible.length > 1 && (
+          <ul className={s.key} aria-label="Table key">
+            <li>
+              <i data-kind="best" aria-hidden="true" /> Highest among shown cases
+            </li>
+            <li>
+              <i data-kind="worst" aria-hidden="true" /> Lowest among shown cases
+            </li>
+            <li>
+              <span aria-hidden="true">●●●</span> Impact rating (three dots highest)
+            </li>
+            {view === 'delta' && <li>Δ view: other cases show the change from the Base Case</li>}
+          </ul>
+        )}
       </ChartCard>
 
       <ChartCard
         title="Equity Growth by Scenario"
-        subtitle={`Showing ${shown}-year projection · equity before selling costs · before tax`}
-        controls={
-          <div className={s.breakevens}>
-            {visible.map((c) => {
-              const y = recoveryYear(c.result);
-              return (
-                <span key={c.id} style={{ background: `${c.color}1f`, color: c.color }}>
-                  <b>{c.name.split(' ')[0]}:</b>{' '}
-                  <code>{y ? `Yr ${y}` : `>${c.result.annualCashflows.length}y`}</code>{' '}
-                  <em>breakeven</em>
-                </span>
-              );
-            })}
-          </div>
-        }
+        subtitle="How much equity each case builds, year by year."
+        basis={[
+          'Projected',
+          'USD, year-end',
+          `${shown}-year horizon`,
+          'Before selling costs',
+          'Before tax',
+        ]}
       >
+        <div className={s.breakevens} role="group" aria-labelledby="scenario-recovery-label">
+          <span className={s.label} id="scenario-recovery-label">
+            Initial cash recovered:
+          </span>
+          {visible.map((c) => {
+            const y = recoveryYear(c.result);
+            return (
+              <span key={c.id} style={{ background: `${c.color}1f`, color: c.color }}>
+                <b>{c.name}:</b>{' '}
+                <code>
+                  {y ? `Year ${y}` : `Not within ${c.result.annualCashflows.length} years`}
+                </code>
+              </span>
+            );
+          })}
+        </div>
         <ComboChart
           label="Year-end equity before selling costs by scenario"
           years={Array.from({ length: shown }, (_, i) => i + 1)}
@@ -491,7 +544,7 @@ export function ScenarioCharts({
             <>
               IRR ranges from <Figure tone="red">{pct(worstIrr.irr)}</Figure> ({worstIrr.name}) to{' '}
               <Figure>{pct(bestIrr.irr)}</Figure> ({bestIrr.name}) — a{' '}
-              <b>{((bestIrr.irr! - worstIrr.irr!) * 100).toFixed(1)}%</b> spread.
+              <b>{((bestIrr.irr! - worstIrr.irr!) * 100).toFixed(1)} percentage-point</b> spread.
               {worstIrr.dscr != null && worstIrr.dscr < 1 && (
                 <>
                   {' '}
@@ -502,7 +555,8 @@ export function ScenarioCharts({
           ) : (
             'Leveraged IRR is unavailable for these scenarios.'
           )}{' '}
-          Breakeven is the first year cumulative cash flow recovers the initial cash invested.
+          Initial cash is recovered in the first year that cumulative cash flow reaches the cash
+          invested.
         </Insight>
         <p className={s.foot}>
           Holding period: {base.result.annualCashflows.length} years · Selling costs:{' '}
@@ -513,7 +567,8 @@ export function ScenarioCharts({
 
       <ChartCard
         title="Cash Flow by Scenario"
-        subtitle={`Annual operating cash flow · years 1–${shown} · before tax`}
+        subtitle="Each case's operating cash flow, year by year."
+        basis={['Projected', 'USD per year', `Years 1–${shown}`, 'Before tax']}
       >
         <ComboChart
           label="Annual operating cash flow by scenario"

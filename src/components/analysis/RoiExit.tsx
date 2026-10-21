@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { AnalysisPayload } from '@/lib/analysis/contract';
 import {
   calculateExits,
@@ -17,6 +17,7 @@ import {
   ExactTable,
   Icon,
   InfoTip,
+  MoreDetail,
   Segmented,
   Statement,
   chartColors,
@@ -38,7 +39,15 @@ const exitColors = {
 const defaultYear = (rows: { year: number }[] | null) =>
   rows?.some((r) => r.year === 10) ? 10 : (rows?.at(-1)?.year ?? null);
 
-function Comparison({ data }: { data: ExitRow[] }) {
+function Comparison({
+  data,
+  basis,
+  children,
+}: {
+  data: ExitRow[];
+  basis: string[];
+  children: ReactNode;
+}) {
   const [selected, setSelected] = useState<number | null>(() => defaultYear(data));
   const [hovered, setHovered] = useState<number | null>(null);
   const [view, setView] = useState<'profit' | 'cashBack'>('profit');
@@ -54,7 +63,8 @@ function Comparison({ data }: { data: ExitRow[] }) {
   return (
     <ChartCard
       title="Exit Analysis & Comparison"
-      subtitle="Compare sale outcomes across different holding periods · each exit year recalculated · projected · before tax"
+      subtitle="What you would get back if you sold at the end of each compared year."
+      basis={basis}
       controls={
         <div className={d.view}>
           <span>View:</span>
@@ -346,14 +356,29 @@ function Comparison({ data }: { data: ExitRow[] }) {
           <strong>Insight:</strong>{' '}
           {marks.bestIrr.year === marks.bestProfit.year ? (
             <>
-              Year {marks.bestIrr.year} is optimal — highest IRR <b>({pct(marks.bestIrr.irr)})</b>{' '}
-              and max profit <b>({wholeDollars(marks.bestProfit.profit)})</b>.
+              Year {marks.bestIrr.year} has both the highest IRR{' '}
+              <b data-tone={tone(marks.bestIrr.irr)}>({pct(marks.bestIrr.irr)})</b> and the highest
+              profit{' '}
+              <b data-tone={tone(marks.bestProfit.profit)}>
+                ({wholeDollars(marks.bestProfit.profit)})
+              </b>{' '}
+              of the compared years.
             </>
           ) : (
             <>
-              Trade-off: Year {marks.bestIrr.year} maximizes IRR <b>({pct(marks.bestIrr.irr)})</b>,
-              but Year {marks.bestProfit.year} yields highest profit{' '}
-              <b>({wholeDollars(marks.bestProfit.profit)})</b>.
+              Trade-off: Year {marks.bestIrr.year} has the highest IRR{' '}
+              <b data-tone={tone(marks.bestIrr.irr)}>({pct(marks.bestIrr.irr)})</b>, but Year{' '}
+              {marks.bestProfit.year} has the highest profit{' '}
+              <b data-tone={tone(marks.bestProfit.profit)}>
+                ({wholeDollars(marks.bestProfit.profit)})
+              </b>
+              .
+            </>
+          )}
+          {marks.bestProfit.profit < 0 && (
+            <>
+              {' '}
+              No compared exit year gets back the cash you put in; these are the smallest losses.
             </>
           )}
           {marks.breakeven && marks.breakeven.year !== marks.bestIrr.year && (
@@ -365,11 +390,31 @@ function Comparison({ data }: { data: ExitRow[] }) {
         <p className={d.exitInsight}>
           <strong>Insight:</strong> IRR is unavailable for every compared exit year, so no best IRR
           is shown.
+          {marks.bestProfit && marks.bestProfit.profit < 0 && (
+            <> No compared exit year gets back the cash you put in.</>
+          )}
         </p>
       )}
+      {children}
     </ChartCard>
   );
 }
+
+/** "year 10 · selling costs 6% · appreciated value" for saved or probe controls. */
+function describeControls(c: ExitControls) {
+  const price = c.salePrice.trim();
+  return [
+    `exit year ${c.years.trim() || 'not set'}`,
+    `selling costs ${c.sellingCosts.trim() === '' ? 'not set' : `${c.sellingCosts.trim()}%`}`,
+    price === '' || !Number.isFinite(Number(price))
+      ? 'sale price from appreciated value'
+      : `sale price ${wholeDollars(Number(price))}`,
+  ].join(' · ');
+}
+const sameControls = (a: ExitControls, b: ExitControls) =>
+  (['years', 'sellingCosts', 'salePrice'] as const).every(
+    (k) => a[k].trim() === b[k].trim() || Number(a[k]) === Number(b[k]),
+  );
 
 export function Exit({
   payload,
@@ -382,26 +427,43 @@ export function Exit({
   saving: boolean;
   onEdit: () => void;
 }) {
-  const [controls, setControls] = useState(() => exitControls(payload));
+  const saved = useMemo(() => exitControls(payload), [payload]);
+  const [controls, setControls] = useState(saved);
   const initial = useMemo(() => {
     try {
-      return { rows: calculateExits(payload, exitControls(payload)), error: '' };
+      return { rows: calculateExits(payload, saved), error: '' };
     } catch (error) {
       return {
         rows: null,
         error: error instanceof Error ? error.message : 'Calculation unavailable',
       };
     }
-  }, [payload]);
+  }, [payload, saved]);
   const [calculation, setCalculation] = useState(initial);
+  // The controls behind the results on screen; they differ from `saved` while a probe runs.
+  const [applied, setApplied] = useState(saved);
   const [version, setVersion] = useState(0);
   const [changed, setChanged] = useState(false);
   const rows = stale || changed ? null : calculation.rows;
   const data = rows ? exitRows(rows) : null;
+  const probing = !sameControls(applied, saved);
   // The exact statement is for the probe exit year (the last compared horizon).
   const selected = rows?.at(-1);
   const result = selected?.result;
   const sale = result?.saleProceeds;
+  const run = (next: ExitControls) => {
+    try {
+      setCalculation({ rows: calculateExits(payload, next), error: '' });
+      setApplied(next);
+      setChanged(false);
+      setVersion((v) => v + 1);
+    } catch (error) {
+      setCalculation({
+        rows: null,
+        error: error instanceof Error ? error.message : 'Calculation unavailable',
+      });
+    }
+  };
   const fields: [keyof ExitControls, string, string][] = [
     ['years', 'Probe exit year', 'Whole years, 1–50.'],
     ['sellingCosts', 'Probe selling costs (%)', '0–30% of sale price.'],
@@ -411,30 +473,92 @@ export function Exit({
       'Optional; blank uses appreciated value. Applies to every compared horizon.',
     ],
   ];
+  const paused = stale
+    ? 'Exit comparison is paused until the assumptions flagged above are corrected.'
+    : changed
+      ? 'Not applied yet. Press Update exit comparison to see results for these probe values.'
+      : 'No exit comparison for these values. Correct the probe and update again.';
   return (
     <div className={chartStyles.stack}>
-      {data ? (
-        <Comparison key={version} data={data} />
-      ) : (
-        <ChartCard title="Exit Analysis & Comparison" subtitle="Projected sale · before tax">
+      <ChartCard
+        title="Exit probe"
+        subtitle="Try another exit year, selling cost or sale price. Probes are temporary and never saved."
+        basis={[probing ? 'Temporary probe' : 'Saved assumptions', 'Before tax']}
+        label="Exit probe"
+      >
+        <div className={d.probeState} data-probe={probing || undefined} role="status">
           <p>
-            {stale
-              ? 'Recalculate base assumptions before comparing exits.'
-              : 'Update exit comparison to see results for these controls.'}
+            <b>Saved:</b> {describeControls(saved)}
           </p>
-        </ChartCard>
-      )}
-      <div className={chartStyles.split}>
-        <ChartCard
-          title={selected ? `Exit statement · year ${selected.year}` : 'Exit statement'}
-          subtitle={
-            result && sale
-              ? `Estimated sale at the end of year ${selected.year} · exact · projected · before tax`
-              : 'Projected sale · before tax'
-          }
+          {probing && (
+            <p>
+              <b>Showing probe:</b> {describeControls(applied)}
+            </p>
+          )}
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (stale || saving) return;
+            run(controls);
+          }}
         >
-          {result && sale ? (
-            <>
+          <fieldset disabled={stale || saving} className={d.probeFields}>
+            {fields.map(([key, label, hint]) => (
+              <label className={styles.field} key={key}>
+                <span id={`exit-probe-${key}-label`}>{label}</span>
+                <input
+                  aria-labelledby={`exit-probe-${key}-label`}
+                  aria-describedby={`exit-probe-${key}-hint`}
+                  inputMode="decimal"
+                  value={controls[key]}
+                  onChange={(e) => {
+                    setControls({ ...controls, [key]: e.target.value });
+                    setChanged(true);
+                  }}
+                />
+                <small id={`exit-probe-${key}-hint`}>{hint}</small>
+              </label>
+            ))}
+            <div className={d.probeActions}>
+              <button type="submit">Update exit comparison</button>
+              {(probing || changed) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setControls(saved);
+                    run(saved);
+                  }}
+                >
+                  Reset to saved
+                </button>
+              )}
+              <button type="button" onClick={onEdit}>
+                Edit saved exit assumptions
+              </button>
+            </div>
+          </fieldset>
+        </form>
+        {calculation.error && (
+          <p role="alert" className={styles.error}>
+            Could not calculate exit comparison. {calculation.error} Correct the controls and try
+            again.
+          </p>
+        )}
+      </ChartCard>
+      {data && rows ? (
+        <Comparison
+          key={version}
+          data={data}
+          basis={[
+            probing ? 'Projected with probe' : 'Projected',
+            'USD',
+            'Each exit year recalculated',
+            'Before tax',
+          ]}
+        >
+          {result && sale && selected && (
+            <MoreDetail summary={`Exact sale statement, year ${selected.year}`}>
               <Statement
                 rows={[
                   ['Projected sale price', dollars(sale.grossSalePrice)],
@@ -458,94 +582,44 @@ export function Exit({
                 ]}
               />
               {result.summaryMetrics.irrLeveraged === null && (
-                <p>IRR unavailable: {result.unavailable.irrLeveraged}</p>
+                <p className={d.detailText}>IRR unavailable: {result.unavailable.irrLeveraged}</p>
               )}
-            </>
-          ) : (
-            <p>
-              {stale
-                ? 'Recalculate base assumptions before comparing exits.'
-                : 'Update exit comparison to see results for these controls.'}
-            </p>
+            </MoreDetail>
           )}
-        </ChartCard>
+          <MoreDetail summary={`Exact exit comparison, ${rows.length} exit years`}>
+            <ExactTable
+              caption="Exit horizon comparison · USD · before tax"
+              headers={[
+                'Sell at end of',
+                'Net sale proceeds after debt',
+                'Cash returned',
+                'Profit',
+                'Total ROI',
+                'Leveraged IRR',
+              ]}
+              rows={rows.map(({ year, result: r }) => [
+                `Year ${year}`,
+                dollars(r.saleProceeds.netProceeds),
+                dollars(r.summaryMetrics.totalReturn + r.summaryMetrics.totalCashRequired),
+                dollars(r.summaryMetrics.totalReturn),
+                rate(r.summaryMetrics.totalReturnPercent),
+                rate(r.summaryMetrics.irrLeveraged),
+              ])}
+            />
+            <p className={d.detailText}>
+              Each horizon is recalculated with the public model. Cash returned includes operating
+              cash flow and net sale proceeds; profit also deducts initial cash.
+            </p>
+          </MoreDetail>
+        </Comparison>
+      ) : (
         <ChartCard
-          title="Holding period comparison"
-          subtitle="Temporary probes leave saved base assumptions unchanged. All figures are before tax, even when optional tax estimates are enabled."
+          title="Exit Analysis & Comparison"
+          subtitle="What you would get back if you sold at the end of each compared year."
+          basis={['Not calculated']}
         >
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (stale || saving) return;
-              try {
-                setCalculation({ rows: calculateExits(payload, controls), error: '' });
-                setChanged(false);
-                setVersion((v) => v + 1);
-              } catch (error) {
-                setCalculation({
-                  rows: null,
-                  error: error instanceof Error ? error.message : 'Calculation unavailable',
-                });
-              }
-            }}
-          >
-            <fieldset disabled={stale || saving} className={chartStyles.stack}>
-              {fields.map(([key, label, hint]) => (
-                <label className={styles.field} key={key}>
-                  <span id={`exit-probe-${key}-label`}>{label}</span>
-                  <input
-                    aria-labelledby={`exit-probe-${key}-label`}
-                    aria-describedby={`exit-probe-${key}-hint`}
-                    inputMode="decimal"
-                    value={controls[key]}
-                    onChange={(e) => {
-                      setControls({ ...controls, [key]: e.target.value });
-                      setChanged(true);
-                    }}
-                  />
-                  <small id={`exit-probe-${key}-hint`}>{hint}</small>
-                </label>
-              ))}
-              <button type="submit">Update exit comparison</button>
-            </fieldset>
-          </form>
-          {calculation.error && (
-            <p role="alert" className={styles.error}>
-              Could not calculate exit comparison. {calculation.error} Correct the controls and try
-              again.
-            </p>
-          )}
-          <div>
-            <button onClick={onEdit}>Edit saved exit assumptions</button>
-          </div>
+          <p className={d.paused}>{paused}</p>
         </ChartCard>
-      </div>
-      {rows && (
-        <section className={styles.card}>
-          <ExactTable
-            caption="Exit horizon comparison · USD · before tax"
-            headers={[
-              'Sell at end of',
-              'Net sale proceeds after debt',
-              'Cash returned',
-              'Profit',
-              'Total ROI',
-              'Leveraged IRR',
-            ]}
-            rows={rows.map(({ year, result: r }) => [
-              `Year ${year}`,
-              dollars(r.saleProceeds.netProceeds),
-              dollars(r.summaryMetrics.totalReturn + r.summaryMetrics.totalCashRequired),
-              dollars(r.summaryMetrics.totalReturn),
-              rate(r.summaryMetrics.totalReturnPercent),
-              rate(r.summaryMetrics.irrLeveraged),
-            ])}
-          />
-          <p>
-            Each horizon is recalculated with the public model. Cash returned includes operating
-            cash flow and net sale proceeds; profit also deducts initial cash.
-          </p>
-        </section>
       )}
     </div>
   );

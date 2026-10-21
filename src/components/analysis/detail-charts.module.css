@@ -853,7 +853,68 @@
   color: var(--rr-ok);
 }
 
+/* Exit probe: saved vs probe line, fields in a row on wide screens, actions together. */
+.probeState {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--rr-subtle);
+  font-size: 13px;
+  color: var(--design-muted);
+}
+.probeState[data-probe] {
+  background: var(--rr-primary-tint);
+  border: 1px solid color-mix(in srgb, var(--design-primary) 30%, white);
+}
+.probeState p {
+  margin: 0 !important;
+}
+.probeState b {
+  font-weight: 600;
+  color: var(--design-text);
+}
+.probeFields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 16px;
+  align-items: start;
+}
+.probeActions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.paused {
+  margin: 0;
+  padding: 12px;
+  border: 1px dashed var(--rr-border-strong);
+  border-radius: 8px;
+  font-size: 13px !important;
+  color: var(--design-muted);
+}
+.exitInsight b[data-tone='red'] {
+  color: var(--rr-bad);
+}
+
 /* ---- C15 / C16 Sensitivity heatmap ---- */
+.heatChoice {
+  display: flex;
+  align-items: center;
+  gap: 12px 20px;
+  flex-wrap: wrap;
+}
+.span {
+  margin: 0;
+  font-size: 12px !important;
+  color: var(--design-muted);
+}
 .heatControls {
   display: flex;
   justify-content: space-between;
@@ -1118,6 +1179,9 @@
 }
 .gradient b[data-tone='green'] {
   color: var(--rr-ok);
+}
+/* The tone follows the sign; the position follows the end of the scale. */
+.gradient b:last-child {
   text-align: left;
 }
 .gradient > span {
@@ -1246,6 +1310,9 @@
   }
   .rangeGrid {
     grid-template-columns: 1fr;
+  }
+  .probeFields {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 480px) {

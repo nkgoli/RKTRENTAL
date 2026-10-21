@@ -17,7 +17,7 @@ import {
   heatPalette,
   type ChartValue,
 } from '@/lib/analysis/chart-data';
-import { ChartCard, chartColors, Check, Icon } from './RoiChart';
+import { ChartCard, chartColors, Check, Icon, MoreDetail } from './RoiChart';
 import styles from './analysis.module.css';
 import chartStyles from './projections.module.css';
 import d from './detail-charts.module.css';
@@ -273,7 +273,7 @@ function Heatmap({
         {finite.length ? (
           <>
             <div className={d.gradient}>
-              <b data-tone="red">{short(min)}</b>
+              <b data-tone={min < 0 ? 'red' : 'green'}>{short(min)}</b>
               <span
                 style={{
                   background: `linear-gradient(to right, ${palette.low}, ${palette.mid}, ${palette.high})`,
@@ -285,7 +285,7 @@ function Heatmap({
                   </i>
                 )}
               </span>
-              <b data-tone="green">{short(max)}</b>
+              <b data-tone={max < 0 ? 'red' : 'green'}>{short(max)}</b>
             </div>
             <small>
               Range: {short(min)} to {short(max)}
@@ -301,8 +301,11 @@ function Heatmap({
             <i data-kind="base" aria-hidden="true">
               ★
             </i>
-            Your assumptions
+            Your saved assumptions
           </li>
+        )}
+        {(baseRow < 0 || baseCol < 0) && (
+          <li>Your saved rent or vacancy is outside these ranges, so no cell is marked.</li>
         )}
         {hasContour && (
           <li>
@@ -334,7 +337,7 @@ function Heatmap({
             {current.value == null && current.reason && <small>{current.reason}</small>}
           </>
         ) : (
-          <em className={d.hint}>Hover over a cell to see details</em>
+          <em className={d.hint}>Hover, tap or use the arrow keys on a cell to see details</em>
         )}
       </div>
     </div>
@@ -363,6 +366,8 @@ export function Sensitivity({
   }, [payload]);
   const [calculation, setCalculation] = useState(initial);
   const [changed, setChanged] = useState(false);
+  // The ranges behind the grid on screen; they differ from the defaults after a custom probe.
+  const [applied, setApplied] = useState(() => sensitivityControls(payload));
   const [metric, setMetric] = useState<Metric>('cashOnCash');
   const [timeframe, setTimeframe] = useState<Timeframe>('year1');
   const [showValues, setShowValues] = useState(false);
@@ -399,6 +404,7 @@ export function Sensitivity({
   const run = (next: SensitivityControls) => {
     try {
       setCalculation({ grid: calculateSensitivity(payload, next), error: '' });
+      setApplied(next);
       setChanged(false);
     } catch (error) {
       setCalculation({
@@ -441,29 +447,33 @@ export function Sensitivity({
       />
     </label>
   );
+  const defaults = sensitivityControls(payload);
+  const custom = (Object.keys(defaults) as (keyof SensitivityControls)[]).some(
+    (k) => applied[k].trim() !== defaults[k].trim() && Number(applied[k]) !== Number(defaults[k]),
+  );
+  const whole = (v: number) => `$${Math.round(v).toLocaleString('en-US')}`;
+  const span = grid
+    ? `Rent ${whole(grid.rents[0])}–${whole(grid.rents.at(-1)!)}/mo (${grid.rents.length} values) · vacancy ${vacancyTick(grid.vacancies[0])}–${vacancyTick(grid.vacancies.at(-1)!)} (${grid.vacancies.length} values)`
+    : null;
+  const vacancy = payload.input.income?.vacancyRate;
   return (
     <ChartCard
       title={`Sensitivity Analysis: ${metric === 'irr' ? 'Leveraged IRR' : 'Cash-on-Cash Return'}`}
-      subtitle={`How ${metric === 'irr' ? 'IRR' : 'CoC'} changes with rent & vacancy · Hover cells for details · projected · ${
-        metric === 'irr' ? `${hold}-year hold` : tf!.label
-      }. Temporary probes leave saved base assumptions unchanged.`}
+      subtitle={`How ${metric === 'irr' ? 'leveraged IRR' : 'cash-on-cash return'} would change if rent or vacancy differed from your saved assumptions.`}
+      basis={[
+        'Projected',
+        metric === 'irr'
+          ? `${hold}-year hold, including the sale`
+          : tf!.label === 'Stabilized'
+            ? 'Year 3 (stabilized)'
+            : tf!.label,
+        'Percent',
+        custom ? 'Temporary custom ranges' : 'Default ranges',
+        'Before tax',
+      ]}
     >
       <div className={d.heatControls}>
-        <div className={d.toggle} role="group" aria-label="Sensitivity timeframe">
-          {timeframes.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              aria-pressed={metric !== 'irr' && timeframe === t.id}
-              disabled={metric === 'irr' || hold < t.year}
-              title={hold < t.year ? `The holding period is ${hold} years` : undefined}
-              onClick={() => setTimeframe(t.id)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-        <div className={d.heatOptions}>
+        <div className={d.heatChoice}>
           <label className={d.metric}>
             <span>Sensitivity metric</span>
             <select value={metric} onChange={(e) => setMetric(e.target.value as Metric)}>
@@ -471,6 +481,31 @@ export function Sensitivity({
               <option value="irr">Hold-period leveraged IRR</option>
             </select>
           </label>
+          <div className={d.metric}>
+            <span aria-hidden="true">Year</span>
+            <div className={d.toggle} role="group" aria-label="Sensitivity timeframe">
+              {timeframes.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  aria-pressed={metric !== 'irr' && timeframe === t.id}
+                  disabled={metric === 'irr' || hold < t.year}
+                  title={
+                    metric === 'irr'
+                      ? 'IRR always covers the whole hold'
+                      : hold < t.year
+                        ? `The holding period is ${hold} years`
+                        : undefined
+                  }
+                  onClick={() => setTimeframe(t.id)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className={d.heatOptions}>
           <Check label="Show values" checked={showValues} onChange={setShowValues} />
           <Check label="Colorblind-safe" checked={colorblind} onChange={setColorblind} />
           <button
@@ -486,20 +521,20 @@ export function Sensitivity({
           </button>
         </div>
       </div>
+      {span && !open && <p className={d.span}>{span}</p>}
       <div id={rangesId} className={d.ranges} hidden={!open}>
         <header>
-          <h3>Analysis Parameters</h3>
+          <h3>Rent and vacancy ranges</h3>
           <button
             type="button"
             disabled={stale || saving}
             onClick={() => {
-              const defaults = sensitivityControls(payload);
               setControls(defaults);
               run(defaults);
             }}
           >
             <Icon name="reset" size={12} />
-            Reset
+            Reset to defaults
           </button>
         </header>
         <form
@@ -519,8 +554,8 @@ export function Sensitivity({
                 </div>
                 {steps('rentSteps', 'Rent steps')}
                 <small>
-                  Your assumption:{' '}
-                  {rent == null ? 'Unavailable' : `$${rent.toLocaleString('en-US')}/mo`}
+                  Saved assumption:{' '}
+                  {rent == null ? 'Not set' : `$${rent.toLocaleString('en-US')}/mo`}
                 </small>
               </div>
               <div>
@@ -530,15 +565,14 @@ export function Sensitivity({
                   {field('vacancyMax', 'Maximum vacancy (%)', 'Max', '%')}
                 </div>
                 {steps('vacancySteps', 'Vacancy steps')}
-                <small>
-                  Your assumption: {payload.input.income?.vacancyRate ?? 'Unavailable'}%
-                </small>
+                <small>Saved assumption: {vacancy == null ? 'Not set' : `${vacancy}%`}</small>
               </div>
             </div>
             <p>
-              Rent: $0–$10 billion / month. Vacancy: 0–100%. 1–9 steps per axis; your rent and
-              vacancy are added when they fall inside the range, up to 100 calculations. For one
-              step, enter equal limits.
+              Ranges are temporary probes; your saved rent and vacancy do not change. Rent: $0–$10
+              billion / month. Vacancy: 0–100%. 1–9 steps per axis; your rent and vacancy are added
+              when they fall inside the range, up to 100 calculations. For one step, enter equal
+              limits.
             </p>
             <button type="submit">Update sensitivity</button>
           </fieldset>
@@ -566,57 +600,63 @@ export function Sensitivity({
             showValues={showValues}
             valueLabel={metric === 'irr' ? 'Leveraged IRR' : 'Cash-on-Cash'}
           />
-          <div
-            className={`${styles.table} ${chartStyles.exact} ${chartStyles.heat}`}
-            role="region"
-            tabIndex={0}
-            aria-label="Sensitivity grid"
+          <MoreDetail
+            summary={`Exact grid to one decimal, ${grid.rents.length} rents × ${grid.vacancies.length} vacancy rates`}
           >
-            <table>
-              <caption>{label} · percentages rounded to one decimal place</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Monthly rent (USD)</th>
-                  {grid.vacancies.map((v) => (
-                    <th key={v} scope="col">
-                      {v.toFixed(1)}% vacancy
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {grid.rents.map((r, ri) => (
-                  <tr key={r}>
-                    <th scope="row">{dollars(r)}</th>
-                    {grid.cells[ri].map((cell, c) => {
-                      const v = value(cell);
-                      const base =
-                        Math.abs(r - (payload.input.income?.monthlyRent ?? NaN)) < 1e-6 &&
-                        Math.abs(grid.vacancies[c] - (payload.input.income?.vacancyRate ?? NaN)) <
-                          1e-6;
-                      return (
-                        <td
-                          key={c}
-                          data-negative={v != null && v < 0}
-                          className={base ? chartStyles.base : undefined}
-                        >
-                          {rate(v, 1)}
-                          {base && <small>Base</small>}
-                          {v === null && <small>{reason(cell)}</small>}
-                        </td>
-                      );
-                    })}
+            <div
+              className={`${styles.table} ${chartStyles.exact} ${chartStyles.heat}`}
+              role="region"
+              tabIndex={0}
+              aria-label="Sensitivity grid"
+            >
+              <table>
+                <caption>{label} · percentages rounded to one decimal place</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Monthly rent (USD)</th>
+                    {grid.vacancies.map((v) => (
+                      <th key={v} scope="col">
+                        {v.toFixed(1)}% vacancy
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {grid.rents.map((r, ri) => (
+                    <tr key={r}>
+                      <th scope="row">{dollars(r)}</th>
+                      {grid.cells[ri].map((cell, c) => {
+                        const v = value(cell);
+                        const base =
+                          Math.abs(r - (payload.input.income?.monthlyRent ?? NaN)) < 1e-6 &&
+                          Math.abs(grid.vacancies[c] - (payload.input.income?.vacancyRate ?? NaN)) <
+                            1e-6;
+                        return (
+                          <td
+                            key={c}
+                            data-negative={v != null && v < 0}
+                            className={base ? chartStyles.base : undefined}
+                          >
+                            {rate(v, 1)}
+                            {base && <small>Base</small>}
+                            {v === null && <small>{reason(cell)}</small>}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </MoreDetail>
         </>
       ) : (
-        <p>
+        <p className={d.paused}>
           {stale
-            ? 'Recalculate base assumptions before running sensitivity.'
-            : 'Update sensitivity to see results for these ranges.'}
+            ? 'Sensitivity is paused until the assumptions flagged above are corrected.'
+            : calculation.error
+              ? 'No sensitivity grid for these ranges. Correct them and update again.'
+              : 'Not applied yet. Press Update sensitivity to see results for these ranges.'}
         </p>
       )}
       <p className={styles.notice}>

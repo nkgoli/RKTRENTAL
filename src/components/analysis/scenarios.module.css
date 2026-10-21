@@ -1,4 +1,4 @@
-﻿.scenarios {
+.scenarios {
   min-width: 0;
   display: grid;
   gap: 20px;
@@ -10,6 +10,7 @@
 .scenarios fieldset {
   display: grid;
   gap: 12px;
+  min-width: 0;
 }
 .scenarios summary {
   overflow-wrap: anywhere;
@@ -27,4 +28,106 @@
 .scenarios dd {
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+/* Grid cards let wide tables scroll inside them instead of widening the page. */
+.scenarios,
+.intro,
+.example,
+.exact,
+.editors {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Intro card: one sentence, basis tags, the add actions, then rules and examples. */
+.intro {
+  display: grid;
+  gap: 12px;
+}
+.intro h2 {
+  margin: 0;
+}
+.intro p {
+  margin: 4px 0 0;
+  color: var(--design-muted);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+.actions p {
+  margin: 0;
+  font-size: 13px;
+}
+.rules {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--design-muted);
+}
+.example {
+  display: grid;
+  gap: 12px;
+}
+.example h4 {
+  margin: 0;
+}
+.example > button {
+  justify-self: start;
+}
+.paused h3,
+.exact h3,
+.editors > h3 {
+  margin: 0;
+}
+.paused p {
+  margin: 4px 0 0;
+  color: var(--design-muted);
+}
+.exact {
+  display: grid;
+  gap: 8px;
+}
+.editors {
+  display: grid;
+  gap: 12px;
+}
+.hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--design-muted);
+}
+.nameRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+}
+.nameRow > label {
+  flex: 1 1 240px;
+}
+.group {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.group h4 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--design-muted);
+}
+.group label small {
+  font-weight: 400;
+  color: var(--design-muted);
+}
+.group label[data-overridden] > span {
+  font-weight: 600;
+  color: var(--design-primary);
 }

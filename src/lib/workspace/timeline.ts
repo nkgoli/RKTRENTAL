@@ -1,6 +1,6 @@
 /**
- * Pure rules for the Overview unit timeline: each unit's leases as past / current / next / draft bars
- * and the vacant gaps between them, positioned as percentages of one shared date axis.
+ * Pure rules for the Overview lease summary: each unit's leases as past / current / next / draft
+ * entries, with date-relative wording derived from the supplied timeline date.
  */
 export type TimelineLease = {
   id: string;
@@ -26,6 +26,8 @@ export type TimelineSegment = {
   leaseId?: string;
   tenantName?: string | null;
   monthlyRent?: number;
+  /** Original lease status, retained so terminal leases can say Ended/Terminated. */
+  status?: TimelineLease['status'];
 };
 
 export type TimelineRow = { unitId: string; label: string; segments: TimelineSegment[] };
@@ -33,6 +35,8 @@ export type TimelineRow = { unitId: string; label: string; segments: TimelineSeg
 export type Timeline = {
   start: Date;
   end: Date;
+  /** The supplied "now" date, normalized to UTC midnight. */
+  today: Date;
   /** Percentage position of today on the axis. */
   todayPct: number;
   rows: TimelineRow[];
@@ -41,12 +45,93 @@ export type Timeline = {
 const DAY = 86_400_000;
 const utcDay = (date: Date) => Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
 
+/** Whole days from one calendar day to another, independent of the local time zone. */
+export function daysBetween(from: Date, to: Date): number {
+  return Math.round((utcDay(to) - utcDay(from)) / DAY);
+}
+
 export function leaseKind(lease: Pick<TimelineLease, 'status' | 'startDate' | 'endDate'>, today: number): SegmentKind {
   if (lease.status === 'DRAFT') return 'draft';
   if (lease.status === 'ENDED' || lease.status === 'TERMINATED') return 'past';
   if (lease.endDate.getTime() < today) return 'past';
   if (lease.startDate.getTime() > today) return 'next';
   return 'current';
+}
+
+const statusLabels: Record<SegmentKind, string> = {
+  current: 'Current',
+  next: 'Upcoming',
+  draft: 'Draft',
+  past: 'Past',
+  vacant: 'Vacant',
+};
+
+/** A lease that ended before its scheduled term, or was terminated. */
+export function isTerminalStatus(status: TimelineLease['status'] | undefined): status is 'ENDED' | 'TERMINATED' {
+  return status === 'ENDED' || status === 'TERMINATED';
+}
+
+/** Explicit, text-first status for a lease or unit. Terminal leases keep their own wording. */
+export function leaseStatusLabel(kind: SegmentKind, status?: TimelineLease['status']): string {
+  if (kind === 'past' && status === 'ENDED') return 'Ended';
+  if (kind === 'past' && status === 'TERMINATED') return 'Terminated';
+  return statusLabels[kind];
+}
+
+function months(days: number): string {
+  const count = Math.max(1, Math.round(days / 30.44));
+  return `${count} month${count === 1 ? '' : 's'}`;
+}
+
+/**
+ * Date-relative wording for a lease, always measured from the timeline's supplied date.
+ * A lease that ends today stays current and reads "Ends today"; a lease that ended today
+ * reads "Ended today". A terminal lease keeps its own status wording and never measures
+ * elapsed time from a scheduled end date that may not be the actual ending date.
+ */
+export function leaseTiming(
+  kind: SegmentKind,
+  start: Date,
+  end: Date,
+  today: Date,
+  status?: TimelineLease['status'],
+): string {
+  const startDays = daysBetween(today, start);
+  const endDays = daysBetween(today, end);
+  switch (kind) {
+    case 'current':
+      if (endDays <= 0) return 'Ends today';
+      if (endDays === 1) return 'Ends tomorrow';
+      if (endDays < 60) return `Ends in ${endDays} days`;
+      return `${months(endDays)} remaining`;
+    case 'next':
+      if (startDays <= 0) return 'Starts today';
+      if (startDays === 1) return 'Starts tomorrow';
+      if (startDays < 60) return `Starts in ${startDays} days`;
+      return `Starts in ${months(startDays)}`;
+    case 'past':
+      if (isTerminalStatus(status)) {
+        const label = status === 'ENDED' ? 'Ended' : 'Terminated';
+        return endDays > 0 ? `${label} early` : label;
+      }
+      if (endDays === 0) return 'Ended today';
+      if (endDays === -1) return 'Ended yesterday';
+      if (endDays > -60) return `Ended ${Math.abs(endDays)} days ago`;
+      return `Ended ${months(Math.abs(endDays))} ago`;
+    case 'draft':
+      if (startDays > 0) return `Starts in ${startDays < 60 ? `${startDays} days` : months(startDays)} · not signed`;
+      return 'Not yet signed';
+    case 'vacant':
+      return 'No lease on file';
+  }
+}
+
+/** The unit's present state: a current lease wins, then an upcoming one, then a draft. */
+export function unitLeaseStatus(segments: TimelineSegment[]): SegmentKind {
+  if (segments.some((segment) => segment.kind === 'current')) return 'current';
+  if (segments.some((segment) => segment.kind === 'next')) return 'next';
+  if (segments.some((segment) => segment.kind === 'draft')) return 'draft';
+  return 'vacant';
 }
 
 export function buildTimeline(units: TimelineUnit[], leases: TimelineLease[], now: Date): Timeline {
@@ -64,7 +149,7 @@ export function buildTimeline(units: TimelineUnit[], leases: TimelineLease[], no
     end: new Date(end),
     left: pct(clamp(start)),
     width: Math.max(pct(clamp(end)) - pct(clamp(start)), 0.8),
-    ...(lease ? { leaseId: lease.id, tenantName: lease.tenantName, monthlyRent: lease.monthlyRent } : {}),
+    ...(lease ? { leaseId: lease.id, tenantName: lease.tenantName, monthlyRent: lease.monthlyRent, status: lease.status } : {}),
   });
 
   const rows = units.map((unit): TimelineRow => {
@@ -89,5 +174,5 @@ export function buildTimeline(units: TimelineUnit[], leases: TimelineLease[], no
     return { unitId: unit.id, label: unit.label, segments };
   });
 
-  return { start: new Date(axisStart), end: new Date(axisEnd), todayPct: pct(today), rows };
+  return { start: new Date(axisStart), end: new Date(axisEnd), today: new Date(today), todayPct: pct(today), rows };
 }

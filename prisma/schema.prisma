@@ -83,6 +83,73 @@ enum ProviderKind {
   SCREENING
   COMPS
   EMAIL
+  SMS
+}
+
+enum ReminderChannel {
+  EMAIL
+  SMS
+}
+
+enum ReminderAttemptStatus {
+  READY
+  SENDING
+  MOCK_RECORDED
+  ACCEPTED
+  DELIVERED
+  FAILED
+  UNCERTAIN
+  CANCELLED
+}
+
+// Immutable rendered preview and dispatch operation. Recipient snapshots survive contact changes.
+model PaymentReminderPreview {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  managerId      String
+  manager        User         @relation(fields: [managerId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  leaseId        String
+  lease          Lease        @relation(fields: [leaseId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  propertyId     String
+  unitId         String
+  channel        ReminderChannel
+  fingerprint    String
+  snapshot       Json
+  createdAt      DateTime     @default(now())
+  expiresAt      DateTime
+  dispatchedAt   DateTime?
+  idempotencyKey String?
+  dedupeKey      String?      @unique
+  attempts       PaymentReminderAttempt[]
+
+  @@unique([id, organizationId])
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, leaseId, createdAt])
+}
+
+model PaymentReminderAttempt {
+  id             String                  @id @default(cuid())
+  organizationId String
+  previewId      String
+  preview        PaymentReminderPreview  @relation(fields: [previewId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  tenantId       String
+  recipient      String
+  subject        String
+  body           String                  @db.Text
+  provider       String
+  providerId     String?
+  status         ReminderAttemptStatus   @default(READY)
+  errorCode      String?
+  createdAt      DateTime                 @default(now())
+  startedAt      DateTime?
+  acceptedAt     DateTime?
+  deliveredAt    DateTime?
+  updatedAt      DateTime                 @updatedAt
+
+  @@unique([previewId, recipient])
+  @@unique([provider, providerId])
+  @@index([organizationId, status, createdAt])
 }
 
 enum ProviderConnectionStatus {
@@ -143,6 +210,7 @@ model Organization {
   vendors             Vendor[]
   maintenanceEvents   MaintenanceEvent[]
   emailDeliveries     EmailDelivery[]
+  reminderPreviews    PaymentReminderPreview[]
   providerConnections ProviderConnection[]
   webhookEvents       WebhookEvent[]
   paymentMethods      PaymentMethod[]
@@ -173,6 +241,7 @@ model User {
   tenant                    Tenant?
   maintenanceEvents         MaintenanceEvent[]
   emailNotificationsEnabled Boolean            @default(true)
+  reminderPreviews           PaymentReminderPreview[]
 
   @@unique([organizationId, email])
   @@unique([id, organizationId])
@@ -292,6 +361,8 @@ model Tenant {
   name                         String
   email                        String?
   phone                        String?
+  emailRemindersEnabled        Boolean              @default(true)
+  smsRemindersEnabled          Boolean              @default(false)
   emergencyContactName         String?
   emergencyContactPhone        String?
   emergencyContactRelationship String?
@@ -344,6 +415,7 @@ model Lease {
   charges           Charge[]
   payments          Payment[]
   autopaySettings   AutopaySetting[]
+  reminderPreviews  PaymentReminderPreview[]
   draft             LeaseDraft?
 
   @@unique([id, organizationId])

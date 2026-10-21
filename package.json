@@ -32,10 +32,12 @@
     "@prisma/client": "^6.19.3",
     "bidi-js": "^1.1.0",
     "next": "^15.5.27",
+    "nodemailer": "^10.2.0",
     "pdf-lib": "^1.17.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "regenerator-runtime": "^0.14.1",
+    "twilio": "^6.2.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -46,6 +48,7 @@
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
     "@types/node": "^26.6.5",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "eslint": "^9.39.5",

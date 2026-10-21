@@ -94,7 +94,7 @@ export function UnitFactsCard({ propertyId, unitId, implicit, hasActiveLease, in
 }) {
   const [editing, setEditing] = useState(false);
   return <Card id="unit-facts">
-    <CardHeader title="Unit facts" action={editing ? undefined : <Button type="button" variant="secondary" size="sm" onClick={() => setEditing(true)}>Edit</Button>} />
+    <CardHeader title="Unit facts" action={editing ? undefined : <Button type="button" variant="secondary" size="sm" onClick={() => setEditing(true)}>Edit unit</Button>} />
     {editing
       ? <UnitFactsForm propertyId={propertyId} unitId={unitId} implicit={implicit} hasActiveLease={hasActiveLease} initial={initial} onDone={() => setEditing(false)} />
       : <dl className={styles.facts}>
@@ -121,13 +121,13 @@ export type PropertyFactsValues = {
   ownerId: string | null;
 };
 
-/** Property details link to the full edit page; unit editing remains inline. */
-export function PropertyFactsCard({ propertyId, initial, address, typeLabel, unitSummary, ownerName, footer }: {
+/** Property details are read-only; the workspace header owns the property-edit entry. */
+export function PropertyFactsCard({ initial, address, typeLabel, unitSummary, ownerName, footer }: {
   propertyId: string; initial: PropertyFactsValues; owners: { id: string; name: string }[];
   address: string; typeLabel: string; unitSummary: string; ownerName: string; footer?: ReactNode;
 }) {
   return <Card id="property-facts">
-    <CardHeader title="Property details" action={<a href={`/properties/${propertyId}/edit`} className="btn btn-secondary btn-sm">Edit</a>} />
+    <CardHeader title="Property details" />
     <dl className={styles.facts}>
       <dt>Address</dt><dd>{address}</dd>
       <dt>Type</dt><dd>{typeLabel}</dd>

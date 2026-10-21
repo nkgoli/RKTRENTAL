@@ -147,6 +147,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         eyebrow="Money"
         title="Payments"
         actions={[
+          { label: 'Payment reminders', href: `/notifications?${scopeQuery(scope)}` },
           { label: 'Payment settings', href: '/integrations' },
           {
             label: '+ Record payment',

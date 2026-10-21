@@ -1,36 +1,42 @@
-.timeline { display: grid; gap: 10px; }
-.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 0; list-style: none; color: var(--design-muted); font-size: 12px; }
-.legend li::before { content: ''; display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; vertical-align: -1px; background: var(--seg, #cbd5e1); }
-.legend li[data-kind="current"], .segment[data-kind="current"] { --seg: var(--design-primary); }
-.legend li[data-kind="next"], .segment[data-kind="next"] { --seg: var(--design-accent); }
-.legend li[data-kind="draft"], .segment[data-kind="draft"] { --seg: var(--rr-warn-bg); }
-.legend li[data-kind="past"], .segment[data-kind="past"] { --seg: var(--rr-border); }
-.legend li[data-kind="vacant"], .segment[data-kind="vacant"] { --seg: var(--rr-warn-bg); }
-.rows { display: grid; gap: 6px; }
-.row { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: center; margin: 6px 0; }
-.rowLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; min-height: 36px; display: flex; align-items: center; }
-.rowLabel a { color: var(--design-text); text-decoration: none; }
-.rowLabel a:hover { color: var(--design-primary); }
-.track { position: relative; min-height: 36px; border-radius: 6px; background: var(--design-background); overflow: hidden; }
-.segment { position: absolute; top: 2px; bottom: 2px; display: flex; align-items: center; overflow: hidden; padding: 6px 12px; border-radius: 5px; background: var(--seg); color: var(--design-surface); font-size: 12px; font-weight: 600; text-decoration: none; box-sizing: border-box; min-width: 4px; }
-.segment[data-kind="past"] { color: var(--design-muted); }
-.segment[data-kind="draft"] { border: 1px dashed var(--rr-warn); color: var(--rr-warn); background: var(--rr-warn-bg); }
-.segment[data-kind="vacant"] { border: 1px dashed var(--rr-warn); color: var(--rr-warn); background: var(--rr-warn-bg); }
-.segmentText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.segment:focus-visible { outline: 3px solid var(--design-text); outline-offset: -3px; z-index: 3; }
-.today { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--design-text); box-shadow: 1px 0 0 var(--design-surface); z-index: 2; }
-.axis { position: relative; display: flex; justify-content: space-between; margin: 10px 0 0 56px; color: var(--design-muted); font-size: 11px; }
-.todayLabel { position: absolute; transform: translateX(-50%); color: var(--design-text); font-weight: 600; }
+.timeline { display: grid; gap: 10px; min-width: 0; }
+.asOf { margin: 0; color: var(--design-muted); font-size: 12px; }
+.rows { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; min-width: 0; }
+.row { display: grid; gap: 8px; padding: 14px 0; border-top: 1px solid var(--rr-border); min-width: 0; }
+.row:first-child { border-top: 0; padding-top: 0; }
+.rowHead { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; min-width: 0; }
+.unitLabel { font: 600 14px/1.3 var(--design-heading-font); color: var(--design-text); overflow-wrap: anywhere; min-width: 0; }
+.unitLabel a { color: inherit; text-decoration: none; }
+.unitLabel a:hover { color: var(--design-primary); text-decoration: underline; }
+.lease { display: grid; gap: 6px; min-width: 0; }
+.leaseTop { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; min-width: 0; }
+.tenant { font-size: 14px; font-weight: 600; color: var(--design-text); overflow-wrap: anywhere; }
+.timing { font-size: 13px; color: var(--design-muted); overflow-wrap: anywhere; }
+.viewLease { margin-left: auto; font-size: 13px; font-weight: 600; min-height: 36px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.viewLease::after { content: '→'; font-size: 14px; }
+.dates { display: flex; flex-wrap: wrap; gap: 4px 24px; margin: 0; }
+.dates > div { display: grid; gap: 1px; min-width: 0; }
+.dates dt { color: var(--design-muted); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.dates dd { margin: 0; font-size: 13px; font-weight: 600; color: var(--design-text); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.vacant { display: flex; align-items: center; gap: 6px 16px; flex-wrap: wrap; font-size: 13px; color: var(--design-muted); overflow-wrap: anywhere; }
+.vacant strong { color: var(--design-text); font-weight: 600; }
+.createLease { font-size: 13px; font-weight: 600; min-height: 36px; display: inline-flex; align-items: center; }
+.history { border-top: 1px dashed var(--rr-border); padding-top: 4px; }
+.history > summary, .more > summary { cursor: pointer; color: var(--design-primary); font-size: 13px; font-weight: 600; min-height: 36px; display: flex; align-items: center; gap: 6px; list-style: none; }
+.history > summary::-webkit-details-marker, .more > summary::-webkit-details-marker { display: none; }
+.history > summary::after, .more > summary::after { content: '+'; margin-left: auto; font-size: 16px; line-height: 1; }
+.history[open] > summary::after, .more[open] > summary::after { content: '−'; }
+.historyList { display: grid; gap: 0; margin: 2px 0 0; padding: 0; list-style: none; }
+.historyItem { padding: 10px 0; border-top: 1px solid var(--rr-border); }
+.more { margin-top: 2px; }
+.empty { margin: 0; color: var(--design-muted); font-size: 13px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.unitLabel a:focus-visible, .viewLease:focus-visible, .createLease:focus-visible, .history > summary:focus-visible, .more > summary:focus-visible { outline: 3px solid var(--design-primary); outline-offset: 3px; border-radius: 4px; }
 @media (max-width: 640px) {
-  .row { grid-template-columns: 44px minmax(0, 1fr); gap: 8px; }
-  .rowLabel, .track { min-height: 44px; }
-  .segment { padding: 8px; }
-  .axis { margin-left: 52px; }
+  .row { padding: 12px 0; }
+  .dates { gap: 4px 16px; }
+  .viewLease, .createLease, .history > summary, .more > summary { min-height: 44px; }
 }
 @media (forced-colors: active) {
-  .segment, .track { border: 1px solid CanvasText; }
-  .today { background: CanvasText; }
+  .row, .historyItem { border-color: CanvasText; }
+  .history > summary, .more > summary { color: LinkText; }
 }
-.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.more { margin-top: 10px; }
-.more > summary { cursor: pointer; color: var(--design-primary); font-size: 13px; font-weight: 600; margin-bottom: 10px; }

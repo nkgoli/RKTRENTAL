@@ -2,6 +2,7 @@ import { db } from '@/lib/db/client';
 import { unitScopeWhere, type ScopeFilter } from '@/lib/workspace/scope';
 import { ensureRentCharges, loadPropertyLedger } from '@/lib/ledger';
 import { buildTimeline, type Timeline } from './timeline';
+import { reminderContent } from '@/lib/notifications/reminder-content';
 
 /** Timeline for a property (one row per unit) or, with a unit in scope, for that unit alone. */
 export async function loadWorkspaceTimeline(organizationId: string, scope: ScopeFilter, now = new Date()): Promise<Timeline> {
@@ -31,12 +32,34 @@ export async function loadWorkspaceTimeline(organizationId: string, scope: Scope
   );
 }
 
-export type PaymentsMonth = { dueCents: number; paidCents: number; outstandingCents: number; lateCount: number; hasCharges: boolean };
+export type PaymentsMonth = { dueCents: number; paidCents: number; outstandingCents: number; lateCount: number; hasCharges: boolean; overdue?: { amountCents: number; leaseCount: number } };
+
+/** Includes former leases with arrears. Uses the dispatch service's exact eligibility rules. */
+export async function loadReminderLeases(organizationId: string, scope: ScopeFilter, now = new Date()) {
+  const leases = await db.lease.findMany({
+    where: { organizationId, status: { not: 'DRAFT' }, ...unitScopeWhere(scope) },
+    include: {
+      unit: { include: { property: true } },
+      tenants: { include: { tenant: { include: { user: true } } } },
+      charges: { orderBy: { id: 'asc' } },
+      payments: { orderBy: { id: 'asc' } },
+    },
+    orderBy: [{ startDate: 'desc' }, { id: 'asc' }],
+  });
+  return leases.map((lease) => ({
+    lease,
+    EMAIL: reminderContent(lease, 'EMAIL', now).snapshot,
+    SMS: reminderContent(lease, 'SMS', now).snapshot,
+  }));
+}
 
 /** This month's charges and what was collected against them, from the same ledger the Payments tab uses. */
 export async function loadPaymentsMonth(organizationId: string, scope: ScopeFilter, now = new Date()): Promise<PaymentsMonth> {
   await ensureRentCharges(organizationId, now);
-  const ledger = await loadPropertyLedger(organizationId, scope, now);
+  const [ledger, reminders] = await Promise.all([
+    loadPropertyLedger(organizationId, scope, now),
+    loadReminderLeases(organizationId, scope, now),
+  ]);
   const rows = ledger.groups
     .filter((group) => group.active)
     .flatMap((group) => group.rows)
@@ -49,5 +72,9 @@ export async function loadPaymentsMonth(organizationId: string, scope: ScopeFilt
     outstandingCents: Math.max(dueCents - paidCents, 0),
     lateCount: rows.filter((row) => row.status === 'LATE').length,
     hasCharges: rows.length > 0,
+    overdue: {
+      amountCents: reminders.reduce((sum, row) => sum + row.EMAIL.amountCents, 0),
+      leaseCount: reminders.filter((row) => row.EMAIL.amountCents > 0).length,
+    },
   };
 }

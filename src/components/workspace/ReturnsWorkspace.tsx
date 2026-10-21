@@ -38,6 +38,7 @@ export function ReturnsWorkspace({
         <a href={`/roi-analysis?${new URLSearchParams({ property: propertyId, view: 'actual', ...periodParams(returns.period) })}`}>
           Compare {propertyName} with projections
         </a>
+        {returns.unitId && ' Projections cover the whole property.'}
       </p>
       <div className="kpis">
         <KpiCard

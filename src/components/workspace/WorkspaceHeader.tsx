@@ -59,7 +59,6 @@ export function WorkspaceHeader({ scope, units, coverKind, coverSrc }: {
       {propertyTypeLabel(scope) === 'Multi-unit' && <UnitSwitcher propertyName={scope.propertyName} units={units} />}
       <div className={styles.headerActions}>
         <Link className="btn btn-secondary btn-sm" href={`/properties/${scope.propertyId}/edit`}>Edit property</Link>
-        <Link className="btn btn-ghost btn-sm" href={`/roi-analysis?property=${scope.propertyId}`}>Open ROI analysis ↗</Link>
       </div>
     </div>
     <div className={styles.cover}><Cover kind={coverKind ?? (scope.activeUnitCount === 1 ? 'house' : 'apartment')} src={coverSrc} /></div>

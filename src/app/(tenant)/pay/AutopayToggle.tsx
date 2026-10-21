@@ -11,12 +11,14 @@ export function AutopayToggle({
   leaseId,
   enabled,
   paymentMethodId,
+  paymentMethodLabel,
   monthlyRentCents,
   rentDueDay,
 }: {
   leaseId: string;
   enabled: boolean;
   paymentMethodId: string | null;
+  paymentMethodLabel?: string;
   monthlyRentCents: number;
   rentDueDay: number;
 }) {
@@ -29,7 +31,11 @@ export function AutopayToggle({
   const toggle = (next: boolean) => {
     if (pending) return;
     if (!hasMethod && next) {
-      setError('Add a payment method before turning on autopay.');
+      setError(
+        paymentMethodLabel
+          ? `Save ${paymentMethodLabel} using Add a payment method before turning on autopay.`
+          : 'Add a payment method before turning on autopay.',
+      );
       return;
     }
     setError(null);
@@ -90,10 +96,12 @@ export function AutopayToggle({
           : error
             ? error
             : on
-              ? 'Autopay is on. You can pause anytime before the due date.'
+              ? `Autopay is on${paymentMethodLabel ? ` with ${paymentMethodLabel}` : ''}. You can pause anytime before the due date.`
               : hasMethod
-                ? 'Turn on autopay to never miss a due date. You can pause anytime before the due date.'
-                : 'Add a payment method above, then turn on autopay to never miss a due date.'}
+                ? `Turn on autopay${paymentMethodLabel ? ` with ${paymentMethodLabel}` : ''}. You can pause anytime before the due date.`
+                : paymentMethodLabel
+                  ? `${paymentMethodLabel} is selected for this payment. Save it using Add a payment method to use it for autopay.`
+                  : 'Save a payment method above to use it for autopay.'}
       </p>
     </section>
   );

@@ -7,21 +7,21 @@ import type { AuthRole, AuthSession } from './session';
 export async function requireRole(...roles: AuthRole[]): Promise<AuthSession> {
   const session = await getSession();
   if (!session) redirect('/sign-in');
-  if (!roles.includes(session.role)) redirect(roleHome(session.role));
+  if (!roles.includes(session.role)) redirect(`${roleHome(session.role)}?notice=role`);
   return session;
 }
 
 export async function requireManagerRole(): Promise<AuthSession> {
   const session = await getSession();
   if (!session) redirect('/sign-in');
-  if (!canAccessRole(session.role, 'MANAGER')) redirect(roleHome(session.role));
+  if (!canAccessRole(session.role, 'MANAGER')) redirect(`${roleHome(session.role)}?notice=role`);
   return session;
 }
 
 export async function requireManagerWriteRole(): Promise<AuthSession> {
   const session = await getSession();
   if (!session) redirect('/sign-in');
-  if (!canWriteAsRole(session.role)) redirect(roleHome(session.role));
+  if (!canWriteAsRole(session.role)) redirect(`${roleHome(session.role)}?notice=role`);
   return session;
 }
 

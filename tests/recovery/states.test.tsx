@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { EmptyState, LoadingState } from '@/components/RouteStates';
 import { RouteError } from '@/components/RouteError';
 import ManagerError from '@/app/(manager)/error';
@@ -14,6 +14,8 @@ import PublicNotFound from '@/app/not-found';
 
 const error = Object.assign(new Error('test failure'), { digest: 'test-digest' });
 const reset = () => {};
+
+vi.mock('@/lib/auth/server-session', () => ({ getSession: async () => null }));
 
 it('renders the shared error state with retry and a boundary-specific return link', () => {
   const html = renderToStaticMarkup(
@@ -77,7 +79,7 @@ it('announces loading with a visible label and skeleton regions', () => {
   expect(html).toContain('aria-hidden="true"');
 });
 
-it('keeps manager, tenant and public recovery destinations distinct', () => {
+it('keeps manager, tenant and public recovery destinations distinct', async () => {
   const managerError = renderToStaticMarkup(<ManagerError error={error} reset={reset} />);
   expect(managerError).toContain('<h2>Something went wrong</h2>');
   expect(managerError).toContain('href="/dashboard"');
@@ -103,10 +105,10 @@ it('keeps manager, tenant and public recovery destinations distinct', () => {
   expect(tenantNotFound).toContain('href="/home"');
   expect(tenantNotFound).toContain('Back to home');
 
-  const publicNotFound = renderToStaticMarkup(<PublicNotFound />);
+  const publicNotFound = renderToStaticMarkup(await PublicNotFound());
   expect(publicNotFound).toContain('<h1>Page not found</h1>');
-  expect(publicNotFound).toContain('href="/"');
-  expect(publicNotFound).toContain('Return to your account');
+  expect(publicNotFound).toContain('href="/sign-in"');
+  expect(publicNotFound).toContain('Sign in');
 });
 
 it('renders loading states for every boundary', () => {

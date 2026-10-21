@@ -47,13 +47,15 @@ it('renders live history, tenant-only comments and authorized photo routes', asy
     'Live vendor',
     'Your requests (2)',
     'I will be home',
-    'Comment on Repair one',
+    'Add a comment to Repair one',
     '/api/files/own-photo/preview',
     '/lease/photos/unit-photo',
   ])
     expect(html).toContain(text);
   expect(html).not.toContain('forbidden-photo');
-  expect(html).not.toContain('Comment on Repair two');
+  expect(html).not.toContain('Add a comment to Repair two');
+  expect(html).toContain('aria-label="Repair stages"');
+  expect(html).toContain('Scheduled');
   expect(html.match(/role="progressbar"/g)).toHaveLength(1);
   expect(html).toContain('Tenant portal / Repairs');
   expect(html).not.toContain('Design reference');

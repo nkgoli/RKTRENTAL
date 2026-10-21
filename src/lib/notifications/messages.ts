@@ -6,7 +6,8 @@ import {
   type LedgerPayment,
 } from '@/lib/ledger/core';
 
-export type MailKind = 'RENT_DUE' | 'RENT_LATE' | 'REPAIR_UPDATE' | 'LEASE_RENEWAL';
+export type MailKind =
+  'RENT_DUE' | 'RENT_LATE' | 'REPAIR_UPDATE' | 'LEASE_RENEWAL' | 'PASSWORD_RESET';
 export type EmailMessage = {
   organizationId: string;
   eventKey: string;

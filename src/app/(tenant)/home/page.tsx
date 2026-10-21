@@ -1,19 +1,14 @@
 import Link from 'next/link';
-import { Badge } from '@/components/ui/Badge';
-import { Alert, Progress } from '@/components/ui/Feedback';
+import { Alert } from '@/components/ui/Feedback';
 import { EmptyState } from '@/components/RouteStates';
 import { requireTenantRole } from '@/lib/auth/access';
 import { formatUsd } from '@/lib/ledger/core';
-import { formatDate } from '@/lib/properties/format';
-import {
-  loadTenantHome,
-  repairProgress,
-  repairStatusLabel,
-  type TenantHomeView,
-} from '@/lib/tenant-portal';
+import { loadTenantHome, type TenantHomeView } from '@/lib/tenant-portal';
 
 import styles from '../portal.module.css';
 import { PortalIcon } from './PortalIcon';
+import { RenewalNotice } from './RenewalNotice';
+import { RepairRequestCard } from '../_components/RepairRequestCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -95,8 +90,8 @@ export default async function TenantHomePage() {
   const repair = view.openRepair;
 
   return (
-    <div className={styles.homeLease}>
-      <div>
+    <div className={`${styles.homeLease} ${styles.homeGrid}`}>
+      <div className={styles.homeHeading}>
         <p className="muted" style={{ fontSize: 13 }}>
           Hi {view.tenantName} · {view.premises}
         </p>
@@ -108,113 +103,100 @@ export default async function TenantHomePage() {
         </h1>
       </div>
 
-      <RentHero view={view} />
+      <div className={styles.homePrimary}>
+        <RentHero view={view} />
 
-      <section aria-labelledby="quick-actions">
-        <h2 id="quick-actions" style={{ fontSize: 'var(--rr-h3)', marginBottom: 8 }}>
-          Quick actions
-        </h2>
-        <div className={styles.quickActions}>
-          <Link className="tile" href="/pay">
-            <span className="tile-icon">
-              <PortalIcon name="pay" />
-            </span>
-            Pay rent
-            <small className="muted" style={{ fontWeight: 400 }}>
-              Bank or card · autopay
-            </small>
-          </Link>
-          <Link className="tile" href="/lease">
-            <span className="tile-icon">
-              <PortalIcon name="lease" />
-            </span>
-            My lease
-            <small className="muted" style={{ fontWeight: 400 }}>
-              {formatDate(view.term.start)} – {formatDate(view.term.end)}
-            </small>
-          </Link>
-          <Link className="tile" href="/repairs">
-            <span className="tile-icon">
-              <PortalIcon name="repair" />
-            </span>
-            Request repair
-            <small className="muted" style={{ fontWeight: 400 }}>
-              Photos &amp; priority
-            </small>
-          </Link>
-          <Link className="tile" href="/lease#documents">
-            <span className="tile-icon">
-              <PortalIcon name="folder" />
-            </span>
-            Documents
-            <small className="muted" style={{ fontWeight: 400 }}>
-              Lease, inspection &amp; notices
-            </small>
-          </Link>
-        </div>
-      </section>
-
-      {view.notice && (
-        <Alert tone={view.notice.kind === 'move-out' ? 'warning' : 'info'}>
-          <p>
-            <strong>{view.notice.title}</strong>
-            <br />
-            <span className="muted">{view.notice.body}</span>
-          </p>
-        </Alert>
-      )}
-
-      {repair && (
-        <section className={`card ${styles.repairCard}`} aria-labelledby="open-repair">
-          <div className="card-header" style={{ marginBottom: 8 }}>
-            <h2 id="open-repair" style={{ fontSize: 18 }}>
-              Open repair request
-            </h2>
-            <Badge tone="warning">{repairStatusLabel(repair.status)}</Badge>
-          </div>
-          <p style={{ fontWeight: 600 }}>{repair.title}</p>
-          <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-            Submitted {shortDate(repair.createdAt)}
-            {repair.vendorName ? ' · Vendor assigned' : ''} · {view.managerName} will confirm a
-            visit window.
-          </p>
-          <Progress
-            value={repairProgress(repair.status)}
-            label={`${repair.title} repair progress`}
-            style={{ margin: '12px 0 8px' }}
-          />
-          <div className="row between">
-            <small className="muted">Received → Scheduled → Done</small>
-            <Link href="/repairs" style={{ fontSize: 13, fontWeight: 600 }}>
-              View →
+        <section aria-labelledby="quick-actions">
+          <h2 id="quick-actions" style={{ fontSize: 'var(--rr-h3)', marginBottom: 8 }}>
+            Quick actions
+          </h2>
+          <div className={styles.quickActions}>
+            <Link className="tile" href="/lease">
+              <span className="tile-icon">
+                <PortalIcon name="lease" />
+              </span>
+              My lease
+              <small className="muted" style={{ fontWeight: 400 }}>
+                Terms &amp; details
+              </small>
+            </Link>
+            <Link className="tile" href="/repairs">
+              <span className="tile-icon">
+                <PortalIcon name="repair" />
+              </span>
+              Request repair
+              <small className="muted" style={{ fontWeight: 400 }}>
+                Photos &amp; priority
+              </small>
+            </Link>
+            <Link className="tile" href="/lease#documents">
+              <span className="tile-icon">
+                <PortalIcon name="folder" />
+              </span>
+              Documents
+              <small className="muted" style={{ fontWeight: 400 }}>
+                Lease &amp; notices
+              </small>
             </Link>
           </div>
         </section>
-      )}
 
-      <section aria-labelledby="announcements">
-        <h2 id="announcements" style={{ fontSize: 'var(--rr-h3)', marginBottom: 8 }}>
-          Announcements
-        </h2>
-        {view.activity.length === 0 ? (
-          <p className="muted">Payments and notices will show up here.</p>
-        ) : (
-          // Announcements are a short list, not a stack of coloured banners.
-          <ul className={styles.activity}>
-            {view.activity.slice(0, 4).map((item) => (
-              <li key={item.id} className="list-item" style={{ padding: '8px 0' }}>
-                <span className={styles.activityMark} aria-hidden="true">
-                  {item.tone === 'success' ? '\u2713' : item.tone === 'warning' ? '!' : '\u2026'}
-                </span>
-                <span className="file-meta">
-                  <strong>{item.title}</strong>
-                  <small>{item.detail}</small>
-                </span>
-              </li>
-            ))}
-          </ul>
+        {view.notice?.kind === 'renewal' && (
+          <RenewalNotice
+            notice={view.notice}
+            storageKey={`renewal:${view.leaseId}:${view.term.end.toISOString()}`}
+            contactEmail={view.managerEmail}
+            managerName={view.managerName}
+          />
         )}
-      </section>
+        {view.notice?.kind === 'move-out' && (
+          <Alert tone="warning">
+            <p>
+              <strong>{view.notice.title}</strong>
+              <br />
+              <span className="muted">{view.notice.body}</span>
+            </p>
+          </Alert>
+        )}
+      </div>
+
+      <div className={styles.homeSecondary}>
+        {repair && (
+          <section aria-labelledby="open-repair">
+            <h2 id="open-repair" style={{ fontSize: 18, marginBottom: 8 }}>
+              Open repair request
+            </h2>
+            <RepairRequestCard
+              request={repair}
+              action={<Link href="/repairs">View request →</Link>}
+            />
+          </section>
+        )}
+
+        <section aria-labelledby="announcements">
+          <h2 id="announcements" style={{ fontSize: 'var(--rr-h3)', marginBottom: 8 }}>
+            Announcements
+          </h2>
+          {view.activity.length === 0 ? (
+            <p className="muted">Payments and notices will show up here.</p>
+          ) : (
+            // Announcements are a short list, not a stack of coloured banners.
+            <ul className={styles.activity}>
+              {view.activity.slice(0, 4).map((item) => (
+                <li key={item.id} className="list-item" style={{ padding: '8px 0' }}>
+                  <span className={styles.activityMark} aria-hidden="true">
+                    {item.tone === 'success' ? '\u2713' : item.tone === 'warning' ? '!' : '\u2026'}
+                  </span>
+                  <span className="file-meta">
+                    <strong>{item.title}</strong>
+                    <small>{item.detail}</small>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

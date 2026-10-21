@@ -30,6 +30,14 @@ export async function middleware(request: NextRequest) {
     return response;
   }
   if (!session) redirectUrl.searchParams.set('next', request.nextUrl.pathname);
+  else {
+    redirectUrl.searchParams.set('notice', 'role');
+    console.info('Role access denied', {
+      pathname: request.nextUrl.pathname,
+      role: session.role,
+      requiredRole,
+    });
+  }
   return NextResponse.redirect(redirectUrl);
 }
 

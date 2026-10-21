@@ -13,14 +13,16 @@
   border: 1px solid var(--rr-border);
   border-radius: var(--design-radius);
   background: var(--design-surface);
-  box-shadow: 0 2px 3px #17243b14, 0 9px 24px -8px #17243b14;
+  box-shadow:
+    0 2px 3px #17243b14,
+    0 9px 24px -8px #17243b14;
 }
 
 .cardHead {
   padding: 28px 28px 20px;
   border-bottom: 1px solid var(--rr-border);
   border-radius: var(--design-radius) var(--design-radius) 0 0;
-  background: linear-gradient(125deg, var(--rr-primary-tint), var(--rr-ok-bg));
+  background: var(--design-surface);
 }
 
 .brand {
@@ -60,14 +62,6 @@
 .heading {
   display: grid;
   gap: 8px;
-}
-
-.eyebrow {
-  color: var(--design-muted);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .card h1 {
@@ -121,6 +115,106 @@
   border-color: var(--design-primary);
   outline: 3px solid var(--design-primary);
   outline-offset: 3px;
+}
+
+.field input[aria-invalid='true'] {
+  border-color: var(--design-danger);
+}
+
+.labelRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.labelRow a,
+.textLink {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  color: var(--design-primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+.labelRow a:hover,
+.textLink:hover {
+  text-decoration: underline;
+}
+
+.fieldError {
+  color: var(--design-danger);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.error ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.error a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.form .error {
+  margin-bottom: 0;
+}
+
+.recoverySteps {
+  display: grid;
+  gap: 16px;
+  margin: 0 0 22px;
+  padding-left: 20px;
+  color: var(--design-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.recoverySteps strong {
+  color: var(--design-text);
+}
+
+.confirmation {
+  display: grid;
+  gap: 12px;
+  color: var(--design-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.confirmation h2 {
+  color: var(--design-text);
+  font-family: var(--design-heading-font);
+  font-size: 22px;
+}
+
+.inputHint {
+  color: var(--design-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.showPasswords {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 14px;
+}
+
+.showPasswords input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--design-primary);
 }
 
 .error,

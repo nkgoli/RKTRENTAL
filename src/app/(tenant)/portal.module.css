@@ -29,6 +29,11 @@
   gap: 8px;
   flex-wrap: wrap;
 }
+.fileAction {
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+}
 .photo {
   position: relative;
   aspect-ratio: 4 / 3;
@@ -198,8 +203,36 @@
 }
 .quickActions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+}
+.homePrimary,
+.homeSecondary {
+  display: grid;
+  gap: 20px;
+  align-content: start;
+  min-width: 0;
+}
+.homeHeading {
+  grid-column: 1 / -1;
+}
+.homeLease .quickActions :global(.tile) {
+  font-size: 13px;
+  padding: 10px;
+}
+.homeLease .quickActions small {
+  font-size: 11px;
+}
+@media (min-width: 900px) {
+  .homeGrid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+  .homeGrid .paymentRow {
+    grid-template-columns: 1fr;
+  }
+  .homeGrid .rentHero :global(.amount) {
+    font-size: 38px;
+  }
 }
 .homeLease .quickActions :global(.tile) {
   padding: 14px;

@@ -113,12 +113,13 @@ test('Alex opens the lease, previews and downloads a document, and is refused an
   await seedOtherTenant();
   await signIn(page);
   await page.goto('/lease');
-  await expect(page.getByRole('heading', { name: 'Alex Rivera', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your lease', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Current lease' })).toBeVisible();
   await expect(page.getByText('Dec 1, 2025 – Nov 30, 2026')).toBeVisible();
   await expect(page.getByText('Alex Rivera, Casey Rivera')).toBeVisible();
-  // Alex has not given notice, so the page shows the renewal reminder instead of a move-out date.
-  await expect(page.getByText('Renewal coming up')).toBeVisible();
+  // The detailed reminder lives on Home; Lease keeps renewal as term metadata.
+  await expect(page.getByText('Renewal pending')).toBeVisible();
+  await expect(page.getByText('Renewal coming up')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Lease & documents' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Unit photos' })).toBeVisible();
   await expect(page.locator('.photo img').first()).toBeVisible();

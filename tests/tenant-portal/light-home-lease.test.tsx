@@ -87,6 +87,8 @@ it('renders live balances, pending funds, notices, repair progress and ledger ac
     expect(html).toContain(`href="${href}"`);
   expect(html).not.toContain('Alex Rivera');
   expect(html).toContain('stroke-width="1.7"');
+  expect(html.match(/href="\/pay"/g)).toHaveLength(1);
+  expect(html).not.toContain('>Pay rent<');
 });
 it('renders settled balance and omits absent repair and renewal content', async () => {
   const view = home();
@@ -119,6 +121,7 @@ it('preserves MIME-gated authenticated document links and conditional photo/occu
   expect(html).not.toContain('<dt>Occupants</dt>');
   expect(html).toContain('Live House — Unit 7');
   expect(html).toContain('$2,310.47');
+  expect(html).toContain('Your lease');
 });
 it('retains move-out dates, enabled autopay, empty documents and authenticated photos', async () => {
   loaders.lease.mockResolvedValue({

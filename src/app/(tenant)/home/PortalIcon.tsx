@@ -2,7 +2,7 @@
 export function PortalIcon({
   name,
 }: {
-  name: 'pay' | 'lease' | 'repair' | 'folder' | 'arrow' | 'building';
+  name: 'pay' | 'lease' | 'repair' | 'folder' | 'arrow' | 'building' | 'eye' | 'download';
 }) {
   if (name === 'building')
     return (
@@ -42,6 +42,13 @@ export function PortalIcon({
       )}
       {name === 'folder' && <path d="M3 6h6l2 2h10v12H3z" />}
       {name === 'arrow' && <path d="M5 12h14M14 7l5 5-5 5" />}
+      {name === 'eye' && (
+        <>
+          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z" />
+          <circle cx="12" cy="12" r="3" />
+        </>
+      )}
+      {name === 'download' && <path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" />}
     </svg>
   );
 }

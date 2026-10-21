@@ -1,38 +1,76 @@
-import { Avatar } from '../ui/Badge';
+'use client';
 
-export function AccountMenu({ initials }: { initials: string }) {
+import { useEffect, useRef, useState } from 'react';
+import { useFormStatus } from 'react-dom';
+import { signOutAction } from '@/app/(auth)/sign-out/actions';
+import { Avatar } from '../ui/Badge';
+import styles from './account-menu.module.css';
+
+function SignOutButton() {
+  const { pending } = useFormStatus();
   return (
-    <details style={{ position: 'relative' }}>
-      <summary aria-label="Account menu" style={{ cursor: 'pointer', listStyle: 'none' }}>
-        <Avatar initials={initials} size="sm" />
-      </summary>
-      <div
-        style={{
-          position: 'absolute',
-          right: 0,
-          top: 'calc(100% + 8px)',
-          zIndex: 20,
-          minWidth: 140,
-          padding: 6,
-          border: '1px solid var(--rr-border)',
-          borderRadius: 8,
-          background: 'var(--design-surface)',
-          boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
-        }}
+    <button className="btn btn-ghost btn-block" disabled={pending} aria-busy={pending}>
+      {pending ? 'Signing out…' : 'Sign out'}
+    </button>
+  );
+}
+
+export function AccountMenu({
+  initials,
+  name,
+  description,
+}: {
+  initials: string;
+  name?: string;
+  description?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const dismiss = (event: PointerEvent) => {
+      if (!root.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', dismiss);
+    return () => document.removeEventListener('pointerdown', dismiss);
+  }, [open]);
+  return (
+    <div
+      className={styles.root}
+      ref={root}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && open) {
+          event.preventDefault();
+          setOpen(false);
+          trigger.current?.focus();
+        }
+      }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+      }}
+    >
+      <button
+        ref={trigger}
+        type="button"
+        aria-label="Account menu"
+        aria-expanded={open}
+        className={styles.trigger}
+        onClick={() => setOpen(!open)}
       >
-        <a
-          href="/sign-out"
-          style={{
-            display: 'block',
-            padding: '8px 10px',
-            color: 'var(--design-text)',
-            fontSize: 14,
-            textDecoration: 'none',
-          }}
-        >
-          Sign out
-        </a>
-      </div>
-    </details>
+        <Avatar initials={initials} size="sm" />
+      </button>
+      {open && (
+        <div className={styles.panel}>
+          <div className={styles.identity}>
+            <strong>{name ?? 'Your account'}</strong>
+            {description && <small>{description}</small>}
+          </div>
+          <form action={signOutAction}>
+            <SignOutButton />
+          </form>
+        </div>
+      )}
+    </div>
   );
 }

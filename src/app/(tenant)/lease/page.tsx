@@ -19,7 +19,7 @@ export default async function TenantLeasePage() {
   if (!view) {
     return (
       <div className={styles.homeLease}>
-        <h1 style={{ fontSize: 'var(--rr-h1)' }}>My lease</h1>
+        <h1 style={{ fontSize: 'var(--rr-h1)' }}>Your lease</h1>
         <EmptyState
           title="No active lease yet"
           description="Your property manager will add it here once it is set up."
@@ -36,21 +36,15 @@ export default async function TenantLeasePage() {
     <div className={styles.homeLease}>
       <div>
         <h1 style={{ fontSize: 'var(--rr-h1)' }}>
-          {view.tenantName}
+          Your lease
           <span className={styles.spark} aria-hidden="true">
             ✳
           </span>
         </h1>
         <p className="muted" style={{ fontSize: 13, marginTop: 2 }}>
-          Managed by {view.managerName}
+          {view.premises} · Managed by {view.managerName}
         </p>
       </div>
-
-      <nav className={styles.sectionLinks} aria-label="Lease sections">
-        <a href="#overview">Current lease</a>
-        <a href="#documents">Documents ({view.documents.length})</a>
-        {view.photos.length > 0 && <a href="#photos">Unit photos</a>}
-      </nav>
 
       <section
         className={`card ${styles.currentLease}`}
@@ -86,6 +80,11 @@ export default async function TenantLeasePage() {
           <dt>Term</dt>
           <dd>
             {formatDate(view.term.start)} – {formatDate(view.term.end)}
+            {view.notice?.kind === 'renewal' && (
+              <small className="muted" style={{ display: 'block', marginTop: 4 }}>
+                Renewal pending
+              </small>
+            )}
           </dd>
           <dt>Rent</dt>
           <dd>{formatUsd(view.monthlyRentCents)} / month</dd>
@@ -112,7 +111,7 @@ export default async function TenantLeasePage() {
         </dl>
       </section>
 
-      {view.notice && (
+      {view.notice?.kind === 'move-out' && (
         <section
           className={view.notice.kind === 'move-out' ? 'alert warning' : 'alert'}
           role="status"
@@ -134,9 +133,9 @@ export default async function TenantLeasePage() {
           <h2 id="lease-documents" style={{ fontSize: 18 }}>
             Lease &amp; documents
           </h2>
-          <Badge tone="info">
+          <span className="muted" style={{ fontSize: 13 }}>
             {view.documents.length} {view.documents.length === 1 ? 'file' : 'files'}
-          </Badge>
+          </span>
         </div>
         {view.documents.length === 0 && (
           <p className="muted">
@@ -159,21 +158,21 @@ export default async function TenantLeasePage() {
               <span className={styles.documentActions}>
                 {canPreview(doc.mimeType) && (
                   <a
-                    className="btn btn-ghost btn-sm"
+                    className={`btn btn-ghost ${styles.fileAction}`}
                     href={doc.previewUrl}
                     target="_blank"
                     rel="noreferrer"
                     aria-label={`Preview ${doc.name} (opens in a new tab)`}
                   >
-                    Preview
+                    <PortalIcon name="eye" />
                   </a>
                 )}
                 <a
-                  className="btn btn-secondary btn-sm"
+                  className={`btn btn-ghost ${styles.fileAction}`}
                   href={doc.downloadUrl}
                   aria-label={`Download ${doc.name}`}
                 >
-                  Download
+                  <PortalIcon name="download" />
                 </a>
               </span>
             </div>

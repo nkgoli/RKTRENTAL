@@ -25,7 +25,7 @@ test('tenant cannot open a manager route or another tenant lease', async ({ page
   await expect(page).toHaveURL(/\/home$/);
 
   await page.goto('/dashboard');
-  await expect(page).toHaveURL(/\/home$/);
+  await expect(page).toHaveURL(/\/home\?notice=role$/);
 
   const response = await page.request.get('/api/auth/leases/seed-lease-maple-1');
   expect(response?.status()).toBe(404);

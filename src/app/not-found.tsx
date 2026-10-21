@@ -1,8 +1,21 @@
 import { EmptyState } from '@/components/RouteStates';
 import { Icon } from '@/components/shell/Icons';
+import { getSession } from '@/lib/auth/server-session';
+import { roleHome } from '@/lib/auth/policy';
+import { GoBackLink } from './(auth)/GoBackLink';
 import styles from './(auth)/auth.module.css';
 
-export default function NotFound() {
+export default async function NotFound() {
+  const session = await getSession();
+  const href = session ? roleHome(session.role) : '/sign-in';
+  const action =
+    session?.role === 'MANAGER'
+      ? 'Back to dashboard'
+      : session?.role === 'TENANT'
+        ? 'Back to home'
+        : session
+          ? 'Back to your account'
+          : 'Sign in';
   return (
     <main className={styles.page}>
       <div className={styles.publicState}>
@@ -15,15 +28,14 @@ export default function NotFound() {
           </span>
         </div>
         <EmptyState
-          eyebrow="Page unavailable"
-          icon="folder"
           headingLevel={1}
           title="Page not found"
           description="This link may have changed or the page is no longer available."
-          action="Return to your account"
-          href="/"
+          action={action}
+          href={href}
           variant="primary"
         />
+        <GoBackLink fallback={href} />
       </div>
     </main>
   );

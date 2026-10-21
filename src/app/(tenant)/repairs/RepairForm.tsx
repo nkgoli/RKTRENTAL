@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { FileUploader } from '@/components/upload';
+import { Field } from '@/components/ui/Forms';
 import { CATEGORIES, ENTRY_OPTIONS, MAX_PHOTOS, URGENCY_OPTIONS } from './format';
 import styles from './repairs.module.css';
 
@@ -14,6 +15,7 @@ export function RepairForm() {
       method="post"
       action="/repairs/submit"
       encType="multipart/form-data"
+      noValidate
       aria-busy={pending}
       onSubmit={(event) => {
         const description = event.currentTarget.elements.namedItem(
@@ -40,11 +42,18 @@ export function RepairForm() {
           ))}
         </select>
       </label>
-      <div className="field">
-        <label htmlFor="repair-description">What needs fixing?</label>
+      <Field
+        label="What needs fixing?"
+        error={
+          error ? (
+            <span id="repair-error">Describe what needs fixing so the vendor can prepare.</span>
+          ) : undefined
+        }
+      >
         <textarea
           id="repair-description"
           name="description"
+          aria-label="What needs fixing?"
           aria-invalid={error}
           aria-describedby={error ? 'repair-error repair-hint' : 'repair-hint'}
           onChange={() => setError(false)}
@@ -55,15 +64,17 @@ export function RepairForm() {
         <span className="hint" id="repair-hint">
           Add where it is and when it started, so the vendor brings the right parts.
         </span>
-      </div>
-      {error && (
-        <p className={styles.error} id="repair-error" role="alert">
-          Describe what needs fixing before sending your request.
-        </p>
-      )}
+      </Field>
       <section className={styles.upload} aria-labelledby="repair-photos-title">
         <h3 id="repair-photos-title">Photos</h3>
-        <FileUploader kind="photo" formField="photos" max={MAX_PHOTOS} label="Photos" />
+        <FileUploader
+          kind="photo"
+          formField="photos"
+          max={MAX_PHOTOS}
+          label="Photos"
+          hint={`JPG, PNG or HEIC · up to ${MAX_PHOTOS} photos`}
+          showCounter={false}
+        />
       </section>
       <fieldset className={styles.entry}>
         <legend style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Entry permission</legend>

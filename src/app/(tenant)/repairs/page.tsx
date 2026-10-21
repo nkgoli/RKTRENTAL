@@ -1,11 +1,11 @@
-import { Badge, type BadgeTone } from '@/components/ui/Badge';
-import { Alert, Progress } from '@/components/ui/Feedback';
+import { Badge } from '@/components/ui/Badge';
+import { Alert } from '@/components/ui/Feedback';
 import { requireTenantRole } from '@/lib/auth/access';
-import { repairProgress, repairStatusLabel } from '@/lib/tenant-portal';
+import { repairStatusLabel } from '@/lib/tenant-portal';
 import { loadTenantRepairs } from './data';
-import { MAX_PHOTOS, parseDescription } from './format';
+import { MAX_PHOTOS } from './format';
 import { RepairForm } from './RepairForm';
-import { TenantPhoto } from '../TenantPhoto';
+import { RepairRequestCard } from '../_components/RepairRequestCard';
 import portal from '../portal.module.css';
 import styles from './repairs.module.css';
 import { EmptyState } from '@/components/RouteStates';
@@ -32,14 +32,6 @@ const notices: Record<string, { tone: 'success' | 'warning' | 'error'; text: str
     text: 'Your request was sent, but a photo could not be uploaded.',
   },
   'no-lease': { tone: 'warning', text: 'There is no active lease on your account.' },
-};
-
-const statusTone: Record<string, BadgeTone> = {
-  NEW: 'info',
-  ASSIGNED: 'info',
-  IN_PROGRESS: 'warning',
-  DONE: 'success',
-  CANCELLED: 'neutral',
 };
 
 const shortDate = (date: Date) =>
@@ -127,53 +119,27 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
             </p>
           )}
           {view.requests.map((request) => {
-            const { category, text } = parseDescription(request.description);
             const own = request.tenantId === session.tenantId;
             return (
-              <article
-                className={`card ${styles.request}`}
+              <RepairRequestCard
                 key={request.id}
-                id={`request-${request.id}`}
-              >
-                <div className="row between">
-                  <h3>{request.title}</h3>
-                  <Badge tone={statusTone[request.status]}>
-                    {repairStatusLabel(request.status)}
-                  </Badge>
-                </div>
-                <p className="muted" style={{ fontSize: 13, margin: '6px 0 10px' }}>
-                  {category} ·{' '}
-                  {request.status === 'DONE' && request.completedAt
-                    ? `Completed ${shortDate(request.completedAt)}`
-                    : `Submitted ${shortDate(request.createdAt)}`}
-                  {request.vendorName ? ` · Vendor: ${request.vendorName}` : ''}
-                </p>
-                {request.status !== 'CANCELLED' && (
-                  <Progress
-                    value={repairProgress(request.status)}
-                    label={`${request.title} repair progress`}
-                  />
-                )}
-                {text && (
-                  <p style={{ fontSize: 13, marginTop: 8, whiteSpace: 'pre-wrap' }}>{text}</p>
-                )}
-                {visiblePhotos(request.photos).length > 0 && (
-                  <div className={styles.photos}>
-                    {visiblePhotos(request.photos).map(({ id, document }) =>
-                      document ? (
-                        <TenantPhoto
-                          key={id}
-                          alt={`${request.title} photo: ${document.name}`}
-                          src={
-                            document.leaseId
+                request={{
+                  ...request,
+                  photos: visiblePhotos(request.photos).flatMap(({ id, document }) =>
+                    document
+                      ? [
+                          {
+                            id,
+                            alt: `${request.title} photo: ${document.name}`,
+                            src: document.leaseId
                               ? `/api/files/${document.id}/preview`
-                              : `/lease/photos/${document.id}`
-                          }
-                        />
-                      ) : null,
-                    )}
-                  </div>
-                )}
+                              : `/lease/photos/${document.id}`,
+                          },
+                        ]
+                      : [],
+                  ),
+                }}
+              >
                 {request.events.length > 0 && (
                   <ul className={styles.timeline} aria-label="Updates">
                     {request.events.map((event) => (
@@ -197,13 +163,13 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
                   <form className={styles.comment} method="post" action="/repairs/comment">
                     <input type="hidden" name="requestId" value={request.id} />
                     <label className="field" htmlFor={`comment-${request.id}`}>
-                      Comment on {request.title}
+                      Add a comment
                       <input
                         id={`comment-${request.id}`}
                         name="comment"
                         required
                         maxLength={2000}
-                        aria-label={`Comment on ${request.title}`}
+                        aria-label={`Add a comment to ${request.title}`}
                         placeholder="Add a comment"
                       />
                     </label>
@@ -212,7 +178,7 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
                     </button>
                   </form>
                 )}
-              </article>
+              </RepairRequestCard>
             );
           })}
         </div>

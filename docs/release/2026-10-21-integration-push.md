@@ -1,4 +1,4 @@
-﻿# Combined release preflight — 2026-10-21
+# Combined release preflight — 2026-10-21
 
 Verify combined changes and push origin/main is blocked at its required lease integration prerequisite. No release merge or push was attempted. This report preserves the independent preflight for continuation; it does not claim combined-tree verification or delivery.
 

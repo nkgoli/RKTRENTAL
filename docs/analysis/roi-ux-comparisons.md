@@ -59,4 +59,37 @@ precision are unchanged.
 - Vitest: `comparison-charts` + `benchmarks` 20 passed. `workspace`, `actuals-workspace`,
   `rent-comps/workbench`, `realroi-charts` and `chart-data` passed 87 tests. `tsc --noEmit`,
   ESLint and Prettier passed on the changed files.
-- After captures are pending a buildable shared tree (see the Task report).
+- After captures: **incomplete** (see the handoff below).
+
+## Handoff to the final Task: blocking completion checklist
+
+The after verification moves to the final Task (combined-head browser verification). It is
+**not** waived. Do not publish or deliver live until every item passes.
+
+- [ ] **Verify the mobile provenance-disclosure fix at 390 px.** The fix is in `050c2c3`
+      (`.intro` grid `minmax(0, 1fr)` and `min-width: 0`). Open "Where the market figures come
+      from…" on Benchmarks and Compare. Confirm `window.innerWidth` stays 390 (no zoomed-out
+      layout viewport), not only that `scrollWidth <= clientWidth`. The harness now checks both.
+- [ ] **Rerun the full 1440/390 after harness on the combined head:**
+      `node tests/analysis/ux-comparison-runtime.mjs <isolatedBaseUrl> evidence/roi-ux-comparisons/after`.
+      Every check must pass.
+- [ ] **Capture and fix the 404.** Record the failed-resource URL (the harness now logs
+      `m.location().url`), then diagnose and fix the 404 console error seen at 1440.
+- [ ] **Attach passing evidence.** Interaction results (report JSON) and desktop/390
+      screenshots, before live delivery.
+
+### What was actually tested (do not mistake for current verification)
+
+- **Tested build:** `d5e8ff86b68a8077af43005e9ce7f1e9847c6420` in the scratch worktree
+  `.data/verify-comparisons`. Its own `.next` was served on port **3194**, against the scratch
+  database copy on port **5545** (copied from `.data/postgres-5543`). It excludes the parallel
+  core Task's unfinished edits. Results:
+  - 1440 px: every check passed except `no-console-errors-1440` (one 404, URL not recorded).
+  - 390 px: stopped at the Benchmarks disclosure tap. This exposed the zoomed-out layout bug.
+- **Fix commit:** `050c2c35e45822ea6b0af8b74c38158f903534dd`, not built or browser-tested.
+  Rebuilding the scratch worktree at it was refused by the tool runtime.
+- **Evidence:**
+  - `evidence/roi-ux-comparisons/before/`: all checks passed at both widths, on the
+    `dc0991f`-equivalent build served on port 3193.
+  - `evidence/roi-ux-comparisons/after/` and `after.log`: the partial, stale d5e8ff8 run
+    described above.

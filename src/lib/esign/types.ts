@@ -1,6 +1,12 @@
 export type EsignStatusValue = 'NOT_SENT' | 'SENT' | 'PARTIALLY_SIGNED' | 'SIGNED' | 'DECLINED';
 
-export type EsignSigner = { name: string; email: string };
+export type EsignSigner = {
+  name: string;
+  email: string;
+  id?: string;
+  role?: 'OWNER' | 'TENANT';
+  signedAt?: string | null;
+};
 
 export type EsignEnvelope = {
   id: string;
@@ -10,6 +16,9 @@ export type EsignEnvelope = {
   signers: EsignSigner[];
   sentAt: string | null;
   signedAt: string | null;
+  version?: number;
+  snapshotHash?: string;
+  archiveStatus?: string;
 };
 
 export type EsignCallbackPayload = {
@@ -36,6 +45,8 @@ export class EsignError extends Error {
   constructor(
     message: string,
     readonly field?: string,
+    readonly status = 400,
+    readonly code = 'INVALID_SIGNING_REQUEST',
   ) {
     super(message);
     this.name = 'EsignError';

@@ -139,7 +139,9 @@ function fakeDb() {
     $executeRaw: async () => 0,
     charge: {
       findMany: async ({ where }: { where: { leaseId: string; description: { in: string[] } } }) =>
-        charges.filter((c) => c.leaseId === where.leaseId && where.description.in.includes(c.description)),
+        charges.filter(
+          (c) => c.leaseId === where.leaseId && where.description.in.includes(c.description),
+        ),
       createMany: async ({ data }: { data: (typeof charges)[number][] }) => {
         charges.push(...data);
         return { count: data.length };
@@ -236,22 +238,21 @@ describe('wizard lease creation service', () => {
 });
 
 describe('mock e-signature provider', () => {
-  it('sends, reports status, and completes signing idempotently', async () => {
+  it('cannot send or complete signing outside the durable authenticated service', async () => {
     resetMockEsign();
     const provider = new MockEsignProvider();
-    const sent = await provider.sendForSignature({
-      leaseId: 'lease-1',
-      documentName: 'Signed lease agreement.pdf',
-      signers: [{ name: 'Alex Rivera', email: 'alex@example.com' }],
-      summaryLines: [],
-    });
-    expect(sent.status).toBe('SENT');
-    expect((await provider.getStatus(sent.id))?.status).toBe('SENT');
-    const signed = await provider.completeSigning('lease-1', day('2027-01-02'));
-    expect(signed.status).toBe('SIGNED');
-    expect((await provider.completeSigning('lease-1')).status).toBe('SIGNED');
+    await expect(
+      provider.sendForSignature({
+        leaseId: 'lease-1',
+        documentName: 'Signed lease agreement.pdf',
+        signers: [{ name: 'Alex Rivera', email: 'alex@example.com' }],
+        summaryLines: [],
+      }),
+    ).rejects.toThrow('persist');
+    expect(await provider.getStatus('mock-lease-1')).toBeNull();
+    await expect(provider.completeSigning('lease-1', day('2027-01-02'))).rejects.toThrow('retired');
     await expect(provider.handleCallback({ envelopeId: 'bogus', event: 'signed' })).rejects.toThrow(
-      'Unknown',
+      'retired',
     );
   });
 
@@ -263,7 +264,9 @@ describe('mock e-signature provider', () => {
 
   it('keeps long wording and paginates the signed PDF', () => {
     const wording = `Clause: ${'Every part of the agreed wording stays here. '.repeat(8)}Final agreed sentence.`;
-    const pdf = new TextDecoder().decode(buildLeasePdf([wording, ...Array.from({ length: 45 }, (_, i) => `Clause ${i}`)]));
+    const pdf = new TextDecoder().decode(
+      buildLeasePdf([wording, ...Array.from({ length: 45 }, (_, i) => `Clause ${i}`)]),
+    );
     expect(pdf).toContain('Final agreed sentence.');
     expect(pdf).toContain('/Count 2');
     expect(pdf).toContain('RocketRental lease agreement - continued');

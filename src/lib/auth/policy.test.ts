@@ -48,4 +48,14 @@ describe('authentication access policy', () => {
     expect(roleHome('OWNER')).toBe('/sign-out');
     expect(roleHome('ADMIN')).toBe('/sign-out');
   });
+
+  it('allows owners to return only to the scoped signing endpoint', () => {
+    expect(safeRedirectTarget('/api/leases/lease-1/signing', 'OWNER')).toBe(
+      '/api/leases/lease-1/signing',
+    );
+    expect(safeRedirectTarget('/api/files', 'OWNER')).toBe('/sign-out');
+    expect(safeRedirectTarget('/api/leases/lease-1/signing/other', 'OWNER')).toBe('/sign-out');
+    expect(safeRedirectTarget('/api/leases/lease-1/signing', 'ADMIN')).toBe('/sign-out');
+    expect(canAccessRole('OWNER', 'MANAGER')).toBe(false);
+  });
 });

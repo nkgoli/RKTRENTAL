@@ -158,6 +158,7 @@ model Organization {
 }
 
 model User {
+  agreementParties           LeaseAgreementParty[]
   id                        String             @id @default(cuid())
   organizationId            String
   organization              Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -282,6 +283,7 @@ model Unit {
 }
 
 model Tenant {
+  agreementParties             LeaseAgreementParty[]
   id                           String               @id @default(cuid())
   organizationId               String
   organization                 Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -308,6 +310,7 @@ model Tenant {
 }
 
 model Lease {
+  agreements        LeaseAgreement[]
   id                String           @id @default(cuid())
   organizationId    String
   organization      Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -346,6 +349,55 @@ model Lease {
   @@unique([id, organizationId])
   @@index([organizationId, unitId, status])
   @@index([organizationId, endDate])
+}
+
+/// Each send freezes the entire agreement and required identities. Never rewrite a version.
+model LeaseAgreement {
+  id             String   @id @default(cuid())
+  organizationId String
+  leaseId        String
+  lease          Lease    @relation(fields: [leaseId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  version        Int
+  snapshot       Json
+  snapshotHash   String
+  createdAt      DateTime @default(now())
+  signedAt       DateTime?
+  supersededAt   DateTime?
+  // A signing result is not proof that a PDF has been stored.
+  archiveStatus  String   @default("AWAITING_SIGNATURES")
+  parties        LeaseAgreementParty[]
+
+  @@unique([id, organizationId])
+  @@unique([leaseId, version])
+  @@index([organizationId, leaseId])
+}
+
+model LeaseAgreementParty {
+  id                     String   @id @default(cuid())
+  organizationId         String
+  agreementId            String
+  agreement              LeaseAgreement @relation(fields: [agreementId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  role                   String
+  userId                 String
+  user                   User     @relation(fields: [userId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  tenantId               String?
+  tenant                 Tenant?  @relation(fields: [tenantId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  expectedName           String
+  expectedEmail          String
+  fullName               String?
+  email                  String?
+  phone                  String?
+  consent                Boolean?
+  consentVersion         String?
+  authenticatedSubjectId String?
+  authenticatedEmail     String?
+  authenticationVersion  BigInt?
+  sessionIssuedAt        Int?
+  signedAt               DateTime?
+
+  @@unique([agreementId, userId])
+  @@unique([agreementId, tenantId])
+  @@index([organizationId, userId])
 }
 
 model LeaseTemplate {

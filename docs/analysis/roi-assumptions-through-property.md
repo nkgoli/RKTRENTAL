@@ -56,3 +56,17 @@ against a production build:
   Cancel and **Save and return to ROI** from Charts → Sensitivity with a period, Cancel from
   Scenarios, Benchmarks and Compare, and the unsaved-changes guard (Keep editing, Save draft
   and continue, Discard and continue).
+
+## Live delivery (2026-10-20)
+
+- Root `main` was fast-forwarded to `577e040`; root's own local edits were left as they were.
+- `register-live-task.ps1 -Restart` rebuilt 3100 / `.data/postgres-5434` from build
+  `9UTEY4P5Uze7np1xJfPcf` to `vZBuu4jiVkALuwSvnZNcS`. `.demo-seeded` is still 11:57:30, so
+  nothing was reseeded. The first restart failed because an isolated `next start` from this
+  checkout held root's Prisma engine; stopping it fixed the rebuild.
+- Read-only live `capture` on Maple Court, Harbor View and Cedar Row passed at 1440 and
+  390 px. Results start 339 px down at 1440 and 547 px down at 390, with no overflow. Opening
+  `view=charts&chart=sensitivity&period=YTD` selected Charts → Sensitivity, with one-decimal
+  cells. Its Edit assumptions link returns to the same address. Elm Street was not opened.
+- Row hashes of all 33 tables in 5434 were the same before and after: digest `98cc6499…fd07`.
+  The Elm Street saved analysis is still DRAFT revision 2 with the same payload hash.

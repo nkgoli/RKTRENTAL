@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { MaintenanceEditorData } from '@/lib/maintenance/editor';
 
-const toast = vi.hoisted(() => ({ success: vi.fn() }));
+const toast = vi.hoisted(() => ({ success: vi.fn(), push: vi.fn() }));
 vi.mock('@/components/ui/Toast', () => ({ useToast: () => toast }));
 import { MaintenanceEditor } from '@/components/maintenance/MaintenanceEditor';
 
@@ -96,6 +96,16 @@ beforeEach(() => {
   vi.clearAllMocks();
   fetchMock.mockReset();
   vi.stubGlobal('fetch', fetchMock);
+  Object.defineProperty(URL, 'createObjectURL', {
+    configurable: true,
+    writable: true,
+    value: vi.fn(() => 'blob:selected-photo'),
+  });
+  Object.defineProperty(URL, 'revokeObjectURL', {
+    configurable: true,
+    writable: true,
+    value: vi.fn(),
+  });
   HTMLDialogElement.prototype.showModal = function () {
     this.setAttribute('open', '');
   };
@@ -332,5 +342,122 @@ describe('dedicated maintenance editor workflow', () => {
     expectDraft();
     expect(getValue('Add a comment')).toBe('Unposted update');
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('intercepts browser Back with unsaved changes and keeps the draft when staying', () => {
+    window.history.replaceState({ editor: true }, '', '/maintenance/request/edit');
+    const push = vi.spyOn(window.history, 'pushState');
+    renderEditor();
+    stage();
+    fireEvent.change(screen.getByLabelText('Add a comment'), {
+      target: { value: 'Unposted update' },
+    });
+    fireEvent.change(screen.getByLabelText('Choose request photo'), {
+      target: { files: [new File(['photo'], 'repair.png', { type: 'image/png' })] },
+    });
+    expect(screen.getByText('repair.png')).toBeTruthy();
+    // The browser has already moved to the previous entry when popstate fires.
+    window.history.pushState({ list: true }, '', '/maintenance');
+    act(() => {
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    const dialog = screen.getByRole('dialog', { name: 'Discard unsaved changes?' });
+    expect(push).toHaveBeenCalledWith(
+      expect.anything(),
+      '',
+      'http://localhost:3000/maintenance/request/edit',
+    );
+    expect(window.location.pathname).toBe('/maintenance/request/edit');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expectDraft();
+    expect(getValue('Add a comment')).toBe('Unposted update');
+    expect(screen.getByText('repair.png')).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('protects a selected photo even when no field changed', () => {
+    window.history.replaceState({ editor: true }, '', '/maintenance/request/edit');
+    renderEditor();
+    fireEvent.change(screen.getByLabelText('Choose request photo'), {
+      target: { files: [new File(['photo'], 'repair.png', { type: 'image/png' })] },
+    });
+    expect(screen.getByText('repair.png')).toBeTruthy();
+    window.history.pushState({ list: true }, '', '/maintenance');
+    act(() => {
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    const dialog = screen.getByRole('dialog', { name: 'Discard unsaved changes?' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByText('repair.png')).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('navigates to the intended destination after confirming a browser Back discard', () => {
+    window.history.replaceState({ editor: true }, '', '/maintenance/request/edit');
+    const back = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+    renderEditor();
+    stage();
+    window.history.pushState({ list: true }, '', '/maintenance');
+    act(() => {
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    const dialog = screen.getByRole('dialog', { name: 'Discard unsaved changes?' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Discard changes' }));
+    expect(back).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('leaves clean browser Back/Forward to the router', () => {
+    window.history.replaceState({ editor: true }, '', '/maintenance/request/edit');
+    const push = vi.spyOn(window.history, 'pushState');
+    let reached = false;
+    const listener = () => {
+      reached = true;
+    };
+    window.addEventListener('popstate', listener);
+    renderEditor();
+    window.history.pushState({ list: true }, '', '/maintenance');
+    act(() => {
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(reached).toBe(true);
+    expect(push).not.toHaveBeenCalledWith(
+      expect.anything(),
+      '',
+      'http://localhost:3000/maintenance/request/edit',
+    );
+    window.removeEventListener('popstate', listener);
+  });
+
+  it('blocks browser Back while an action is pending and keeps the draft', async () => {
+    window.history.replaceState({ editor: true }, '', '/maintenance/request/edit');
+    const finish = deferResponse();
+    renderEditor();
+    stage();
+    fireEvent.submit(editForm());
+    expect(editForm().getAttribute('aria-busy')).toBe('true');
+    window.history.pushState({ list: true }, '', '/maintenance');
+    act(() => {
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(toast.push).toHaveBeenCalledWith({
+      message: 'Wait for the current action to finish before leaving.',
+      tone: 'info',
+    });
+    expect(window.location.pathname).toBe('/maintenance/request/edit');
+    expectDraft();
+    await finish({ message: 'Repair request saved.', request: saved() });
+    await screen.findByText('Repair request saved.');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // Once the save settles the editor is clean, so Back is no longer intercepted.
+    window.history.pushState({ list: true }, '', '/maintenance');
+    act(() => {
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

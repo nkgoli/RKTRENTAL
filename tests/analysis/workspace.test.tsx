@@ -449,7 +449,7 @@ describe('ROI summary workspace', () => {
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="b" />,
     );
     expect(screen.getByRole('alertdialog')).toBeTruthy();
-    expect(window.location.search).toBe('?property=a');
+    expect(window.location.search).toBe('?property=a&view=scenarios');
     fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
     await waitFor(() => expect(document.activeElement).toBe(scenarioName()));
     const change = screen.getByRole('button', { name: 'Change property' });
@@ -739,7 +739,9 @@ describe('ROI projection interactions', () => {
     const target = new URL(vi.mocked(browser.assign).mock.calls[0][0], 'http://local.test');
     expect(target.pathname).toBe('/properties/a/edit');
     expect(target.searchParams.get('field')).toBe('input.income.monthlyRent');
-    expect(target.searchParams.get('returnTo')).toBe('/roi-analysis?property=a');
+    expect(target.searchParams.get('returnTo')).toBe(
+      '/roi-analysis?property=a&view=charts&chart=exit',
+    );
     cleanup();
     const overflow = make();
     overflow.input.income!.monthlyRent = 10000000000;
@@ -768,7 +770,7 @@ describe('ROI projection interactions', () => {
     });
     expect(screen.getByRole('alertdialog')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
-    expect(window.location.search).toBe('?property=a');
+    expect(window.location.search).toBe('?property=a&view=charts');
     expect(screen.getByRole('tab', { name: 'Equity' }).getAttribute('aria-selected')).toBe('true');
     fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
     fireEvent.click(screen.getByRole('button', { name: 'Discard and continue' }));
@@ -1145,5 +1147,85 @@ it('keeps invalid custom text across sections, focuses correction and saves expl
     historicalCAGR: -5,
     averageYield: 0,
     volatility: 12,
+  });
+});
+
+describe('compact header and section-preserving assumptions round trip', () => {
+  const returnTo = () =>
+    href(summaryCard().getByRole('link', { name: 'Edit assumptions' })).searchParams.get(
+      'returnTo',
+    );
+  const selected = (name: string) =>
+    screen.getByRole('tab', { name }).getAttribute('aria-selected') === 'true';
+  it('reopens the section, chart sub-tab and period named by the address', async () => {
+    routeQuery.value = new URLSearchParams('property=a&view=charts&chart=sensitivity&period=YTD');
+    render(<RoiWorkspace selection={{ ok: true, data: properties }} />);
+    await screen.findByRole('button', { name: 'Save draft' });
+    expect(selected('Charts') && selected('Sensitivity')).toBe(true);
+    expect(returnTo()).toBe('/roi-analysis?property=a&view=charts&chart=sensitivity&period=YTD');
+    fireEvent.click(screen.getByRole('tab', { name: 'Amortization' }));
+    expect(window.location.search).toBe('?property=a&view=charts&chart=amortization&period=YTD');
+    for (const [tabName, view] of [
+      ['Scenarios', 'scenarios'],
+      ['Benchmarks', 'benchmarks'],
+      ['Compare', 'compare'],
+    ]) {
+      fireEvent.click(screen.getByRole('tab', { name: tabName }));
+      expect(returnTo()).toBe(`/roi-analysis?property=a&view=${view}&period=YTD`);
+    }
+    fireEvent.click(screen.getByRole('tab', { name: 'Summary' }));
+    expect(returnTo()).toBe('/roi-analysis?property=a&period=YTD');
+  });
+  it('ignores unsupported sections and sub-tabs in the address', async () => {
+    routeQuery.value = new URLSearchParams('property=a&view=evil&chart=nope');
+    render(<RoiWorkspace selection={{ ok: true, data: properties }} />);
+    await screen.findByRole('button', { name: 'Save draft' });
+    expect(selected('Summary')).toBe(true);
+    expect(returnTo()).toBe('/roi-analysis?property=a');
+  });
+  it('guards unsaved edits before editing from Sensitivity and returns there', async () => {
+    await open();
+    addScenario('Kept case');
+    fireEvent.click(screen.getByRole('tab', { name: 'Charts' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Sensitivity' }));
+    fireEvent.click(summaryCard().getByRole('link', { name: 'Edit assumptions' }));
+    expect(screen.getByRole('alertdialog')).toBeTruthy();
+    expect(browser.assign).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
+    await waitFor(() => expect(browser.assign).toHaveBeenCalled());
+    const target = new URL(vi.mocked(browser.assign).mock.calls[0][0], 'http://local.test');
+    expect(target.searchParams.get('returnTo')).toBe(
+      '/roi-analysis?property=a&view=charts&chart=sensitivity',
+    );
+    expect(saveRoiAnalysisAction).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'DRAFT', propertyId: 'a' }),
+    );
+  });
+  it('keeps assumptions compact with keyboard-reachable details and secondary actions', async () => {
+    const user = userEvent.setup();
+    await open();
+    const toggle = summaryCard().getByRole('button', { name: 'Show details' });
+    const details = document.getElementById(toggle.getAttribute('aria-controls')!)!;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(details.hidden).toBe(true);
+    toggle.focus();
+    await user.keyboard('{Enter}');
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(details.hidden).toBe(false);
+    expect(summaryCard().getByRole('button', { name: 'Hide details' })).toBe(toggle);
+    const menu = screen.getByText('More actions', { selector: 'summary' });
+    const disclosure = menu.closest('details')!;
+    menu.focus();
+    expect(document.activeElement).toBe(menu);
+    disclosure.open = true;
+    fireEvent.keyDown(within(disclosure).getByRole('button', { name: 'Recalculate' }), {
+      key: 'Escape',
+    });
+    expect(disclosure.open).toBe(false);
+    expect(document.activeElement).toBe(menu);
+    disclosure.open = true;
+    fireEvent.click(within(disclosure).getByRole('button', { name: 'Change property' }));
+    expect(disclosure.isConnected && disclosure.open).toBe(false);
+    expect(screen.getByRole('searchbox')).toBeTruthy();
   });
 });

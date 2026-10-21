@@ -7,6 +7,34 @@ const ROI_PATH = '/roi-analysis';
 const PERIOD = /^[A-Za-z0-9_-]{1,40}$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
+/** ROI sections an address may name; Summary is the default and is left out of the address. */
+export const ROI_VIEWS = ['summary', 'actual', 'charts', 'scenarios', 'benchmarks', 'compare'];
+/** Charts sub-tabs; Equity is the default and is left out of the address. */
+export const CHART_PANELS = [
+  'equity',
+  'cash-flow',
+  'expenses',
+  'amortization',
+  'exit',
+  'sensitivity',
+];
+
+export function roiViewFrom(query: { get(name: string): string | null } | null) {
+  const view = query?.get('view') ?? '';
+  return ROI_VIEWS.includes(view) ? view : 'summary';
+}
+export function chartPanelFrom(query: { get(name: string): string | null } | null) {
+  const chart = query?.get('chart') ?? '';
+  return CHART_PANELS.includes(chart) ? chart : 'equity';
+}
+/** Writes a supported section, and on Charts a non-default sub-tab, into `query`. */
+export function setRoiView(query: URLSearchParams, view: string, chart: string) {
+  if (view === 'summary' || !ROI_VIEWS.includes(view)) return;
+  query.set('view', view);
+  if (view === 'charts' && chart !== 'equity' && CHART_PANELS.includes(chart))
+    query.set('chart', chart);
+}
+
 export function roiReturnPath(raw: unknown, propertyId: string): string | null {
   if (typeof raw !== 'string' || !raw.startsWith('/') || raw.startsWith('//') || raw.length > 500)
     return null;
@@ -19,7 +47,7 @@ export function roiReturnPath(raw: unknown, propertyId: string): string | null {
   if (url.origin !== 'http://local.invalid' || url.pathname !== ROI_PATH || url.hash) return null;
   if (!propertyId || url.searchParams.get('property') !== propertyId) return null;
   const query = new URLSearchParams({ property: propertyId });
-  if (url.searchParams.get('view') === 'actual') query.set('view', 'actual');
+  setRoiView(query, roiViewFrom(url.searchParams), chartPanelFrom(url.searchParams));
   const period = url.searchParams.get('period');
   if (period && PERIOD.test(period)) {
     query.set('period', period);

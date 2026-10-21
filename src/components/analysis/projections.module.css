@@ -193,6 +193,16 @@
   }
 }
 @media (max-width: 600px) {
+  /* One sideways-scrolling row keeps results high on phones. */
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs button {
+    flex: none;
+    white-space: nowrap;
+  }
   .rangeFields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

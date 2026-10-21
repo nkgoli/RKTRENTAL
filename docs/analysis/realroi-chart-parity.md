@@ -99,8 +99,9 @@ All ROI charts live at `/roi-analysis?property=<id>` in `src/components/analysis
 | Benchmarks and Compare | `RoiBenchmarks.tsx`  |
 
 They draw with the custom-SVG `ComboChart` in `RoiChart.tsx` and the helpers in
-`chart-data.ts`. Only `view=actual` lives in the URL; every other tab and Charts
-sub-tab is component state.
+`chart-data.ts`. The selected tab lives in the URL as `view` (Summary omitted) and, on
+Charts, a non-default sub-tab as `chart`, so reloads and the Edit assumptions round trip
+reopen the same panel.
 
 **Tab order differs:**
 

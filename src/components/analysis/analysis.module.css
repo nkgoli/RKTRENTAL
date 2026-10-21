@@ -82,19 +82,81 @@
   color: var(--design-muted);
   box-shadow: none;
 }
-.context {
+/* With a property open, the heading is one band: title, property context and actions. */
+.headingCompact {
+  align-items: center;
+  margin-bottom: 8px;
+}
+.headingCompact h1 {
+  font-size: 22px;
+}
+.workspace p.context {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  padding: 12px var(--rr-card-pad);
+  gap: 2px 8px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.context strong {
+  color: var(--design-text);
+}
+.context span + span::before,
+.context strong + span::before {
+  content: '·';
+  margin-right: 8px;
+}
+/* The live status line takes no space while empty. */
+.workspace p.status {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.workspace p.status:empty {
+  margin: 0;
+}
+.headingCompact .actions {
+  margin: 0;
+  align-items: center;
+}
+.menu {
+  position: relative;
+}
+.menu > summary {
+  list-style: none;
+  border: 1px solid var(--rr-border-strong);
+  background: var(--design-surface);
+  border-radius: 7px;
+  padding: 7px 14px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.menu > summary::-webkit-details-marker {
+  display: none;
+}
+.menu > summary::after {
+  content: ' ▾';
+}
+.menu > summary:hover {
+  background: var(--rr-hover);
+}
+.menu > div {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  display: grid;
+  gap: 4px;
+  min-width: 200px;
+  padding: 6px;
   background: var(--design-surface);
   border: var(--rr-card-border);
-  border-radius: var(--rr-card-radius);
-  box-shadow: var(--rr-shadow);
+  border-radius: 8px;
+  box-shadow: var(--rr-card-shadow);
 }
-.context span:last-child {
-  margin-left: auto;
-  color: var(--design-muted);
+.menu > div button {
+  text-align: left;
+  border-color: transparent;
 }
 .properties {
   display: grid;
@@ -130,23 +192,33 @@
   align-items: stretch;
 }
 .summary {
-  margin: 16px 0;
+  margin: 0 0 12px;
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 .summary h2 {
   margin: 0;
+  font-size: 15px;
 }
 .summary p {
-  margin: 12px 0 0;
+  margin: 8px 0 0;
+  line-height: 1.45;
 }
 .summaryHead {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
 }
-.summaryHead p {
-  margin: 2px 0 0;
+.summarySource,
+.summaryState {
   font-size: 13px;
+  color: var(--design-muted);
+}
+.summaryActions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
 }
 .workspace a.editLink {
   color: var(--design-text);
@@ -157,7 +229,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 12px 20px;
-  margin: 16px 0 0;
+  margin: 12px 0 0;
 }
 .summaryGrid div {
   min-width: 0;
@@ -381,15 +453,32 @@
   .metrics strong {
     font-size: 24px;
   }
-  .context {
-    flex-direction: column;
-    gap: 8px;
+  .headingCompact h1 {
+    font-size: 20px;
   }
-  .context span:last-child {
+  .context strong {
+    flex-basis: 100%;
+  }
+  .context strong + span::before {
+    content: none;
+  }
+  .headingCompact .actions {
+    width: 100%;
+  }
+  .headingCompact .actions > button {
+    flex: 1;
+  }
+  .menu > div {
+    right: auto;
+    left: 0;
+  }
+  .summaryActions {
     margin-left: 0;
+    width: 100%;
   }
-  .summaryHead {
-    flex-direction: column;
+  .summaryActions > * {
+    flex: 1;
+    justify-content: center;
   }
   .workspace a.editLink {
     min-height: 44px;

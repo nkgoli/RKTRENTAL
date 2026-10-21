@@ -1,5 +1,5 @@
 'use client';
-import type { MouseEvent } from 'react';
+import { useId, useState, type MouseEvent } from 'react';
 import type { AnalysisPayload, ValidationIssue, calculatePayload } from '@/lib/analysis';
 import { fieldLabel } from './fields';
 import styles from './analysis.module.css';
@@ -48,6 +48,8 @@ export function AssumptionsSummary({
   /** Lets the workspace guard unsaved scenario or comparison edits before leaving. */
   onEdit: (event: MouseEvent<HTMLAnchorElement>, path?: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const detailsId = useId();
   const { purchase = {}, financing = {}, income = {}, appreciationExit = {} } = payload.input;
   const loan = financing.loanAmount;
   const financingText =
@@ -98,22 +100,40 @@ export function AssumptionsSummary({
         : null,
     ],
   ];
+  // One compact row by default so results lead; the full digest opens on demand.
   return (
     <section className={`${styles.card} ${styles.summary}`} aria-label="Baseline assumptions">
       <div className={styles.summaryHead}>
-        <div>
-          <h2>Assumptions</h2>
-          <p>{source}</p>
-        </div>
-        <a
-          className={`btn btn-secondary ${styles.editLink}`}
-          href={editHref}
-          onClick={(event) => onEdit(event)}
-        >
-          Edit assumptions
-        </a>
+        <h2>Assumptions</h2>
+        <span className={styles.summarySource}>{source}</span>
+        {!missing.length && (
+          <span className={styles.summaryState} role="status">
+            {result && !stale
+              ? 'Calculated automatically from your current assumptions.'
+              : result
+                ? 'Out of date - recalculate to update these results.'
+                : 'Review your assumptions to calculate. No valid projection is available yet.'}
+          </span>
+        )}
+        <span className={styles.summaryActions}>
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={detailsId}
+            onClick={() => setOpen((o) => !o)}
+          >
+            {open ? 'Hide details' : 'Show details'}
+          </button>
+          <a
+            className={`btn btn-secondary ${styles.editLink}`}
+            href={editHref}
+            onClick={(event) => onEdit(event)}
+          >
+            Edit assumptions
+          </a>
+        </span>
       </div>
-      <dl className={styles.summaryGrid}>
+      <dl id={detailsId} className={styles.summaryGrid} hidden={!open}>
         {items.map(([label, value]) => (
           <div key={label}>
             <dt>{label}</dt>
@@ -123,7 +143,7 @@ export function AssumptionsSummary({
           </div>
         ))}
       </dl>
-      {missing.length ? (
+      {!!missing.length && (
         <p className={styles.missing} role="status">
           <strong>
             {incomplete
@@ -139,20 +159,11 @@ export function AssumptionsSummary({
             Complete assumptions
           </a>
         </p>
-      ) : (
-        <p role="status">
-          {result && !stale
-            ? 'Calculated automatically from your current assumptions.'
-            : result
-              ? 'Out of date - recalculate to update these results.'
-              : 'Review the entries below to calculate. No valid projection is available yet.'}
-        </p>
       )}
       {demoCount > 0 && (
         <p className={styles.demo} data-demo-assumptions={demoCount}>
           Sample data: {demoCount} assumption{demoCount === 1 ? ' is a' : 's are'} fictional demo
-          value{demoCount === 1 ? '' : 's'} ({demoLabel}), not recorded actuals. Edit assumptions to
-          replace them with your own.
+          value{demoCount === 1 ? '' : 's'} ({demoLabel}), not recorded actuals.
         </p>
       )}
     </section>

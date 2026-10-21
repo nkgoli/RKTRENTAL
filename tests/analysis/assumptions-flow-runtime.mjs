@@ -139,6 +139,10 @@ if (mode === 'capture') {
   };
   await page.getByRole('tab', { name: 'Summary', exact: true }).click();
   afterSave.cash = await metric('Annual cash flow');
+  await page
+    .getByRole('region', { name: 'Baseline assumptions' })
+    .getByRole('button', { name: 'Show details' })
+    .click();
   afterSave.vacancy = await page
     .getByRole('region', { name: 'Baseline assumptions' })
     .locator('div', { has: page.getByText('Vacancy', { exact: true }) })

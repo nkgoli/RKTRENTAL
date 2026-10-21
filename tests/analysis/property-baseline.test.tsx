@@ -35,6 +35,25 @@ describe('Returns & ROI return address', () => {
     ])
       expect(roiReturnPath(raw, 'p1')).toBeNull();
   });
+  it('keeps every supported section and the Charts sub-tab, dropping unknown values', () => {
+    for (const view of ['scenarios', 'benchmarks', 'compare'])
+      expect(roiReturnPath(`/roi-analysis?property=p1&view=${view}&chart=exit`, 'p1')).toBe(
+        `/roi-analysis?property=p1&view=${view}`,
+      );
+    expect(
+      roiReturnPath('/roi-analysis?period=YTD&chart=sensitivity&view=charts&property=p1', 'p1'),
+    ).toBe('/roi-analysis?property=p1&view=charts&chart=sensitivity&period=YTD');
+    expect(roiReturnPath('/roi-analysis?property=p1&view=charts&chart=equity', 'p1')).toBe(
+      '/roi-analysis?property=p1&view=charts',
+    );
+    expect(roiReturnPath('/roi-analysis?property=p1&view=charts&chart=%3Cx%3E', 'p1')).toBe(
+      '/roi-analysis?property=p1&view=charts',
+    );
+    for (const view of ['summary', 'evil', 'javascript:alert(1)'])
+      expect(roiReturnPath(`/roi-analysis?property=p1&view=${view}`, 'p1')).toBe(
+        '/roi-analysis?property=p1',
+      );
+  });
   it('links to the property editor ROI section with an allowlisted field', () => {
     const href = new URL(
       assumptionsEditPath('p1', '/roi-analysis?property=p1', 'input.income.vacancyRate'),

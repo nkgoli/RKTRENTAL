@@ -164,7 +164,8 @@ export function PropertyRoiFields({
         {original && !baseline && (
           <p className="muted">
             Clear a saved field to mark it unknown. Unchanged fields keep their latest saved values.
-            Existing saved analyses keep their own assumptions.
+            If this property has a saved ROI analysis, the assumptions you change or clear here
+            update it too; its other assumptions and scenarios stay as saved.
           </p>
         )}
         {demoCount > 0 && (

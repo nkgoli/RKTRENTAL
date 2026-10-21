@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { AnalysisPayload } from '@/lib/analysis/contract';
 import { dollars, projectionRows, rate, type ProjectionResult } from '@/lib/analysis/projections';
 import {
@@ -47,8 +47,18 @@ export function AnalysisTabs({
   value: string;
   onChange: (id: string) => void;
 }) {
+  const list = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // On phones the tabs scroll sideways; keep the selected one in view without moving the page.
+    const row = list.current;
+    const tab = row?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!row || !tab || row.scrollWidth <= row.clientWidth) return;
+    const left = tab.offsetLeft - row.offsetLeft;
+    if (left < row.scrollLeft || left + tab.offsetWidth > row.scrollLeft + row.clientWidth)
+      row.scrollLeft = Math.max(0, left - 16);
+  }, [value]);
   return (
-    <div className={chartStyles.tabs} role="tablist" aria-label={label}>
+    <div ref={list} className={chartStyles.tabs} role="tablist" aria-label={label}>
       {choices.map((choice, index) => (
         <button
           key={choice.id}
@@ -942,6 +952,8 @@ export function RoiProjections({
   stale,
   saving,
   onEdit,
+  panel: chosen,
+  onPanel,
 }: {
   result: ProjectionResult | null;
   calculatedPayload: AnalysisPayload | null;
@@ -949,8 +961,13 @@ export function RoiProjections({
   stale: boolean;
   saving: boolean;
   onEdit: (path?: string) => void;
+  /** The selected sub-tab when the workspace keeps it in the address; otherwise kept here. */
+  panel?: string;
+  onPanel?: (panel: string) => void;
 }) {
-  const [panel, setPanel] = useState<string>('equity');
+  const [own, setOwn] = useState<string>('equity');
+  const panel = chosen ?? own;
+  const setPanel = onPanel ?? setOwn;
   const content: Record<string, ReactNode> =
     result && calculatedPayload
       ? {

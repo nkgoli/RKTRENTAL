@@ -49,7 +49,12 @@ import {
 import { NetCashFlowCard, OutcomeCard, ProjectionMilestones } from './RoiSummaryCharts';
 import { DealSnapshot, FixMyDeal } from './RoiDealPanels';
 import { AssumptionsSummary, isBaselinePath } from './AssumptionsSummary';
-import { assumptionsEditPath } from '@/lib/analysis/return-path';
+import {
+  assumptionsEditPath,
+  chartPanelFrom,
+  roiViewFrom,
+  setRoiView,
+} from '@/lib/analysis/return-path';
 import { browser } from './browser';
 import styles from './analysis.module.css';
 
@@ -101,12 +106,12 @@ export function RoiWorkspace({
   const [message, setMessage] = useState('');
   const [requestErrors, setErrors] = useState<ValidationIssue[]>([]);
   const [calculationVersion, setCalculationVersion] = useState(0);
-  const [view, setViewState] = useState(() =>
-    searchParams?.get('view') === 'actual' ? 'actual' : 'summary',
-  );
+  const [view, setViewState] = useState(() => roiViewFrom(searchParams));
+  const [chart, setChartState] = useState(() => chartPanelFrom(searchParams));
   const [period, setPeriodState] = useState<PeriodChoice>(() => periodChoiceFrom(searchParams));
   // Mirrors for URL writes made in the same event as a state change.
   const viewRef = useRef(view);
+  const chartRef = useRef(chart);
   const periodRef = useRef(period);
   const [actuals, setActuals] = useState<ActualsState>({ status: 'loading' });
   const actualsToken = useRef(0);
@@ -115,6 +120,7 @@ export function RoiWorkspace({
   const [pending, setPending] = useState<string | null>(null);
   const [recovery, setRecovery] = useState<string | null>(null);
   const modal = useRef<HTMLDivElement>(null);
+  const menu = useRef<HTMLDetailsElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
   const [conflict, setConflict] = useState(false);
   const token = useRef(0);
@@ -243,7 +249,7 @@ export function RoiWorkspace({
       setMessage(
         saved.data
           ? `Loaded ${saved.data.status.toLowerCase()} - revision ${saved.data.revision}`
-          : 'New analysis - saved property details are filled in. Use Edit assumptions to add any that are missing.',
+          : 'New analysis - filled in from saved property details.',
       );
     } catch {
       if (request === token.current)
@@ -269,7 +275,7 @@ export function RoiWorkspace({
       if (dirty && property) {
         window.history.replaceState(null, '', propertyUrl(selected));
         choose(id);
-      } else switchProperty(id, false);
+      } else switchProperty(id, false, true);
     };
   });
   useEffect(() => {
@@ -318,8 +324,8 @@ export function RoiWorkspace({
         adoptLocation(destination.searchParams);
         window.history.pushState(null, '', propertyUrl(id));
       } else {
-        if (dirty) pendingLocation.current = destination.searchParams;
-        else adoptLocation(destination.searchParams);
+        // Adopted once the property actually changes, after any unsaved-changes decision.
+        pendingLocation.current = destination.searchParams;
         choose(id);
       }
     };
@@ -353,7 +359,7 @@ export function RoiWorkspace({
   function propertyUrl(id: string) {
     if (!id) return '/roi-analysis';
     const query = new URLSearchParams({ property: id });
-    if (viewRef.current === 'actual') query.set('view', 'actual');
+    setRoiView(query, viewRef.current, chartRef.current);
     for (const [name, value] of Object.entries(periodChoiceParams(periodRef.current)))
       query.set(name, value);
     return `/roi-analysis?${query}`;
@@ -367,17 +373,36 @@ export function RoiWorkspace({
     setView(next);
     if (selected) window.history.replaceState(null, '', propertyUrl(selected));
   }
+  function setChart(next: string) {
+    chartRef.current = next;
+    setChartState(next);
+  }
+  function changeChart(next: string) {
+    setChart(next);
+    if (selected) window.history.replaceState(null, '', propertyUrl(selected));
+  }
   function changePeriod(next: PeriodChoice) {
     periodRef.current = next;
     setPeriodState(next);
     if (selected) window.history.replaceState(null, '', propertyUrl(selected));
   }
-  /** Adopts view and period from a complete address; absent parameters mean the defaults. */
+  /** Adopts view, chart and period from a complete address; absent parameters mean the defaults. */
   function adoptLocation(query: URLSearchParams) {
-    setView(query.get('view') === 'actual' ? 'actual' : 'summary');
+    setView(roiViewFrom(query));
+    setChart(chartPanelFrom(query));
     const next = periodChoiceFrom(query);
     periodRef.current = next;
     setPeriodState(next);
+  }
+  /** Closes the More actions menu, returning focus to its toggle, before the action runs. */
+  function menuAction(action: () => void) {
+    return () => {
+      if (menu.current) {
+        menu.current.open = false;
+        menu.current.querySelector('summary')?.focus();
+      }
+      action();
+    };
   }
   function closeGuard() {
     pendingLocation.current = null;
@@ -435,10 +460,12 @@ export function RoiWorkspace({
       field?.focus();
     }, 0);
   }
-  function switchProperty(id: string, writeHistory = true) {
+  /** `fromAddress`: the view, chart and period already come from the address being opened. */
+  function switchProperty(id: string, writeHistory = true, fromAddress = false) {
     const waiting = pendingLocation.current;
     pendingLocation.current = null;
-    if (waiting && (waiting.get('property') ?? '') === id) adoptLocation(waiting);
+    const adopt = !!waiting && (waiting.get('property') ?? '') === id;
+    if (adopt) adoptLocation(waiting);
     token.current++;
     setPending(null);
     setRecovery(null);
@@ -447,8 +474,12 @@ export function RoiWorkspace({
     setValues({});
     setSelected(id);
     setPayload(null);
-    // The actual-versus-projected view and its period are shared context across properties.
-    setView(viewRef.current === 'actual' ? 'actual' : 'summary');
+    // An address names its own section. Choosing another property keeps only the
+    // actual-versus-projected view and its period, which are shared across properties.
+    if (!adopt && !fromAddress && selected && viewRef.current !== 'actual') {
+      setView('summary');
+      setChart('equity');
+    }
     if (writeHistory) window.history.pushState(null, '', propertyUrl(id));
     if (id) void load(id);
     else {
@@ -618,19 +649,72 @@ export function RoiWorkspace({
             <button onClick={() => setRecovery(null)}>Cancel property change</button>
           </p>
         )}
-        <div className={styles.heading}>
+        <div className={`${styles.heading} ${selected ? styles.headingCompact : ''}`}>
           <div>
-            <p className={styles.eyebrow}>Returns &amp; ROI</p>
+            {/* The app shell already titles the page; an open property needs no second label. */}
+            {!selected && <p className={styles.eyebrow}>Returns &amp; ROI</p>}
             <h1>{selected ? 'ROI Analysis' : 'Choose a property'}</h1>
-            <p>
-              Compare recorded rent and expenses with projected returns from assumptions you
-              control.
-            </p>
+            {selected ? (
+              <p className={styles.context}>
+                <strong>{property?.name ?? 'Unavailable property'}</strong>
+                <span>
+                  {property ? `${property.street}, ${property.city} - Whole property` : selected}
+                </span>
+                <span>{dirty ? 'Unsaved changes' : `Revision ${revision}`}</span>
+              </p>
+            ) : (
+              <p>
+                Compare recorded rent and expenses with projected returns from assumptions you
+                control.
+              </p>
+            )}
           </div>
           {selected && (
-            <button disabled={saving} onClick={() => choose('')}>
-              Change property
-            </button>
+            <div className={styles.actions}>
+              {payload && !loading && (
+                <>
+                  <button disabled={saving || conflict} onClick={() => save('DRAFT')}>
+                    Save draft
+                  </button>
+                  <button
+                    className={styles.primary}
+                    disabled={saving || conflict}
+                    onClick={() => save('READY')}
+                  >
+                    Save ready
+                  </button>
+                </>
+              )}
+              <details
+                className={styles.menu}
+                ref={menu}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Escape' || !menu.current?.open) return;
+                  menu.current.open = false;
+                  menu.current.querySelector('summary')?.focus();
+                }}
+              >
+                <summary>More actions</summary>
+                <div role="group" aria-label="More actions">
+                  {payload && !loading && (
+                    <>
+                      <button disabled={saving} onClick={menuAction(() => validate(true))}>
+                        Recalculate
+                      </button>
+                      <button
+                        disabled={saving}
+                        onClick={menuAction(() => (dirty ? choose(selected) : load(selected)))}
+                      >
+                        Reload saved analysis
+                      </button>
+                    </>
+                  )}
+                  <button disabled={saving} onClick={menuAction(() => choose(''))}>
+                    Change property
+                  </button>
+                </div>
+              </details>
+            </div>
           )}
         </div>
         {!selection.ok && <p role="alert">{failure(selection.code)}</p>}
@@ -654,14 +738,7 @@ export function RoiWorkspace({
           </>
         ) : (
           <>
-            <section className={styles.context}>
-              <strong>{property?.name ?? 'Unavailable property'}</strong>
-              <span>
-                {property ? `${property.street}, ${property.city} - Whole property` : selected}
-              </span>
-              <span>{dirty ? 'Unsaved changes' : `Revision ${revision}`}</span>
-            </section>
-            <p role="status" aria-live="polite">
+            <p className={styles.status} role="status" aria-live="polite">
               {message}
             </p>
             {loading ? (
@@ -670,27 +747,6 @@ export function RoiWorkspace({
               <button onClick={() => load(selected)}>Retry loading</button>
             ) : (
               <>
-                <div className={styles.actions}>
-                  <button disabled={saving} onClick={() => validate(true)}>
-                    Recalculate
-                  </button>
-                  <button disabled={saving || conflict} onClick={() => save('DRAFT')}>
-                    Save draft
-                  </button>
-                  <button
-                    className={styles.primary}
-                    disabled={saving || conflict}
-                    onClick={() => save('READY')}
-                  >
-                    Save ready
-                  </button>
-                  <button
-                    disabled={saving}
-                    onClick={() => (dirty ? choose(selected) : load(selected))}
-                  >
-                    Reload saved analysis
-                  </button>
-                </div>
                 <AssumptionsSummary
                   payload={calculatedPayload ?? applyValues(payload, values, tax)}
                   result={result}
@@ -847,6 +903,8 @@ export function RoiWorkspace({
                     stale={stale}
                     saving={saving}
                     onEdit={(path) => focusField(path ?? errors[0]?.path ?? '')}
+                    panel={chart}
+                    onPanel={changeChart}
                   />
                 </div>
                 <div

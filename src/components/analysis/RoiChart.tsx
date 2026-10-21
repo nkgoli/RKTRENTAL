@@ -232,7 +232,8 @@ export function ChartCard({
 /**
  * Data-basis tags ("Projected", "USD per year", "Before tax"). Tags starting with
  * "Recorded"/"Actual" or "Projected" take the actual and projected tints everywhere,
- * so the two kinds of figure never look alike.
+ * so the two kinds of figure never look alike. "Hypothetical…" and "Temporary…" figures
+ * (reference markets, probes) take a caution tint so they never pass for the property's own.
  */
 export function Basis({ items }: { items: string[] }) {
   return (
@@ -245,7 +246,9 @@ export function Basis({ items }: { items: string[] }) {
               ? 'actual'
               : /^projected/i.test(item)
                 ? 'projected'
-                : undefined
+                : /^(hypothetical|temporary)/i.test(item)
+                  ? 'hypothetical'
+                  : undefined
           }
         >
           {item}
@@ -776,7 +779,8 @@ export function ComboChart({
   label: string;
   years: (number | string)[];
   series: ChartSeries[];
-  unit?: 'USD' | 'Index';
+  /** Percent values are already in percent (10.5 means 10.5%). */
+  unit?: 'USD' | 'Index' | 'Percent';
   height?: number;
   markers?: ChartMarker[];
   /** Shaded x ranges (inclusive indexes), such as pre- and post-breakeven. */
@@ -855,7 +859,13 @@ export function ComboChart({
     fixedTop >= largest && fixedTop > 0 ? fixedDomainScale(0, fixedTop) : referenceScale(plotted);
   const stepOf = (ticks: number[]) => (ticks.length > 1 ? ticks[1] - ticks[0] : 1);
   const tickText = (v: number, s: number) =>
-    tickFormat ? tickFormat(v, s) : unit === 'USD' ? thousands(v, s) : v.toFixed(0);
+    tickFormat
+      ? tickFormat(v, s)
+      : unit === 'USD'
+        ? thousands(v, s)
+        : unit === 'Percent'
+          ? `${v.toFixed(s < 1 ? 1 : 0)}%`
+          : v.toFixed(0);
   const distinct =
     new Set(preferred.ticks.map((t) => tickText(t, stepOf(preferred.ticks)))).size ===
     preferred.ticks.length;
@@ -890,19 +900,21 @@ export function ComboChart({
         ? format(v)
         : unit === 'USD'
           ? dollars(v)
-          : v.toFixed(4);
+          : unit === 'Percent'
+            ? `${v.toFixed(2)}%`
+            : v.toFixed(4);
   const shown = (v: ChartValue | undefined, money?: boolean) =>
     unit === 'USD' || money
       ? wholeDollars(v)
       : v == null || !Number.isFinite(v)
         ? 'Unavailable'
-        : v.toFixed(1);
-  const spokenValue = (r: Extract<TipRow, { label: string }>) =>
-    r.value === undefined
-      ? (r.text ?? '')
-      : r.money && unit !== 'USD'
-        ? dollars(r.value)
-        : exact(r.value);
+        : `${v.toFixed(1)}${unit === 'Percent' ? '%' : ''}`;
+  const spokenValue = (r: Extract<TipRow, { label: string }>) => {
+    if (r.value === undefined) return r.text ?? '';
+    const value = r.money && unit !== 'USD' ? dollars(r.value) : exact(r.value);
+    // A row that shows words ("No loan", "Paid off") is read as shown, then exactly.
+    return r.text ? `${r.text} (${value})` : value;
+  };
   const reference = xTicks ?? referenceTickIndexes(years);
   const longest = Math.max(1, ...reference.map((i) => xFormat(years[i] ?? '').length));
   const fit = xTickIndexes(n, innerW, Math.max(narrow ? 34 : 40, longest * 7 + 8));
@@ -1041,7 +1053,9 @@ export function ComboChart({
           }
           style={onSelect ? { cursor: 'pointer' } : undefined}
         >
-          <title id={`${id}-title`}>{`${label} (${unit === 'USD' ? 'USD' : 'index'})`}</title>
+          <title
+            id={`${id}-title`}
+          >{`${label} (${unit === 'USD' ? 'USD' : unit === 'Percent' ? 'percent' : 'index'})`}</title>
           <defs>
             {areas.map((a, k) => (
               <linearGradient key={k} id={`${id}-area-${k}`} x1="0" y1="0" x2="0" y2="1">

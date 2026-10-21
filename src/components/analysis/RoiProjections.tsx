@@ -49,6 +49,8 @@ export function AnalysisTabs({
   onChange: (id: string) => void;
 }) {
   const list = useRef<HTMLDivElement>(null);
+  // Which ends of a sideways-scrolling row hide more tabs ("start end"); empty when all fit.
+  const [more, setMore] = useState('');
   useEffect(() => {
     // On phones the tabs scroll sideways; keep the selected one in view without moving the page.
     const row = list.current;
@@ -58,8 +60,34 @@ export function AnalysisTabs({
     if (left < row.scrollLeft || left + tab.offsetWidth > row.scrollLeft + row.clientWidth)
       row.scrollLeft = Math.max(0, left - 16);
   }, [value]);
+  useEffect(() => {
+    const row = list.current;
+    if (!row) return;
+    const measure = () => {
+      const hidden = row.scrollWidth - row.clientWidth;
+      setMore(
+        [row.scrollLeft > 1 && 'start', hidden > 1 && row.scrollLeft < hidden - 1 && 'end']
+          .filter(Boolean)
+          .join(' '),
+      );
+    };
+    measure();
+    row.addEventListener('scroll', measure, { passive: true });
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(row);
+    return () => {
+      row.removeEventListener('scroll', measure);
+      observer?.disconnect();
+    };
+  }, []);
   return (
-    <div ref={list} className={chartStyles.tabs} role="tablist" aria-label={label}>
+    <div
+      ref={list}
+      className={chartStyles.tabs}
+      role="tablist"
+      aria-label={label}
+      data-more={more || undefined}
+    >
       {choices.map((choice, index) => (
         <button
           key={choice.id}

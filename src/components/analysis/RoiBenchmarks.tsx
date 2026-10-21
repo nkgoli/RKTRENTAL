@@ -1164,7 +1164,7 @@ function CompareView({
       >
         <ComboChart
           label="Annualized return by asset"
-          unit="Index"
+          unit="Percent"
           xLabel="Asset"
           height={256}
           years={assets.map((a) => a.name)}

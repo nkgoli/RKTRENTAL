@@ -111,7 +111,7 @@ export function AssumptionsSummary({
             {result && !stale
               ? 'Calculated automatically from your current assumptions.'
               : result
-                ? 'Out of date - recalculate to update these results.'
+                ? 'Out of date - correct the entries to review; results update automatically.'
                 : 'Review your assumptions to calculate. No valid projection is available yet.'}
           </span>
         )}

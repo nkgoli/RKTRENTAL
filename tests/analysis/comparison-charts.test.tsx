@@ -210,6 +210,9 @@ describe('Benchmarks and Compare presentation (C19–C24)', () => {
     const tags = screen.getAllByRole('list', { name: 'Data basis' });
     expect(tags[0].textContent).toContain('Projected property');
     expect(tags[0].textContent).toContain('Hypothetical markets');
+    // Hypothetical figures are tinted apart from the property's own projected figures.
+    expect(within(tags[0]).getByText('Hypothetical markets').dataset.kind).toBe('hypothetical');
+    expect(within(tags[0]).getByText('Projected property').dataset.kind).toBe('projected');
     expect(screen.getByText(/not live or verified data/)).toBeTruthy();
     const method = screen.getByText(/Where the market figures come from/).closest('details')!;
     expect(method.open).toBe(false);
@@ -245,6 +248,9 @@ describe('Benchmarks and Compare presentation (C19–C24)', () => {
       selected: [markets[0]],
       snapshot: { ...sample, benchmarks: [markets[0]] },
     });
+    // The annualized-return bars are percentages, and their chart title says so.
+    const titles = [...document.querySelectorAll('svg title')].map((t) => t.textContent);
+    expect(titles).toContain('Annualized return by asset (percent)');
     fireEvent.click(screen.getByRole('button', { name: 'vs Property' }));
     const table = screen.getByRole('region', { name: 'Side-by-side comparison' });
     expect(table.textContent).toMatch(/\d pp/);

@@ -1,0 +1,337 @@
+.workspace {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.workspace h2 {
+  margin: 0 0 12px;
+  font: 600 20px/1.2 var(--design-heading-font);
+  letter-spacing: -0.035em;
+}
+.workspace h3 {
+  margin: 0 0 8px;
+  font: 600 16px/1.3 var(--design-heading-font);
+}
+.workspace p {
+  margin: 0 0 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.workspace :is(button, input, select, textarea):focus-visible {
+  outline: 3px solid var(--design-primary);
+  outline-offset: 3px;
+}
+.selection {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: 16px 24px;
+  align-items: flex-start;
+}
+.selection > p {
+  grid-column: 1 / -1;
+}
+.muted {
+  color: var(--design-muted);
+  font-size: 13px;
+}
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.compose {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.balance {
+  padding: 20px;
+  border: 1px solid var(--rr-border);
+  border-radius: var(--design-radius);
+  background: var(--rr-primary-tint);
+}
+.balanceHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.balanceHead p {
+  margin-bottom: 6px;
+}
+.balanceHead strong {
+  font: 600 30px/1.1 var(--design-heading-font);
+  letter-spacing: -0.035em;
+}
+.charges {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rr-border);
+}
+.charges li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rr-border);
+  font-size: 13px;
+}
+.charges li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.charges small {
+  display: block;
+  margin-top: 4px;
+  color: var(--design-muted);
+}
+.field {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 0;
+}
+.field :is(input, select, textarea) {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--rr-border-strong);
+  border-radius: 8px;
+  color: var(--design-text);
+  background: var(--design-surface);
+  font: 400 14px/1.5 var(--design-font);
+}
+.field textarea {
+  resize: vertical;
+}
+.field small {
+  color: var(--design-muted);
+  font-weight: 400;
+}
+.field :disabled {
+  background: var(--design-background);
+  color: var(--design-muted);
+}
+.channel,
+.recipients {
+  border: 0;
+  padding: 0;
+  margin: 20px 0;
+  min-width: 0;
+}
+.channel legend,
+.recipients legend {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.channel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+.channel label,
+.recipients label {
+  min-height: 44px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 14px;
+  cursor: pointer;
+}
+.channel input,
+.recipients input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--design-primary);
+}
+.recipients label {
+  padding: 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--rr-border);
+  border-radius: 8px;
+}
+.recipients label:has(input:checked) {
+  border-color: var(--design-primary);
+  background: var(--rr-primary-tint);
+}
+.recipients span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.recipients small {
+  display: block;
+  margin-top: 4px;
+  color: var(--design-muted);
+}
+.alert,
+.info {
+  padding: 16px;
+  border-left: 3px solid var(--design-danger);
+  background: var(--rr-bad-bg);
+  color: var(--design-text);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.info {
+  border-color: var(--design-primary);
+  background: var(--rr-primary-tint);
+}
+.alert p,
+.info p {
+  margin: 4px 0 8px;
+}
+.good {
+  color: var(--design-accent);
+}
+.warning {
+  color: var(--design-danger);
+}
+.excluded {
+  margin: 0 0 20px;
+  padding-left: 20px;
+  color: var(--design-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.excluded li + li {
+  margin-top: 8px;
+}
+.messageEditor {
+  border-top: 1px solid var(--rr-border);
+  margin-top: 16px;
+  padding-top: 20px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 16px;
+}
+.actions button {
+  min-height: 44px;
+  white-space: normal;
+}
+.review {
+  display: grid;
+  gap: 16px;
+  border-color: var(--design-primary);
+}
+.messagePreview {
+  border: 1px solid var(--rr-border);
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--design-background);
+  overflow-wrap: anywhere;
+}
+.messageBody {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.history {
+  min-width: 0;
+}
+.historyHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.historyHead h2 {
+  margin: 4px 0 0;
+}
+.historyHead p {
+  margin: 0;
+}
+.historyList {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 24px;
+}
+.historyList > li {
+  border-top: 1px solid var(--rr-border);
+  padding-top: 16px;
+}
+.historyMeta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+.historyMeta time,
+.attempt small {
+  color: var(--design-muted);
+  font-size: 12px;
+}
+.attempt {
+  display: grid;
+  gap: 8px;
+  padding: 16px 0 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.attempt p {
+  margin: 0;
+}
+.attempt details {
+  background: var(--design-background);
+  border-radius: 8px;
+  padding: 12px;
+}
+.attempt summary {
+  color: var(--design-primary);
+  cursor: pointer;
+  min-height: 28px;
+}
+.attempt details[open] summary {
+  margin-bottom: 12px;
+}
+.attempt button {
+  justify-self: start;
+  min-height: 44px;
+}
+.recovery p {
+  max-width: 70ch;
+}
+@media (max-width: 1000px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .selection {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .workspace,
+  .compose {
+    gap: 16px;
+  }
+  .balance {
+    padding: 16px;
+  }
+  .field :is(input, select, textarea) {
+    font-size: 16px;
+  }
+  .actions > button {
+    width: 100%;
+  }
+  .historyHead button {
+    min-height: 44px;
+  }
+}

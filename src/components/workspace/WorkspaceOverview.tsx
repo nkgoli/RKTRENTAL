@@ -22,7 +22,7 @@ function statusTone(status: string): 'success' | 'warning' | 'info' | undefined 
 const dollars = (cents: number) => formatMoney(cents / 100);
 
 /** Compact strip from the ledger: what was collected against this month's charges. */
-function PaymentsStrip({ payments, href }: { payments?: PaymentsMonth; href: string }) {
+export function PaymentsStrip({ payments, href, reminderHref }: { payments?: PaymentsMonth; href: string; reminderHref: string }) {
   if (!payments) return null;
   const pct = payments.dueCents > 0 ? Math.min(100, Math.round((payments.paidCents / payments.dueCents) * 100)) : 0;
   return (
@@ -40,6 +40,13 @@ function PaymentsStrip({ payments, href }: { payments?: PaymentsMonth; href: str
         </div>
         <div className={styles.bar} role="progressbar" aria-label="Collected this month" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${pct}%` }} /></div>
       </> : <p className="muted">No rent charges due this month.</p>}
+      <div className={styles.reminderRow}>
+        {payments.overdue && payments.overdue.amountCents > 0 ? <>
+          <div><strong className={styles.owed}>{dollars(payments.overdue.amountCents)} overdue</strong><small>All dates · includes older arrears and assessed fees</small></div>
+          <Link className="btn btn-secondary btn-sm" href={reminderHref}>Send payment reminder</Link>
+        </> : <span className="muted">No overdue balance.</span>}
+        <Link href={`${reminderHref}&view=history`}>Reminder history</Link>
+      </div>
     </section>
   );
 }
@@ -137,7 +144,7 @@ export function PropertyOverview({ property, owners = [], timeline, payments, un
           <span className={styles.occupancyTile} aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 21V4h10v17M14 9h6v12M2 21h20M8 8h2M8 12h2M8 16h2M17 13h1M17 17h1" /></svg></span>
           <div><small>Property occupancy</small><p><strong className={styles.metric}>{occupancyPct}%</strong>{property.stats.occupied} of {activeUnits.length} occupied</p></div>
         </div>
-        <PaymentsStrip payments={payments} href={`/properties/${property.id}/payments`} />
+        <PaymentsStrip payments={payments} href={`/properties/${property.id}/payments`} reminderHref={`/notifications?propertyId=${property.id}`} />
       </section>
       <TimelineCard timeline={timeline} propertyId={property.id} linkUnits={multiUnit} />
       {multiUnit && <PropertyUnits property={property} page={unitsPage} />}
@@ -198,7 +205,7 @@ export function UnitOverview({ unit, canDelete, timeline, payments }: {
       {timeline
         ? <TimelineCard timeline={timeline} propertyId={unit.property.id} footer={<UnitLeaseSummary unit={unit} />} />
         : <Card><CardHeader title="Lease timeline" /><UnitLeaseSummary unit={unit} /></Card>}
-      <PaymentsStrip payments={payments} href={`/properties/${unit.property.id}/payments?unit=${unit.id}`} />
+      <PaymentsStrip payments={payments} href={`/properties/${unit.property.id}/payments?unit=${unit.id}`} reminderHref={`/notifications?propertyId=${unit.property.id}&unitId=${unit.id}`} />
       <div className={styles.pair}>
         <UnitFactsCard
           propertyId={unit.property.id}

@@ -41,20 +41,23 @@ Screenshots are in `.playwright-mcp/` (local evidence, not committed):
 
 - `lease-summary-desktop-property.png`
 - `lease-summary-desktop-unit-current.png`
+- `lease-summary-desktop-unit-4b.png`
 - `lease-summary-desktop-maple.png`
 - `lease-summary-desktop-upcoming.png`
 - `lease-summary-desktop-draft.png`
 - `lease-summary-desktop-history.png`
 - `lease-summary-desktop-vacant.png`
 - `lease-summary-desktop-focus.png`
+- `lease-summary-desktop-single-unit.png`
 - `lease-summary-390-property.png`
 - `lease-summary-390-unit-current.png`
+- `lease-summary-390-unit-4b.png`
 - `lease-summary-390-maple.png`
 - `lease-summary-390-history.png`
 - `lease-summary-390-vacant.png`
 - `lease-summary-390-upcoming-long-name.png`
 
-The before state is the supplied attachment `Artifacts/input:c33d5e889c5f468422431cf83c91072bf238ed5771d53a1bba49ae78086fa2c3` (the thick solid blue lease-term bar).
+The before state is the supplied attachment `Artifacts/input:c33d5e889c5f468422431cf83c91072bf238ed5771d53a1bba49ae78086fa2c3` (the thick solid blue lease-term bar). The retained checkout also has the previous task's before captures for the same unit: `tests/workspace/native-review/evidence/before-1280-unit-occupied.png` and `before-390-unit-occupied.png`; the matching after captures are `lease-summary-desktop-unit-4b.png` and `lease-summary-390-unit-4b.png`.
 
 ## Limitations
 

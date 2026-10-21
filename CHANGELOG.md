@@ -6,6 +6,7 @@ All notable changes to RocketRental. This project uses semantic versioning.
 
 ### UX pass
 
+- Added scoped overdue payment reminders with explicitly selected recipients, editable bound previews, email/SMS sandbox tests, persistent outcome history and duplicate-safe interrupted-send recovery. Older arrears and assessed fees remain separate from current-month totals.
 - Refined manager lists, property and leasing forms, financial analysis, shared confirmations and feedback in the preceding manager UX pass.
 - Gave the tenant portal desktop navigation, a two-column Home, one rent action, dismissible renewal reminders, contextual account controls and clearer lease documents.
 - Added a focused payment-review dialog, a compact method chooser, accurate autopay guidance, inline repair validation and consistent request cards with photo previews.

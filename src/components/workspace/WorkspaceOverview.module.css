@@ -9,6 +9,10 @@
 .metric { font: 600 30px/1.1 var(--design-heading-font); letter-spacing: -.04em; color: var(--design-text); display: inline-block; margin-right: 8px; font-variant-numeric: tabular-nums; }
 .strip { border-left: 1px solid var(--rr-border); padding-left: 24px; display: grid; gap: 9px; align-content: start; min-width: 0; }
 .strip h3 { margin: 0; font: 600 14px var(--design-heading-font); }
+.reminderRow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 12px; margin-top: 3px; border-top: 1px solid var(--rr-border); font-size: 13px; }
+.reminderRow > div { flex: 1; min-width: 150px; }
+.reminderRow small { display: block; margin-top: 4px; color: var(--design-muted); font-size: 12px; }
+.reminderRow a { min-height: 44px; display: inline-flex; align-items: center; }
 .stripHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; }
 .stripNumbers { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; font-size: 13px; }
 .stripNumbers strong { font-size: 17px; }

@@ -55,11 +55,11 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')('provider persistence', 
       await prisma.charge.count({
         where: { organizationId: demo, id: { startsWith: 'seed-charge-' }, kind: 'RENT' },
       }),
-    ).toBe(123); // 41 active leases across August–October 2026
+    ).toBe(410); // 41 active leases across January–October 2026
     expect(
       await prisma.payment.count({
         where: { organizationId: demo, id: { startsWith: 'seed-payment-' } },
       }),
-    ).toBe(123);
+    ).toBe(403); // Current full ledger seed, including Alex's earlier move-in history.
   });
 });

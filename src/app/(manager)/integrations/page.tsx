@@ -20,6 +20,8 @@ import { ProviderLogo } from '@/components/integrations/ProviderLogo';
 import { connectAction, disconnectAction } from './actions';
 import { FeeSwitch } from './FeeSwitch';
 import { AutoSaveSettings } from './AutoSaveSettings';
+import { ReminderSetup } from '@/components/notifications/ReminderSetup';
+import { loadReminderChannels } from '@/components/notifications/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -198,7 +200,10 @@ export default async function Page({
 }) {
   const session = await requireManagerRole();
   const { notice, error } = await searchParams;
-  const view = await loadIntegrations(session.organizationId, db.providerConnection);
+  const [view, reminderChannels] = await Promise.all([
+    loadIntegrations(session.organizationId, db.providerConnection),
+    loadReminderChannels(session.organizationId),
+  ]);
   const { payments, screening, comps } = view.settings;
   const providers = [...view.groups.payments, ...view.groups.screening, ...view.groups.comps];
   const connected = providers.filter((provider) => provider.connected);
@@ -207,6 +212,7 @@ export default async function Page({
   return (
     <div className={styles.page}>
       <PageHeader eyebrow="Settings" title="Integrations" actions={[]} />
+      <ReminderSetup channels={reminderChannels} />
       <nav className={styles.jumpLinks} aria-label="Provider groups">
         <a className="chip" href="#payments-providers">
           Payments

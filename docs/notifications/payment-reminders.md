@@ -8,9 +8,19 @@ npm.cmd run db:migrate
 node node_modules/prisma/build/index.js generate
 ```
 
-## UI contract
+## Manager workspace
 
-All manager endpoints require a current authenticated `MANAGER` session. Owner, tenant and admin roles are rejected. Organization and manager come from the verified session; property, unit, tenants and contact addresses come from the selected lease in that organization. Requests cannot supply content, recipients, amounts or organization IDs. JSON bodies reject unknown fields; cookie mutation requests with a foreign Origin are rejected. Responses contain personal contact information and must be displayed only in the authenticated manager workspace; do not cache them.
+Property/unit overdue summaries link to `/notifications` with their scope. Monthly totals remain limited to the current month's active charges; the separate overdue amount uses all eligible persisted arrears, including ended leases and assessed fees. Reminder history remains available when a lease is paid. A property-wide lease selection is retained in the URL through reload.
+
+The manager workspace uses authenticated server actions and `PaymentReminders.preview(actor, leaseId, channel, review)` to bind an explicitly reviewed recipient subset and edited subject/body. `review` is `{ recipients: [{ tenantId, subject, body }] }`; duplicate IDs, unknown fields, empty selections, subject header breaks, NUL characters and oversized content are rejected. A subject is 1–200 characters, a body 1–2,000, and a preview supports at most 30 selected contacts. Tenant IDs must belong to the selected scoped lease and be currently eligible for that channel. Contact addresses and ledger amounts always come from the server. Ambiguous selections start unchecked in the UI.
+
+Reviewed snapshots have `reviewVersion: 1` and a server-selected `transport` name. The fingerprint binds the exact stored content, contacts, selection, channel, transport, scope and current ledger state. Dispatch reconstructs eligibility and compares the complete audit snapshot before reservation and again before claiming each selected attempt. A transport change invalidates the preview, so a reviewed sandbox test cannot turn into a live send. The UI also rejects a preview whose sandbox/live mode differs from the displayed availability. JSONB object key ordering does not affect validation. Attempts and persistent history use the exact reviewed messages. Existing default HTTP previews remain supported.
+
+Same-state/day duplicate protection remains scoped to the lease and channel; editing content or choosing a different subset cannot bypass it. Send to all intended recipients in one reviewed operation. Preserve the same operation/key after an interrupted response. The browser stores only that operation's opaque IDs and key in session storage for recovery, not draft content or contact data. Drafts stay on the page after errors, including session expiry; changing content or recipients requires a fresh preview. Sending is disabled during submission, and review receives keyboard focus once mounted.
+
+## HTTP contract
+
+All manager endpoints require a current authenticated `MANAGER` session. Owner, tenant and admin roles are rejected. Organization and manager come from the verified session; property, unit, tenants and contact addresses come from the selected lease in that organization. The HTTP routes below retain their identifier-only request contract; edited previews use the authenticated manager actions described above. Requests cannot supply contact addresses, amounts or organization IDs. JSON bodies reject unknown fields; cookie mutation requests with a foreign Origin are rejected. Responses contain personal contact information and must be displayed only in the authenticated manager workspace; do not cache them.
 
 | Endpoint                                       | Request                                                           | Successful response                                                                                  |
 | ---------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |

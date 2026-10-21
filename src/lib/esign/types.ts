@@ -19,6 +19,10 @@ export type EsignEnvelope = {
   version?: number;
   snapshotHash?: string;
   archiveStatus?: string;
+  archivedAt?: string | null;
+  archiveDocumentId?: string | null;
+  archiveNextAttemptAt?: string | null;
+  archiveError?: string | null;
 };
 
 export type EsignCallbackPayload = {

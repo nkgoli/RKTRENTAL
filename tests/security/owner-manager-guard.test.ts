@@ -42,13 +42,13 @@ describe('OWNER manager access guards', () => {
   });
 
   it('refuses an OWNER session for manager reads', async () => {
-    await expect(requireManagerRole()).rejects.toThrow('redirect:/sign-out');
-    expect(mocks.redirect).toHaveBeenCalledWith('/sign-out?notice=role');
+    await expect(requireManagerRole()).rejects.toThrow('redirect:/sign');
+    expect(mocks.redirect).toHaveBeenCalledWith('/sign?notice=role');
   });
 
   it('refuses an OWNER session for manager writes', async () => {
-    await expect(requireManagerWriteRole()).rejects.toThrow('redirect:/sign-out');
-    expect(mocks.redirect).toHaveBeenCalledWith('/sign-out?notice=role');
+    await expect(requireManagerWriteRole()).rejects.toThrow('redirect:/sign');
+    expect(mocks.redirect).toHaveBeenCalledWith('/sign?notice=role');
   });
 
   it('wires the applications page and mutations through the manager guards', () => {

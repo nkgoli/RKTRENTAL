@@ -1,4 +1,34 @@
-export const DOCUMENT_KINDS = ['LEASE', 'ADDENDUM', 'DISCLOSURE', 'NOTICE', 'INSPECTION', 'ID', 'PHOTO'] as const;
+import type { AgreementFileReference } from '@/lib/storage/types';
+
+export const DOCUMENT_KINDS = [
+  'LEASE',
+  'ADDENDUM',
+  'DISCLOSURE',
+  'NOTICE',
+  'INSPECTION',
+  'ID',
+  'PHOTO',
+] as const;
+
+/** File kind/name is never signing proof. Originals may be included in several signed versions. */
+export function documentAgreementMetadata(document: { agreementFiles?: AgreementFileReference[] }) {
+  return (document.agreementFiles ?? []).map((file) => ({
+    agreementId: file.agreementId,
+    version: file.agreement.version,
+    artifact: file.slot === 'LEASE' ? ('LEASE' as const) : ('ADDENDUM' as const),
+    signatureStatus: !file.agreement.signedAt
+      ? file.agreement.supersededAt
+        ? ('SUPERSEDED' as const)
+        : ('AWAITING_SIGNATURES' as const)
+      : file.slot === 'LEASE' && file.agreement.archiveStatus === 'ARCHIVED'
+        ? ('SIGNED' as const)
+        : ('INCLUDED_IN_SIGNED_AGREEMENT' as const),
+    signedAt: file.agreement.signedAt?.toISOString() ?? null,
+    supersededAt: file.agreement.supersededAt?.toISOString() ?? null,
+    archiveStatus: file.agreement.archiveStatus,
+    sha256: file.sha256,
+  }));
+}
 
 export type LibraryDocumentKind = (typeof DOCUMENT_KINDS)[number] | 'OTHER';
 export type LibrarySort = 'newest' | 'oldest';
@@ -28,6 +58,7 @@ export interface LibraryLease {
 }
 
 export interface LibraryDocument {
+  agreementFiles?: AgreementFileReference[];
   id: string;
   name: string;
   kind: LibraryDocumentKind;

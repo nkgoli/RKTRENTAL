@@ -1027,15 +1027,17 @@ export function ReviewStep({
   unitLabel,
   tenants,
   attachments,
+  lessorSigner,
 }: {
   draft: WizardDraft;
   errors: WizardErrors;
   unitLabel: string;
   tenants: TenantOption[];
   attachments: AttachmentFile[];
+  lessorSigner?: { name: string; email: string } | null;
 }) {
   const names = tenants.filter((t) => draft.tenantIds.includes(t.id)).map((t) => t.name);
-  const primary = tenants.find((t) => t.id === draft.primaryTenantId);
+
   const list = (items: string[]) => (items.length ? items.join('; ') : 'None');
   return (
     <div>
@@ -1098,7 +1100,12 @@ export function ReviewStep({
         <dd>
           {draft.template
             ? list(
-                resolveTerms(draft.template, contextFromDraft(draft), draft.termOverrides)
+                resolveTerms(
+                  draft.template,
+                  contextFromDraft(draft),
+                  draft.termOverrides,
+                  draft.renewalTerms,
+                )
                   .filter((t) => t.included && t.section === 'CLAUSE')
                   .map((t) => t.title),
               )
@@ -1108,7 +1115,12 @@ export function ReviewStep({
         <dd>
           {draft.template
             ? list(
-                resolveTerms(draft.template, contextFromDraft(draft), draft.termOverrides)
+                resolveTerms(
+                  draft.template,
+                  contextFromDraft(draft),
+                  draft.termOverrides,
+                  draft.renewalTerms,
+                )
                   .filter((t) => t.included && t.section === 'RULE')
                   .map((t) => t.title),
               )
@@ -1118,7 +1130,12 @@ export function ReviewStep({
         <dd>
           {draft.template
             ? list(
-                resolveTerms(draft.template, contextFromDraft(draft), draft.termOverrides)
+                resolveTerms(
+                  draft.template,
+                  contextFromDraft(draft),
+                  draft.termOverrides,
+                  draft.renewalTerms,
+                )
                   .filter((t) => t.included && t.section === 'DISCLOSURE')
                   .map((t) => t.title),
               )
@@ -1135,16 +1152,80 @@ export function ReviewStep({
           {draft.lessorAddress ? ` · ${draft.lessorAddress}` : ''}
         </dd>
         <dt>Signature</dt>
-        <dd>Electronic · mock provider · {primary?.name ?? 'Primary tenant'}</dd>
+        <dd>Electronic · owner / lessor and every tenant sign independently</dd>
+        <dt>Owner / lessor account</dt>
+        <dd>
+          {lessorSigner
+            ? `${lessorSigner.name} · ${lessorSigner.email}`
+            : 'Assign an owner / lessor account to this property before sending.'}
+        </dd>
+        <dt>Tenant accounts</dt>
+        <dd>
+          {tenants
+            .filter((t) => draft.tenantIds.includes(t.id))
+            .map((t) => (
+              <p key={t.id}>
+                {t.name} · {t.email || 'Email required'}
+              </p>
+            ))}
+        </dd>
       </dl>
+      <h3 className={styles.reviewSection}>Full agreement wording</h3>
+      {draft.template &&
+        resolveTerms(
+          draft.template,
+          contextFromDraft(draft),
+          draft.termOverrides,
+          draft.renewalTerms,
+        )
+          .filter((t) => t.included)
+          .map((t) => (
+            <section key={t.id} style={{ marginTop: 16 }}>
+              <h4>{t.title}</h4>
+              <p style={{ whiteSpace: 'pre-wrap' }}>{t.body}</p>
+            </section>
+          ))}
+      {[
+        [OPTION_CHOICES, draft.options],
+        [CLAUSE_OPTIONS, draft.clauses],
+        [RULE_OPTIONS, draft.rules],
+        [DISCLOSURE_OPTIONS, draft.disclosures],
+      ].map(([choices, selected], group) =>
+        (choices as ClauseOption[])
+          .filter((c) => (selected as string[]).includes(c.id))
+          .map((c) => (
+            <section key={`${group}-${c.id}`} style={{ marginTop: 16 }}>
+              <h4>{c.label}</h4>
+              <p>{c.description}</p>
+            </section>
+          )),
+      )}
+      {draft.customClause && <p style={{ whiteSpace: 'pre-wrap' }}>{draft.customClause}</p>}
+      {draft.customRules && <p style={{ whiteSpace: 'pre-wrap' }}>{draft.customRules}</p>}
+      <h3 className={styles.reviewSection}>Separate files to review</h3>
+      {attachments.map((file) => (
+        <p key={file.id}>
+          <strong>{file.name}</strong> ·{' '}
+          {file.kind === 'ADDENDUM' ? 'Included addendum' : 'Supporting document'} ·{' '}
+          <a href={`/api/files/${file.id}/preview`} target="_blank" rel="noreferrer">
+            Preview
+          </a>{' '}
+          · <a href={`/api/files/${file.id}/download`}>Download</a>
+        </p>
+      ))}
+      <p className={styles.sub}>
+        Only files marked Addendum are included in the signed agreement. Other files remain
+        supporting documents.
+      </p>
       {Object.keys(errors).length > 0 && (
         <div className={styles.alert} role="alert" style={{ marginTop: 16 }}>
           {Object.values(errors).join(' ')}
         </div>
       )}
       <p className={styles.sub} style={{ marginTop: 16 }}>
-        Sending creates an active lease, adds its move-in charges to Payments and emails the signer
-        through the mock provider (no real email is sent).
+        Sending creates an active lease, adds its scheduled charges to Payments and makes the
+        agreement available for each designated party to sign. No email or text notification is
+        sent.
       </p>
     </div>
   );

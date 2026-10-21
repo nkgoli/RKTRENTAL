@@ -14,6 +14,9 @@ import {
 } from '@/lib/lease-create/clauses';
 import type { EsignCallbackPayload, EsignEnvelope } from './types';
 import { EsignError } from './types';
+import { snapshotAddendums } from './attachments';
+import { archiveSignedAgreement, runLeaseArchiveSweep } from './archive';
+import { assertArchivableText } from './pdf';
 
 export const SIGNED_LEASE_NAME = 'Signed lease agreement.pdf';
 export const SIGNATURE_CONSENT_VERSION = 'lease-esign-v1';
@@ -49,9 +52,35 @@ const signatureSchema = z
   .strict();
 export type LeaseSignatureInput = z.infer<typeof signatureSchema>;
 
-const include = { parties: { orderBy: { id: 'asc' as const } } };
+const include = { parties: { orderBy: { id: 'asc' as const } }, files: true };
 type Agreement = Prisma.LeaseAgreementGetPayload<{ include: typeof include }>;
 type Tx = Prisma.TransactionClient;
+
+async function requireArchivableText(value: unknown, field?: string) {
+  const text: string[] = [];
+  JSON.stringify(value, (key, item) => {
+    text.push(key);
+    if (typeof item === 'string') text.push(item);
+    return item;
+  });
+  try {
+    await assertArchivableText(text.join('\n'));
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('PDF font does not support'))
+      throw new EsignError(
+        'The PDF fonts cannot yet render some of this text. Ask your manager to enable support for these characters before signing.',
+        field,
+        400,
+        'UNSUPPORTED_PDF_TEXT',
+      );
+    throw new EsignError(
+      'PDF preparation is temporarily unavailable. Please retry.',
+      undefined,
+      503,
+      'PDF_UNAVAILABLE',
+    );
+  }
+}
 const denied = () =>
   new EsignError(
     'Signing agreement not found or unavailable.',
@@ -109,7 +138,7 @@ async function lockLease(tx: Tx, organizationId: string, leaseId: string) {
 }
 type Lease = Awaited<ReturnType<typeof lockLease>>;
 
-async function agreementSource(tx: Tx, lease: Lease) {
+async function agreementSource(tx: Tx, lease: Lease, freezeFiles = false) {
   const owner = lease.unit.property.owner;
   if (!owner || !['OWNER', 'MANAGER'].includes(owner.role))
     throw new EsignError(
@@ -192,6 +221,7 @@ async function agreementSource(tx: Tx, lease: Lease) {
       );
   }
   const property = lease.unit.property;
+  const addendums = await snapshotAddendums(tx, lease.organizationId, lease.id, freezeFiles);
   const snapshot = {
     schemaVersion: 1,
     organizationId: lease.organizationId,
@@ -236,11 +266,13 @@ async function agreementSource(tx: Tx, lease: Lease) {
     parties,
     consentVersion: SIGNATURE_CONSENT_VERSION,
     consentText: SIGNATURE_CONSENT_TEXT,
+    ...(addendums.length ? { addendums } : {}),
   };
   return {
     parties,
     snapshot,
     snapshotHash: createHash('sha256').update(canonical(snapshot)).digest('hex'),
+    addendums,
   };
 }
 
@@ -253,6 +285,10 @@ function envelope(agreement: Agreement): EsignEnvelope {
     version: agreement.version,
     snapshotHash: agreement.snapshotHash,
     archiveStatus: agreement.archiveStatus,
+    archivedAt: agreement.archivedAt?.toISOString() ?? null,
+    archiveDocumentId: agreement.files.find((file) => file.slot === 'LEASE')?.documentId ?? null,
+    archiveNextAttemptAt: agreement.archiveNextAttemptAt?.toISOString() ?? null,
+    archiveError: agreement.archiveLastError,
     status: agreement.supersededAt
       ? 'NOT_SENT'
       : agreement.signedAt
@@ -294,7 +330,8 @@ export async function sendLeaseForSignature(
       throw conflict(
         'This historical signed lease has no individual signing record. Create a renewal or amendment.',
       );
-    const source = await agreementSource(tx, lease);
+    const source = await agreementSource(tx, lease, true);
+    await requireArchivableText(source.snapshot);
     if (previous && !previous.supersededAt && previous.snapshotHash === source.snapshotHash)
       return envelope(previous);
     if (previous && !previous.supersededAt)
@@ -313,6 +350,16 @@ export async function sendLeaseForSignature(
       },
       include,
     });
+    for (const addendum of source.addendums)
+      await tx.leaseAgreementFile.create({
+        data: {
+          organizationId,
+          agreementId: created.id,
+          documentId: addendum.documentId,
+          slot: `ADDENDUM:${addendum.documentId}`,
+          sha256: addendum.sha256,
+        },
+      });
     await tx.lease.update({
       where: { id: leaseId },
       data: { eSignStatus: 'SENT', signedAt: null },
@@ -337,7 +384,7 @@ export async function getLeaseSignStatus(
   leaseId: string,
   client: PrismaClient = db,
 ): Promise<EsignEnvelope> {
-  return transaction(client, async (tx) => {
+  const result = await transaction(client, async (tx) => {
     const lease = await lockLease(tx, organizationId, leaseId);
     const agreement = await latestAgreement(tx, organizationId, leaseId);
     if (agreement) {
@@ -362,6 +409,32 @@ export async function getLeaseSignStatus(
       archiveStatus: 'LEGACY_UNKNOWN',
     };
   });
+  return refreshArchive(result, organizationId, client);
+}
+
+async function refreshArchive<T extends EsignEnvelope>(
+  result: T,
+  organizationId: string,
+  client: PrismaClient,
+): Promise<T> {
+  // Authorization/lease lookup is complete before consuming any work. Retry older signed versions too.
+  await runLeaseArchiveSweep(organizationId, client, { leaseId: result.leaseId, limit: 2 }).catch(
+    () => undefined,
+  );
+  if (!result.id) return result;
+  const current = await client.leaseAgreement
+    .findFirst({ where: { id: result.id, organizationId }, include })
+    .catch(() => null);
+  if (!current) return result;
+  const state = envelope(current);
+  return {
+    ...result,
+    archiveStatus: state.archiveStatus,
+    archivedAt: state.archivedAt,
+    archiveDocumentId: state.archiveDocumentId,
+    archiveNextAttemptAt: state.archiveNextAttemptAt,
+    archiveError: state.archiveError,
+  };
 }
 
 async function currentUser(tx: Tx, session: AuthSession) {
@@ -418,7 +491,7 @@ export async function getSigningAgreement(
   leaseId: string,
   client: PrismaClient = db,
 ) {
-  return transaction(client, async (tx) => {
+  const result = await transaction(client, async (tx) => {
     const { agreement, party } = await accessibleAgreement(tx, session, leaseId, false);
     return {
       ...envelope(agreement),
@@ -428,6 +501,7 @@ export async function getSigningAgreement(
       consentText: SIGNATURE_CONSENT_TEXT,
     };
   });
+  return refreshArchive(result, session.organizationId, client);
 }
 
 /** The session comes from getSession(), never from JSON. Identity and timestamp are server-owned. */
@@ -444,7 +518,8 @@ export async function submitLeaseSignature(
       parsed.error.issues[0]?.path.join('.'),
     );
   const value = parsed.data;
-  return transaction(client, async (tx) => {
+  await requireArchivableText(value.fullName, 'fullName');
+  const result = await transaction(client, async (tx) => {
     const { user, lease, agreement, party } = await accessibleAgreement(tx, session, leaseId, true);
     if (!party) throw denied();
     if (!['DRAFT', 'ACTIVE'].includes(lease.status))
@@ -521,6 +596,9 @@ export async function submitLeaseSignature(
       await tx.leaseAgreement.findUniqueOrThrow({ where: { id: agreement.id }, include }),
     );
   });
+  if (result.signedAt) await archiveSignedAgreement(session.organizationId, result.id, client);
+  // The signing success survives PDF failure and reports its independently stored status.
+  return refreshArchive(result, session.organizationId, client);
 }
 
 /** Retired compatibility entry points: callbacks cannot attest to individual consent or identity. */

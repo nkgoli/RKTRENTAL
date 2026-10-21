@@ -1,5 +1,6 @@
 import { getSession } from '@/lib/auth/server-session';
 import { runNotificationSweep } from '@/lib/notifications/service';
+import { runLeaseArchiveSweep } from '@/lib/esign/archive';
 
 export const runtime = 'nodejs';
 
@@ -10,5 +11,7 @@ export async function POST() {
   if (session.role !== 'MANAGER' && session.role !== 'OWNER')
     return Response.json({ error: 'Manager access required' }, { status: 403 });
   const result = await runNotificationSweep(session.organizationId);
-  return Response.json(result);
+  const archives =
+    session.role === 'MANAGER' ? await runLeaseArchiveSweep(session.organizationId) : [];
+  return Response.json({ ...result, archives });
 }

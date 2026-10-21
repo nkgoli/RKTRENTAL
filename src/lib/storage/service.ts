@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
 import type { FileAccess } from './access';
 import { assertDocumentAccess, assertTargetAccess } from './access';
@@ -23,6 +23,7 @@ export interface DocumentRepository {
   listByTarget(orgId: string, target: FileTarget): Promise<StoredDocument[]>;
   findById(orgId: string, id: string): Promise<StoredDocument | null>;
   delete(id: string): Promise<void>;
+  deleteWithStorage?(document: StoredDocument, removeBytes: () => Promise<void>): Promise<void>;
   /** Optional fast photo count; falls back to listByTarget when omitted. */
   countPhotos?(orgId: string, target: FileTarget): Promise<number>;
   /**
@@ -148,6 +149,7 @@ export class FileService {
     private repo: DocumentRepository,
     private access: FileAccess,
     private env: PhotoLimitEnv = process.env,
+    private beforeList?: (actor: FileActor, target: FileTarget) => Promise<void>,
   ) {}
 
   /** Serializes photo count-and-create per target within this process. */
@@ -277,6 +279,7 @@ export class FileService {
         storageKey,
         sizeBytes: input.body.byteLength,
         mimeType: canonicalMime,
+        contentSha256: createHash('sha256').update(input.body).digest('hex'),
       });
     } catch (e) {
       await this.storage.delete(storageKey).catch(() => undefined);
@@ -340,6 +343,7 @@ export class FileService {
         storageKey: input.storageKey,
         sizeBytes: object.body.byteLength,
         mimeType: canonicalMime,
+        contentSha256: createHash('sha256').update(object.body).digest('hex'),
       });
     } catch (e) {
       await this.storage.delete(input.storageKey).catch(() => undefined);
@@ -348,6 +352,7 @@ export class FileService {
   }
   async list(actor: FileActor, target: FileTarget): Promise<StoredDocument[]> {
     await assertTargetAccess(this.access, actor, target);
+    await this.beforeList?.(actor, target);
     const documents = await this.repo.listByTarget(actor.organizationId, target);
     const visible =
       actor.role === 'TENANT' ? documents.filter((doc) => doc.kind !== 'ID') : documents;
@@ -458,6 +463,10 @@ export class FileService {
     if (actor.role !== 'MANAGER')
       throw new StorageError('Forbidden', 'FORBIDDEN', 403);
     const document = await this.getDocument(actor, id);
+    if (document.agreementFiles?.length)
+      throw new StorageError('Agreement documents must be retained', 'FORBIDDEN', 403);
+    if (this.repo.deleteWithStorage)
+      return this.repo.deleteWithStorage(document, () => this.storage.delete(document.storageKey));
     await this.storage.delete(document.storageKey);
     await this.repo.delete(document.id);
   }
@@ -484,10 +493,21 @@ export async function createPrismaFileService(): Promise<FileService> {
       OR: [{ kind: { not: 'PHOTO' as const } }, { maintenancePhoto: { is: null as null } }],
     }),
   });
+  const agreementInclude = {
+    agreementFiles: {
+      include: {
+        agreement: {
+          select: { version: true, signedAt: true, supersededAt: true, archiveStatus: true },
+        },
+      },
+    },
+  } as const;
   const repo: DocumentRepository = {
     async create(input) {
+      const { agreementFiles: _references, ...data } = input;
+      void _references;
       const row = await db.document.create({
-        data: { ...input, sizeBytes: BigInt(input.sizeBytes) },
+        data: { ...data, sizeBytes: BigInt(input.sizeBytes) },
       });
       return { ...row, sizeBytes: Number(row.sizeBytes) };
     },
@@ -495,6 +515,8 @@ export async function createPrismaFileService(): Promise<FileService> {
       return db.document.count({ where: { ...targetWhere(orgId, target), kind: 'PHOTO', ...galleryPhotoWhere(target) } });
     },
     async createPhotoWithinLimit(input, max) {
+      const { agreementFiles: _references, ...data } = input;
+      void _references;
       const target: FileTarget = input.propertyId
         ? { kind: 'property', id: input.propertyId }
         : input.unitId
@@ -515,7 +537,7 @@ export async function createPrismaFileService(): Promise<FileService> {
         });
         const sortOrder = top?.sortOrder != null ? top.sortOrder + 1 : used;
         return tx.document.create({
-          data: { ...input, sortOrder, sizeBytes: BigInt(input.sizeBytes) },
+          data: { ...data, sortOrder, sizeBytes: BigInt(input.sizeBytes) },
         });
       });
       return { ...row, sizeBytes: Number(row.sizeBytes) };
@@ -523,6 +545,7 @@ export async function createPrismaFileService(): Promise<FileService> {
     async listByTarget(orgId, target) {
       const rows = await db.document.findMany({
         where: visibleTargetWhere(orgId, target),
+        include: agreementInclude,
         orderBy: [
           { isCover: 'desc' },
           { sortOrder: { sort: 'asc', nulls: 'last' } },
@@ -571,12 +594,34 @@ export async function createPrismaFileService(): Promise<FileService> {
       return rows.map((r) => ({ ...r, sizeBytes: Number(r.sizeBytes) }));
     },
     async findById(orgId, id) {
-      const row = await db.document.findFirst({ where: { id, organizationId: orgId } });
+      const row = await db.document.findFirst({
+        where: { id, organizationId: orgId },
+        include: agreementInclude,
+      });
       return row ? { ...row, sizeBytes: Number(row.sizeBytes) } : null;
     },
     async delete(id) {
       await db.document.delete({ where: { id } });
     },
+    async deleteWithStorage(document, removeBytes) {
+      await db.$transaction(async (tx) => {
+        if (document.leaseId)
+          await tx.$queryRaw`SELECT "id" FROM "Lease" WHERE "id" = ${document.leaseId} FOR UPDATE`;
+        const references = await tx.leaseAgreementFile.count({ where: { documentId: document.id } });
+        if (references)
+          throw new StorageError('Agreement documents must be retained', 'FORBIDDEN', 403);
+        await removeBytes();
+        await tx.document.delete({ where: { id: document.id } });
+      });
+    },
   };
-  return new FileService(getStorage(), repo, await createPrismaFileAccess());
+  return new FileService(
+    getStorage(), repo, await createPrismaFileAccess(), process.env,
+    async (actor, target) => {
+      if (target.kind !== 'lease') return;
+      const { runLeaseArchiveSweep } = await import('@/lib/esign/archive');
+      await runLeaseArchiveSweep(actor.organizationId, db, { leaseId: target.id, limit: 2 })
+        .catch(() => undefined);
+    },
+  );
 }

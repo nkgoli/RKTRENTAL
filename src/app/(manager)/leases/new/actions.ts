@@ -4,13 +4,8 @@ import { requireManagerRole } from '@/lib/auth/access';
 import { LeaseServiceError } from '@/lib/leases/service';
 import { activateDraftLease, coerceDraft, saveLeaseDraft } from '@/lib/lease-create/drafts';
 import { STEP } from '@/lib/lease-create/types';
-import {
-  completeMockSigning,
-  getLeaseSignStatus,
-  sendLeaseForSignature,
-} from '@/lib/esign/service';
+import { getLeaseSignStatus, sendLeaseForSignature } from '@/lib/esign/service';
 import { EsignError } from '@/lib/esign/types';
-import { actorFromSession } from '@/lib/storage/http';
 import { getTemplate, saveTemplate } from '@/lib/lease-create/template-service';
 import { contextFromDraft, resolveTerms } from '@/lib/lease-create/templates';
 
@@ -21,10 +16,19 @@ export async function saveTemplateFromDraftAction(input: { name: string; draft: 
     if (!draft.template) return { error: 'Choose a template first.' };
     const resolved = resolveTerms(draft.template, contextFromDraft(draft), draft.termOverrides)
       .filter((item) => item.included)
-      .map((item, index) => ({ id: item.id, section: item.section, title: item.title,
-        body: item.body, order: index, required: item.required, includeWhen: item.includeWhen }));
+      .map((item, index) => ({
+        id: item.id,
+        section: item.section,
+        title: item.title,
+        body: item.body,
+        order: index,
+        required: item.required,
+        includeWhen: item.includeWhen,
+      }));
     const saved = await saveTemplate(session.organizationId, {
-      name: input.name, items: resolved, defaultFees: draft.template.defaultFees,
+      name: input.name,
+      items: resolved,
+      defaultFees: draft.template.defaultFees,
     });
     const template = await getTemplate(session.organizationId, saved.id);
     if (!template) return { error: 'The new template could not be loaded.' };
@@ -72,7 +76,8 @@ export async function saveWizardStepAction(input: SaveStepInput): Promise<SaveSt
       draft: coerceDraft(input.draft),
       strict: Boolean(input.strict),
     });
-    if (!result.ok) return { ok: false, errors: result.errors, message: 'Please fix the highlighted fields.' };
+    if (!result.ok)
+      return { ok: false, errors: result.errors, message: 'Please fix the highlighted fields.' };
     return {
       ok: true,
       leaseId: result.leaseId,
@@ -118,7 +123,7 @@ export async function sendWizardLeaseAction(input: {
         leaseId,
         esignStatus: envelope.status,
         message:
-          'Lease created and sent for e-signature through the mock provider. Complete mock signing below to store the signed lease PDF.',
+          'Agreement ready for the owner / lessor and each tenant to review and sign from their own accounts. No email or text notification was sent.',
       };
     } catch (error) {
       if (!(error instanceof EsignError)) throw error;
@@ -140,24 +145,11 @@ export async function sendWizardLeaseAction(input: {
   }
 }
 
-export async function completeSigningAction(
-  _prev: WizardActionState,
-  form: FormData,
-): Promise<WizardActionState> {
+export async function prepareSigningAction(leaseId: string): Promise<WizardActionState> {
   const session = await requireManagerRole();
-  const leaseId = String(form.get('leaseId') ?? '');
   try {
-    const envelope = await completeMockSigning(
-      session.organizationId,
-      actorFromSession(session),
-      leaseId,
-    );
-    return {
-      ok: true,
-      leaseId,
-      esignStatus: envelope.status,
-      message: 'Mock signing complete. The signed lease PDF is stored as a lease document.',
-    };
+    const envelope = await sendLeaseForSignature(session.organizationId, leaseId);
+    return { ok: true, leaseId, esignStatus: envelope.status };
   } catch (error) {
     if (error instanceof EsignError) return { message: error.message, leaseId };
     throw error;

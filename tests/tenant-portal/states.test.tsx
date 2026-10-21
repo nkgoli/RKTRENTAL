@@ -30,7 +30,7 @@ import NotFound from '@/app/(tenant)/not-found';
 it('gives each unassigned tenant screen a clear explanation and retry link', async () => {
   for (const [page, href] of [
     [await Home(), '/home'],
-    [await Lease(), '/lease'],
+    [await Lease({}), '/lease'],
     [await Pay({ searchParams: Promise.resolve({}) }), '/pay'],
     [await Repairs({ searchParams: Promise.resolve({}) }), '/repairs'],
   ] as const) {

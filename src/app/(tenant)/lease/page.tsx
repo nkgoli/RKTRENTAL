@@ -1,3 +1,4 @@
+import { LeaseAgreementList } from '@/components/lease-signing/LeaseAgreementList';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/RouteStates';
@@ -12,14 +13,21 @@ import styles from '../portal.module.css';
 
 export const dynamic = 'force-dynamic';
 
-export default async function TenantLeasePage() {
+export default async function TenantLeasePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ lease?: string }>;
+}) {
   const session = await requireTenantRole();
-  const view = await loadTenantLease(session);
+  const agreements = await LeaseAgreementList({ session, tenantPortal: true });
+  const selected = (await searchParams)?.lease;
+  const view = await loadTenantLease(session, { leaseId: selected });
 
   if (!view) {
     return (
       <div className={styles.homeLease}>
         <h1 style={{ fontSize: 'var(--rr-h1)' }}>Your lease</h1>
+        {agreements}
         <EmptyState
           title="No active lease yet"
           description="Your property manager will add it here once it is set up."
@@ -46,6 +54,10 @@ export default async function TenantLeasePage() {
         </p>
       </div>
 
+      {agreements}
+      <a className="btn btn-primary" href={`/sign/leases/${view.leaseId}`}>
+        Review agreement & signatures
+      </a>
       <section
         className={`card ${styles.currentLease}`}
         id="overview"
@@ -54,7 +66,7 @@ export default async function TenantLeasePage() {
         <div className={styles.currentHeader}>
           <div className="card-header">
             <h2 id="current-lease" style={{ fontSize: 18 }}>
-              Current lease
+              {selected ? 'Selected lease' : 'Current lease'}
             </h2>
             <Badge tone={view.status === 'ACTIVE' ? 'success' : 'neutral'}>
               {statusLabel(view.status)}

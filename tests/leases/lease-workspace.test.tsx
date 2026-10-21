@@ -104,7 +104,7 @@ describe('lease workspace', () => {
       expect(html).toContain(value);
     expect(html).not.toContain('Document controls');
     expect(html).not.toContain('No agreement snapshot');
-    expect(html).not.toContain('Terms as signed');
+    expect(html).not.toContain('Prepared lease terms');
   });
 
   it('preserves signed wording and template version separately from editable terms', async () => {
@@ -122,8 +122,8 @@ describe('lease workspace', () => {
     fixture.lease.templateVersion = 2;
     const html = await render({ tab: 'agreement' });
     for (const value of [
-      'Terms as signed',
-      'Locked at send',
+      'Prepared lease terms',
+      'Saved terms',
       'Standard residential lease',
       'v2',
       'Security deposit',

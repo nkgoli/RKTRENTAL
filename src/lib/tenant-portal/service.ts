@@ -239,12 +239,17 @@ export async function listTenantLeaseDocuments(
 
 export async function loadTenantLease(
   scope: TenantScope,
-  options: { now?: Date; client?: Client; files?: Pick<FileService, 'list'> } = {},
+  options: {
+    now?: Date;
+    client?: Client;
+    files?: Pick<FileService, 'list'>;
+    leaseId?: string;
+  } = {},
 ): Promise<TenantLeaseView | null> {
   const { organizationId, tenantId } = requireTenantScope(scope);
   const client = options.client ?? db;
   const now = options.now ?? new Date();
-  const lease = await findTenantLeaseForPortal(scope, { client });
+  const lease = await findTenantLeaseForPortal(scope, { client, leaseId: options.leaseId });
   if (!lease) return null;
   const files =
     options.files ?? (await (await import('@/lib/storage/service')).createPrismaFileService());

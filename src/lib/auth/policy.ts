@@ -43,6 +43,7 @@ export function canWriteAsRole(role: AuthRole | undefined): boolean {
 export function roleHome(role: AuthRole): string {
   if (role === 'TENANT') return '/home';
   if (role === 'MANAGER') return '/dashboard';
+  if (role === 'OWNER') return '/sign';
   return '/sign-out';
 }
 
@@ -57,7 +58,11 @@ export function safeRedirectTarget(candidate: string | null | undefined, role: A
   }
   // A designated owner can authenticate directly into the narrow signing API.
   // General owner navigation and manager permissions remain unchanged.
-  if (role !== 'ADMIN' && /^\/api\/leases\/[A-Za-z0-9_-]+\/signing$/.test(candidate))
+  if (
+    role !== 'ADMIN' &&
+    (/^\/api\/leases\/[A-Za-z0-9_-]+\/signing$/.test(candidate) ||
+      /^\/sign(?:\/leases\/[A-Za-z0-9_-]+)?$/.test(candidate))
+  )
     return candidate;
   const requiredRole = requiredRoleForRoute(candidate);
   return requiredRole && canAccessRole(role, requiredRole) ? candidate : roleHome(role);

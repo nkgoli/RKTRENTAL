@@ -2,6 +2,7 @@ import { getSession } from '@/lib/auth/server-session';
 import type { AuthSession } from '@/lib/auth/session';
 import type { FileActor, FileTarget, FileTargetKind, StoredDocument } from './types';
 import { StorageError } from './types';
+import { documentAgreementMetadata } from '@/lib/documents/library';
 
 export function actorFromSession(s: AuthSession): FileActor {
   return {
@@ -82,6 +83,7 @@ export function publicDocument(d: StoredDocument) {
     isCover: d.isCover ?? false,
     sortOrder: d.sortOrder ?? null,
     createdAt: d.createdAt.toISOString(),
+    agreements: documentAgreementMetadata(d),
     previewUrl: `/api/files/${d.id}/preview`,
     downloadUrl: `/api/files/${d.id}/download`,
   };

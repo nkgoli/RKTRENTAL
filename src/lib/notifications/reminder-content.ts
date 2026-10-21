@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { computeBalance, isPastGrace, startOfUtcDay, toCents } from '@/lib/ledger/core';
 import type { Prisma } from '@prisma/client';
 import { overdueReminderMessage } from './messages';
+import { z } from 'zod';
 
 export type ReminderLease = Prisma.LeaseGetPayload<{
   include: {
@@ -28,6 +29,90 @@ export function validEmail(value: string) {
 }
 export const validPhone = (v: string) => /^\+[1-9]\d{7,14}$/.test(v);
 export const hash = (v: unknown) => createHash('sha256').update(JSON.stringify(v)).digest('hex');
+
+/** IDs select existing eligible contacts; addresses and ledger values are never client input. */
+export const reminderReviewInput = z
+  .object({
+    recipients: z
+      .array(
+        z
+          .object({
+            tenantId: z.string().min(1).max(100),
+            subject: z
+              .string()
+              .trim()
+              .min(1)
+              .max(200)
+              .refine((s) => !/[\r\n\u0000]/.test(s)),
+            body: z
+              .string()
+              .trim()
+              .min(1)
+              .max(2000)
+              .refine((s) => !/\u0000/.test(s)),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(30)
+      .refine((rows) => new Set(rows.map((r) => r.tenantId)).size === rows.length),
+  })
+  .strict();
+export type ReminderReview = z.infer<typeof reminderReviewInput>;
+
+// JSONB may reorder keys; audit comparisons must not depend on object insertion order.
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+  if (value && typeof value === 'object')
+    return `{${Object.entries(value)
+      .filter(([, v]) => v !== undefined)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`)
+      .join(',')}}`;
+  return JSON.stringify(value);
+}
+
+type Content = ReturnType<typeof reminderContent>;
+
+export function applyReminderReview(base: Content, review: ReminderReview, transport: string) {
+  const recipients = [...review.recipients]
+    .sort((a, b) => a.tenantId.localeCompare(b.tenantId))
+    .map((edit) => {
+      const eligible = base.snapshot.recipients.find((r) => r.tenantId === edit.tenantId);
+      return eligible ? { ...eligible, subject: edit.subject, body: edit.body } : null;
+    });
+  if (recipients.some((r) => r === null)) return null;
+  const snapshot = {
+    ...base.snapshot,
+    reviewVersion: 1,
+    transport,
+    recipients: recipients.filter((r) => r !== null),
+  };
+  return { snapshot, fingerprint: hash([base.fingerprint, canonical(snapshot)]) };
+}
+
+/** Rebuild against fresh eligibility and compare the entire stored, reviewed audit snapshot. */
+export function restoreReminderReview(base: Content, stored: unknown) {
+  if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return null;
+  const snapshot = stored as Record<string, unknown>;
+  if (snapshot.reviewVersion === undefined)
+    return canonical(stored) === canonical(base.snapshot) ? base : null;
+  if (
+    snapshot.reviewVersion !== 1 ||
+    typeof snapshot.transport !== 'string' ||
+    !Array.isArray(snapshot.recipients)
+  )
+    return null;
+  const review = reminderReviewInput.safeParse({
+    recipients: snapshot.recipients.map((r) => {
+      if (!r || typeof r !== 'object') return null;
+      return { tenantId: r.tenantId, subject: r.subject, body: r.body };
+    }),
+  });
+  if (!review.success) return null;
+  const rebuilt = applyReminderReview(base, review.data, snapshot.transport);
+  return rebuilt && canonical(rebuilt.snapshot) === canonical(stored) ? rebuilt : null;
+}
 
 export function reminderContent(lease: ReminderLease, channel: Channel, now: Date) {
   const today = startOfUtcDay(now);

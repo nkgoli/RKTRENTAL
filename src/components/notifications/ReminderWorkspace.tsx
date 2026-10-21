@@ -20,8 +20,13 @@ import {
   type ReminderSnapshot,
 } from './model';
 import styles from './Reminders.module.css';
+import {
+  pendingOperations,
+  rememberOperation,
+  forgetOperation,
+  type Pending,
+} from './pending-operation';
 
-type Pending = { leaseId: string; previewId: string; key: string };
 type Editor = { selected: string[]; messages: Record<string, { subject: string; body: string }> };
 
 function initialEditor(snapshot: ReminderSnapshot): Editor {
@@ -123,29 +128,23 @@ export function ReminderWorkspace({
   const blocked = Boolean(busy || pending);
 
   useEffect(() => {
+    if (preview) reviewHeading.current?.focus();
+  }, [preview]);
+
+  useEffect(() => {
     if (historyFirst && leaseId) historyHeading.current?.focus();
   }, [historyFirst, leaseId]);
 
   useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(storageKey);
-      if (stored) {
-        const operation = JSON.parse(stored) as Pending;
-        if (
-          operation.leaseId &&
-          operation.previewId &&
-          operation.key &&
-          choices.some((c) => c.id === operation.leaseId)
-        ) {
-          setPending(operation);
-          setLeaseId(operation.leaseId);
-          setNotice(
-            'An earlier send has an unconfirmed response. Check its original operation before starting another reminder.',
-          );
-        }
-      }
-    } catch {
-      /* Server duplicate protection also covers browsers without session storage. */
+    const operation = pendingOperations(storageKey).find((p) =>
+      choices.some((c) => c.id === p.leaseId),
+    );
+    if (operation) {
+      setPending(operation);
+      setLeaseId(operation.leaseId);
+      setNotice(
+        'An earlier send has an unconfirmed response. Check its original operation before starting another reminder.',
+      );
     }
   }, [storageKey, choices]);
 
@@ -211,9 +210,18 @@ export function ReminderWorkspace({
     try {
       const r = await previewReminder(leaseId, channel, draft);
       if (r.ok) {
+        if (
+          r.value.snapshot.transport &&
+          (r.value.snapshot.transport === 'mock') !== (channelState.mode === 'sandbox')
+        ) {
+          setPreview(null);
+          setError(
+            'Delivery configuration changed. Your draft is preserved. Refresh channel availability before previewing again.',
+          );
+          return;
+        }
         setPreview(r.value);
         setSent(false);
-        setTimeout(() => reviewHeading.current?.focus(), 0);
       } else {
         setPreview(null);
         setError(errorMessage(r.error));
@@ -234,11 +242,7 @@ export function ReminderWorkspace({
     setBusy('send');
     setError('');
     setNotice('');
-    try {
-      sessionStorage.setItem(storageKey, JSON.stringify(operation));
-    } catch {
-      /* optional crash recovery */
-    }
+    rememberOperation(storageKey, operation);
     try {
       const r = await dispatchReminder(operation.previewId, operation.key);
       if (r.ok) {
@@ -249,11 +253,7 @@ export function ReminderWorkspace({
           setPending(operation);
         } else {
           setPending(null);
-          try {
-            sessionStorage.removeItem(storageKey);
-          } catch {
-            /* optional crash recovery */
-          }
+          forgetOperation(storageKey, operation.leaseId);
         }
         setNotice(
           r.value.attempts?.every((a) => a.status === 'MOCK_RECORDED')
@@ -277,11 +277,7 @@ export function ReminderWorkspace({
         ) {
           setPending(null);
           setPreview(null);
-          try {
-            sessionStorage.removeItem(storageKey);
-          } catch {
-            /* optional crash recovery */
-          }
+          forgetOperation(storageKey, operation.leaseId);
         }
         await refreshHistory();
       }
@@ -330,6 +326,10 @@ export function ReminderWorkspace({
             disabled={blocked}
             onChange={(e) => {
               setLeaseId(e.target.value);
+              const url = new URL(window.location.href);
+              if (e.target.value) url.searchParams.set('leaseId', e.target.value);
+              else url.searchParams.delete('leaseId');
+              window.history.replaceState(null, '', url);
               setPreview(null);
               setError('');
               setNotice('');

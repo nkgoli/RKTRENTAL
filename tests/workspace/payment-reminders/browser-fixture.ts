@@ -4,7 +4,7 @@ import { hashPassword } from '../../../src/lib/auth/password';
 import { rentKey } from '../../../src/lib/ledger/core';
 
 const db = new PrismaClient();
-const org = 'synthetic-reminder-browser';
+const org = 'synthetic-reminder-reviewed';
 if (!process.env.DATABASE_URL?.includes('localhost:55491/'))
   throw new Error('Requires the dedicated local reminder check database on port 55491');
 async function main() {
@@ -21,7 +21,7 @@ async function main() {
         id: `${org}-manager`,
         organizationId: org,
         name: 'Synthetic Manager',
-        email: 'reminder-manager@example.invalid',
+        email: 'reviewed-manager@example.invalid',
         passwordHash: await hashPassword('SyntheticReminder#2026'),
         role: 'MANAGER',
       },

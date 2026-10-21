@@ -132,6 +132,163 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')(
       expect(await service().history(actor, otherLease.lease.id)).toEqual([]);
     });
 
+    it('binds an explicit recipient subset and edited content to the preview, dispatch and reload history', async () => {
+      const { lease, second } = await fixture();
+      const transport = mock();
+      const s = service(transport);
+      const review = {
+        recipients: [
+          {
+            tenantId: second.id,
+            subject: 'Reviewed synthetic subject',
+            body: 'Reviewed synthetic body only for the chosen cotenant.',
+          },
+        ],
+      };
+      const preview = await s.preview(actor, lease.id, 'EMAIL', review);
+      expect(preview.snapshot).toMatchObject({
+        reviewVersion: 1,
+        channel: 'EMAIL',
+        recipients: [{ ...review.recipients[0], recipient: second.email }],
+      });
+      const result = await s.dispatch(actor, preview.id, key());
+      expect(result.attempts).toHaveLength(1);
+      expect(transport.send).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ ...review.recipients[0], recipient: second.email }),
+      );
+      const history = await service().history(actor, lease.id);
+      expect(history[0].attempts[0]).toMatchObject({
+        ...review.recipients[0],
+        recipient: second.email,
+        status: 'MOCK_RECORDED',
+      });
+      expect(history[0].snapshot).toEqual(preview.snapshot);
+    });
+
+    it('rejects foreign-lease recipients, duplicate selection and client-injected addresses or balances', async () => {
+      const { lease, tenant } = await fixture();
+      const foreign = await fixture();
+      const s = service();
+      const row = { tenantId: tenant.id, subject: 'Synthetic subject', body: 'Synthetic body' };
+      await expect(
+        s.preview(actor, lease.id, 'EMAIL', {
+          recipients: [{ ...row, tenantId: foreign.tenant.id }],
+        }),
+      ).rejects.toMatchObject({ code: 'RECIPIENT_NOT_ELIGIBLE' });
+      for (const invalid of [
+        { recipients: [row, row] },
+        { recipients: [{ ...row, recipient: 'injected@example.invalid' }] },
+        { recipients: [row], amountCents: 1 },
+        { recipients: [{ ...row, subject: 'Header\r\nBcc: injected@example.invalid' }] },
+        { recipients: [] },
+      ]) {
+        await expect(s.preview(actor, lease.id, 'EMAIL', invalid as never)).rejects.toMatchObject({
+          code: 'INVALID_REQUEST',
+        });
+      }
+    });
+
+    it('invalidates reviewed previews on opt-out, contact, ledger, channel or stored content changes', async () => {
+      for (const change of ['opt-out', 'contact', 'ledger', 'channel', 'content', 'amount']) {
+        const { lease, tenant } = await fixture();
+        const transport = mock();
+        const s = service(transport);
+        const p = await s.preview(actor, lease.id, 'SMS', {
+          recipients: [{ tenantId: tenant.id, subject: 'Synthetic', body: 'Reviewed SMS' }],
+        });
+        if (change === 'opt-out')
+          await db.tenant.update({
+            where: { id: tenant.id },
+            data: { smsRemindersEnabled: false },
+          });
+        if (change === 'contact')
+          await db.tenant.update({ where: { id: tenant.id }, data: { phone: '+15005550009' } });
+        if (change === 'ledger')
+          await db.charge.create({
+            data: {
+              organizationId: org,
+              leaseId: lease.id,
+              kind: 'OTHER',
+              amount: '1',
+              dueDate: new Date('2026-10-01'),
+            },
+          });
+        const snapshot = p.snapshot as Record<string, unknown>;
+        if (change === 'channel')
+          await db.paymentReminderPreview.update({
+            where: { id: p.id },
+            data: { channel: 'EMAIL' },
+          });
+        if (change === 'content')
+          await db.paymentReminderPreview.update({
+            where: { id: p.id },
+            data: {
+              snapshot: {
+                ...snapshot,
+                recipients: [
+                  {
+                    tenantId: tenant.id,
+                    recipient: tenant.phone,
+                    subject: 'Synthetic',
+                    body: 'Altered after preview',
+                  },
+                ],
+              } as never,
+            },
+          });
+        if (change === 'amount')
+          await db.paymentReminderPreview.update({
+            where: { id: p.id },
+            data: { snapshot: { ...snapshot, amountCents: 1 } as never },
+          });
+        await expect(s.dispatch(actor, p.id, key())).rejects.toMatchObject({
+          code: 'STALE_PREVIEW',
+        });
+        expect(transport.send).not.toHaveBeenCalled();
+      }
+    });
+
+    it('does not let content edits or a different subset bypass same-state duplicate prevention', async () => {
+      const { lease, tenant, second } = await fixture();
+      const transport = mock();
+      const s = service(transport);
+      const p = await s.preview(actor, lease.id, 'EMAIL', {
+        recipients: [
+          { tenantId: tenant.id, subject: 'Synthetic first', body: 'First reviewed body' },
+        ],
+      });
+      const operationKey = key();
+      await Promise.all([
+        s.dispatch(actor, p.id, operationKey),
+        s.dispatch(actor, p.id, operationKey),
+      ]);
+      expect(transport.send).toHaveBeenCalledTimes(1);
+      const other = await s.preview(actor, lease.id, 'EMAIL', {
+        recipients: [
+          { tenantId: second.id, subject: 'Different edit', body: 'Different reviewed body' },
+        ],
+      });
+      await expect(s.dispatch(actor, other.id, key())).rejects.toMatchObject({
+        code: 'REMINDER_ALREADY_DISPATCHED',
+      });
+      expect(transport.send).toHaveBeenCalledTimes(1);
+    });
+
+    it('cannot turn a reviewed sandbox preview into a live send after transport configuration changes', async () => {
+      const { lease, tenant } = await fixture();
+      let transport: ReminderTransport = mock();
+      const s = new PaymentReminders(db, async () => transport, clock);
+      const p = await s.preview(actor, lease.id, 'EMAIL', {
+        recipients: [{ tenantId: tenant.id, subject: 'Synthetic test', body: 'Sandbox test only' }],
+      });
+      expect(p.snapshot).toMatchObject({ transport: 'mock' });
+      const send = vi.fn(async () => ({ status: 'ACCEPTED' as const }));
+      transport = { name: 'smtp', send };
+      await expect(s.dispatch(actor, p.id, key())).rejects.toMatchObject({ code: 'STALE_PREVIEW' });
+      expect(send).not.toHaveBeenCalled();
+      expect(await db.paymentReminderAttempt.count({ where: { previewId: p.id } })).toBe(0);
+    });
+
     it('enforces manager-only access and organization isolation for every operation', async () => {
       const { lease } = await fixture();
       const s = service();

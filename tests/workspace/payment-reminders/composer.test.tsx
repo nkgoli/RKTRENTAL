@@ -70,6 +70,7 @@ const mount = (choices = [choice], config = channels) =>
 beforeEach(() => {
   vi.clearAllMocks();
   sessionStorage.clear();
+  window.history.replaceState(null, '', '/');
   actions.reminderHistory.mockResolvedValue({ ok: true, value: [] });
   actions.previewReminder.mockImplementation(async (_lease, channel, draft) => ({
     ok: true,
@@ -107,6 +108,7 @@ describe('payment reminder composer (synthetic recipients only)', () => {
     expect((screen.getByLabelText('Lease') as HTMLSelectElement).value).toBe('');
     expect(screen.queryByRole('button', { name: 'Preview reminder' })).toBeNull();
     await user.selectOptions(screen.getByLabelText('Lease'), 'lease');
+    expect(new URL(window.location.href).searchParams.get('leaseId')).toBe('lease');
     expect(
       (screen.getByRole('button', { name: 'Preview reminder' }) as HTMLButtonElement).disabled,
     ).toBe(true);
@@ -164,6 +166,19 @@ describe('payment reminder composer (synthetic recipients only)', () => {
     expect(screen.getByText(/SMS to/)).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Record sandbox test/ }));
     await screen.findByText(/Sandbox test recorded/);
+  });
+
+  it('requires refreshed availability when a sandbox page receives a live-transport preview', async () => {
+    actions.previewReminder.mockResolvedValueOnce({
+      ok: true,
+      value: { ...preview, snapshot: { ...snapshot, transport: 'smtp' } },
+    });
+    mount();
+    await userEvent.click(screen.getByRole('button', { name: 'Preview reminder' }));
+    await screen.findByText(/Delivery configuration changed/);
+    expect(screen.queryByRole('button', { name: /Record sandbox test/ })).toBeNull();
+    expect((screen.getByLabelText('Subject') as HTMLInputElement).value).toBe('Payment reminder');
+    expect(actions.dispatchReminder).not.toHaveBeenCalled();
   });
 
   it('preserves a failed draft and requires another preview after stale dispatch', async () => {
@@ -242,6 +257,29 @@ describe('payment reminder composer (synthetic recipients only)', () => {
       (screen.getByRole('button', { name: 'Preview reminder' }) as HTMLButtonElement).disabled,
     ).toBe(true);
     expect(actions.dispatchReminder).not.toHaveBeenCalled();
+  });
+
+  it('preserves the original recovery key when another scoped lease also has an interrupted send', async () => {
+    const user = userEvent.setup();
+    actions.dispatchReminder.mockRejectedValue(new Error('synthetic network interruption'));
+    const first = mount();
+    await user.click(screen.getByRole('button', { name: 'Preview reminder' }));
+    await screen.findByRole('heading', { name: /Review before/ });
+    await user.click(screen.getByRole('button', { name: /Record sandbox test/ }));
+    await screen.findByText(/Send response was interrupted/);
+    const originalArgs = actions.dispatchReminder.mock.calls[0];
+    first.unmount();
+    const second = mount([{ ...choice, id: 'second-scoped-lease' }]);
+    await user.click(screen.getByRole('button', { name: 'Preview reminder' }));
+    await screen.findByRole('heading', { name: /Review before/ });
+    await user.click(screen.getByRole('button', { name: /Record sandbox test/ }));
+    await screen.findByText(/Send response was interrupted/);
+    second.unmount();
+    mount();
+    actions.dispatchReminder.mockResolvedValue({ ok: true, value: recorded });
+    await user.click(await screen.findByRole('button', { name: 'Check original send' }));
+    await screen.findByText(/Sandbox test recorded/);
+    expect(actions.dispatchReminder.mock.calls[2]).toEqual(originalArgs);
   });
 
   it('keeps paid-lease history and distinguishes supported outcomes without offering a reminder', async () => {

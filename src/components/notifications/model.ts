@@ -1,6 +1,7 @@
 export type Channel = 'EMAIL' | 'SMS';
 export type Recipient = { tenantId: string; recipient: string; subject: string; body: string };
 export type ReminderSnapshot = {
+  transport?: string;
   asOf: string;
   amountCents: number;
   pendingCents: number;
@@ -66,7 +67,7 @@ export const errorMessage = (code: string) =>
     NO_ELIGIBLE_RECIPIENTS:
       'No eligible contacts for this channel. Review contact details and tenant preferences, or choose another channel.',
     STALE_PREVIEW:
-      'The balance, contacts, preferences or preview expiry changed. Your draft is preserved. Preview again before sending.',
+      'The balance, contacts, preferences, delivery configuration or preview expiry changed. Your draft is preserved. Preview again before sending.',
     REMINDER_ALREADY_DISPATCHED:
       'A reminder for this balance and channel was already submitted today. Check history before taking another action.',
     PREVIEW_ALREADY_DISPATCHED:
@@ -77,8 +78,8 @@ export const errorMessage = (code: string) =>
       'An administrator must check the original provider logs. Delivery remains unconfirmed; do not resend.',
     RECONCILIATION_UNAVAILABLE:
       'Provider status could not be checked. Keep the original operation and try checking again later.',
-    REVIEW_OPTIONS_UNAVAILABLE:
-      'The reminder service does not yet support edited content or a recipient subset. Your draft is preserved; no message was sent.',
+    RECIPIENT_NOT_ELIGIBLE:
+      'A selected recipient is no longer eligible for this lease and channel. Your draft is preserved. Refresh contact details and preferences, then preview again.',
     INVALID_REQUEST:
       'Review your selected recipients and message. A subject must be 1–200 characters and a message 1–2,000 characters.',
   })[code] ??

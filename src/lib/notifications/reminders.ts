@@ -1,7 +1,15 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
 import type { AuthSession } from '@/lib/auth/session';
-import { hash, reminderContent, type Channel } from './reminder-content';
+import {
+  hash,
+  reminderContent,
+  reminderReviewInput,
+  applyReminderReview,
+  restoreReminderReview,
+  type Channel,
+  type ReminderReview,
+} from './reminder-content';
 import {
   boundedSend,
   ReminderError,
@@ -63,14 +71,24 @@ export class PaymentReminders {
     private readonly clock = () => new Date(),
   ) {}
 
-  async preview(actor: ReminderActor, leaseId: string, channel: Channel) {
+  async preview(actor: ReminderActor, leaseId: string, channel: Channel, review?: ReminderReview) {
     await authorize(actor, this.client);
+    const input = review === undefined ? undefined : reminderReviewInput.safeParse(review);
+    if (input && !input.success) throw new ReminderError('INVALID_REQUEST', 400);
+    const previewTransport = input?.success
+      ? (await this.factory(actor.organizationId, channel, this.client)).name
+      : undefined;
     return transaction(this.client, async (tx) => {
       const now = this.clock();
       const lease = await loadLease(tx, actor.organizationId, leaseId);
-      const { snapshot, fingerprint } = reminderContent(lease, channel, now);
-      if (snapshot.amountCents <= 0) throw new ReminderError('NOT_OVERDUE', 422);
-      if (!snapshot.recipients.length) throw new ReminderError('NO_ELIGIBLE_RECIPIENTS', 422);
+      const base = reminderContent(lease, channel, now);
+      if (base.snapshot.amountCents <= 0) throw new ReminderError('NOT_OVERDUE', 422);
+      if (!base.snapshot.recipients.length) throw new ReminderError('NO_ELIGIBLE_RECIPIENTS', 422);
+      const content = input?.success
+        ? applyReminderReview(base, input.data, previewTransport!)
+        : base;
+      if (!content) throw new ReminderError('RECIPIENT_NOT_ELIGIBLE', 422);
+      const { snapshot, fingerprint } = content;
       return tx.paymentReminderPreview.create({
         data: {
           organizationId: actor.organizationId,
@@ -128,8 +146,15 @@ export class PaymentReminders {
           const now = this.clock();
           const lease = await loadLease(tx, actor.organizationId, preview.leaseId);
           const fresh = reminderContent(lease, preview.channel, now);
-          if (current.expiresAt <= now || fresh.fingerprint !== current.fingerprint)
+          const reviewed = restoreReminderReview(fresh, current.snapshot);
+          if (
+            current.expiresAt <= now ||
+            !reviewed ||
+            reviewed.fingerprint !== current.fingerprint ||
+            ('transport' in reviewed.snapshot && reviewed.snapshot.transport !== transport.name)
+          )
             throw new ReminderError('STALE_PREVIEW');
+          // Edits and recipient subsets must not bypass the underlying lease/channel dedupe.
           const dedupeKey = hash([
             actor.organizationId,
             lease.id,
@@ -153,7 +178,10 @@ export class PaymentReminders {
               idempotencyKey: key,
               dedupeKey,
               attempts: {
-                create: fresh.snapshot.recipients.map((r) => ({ ...r, provider: transport.name })),
+                create: reviewed.snapshot.recipients.map((r) => ({
+                  ...r,
+                  provider: transport.name,
+                })),
               },
             },
           });
@@ -181,12 +209,24 @@ export class PaymentReminders {
         const manager = await tx.user.findFirst({
           where: { id: actor.subjectId, organizationId: actor.organizationId, role: 'MANAGER' },
         });
+        const reviewed = lease
+          ? restoreReminderReview(reminderContent(lease, preview.channel, now), operation.snapshot)
+          : null;
+        const matchesAttempt = reviewed?.snapshot.recipients.some(
+          (r) =>
+            r.tenantId === attempt.tenantId &&
+            r.recipient === attempt.recipient &&
+            r.subject === attempt.subject &&
+            r.body === attempt.body,
+        );
         const stale =
           attempt.provider !== transport.name ||
           !lease ||
           !manager ||
           preview.expiresAt <= now ||
-          reminderContent(lease, preview.channel, now).fingerprint !== preview.fingerprint;
+          !reviewed ||
+          reviewed.fingerprint !== operation.fingerprint ||
+          !matchesAttempt;
         const result = await tx.paymentReminderAttempt.updateMany({
           where: { id: attempt.id, status: 'READY' },
           data: {

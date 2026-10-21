@@ -58,10 +58,19 @@ export function MaintenanceEditor({
   const titleInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const feedbackElement = useRef<HTMLParagraphElement>(null);
+  // The editor's own history entry, kept so a same-document Back/Forward can be
+  // intercepted before Next.js traverses away and unmounts the draft.
+  const editorUrl = useRef('');
+  const editorState = useRef<unknown>(null);
+  const discardMode = useRef<'assign' | 'back' | 'traverse'>('assign');
+  const pendingTraverse = useRef<string | null>(null);
+  const navigationApi = useRef<Navigation | null>(null);
   const dirty = (Object.keys(values) as (keyof EditorValues)[]).some(
     (key) => values[key] !== baseline[key],
   );
   const hasUnsaved = dirty || Boolean(comment.trim()) || Boolean(file);
+  const hasUnsavedRef = useRef(hasUnsaved);
+  hasUnsavedRef.current = hasUnsaved;
   const vendor = vendors.find((item) => item.id === values.vendorId);
   const change = <K extends keyof EditorValues>(key: K, value: EditorValues[K]) => {
     setValues((previous) => ({ ...previous, [key]: value }));
@@ -80,7 +89,15 @@ export function MaintenanceEditor({
   useEffect(() => {
     feedbackElement.current?.focus();
   }, [feedback]);
+  // Refresh the editor entry after every render so a restored entry keeps the
+  // current Next.js tree instead of the destination's.
   useEffect(() => {
+    editorUrl.current = window.location.href;
+    editorState.current = window.history.state;
+  });
+  useEffect(() => {
+    const navigation = window.navigation ?? null;
+    navigationApi.current = navigation;
     const unload = (event: BeforeUnloadEvent) => {
       if (!leaving.current && (hasUnsaved || busy.current)) {
         event.preventDefault();
@@ -112,21 +129,75 @@ export function MaintenanceEditor({
         return;
       if (busy.current) {
         event.preventDefault();
+        toast.push({
+          message: 'Wait for the current action to finish before leaving.',
+          tone: 'info',
+        });
         return;
       }
       if (hasUnsaved) {
         event.preventDefault();
         event.stopPropagation();
+        discardMode.current = 'assign';
         setDiscardTo(link.href);
       }
     };
+    // Same-document Back/Forward never fires beforeunload or a link click. The
+    // Navigation API can cancel the traversal before it commits, which keeps the
+    // editor entry and its forward history intact.
+    const onNavigate = (event: NavigateEvent) => {
+      if (event.navigationType !== 'traverse' || event.hashChange || event.downloadRequest) return;
+      if (leaving.current) return;
+      if (!hasUnsavedRef.current && !busy.current) return;
+      if (!event.canIntercept) return;
+      event.preventDefault();
+      if (busy.current) {
+        toast.push({
+          message: 'Wait for the current action to finish before leaving.',
+          tone: 'info',
+        });
+        return;
+      }
+      pendingTraverse.current = event.destination.key;
+      discardMode.current = 'traverse';
+      setDiscardTo(event.destination.url);
+    };
+    // Fallback for browsers without the Navigation API. Next.js listens for
+    // popstate and would traverse to the previous route, unmounting the editor.
+    // A capture listener runs first, so stop that traversal, restore the editor
+    // entry and let the manager choose stay or discard.
+    const onPopState = (event: PopStateEvent) => {
+      if (navigation) return;
+      if (leaving.current) return;
+      if (!hasUnsavedRef.current && !busy.current) return;
+      event.stopImmediatePropagation();
+      const destination = window.location.href;
+      try {
+        window.history.pushState(editorState.current, '', editorUrl.current);
+      } catch {
+        return;
+      }
+      if (busy.current) {
+        toast.push({
+          message: 'Wait for the current action to finish before leaving.',
+          tone: 'info',
+        });
+        return;
+      }
+      discardMode.current = 'back';
+      setDiscardTo(destination);
+    };
     window.addEventListener('beforeunload', unload);
     document.addEventListener('click', navigate, true);
+    window.addEventListener('popstate', onPopState, true);
+    navigation?.addEventListener('navigate', onNavigate);
     return () => {
       window.removeEventListener('beforeunload', unload);
       document.removeEventListener('click', navigate, true);
+      window.removeEventListener('popstate', onPopState, true);
+      navigation?.removeEventListener('navigate', onNavigate);
     };
-  }, [hasUnsaved]);
+  }, [hasUnsaved, toast]);
 
   async function perform(operation: Operation) {
     if (busy.current) return;
@@ -219,8 +290,10 @@ export function MaintenanceEditor({
         className="btn btn-secondary"
         disabled={Boolean(pending)}
         onClick={() => {
-          if (hasUnsaved) setDiscardTo(returnTo);
-          else window.location.assign(returnTo);
+          if (hasUnsaved) {
+            discardMode.current = 'assign';
+            setDiscardTo(returnTo);
+          } else window.location.assign(returnTo);
         }}
       >
         Cancel
@@ -648,7 +721,21 @@ export function MaintenanceEditor({
         confirmLabel="Discard changes"
         onConfirm={() => {
           leaving.current = true;
-          window.location.assign(discardTo!);
+          if (discardMode.current === 'traverse' && pendingTraverse.current && navigationApi.current) {
+            try {
+              navigationApi.current
+                .traverseTo(pendingTraverse.current)
+                .finished?.catch(() => window.location.assign(discardTo!));
+            } catch {
+              window.location.assign(discardTo!);
+            }
+          } else if (discardMode.current === 'back') {
+            // The fallback already sits on the destination entry, so going back
+            // reaches it without adding a duplicate entry or a loop.
+            window.history.back();
+          } else {
+            window.location.assign(discardTo!);
+          }
         }}
       />
       <ConfirmDialog

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 import type { SegmentKind, Timeline, TimelineRow, TimelineSegment } from '@/lib/workspace/timeline';
-import { leaseStatusLabel, leaseTiming } from '@/lib/workspace/timeline';
+import { isTerminalStatus, leaseStatusLabel, leaseTiming } from '@/lib/workspace/timeline';
 import { formatDate } from '@/lib/properties/format';
 import styles from './LeaseTimeline.module.css';
 
@@ -21,10 +21,12 @@ function leaseHref(segment: TimelineSegment, propertyId: string, unitId: string)
 }
 
 function LeaseDates({ segment }: { segment: TimelineSegment }) {
+  // A terminal lease's endDate is the scheduled term end, not necessarily the actual ending date.
+  const terminal = segment.kind === 'past' && isTerminalStatus(segment.status);
   return (
     <dl className={styles.dates}>
       <div><dt>Start</dt><dd>{formatDate(segment.start)}</dd></div>
-      <div><dt>End</dt><dd>{formatDate(segment.end)}</dd></div>
+      <div><dt>{terminal ? 'Scheduled end' : 'End'}</dt><dd>{formatDate(segment.end)}</dd></div>
     </dl>
   );
 }
@@ -42,9 +44,9 @@ function LeaseSummary({ segment, today, propertyId, unitId, showTenant, showDate
   return (
     <div className={styles.lease}>
       <div className={styles.leaseTop}>
-        <Badge tone={statusTone[segment.kind]}>{leaseStatusLabel(segment.kind)}</Badge>
+        <Badge tone={statusTone[segment.kind]}>{leaseStatusLabel(segment.kind, segment.status)}</Badge>
         {showTenant && <span className={styles.tenant}>{segment.tenantName ?? 'No tenant'}</span>}
-        <span className={styles.timing}>{leaseTiming(segment.kind, segment.start, segment.end, today)}</span>
+        <span className={styles.timing}>{leaseTiming(segment.kind, segment.start, segment.end, today, segment.status)}</span>
         {showLink && href && <Link className={styles.viewLease} href={href}>View lease</Link>}
       </div>
       {showDates && <LeaseDates segment={segment} />}
@@ -71,7 +73,7 @@ function LeaseRow({ row, timeline, propertyId, linkUnits, compact }: {
   const latestPast = past[0];
   const unitHref = `/properties/${propertyId}?unit=${encodeURIComponent(row.unitId)}`;
   const createHref = `/leases/new?unit=${encodeURIComponent(row.unitId)}`;
-  const otherKinds = [...new Set(others.map((segment) => leaseStatusLabel(segment.kind)))];
+  const otherKinds = [...new Set(others.map((segment) => leaseStatusLabel(segment.kind, segment.status)))];
   const historyLabel = others.every((segment) => segment.kind === 'past')
     ? `Lease history (${others.length})`
     : `Other leases (${others.length}) · ${otherKinds.join(', ')}`;
@@ -98,7 +100,12 @@ function LeaseRow({ row, timeline, propertyId, linkUnits, compact }: {
       ) : (
         <div className={styles.vacant}>
           <strong>{latestPast ? 'No current lease' : 'No lease on file'}</strong>
-          {latestPast && <span>{leaseTiming('past', latestPast.start, latestPast.end, timeline.today)}</span>}
+          {latestPast && (
+            <span>
+              {leaseTiming('past', latestPast.start, latestPast.end, timeline.today, latestPast.status)}
+              {isTerminalStatus(latestPast.status) && <> · scheduled through {formatDate(latestPast.end)}</>}
+            </span>
+          )}
           {!compact && <Link className={styles.createLease} href={createHref}>Create lease</Link>}
         </div>
       )}

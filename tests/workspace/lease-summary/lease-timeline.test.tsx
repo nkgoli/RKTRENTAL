@@ -61,14 +61,56 @@ describe('lease summary rendering', () => {
     expect(html).toContain('View lease');
   });
 
-  it('shows a past-only unit as vacant with its history behind a disclosure', () => {
+  it('shows a past-only unit as vacant with its terminal history behind a disclosure', () => {
     const html = render([lease({ id: 'l4', status: 'ENDED', startDate: day('2025-01-01'), endDate: day('2026-06-30') })], { linkUnits: true });
 
     expect(html).toContain('Vacant');
     expect(html).toContain('No current lease');
-    expect(html).toContain('Ended 4 months ago');
+    expect(html).toContain('Ended');
+    expect(html).not.toContain('Ended 4 months ago');
+    expect(html).toContain('Lease history (1)');
+    expect(html).toContain('Scheduled end');
+    expect(html).toContain('Jun 30, 2026');
+    expect(html).toContain('View lease');
+  });
+
+  it('shows a terminated lease with a future scheduled end without inventing elapsed time', () => {
+    const html = render([lease({ id: 'l5', status: 'TERMINATED', startDate: day('2026-01-01'), endDate: day('2026-12-31') })], { linkUnits: true });
+
+    expect(html).toContain('Vacant');
+    expect(html).toContain('No current lease');
+    expect(html).toContain('Terminated early');
+    expect(html).toContain('scheduled through Dec 31, 2026');
+    expect(html).toContain('Scheduled end');
+    expect(html).toContain('Dec 31, 2026');
     expect(html).toContain('Lease history (1)');
     expect(html).toContain('View lease');
+    expect(html).not.toContain('Ended 71 days ago');
+    expect(html).not.toContain('Terminated 71 days ago');
+  });
+
+  it('shows an ended lease with a future scheduled end without claiming elapsed time', () => {
+    const html = render([lease({ id: 'l6', status: 'ENDED', startDate: day('2026-01-01'), endDate: day('2026-12-31') })], { linkUnits: true });
+
+    expect(html).toContain('Ended early');
+    expect(html).toContain('scheduled through Dec 31, 2026');
+    expect(html).toContain('Scheduled end');
+    expect(html).not.toContain('Ended 71 days ago');
+  });
+
+  it('keeps a terminal lease explicit in the expanded history beside a current lease', () => {
+    const html = render([
+      lease({ id: 'l1', startDate: day('2026-01-01'), endDate: day('2026-12-31') }),
+      lease({ id: 'l2', status: 'TERMINATED', startDate: day('2025-01-01'), endDate: day('2025-06-30'), tenantName: 'Jordan Lee' }),
+    ], { linkUnits: true });
+
+    expect(html).toContain('Current');
+    expect(html).toContain('Lease history (1)');
+    expect(html).toContain('Terminated');
+    expect(html).toContain('Scheduled end');
+    expect(html).toContain('Jun 30, 2025');
+    expect(html).toContain('Jordan Lee');
+    expect(html).not.toContain('Terminated 1 year ago');
   });
 
   it('shows a truthful vacant state with a create-lease action', () => {

@@ -10,14 +10,14 @@
 .lease { display: grid; gap: 6px; min-width: 0; }
 .leaseTop { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; min-width: 0; }
 .tenant { font-size: 14px; font-weight: 600; color: var(--design-text); overflow-wrap: anywhere; }
-.timing { font-size: 13px; color: var(--design-muted); }
+.timing { font-size: 13px; color: var(--design-muted); overflow-wrap: anywhere; }
 .viewLease { margin-left: auto; font-size: 13px; font-weight: 600; min-height: 36px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .viewLease::after { content: '→'; font-size: 14px; }
 .dates { display: flex; flex-wrap: wrap; gap: 4px 24px; margin: 0; }
 .dates > div { display: grid; gap: 1px; min-width: 0; }
 .dates dt { color: var(--design-muted); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
 .dates dd { margin: 0; font-size: 13px; font-weight: 600; color: var(--design-text); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.vacant { display: flex; align-items: center; gap: 6px 16px; flex-wrap: wrap; font-size: 13px; color: var(--design-muted); }
+.vacant { display: flex; align-items: center; gap: 6px 16px; flex-wrap: wrap; font-size: 13px; color: var(--design-muted); overflow-wrap: anywhere; }
 .vacant strong { color: var(--design-text); font-weight: 600; }
 .createLease { font-size: 13px; font-weight: 600; min-height: 36px; display: inline-flex; align-items: center; }
 .history { border-top: 1px dashed var(--rr-border); padding-top: 4px; }

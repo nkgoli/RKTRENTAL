@@ -38,6 +38,7 @@ export function RouteError({
           </Link>
         )}
       </div>
+      {error.digest && <p className={styles.reference}>Reference: {error.digest}</p>}
     </section>
   );
 }

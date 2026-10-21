@@ -6,6 +6,7 @@ import { cx } from '../ui/cx';
 import { Icon } from './Icons';
 import { AccountMenu } from './AccountMenu';
 import { findTenantTab, isActive, tenantTabs } from './nav';
+import { ToastProvider } from '../ui/Toast';
 import focus from './focus.module.css';
 import styles from './tenant-shell.module.css';
 
@@ -20,7 +21,7 @@ export function TenantShell({
   const current = findTenantTab(pathname);
 
   return (
-    <>
+    <ToastProvider offset="tabbar">
       <a className={focus.skip} href="#tenant-main">
         Skip to main content
       </a>
@@ -62,6 +63,6 @@ export function TenantShell({
           })}
         </nav>
       </div>
-    </>
+    </ToastProvider>
   );
 }

@@ -13,7 +13,13 @@ export type IconName =
   | 'documents'
   | 'integrations';
 
-export type ManagerAction = { label: string; href: string; primary?: boolean };
+export type ManagerAction = {
+  label: string;
+  href: string;
+  primary?: boolean;
+  /** Stroked icon before the label; use `plus` for create actions instead of a typed "+". */
+  icon?: 'plus' | 'arrow-right' | 'arrow-left' | 'download';
+};
 
 export type ManagerNavItem = {
   label: string;
@@ -48,7 +54,7 @@ export const managerNav: ManagerNavGroup[] = [
         icon: 'dashboard',
         actions: [
           { label: 'View reports', href: '/returns' },
-          { label: '+ Add property', href: '/properties?add=1', primary: true },
+          { label: 'Add property', href: '/properties?add=1', primary: true, icon: 'plus' },
         ],
       },
     ],
@@ -60,13 +66,13 @@ export const managerNav: ManagerNavGroup[] = [
         label: 'Properties',
         href: '/properties',
         icon: 'properties',
-        actions: [{ label: '+ Add property', href: '/properties?add=1', primary: true }],
+        actions: [{ label: 'Add property', href: '/properties?add=1', primary: true, icon: 'plus' }],
       },
       {
         label: 'Tenants',
         href: '/tenants',
         icon: 'tenants',
-        actions: [{ label: '+ Add tenant', href: '/tenants', primary: true }],
+        actions: [{ label: 'Add tenant', href: '/tenants?add=1', primary: true, icon: 'plus' }],
       },
     ],
   },
@@ -78,7 +84,7 @@ export const managerNav: ManagerNavGroup[] = [
         label: 'Leases',
         href: '/leases',
         icon: 'leases',
-        actions: [{ label: '+ Create lease', href: '/leases/new', primary: true }],
+        actions: [{ label: 'Create lease', href: '/leases/new', primary: true, icon: 'plus' }],
       },
     ],
   },

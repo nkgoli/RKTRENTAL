@@ -1,9 +1,27 @@
 import type { ReactNode, TableHTMLAttributes } from 'react';
 import { Avatar } from './Badge';
+import { cx } from './cx';
 
-export function Table({ children, ...rest }: TableHTMLAttributes<HTMLTableElement>) {
+/**
+ * Shared table. `mobile="cards"` turns every body row into a two-column card below 640px;
+ * cells opt into a slot with `data-cell`:
+ *   title   – first line, left (name + avatar)
+ *   status  – first line, right (a Badge)
+ *   meta    – second line, left, muted
+ *   amount  – second line, right, tabular
+ *   sub     – full-width muted line
+ *   actions – full-width row of buttons at the end
+ *   hide    – not shown on phone
+ * A row with `className="row-link"` and one `<a className="row-anchor">` is clickable as a whole.
+ */
+export function Table({
+  children,
+  mobile,
+  className,
+  ...rest
+}: TableHTMLAttributes<HTMLTableElement> & { mobile?: 'cards' }) {
   return (
-    <table className="table" {...rest}>
+    <table className={cx('table', className)} data-mobile={mobile} {...rest}>
       {children}
     </table>
   );

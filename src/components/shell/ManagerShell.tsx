@@ -8,6 +8,7 @@ import { DOCKED_QUERY, FOCUSABLE, nextTrapIndex } from './drawer';
 import { Icon } from './Icons';
 import { PageHeaderContext, type PageHeaderConfig } from './PageHeader';
 import { findManagerItem, isItemActive, managerNav } from './nav';
+import { ToastProvider } from '../ui/Toast';
 import focus from './focus.module.css';
 
 export type ManagerUser = { name: string; role: string; initials: string };
@@ -29,6 +30,8 @@ export function ManagerShell({
   const title =
     override?.title ?? (current ? (current.item.title ?? current.item.label) : 'RocketRental');
   const actions = override?.actions ?? current?.item.actions;
+  const meta = override?.meta;
+  const back = override?.back;
   const [open, setOpen] = useState(false);
   const menuBtn = useRef<HTMLButtonElement>(null);
   const sidebar = useRef<HTMLElement>(null);
@@ -85,7 +88,7 @@ export function ManagerShell({
   }, [open, close]);
 
   return (
-    <>
+    <ToastProvider>
       <a className={focus.skip} href="#main-content" inert={open}>
         Skip to main content
       </a>
@@ -149,18 +152,20 @@ export function ManagerShell({
             })}
           </nav>
           <div className="sidebar-foot">
-            <Avatar initials={user.initials} />
+            <Avatar initials={user.initials} size="sm" />
             <div>
               <strong>{user.name}</strong>
               <small>{user.role}</small>
             </div>
-            <a className={cx('btn', 'btn-ghost', 'btn-sm')} href="/sign-out">
+            <a className="sidebar-signout" href="/sign-out" title="Sign out">
               Sign out
             </a>
           </div>
         </aside>{' '}
         <main className="main" id="main-content" tabIndex={-1} inert={open}>
-          <header className={cx('topbar', workspaceRoute && focus.workspaceTopbar)}>
+          <header
+            className={cx('topbar', workspaceRoute && focus.workspaceTopbar, meta && 'topbar-meta')}
+          >
             <button
               type="button"
               className="menu-btn"
@@ -183,8 +188,20 @@ export function ManagerShell({
             </button>
             {!workspaceRoute && (
               <div>
-                <p className="eyebrow">{eyebrow}</p>
+                <p className="eyebrow">
+                  {back ? (
+                    <>
+                      <a className="topbar-back" href={back.href}>
+                        <Icon name="arrow-left" />
+                        {back.label}
+                      </a>
+                      <span aria-hidden="true"> / </span>
+                    </>
+                  ) : null}
+                  {eyebrow}
+                </p>
                 <h1>{title}</h1>
+                {meta && <p className="topbar-sub">{meta}</p>}
               </div>
             )}
             {!workspaceRoute && (
@@ -195,6 +212,7 @@ export function ManagerShell({
                     className={cx('btn', a.primary ? 'btn-primary' : 'btn-secondary')}
                     href={a.href}
                   >
+                    {a.icon && <Icon name={a.icon} />}
                     {a.label}
                   </a>
                 ))}
@@ -206,6 +224,6 @@ export function ManagerShell({
           </div>
         </main>
       </div>
-    </>
+    </ToastProvider>
   );
 }

@@ -8,20 +8,35 @@ import type {
 } from 'react';
 import { cx } from './cx';
 
+/** Label, optional tag, control, hint, error: always in that order. */
 export function Field({
   label,
   hint,
+  optional,
+  error,
   children,
+  className,
 }: {
   label: string;
   hint?: string;
+  optional?: boolean;
+  error?: ReactNode;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <label className="field">
-      {label}
+    <label className={cx('field', className)}>
+      <span className="field-label">
+        {label}
+        {optional && <span className="optional">Optional</span>}
+      </span>
       {children}
       {hint && <span className="hint">{hint}</span>}
+      {error && (
+        <span className="field-error" role="alert">
+          {error}
+        </span>
+      )}
     </label>
   );
 }

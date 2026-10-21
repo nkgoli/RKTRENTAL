@@ -133,3 +133,14 @@ Results (all on the isolated 3201/5551 runtime):
   - the C22 percent title;
   - the spoken "No loan ($0.00)".
 - `tsc --noEmit`, ESLint (`--max-warnings=0`) and Prettier passed on the changed files.
+
+## Pushed to origin/main
+
+- Date: 2026-10-20.
+- Commit pushed: `1486dc276a1f07f4063681be864102a366c8d6a3` (this polish), with a plain
+  fast-forward `git push origin main` (12 commits, no force).
+- origin/main before: `cddc22a011415a5ec58db298332972271713d3a8`.
+- origin/main after: `1486dc276a1f07f4063681be864102a366c8d6a3`, confirmed with
+  `git ls-remote origin main`.
+- The live 3100 runtime was not restarted: the UX review's runtime (workspace
+  `@674zha634hg1uxuy9ha`) holds the port, so the served-build and hash checks were left to it.

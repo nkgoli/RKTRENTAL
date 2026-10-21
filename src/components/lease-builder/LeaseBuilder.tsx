@@ -63,7 +63,7 @@ const SUBTITLES: Record<number, string> = {
     'Set move-in day and the lease term. The next step aligns rent to your chosen due day.',
   [STEP.rent]:
     'Choose the rent due day and review every move-in and recurring charge before sending.',
-  [STEP.tenants]: 'Choose who is on the lease and who signs as the primary tenant.',
+  [STEP.tenants]: 'Choose every tenant who will sign the lease and identify the primary contact.',
   [STEP.options]: 'Renewal notice, occupants and other options for this lease.',
   [STEP.clauses]: 'Pick the clauses that belong in the agreement.',
   [STEP.rules]: 'Set the house rules tenants agree to.',

@@ -393,8 +393,8 @@ export default async function LeaseDetailPage({
               {signedTerms && (
                 <section className={styles.section} aria-labelledby="terms-as-signed">
                   <div className={styles.sectionHeading}>
-                    <h2 id="terms-as-signed">Terms as signed</h2>
-                    <Badge tone="info">Locked at send</Badge>
+                    <h2 id="terms-as-signed">Prepared lease terms</h2>
+                    <Badge tone="info">Saved terms</Badge>
                   </div>
                   <p className="muted">
                     {snapshotTemplate?.name ?? 'Lease template'} · v{lease.templateVersion ?? 1}

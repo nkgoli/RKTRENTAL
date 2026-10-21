@@ -23,9 +23,11 @@
 /* Intro card: one sentence, basis tags, a short caveat, then the picker and its disclosure. */
 .intro {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 .intro > * {
+  min-width: 0;
   margin: 0 !important;
 }
 .caveat,

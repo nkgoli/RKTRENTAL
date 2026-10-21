@@ -35,8 +35,19 @@ async function session(width) {
     // Complete charts in the captures (the reveal animation is off under reduced motion).
     reducedMotion: 'reduce',
   });
+  // Instant scrolling, so a tap lands where Playwright scrolled the target to.
+  await page.addInitScript(() =>
+    document.addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = '*{scroll-behavior:auto !important}';
+      document.head.append(style);
+    }),
+  );
   page.errors = [];
-  page.on('console', (m) => m.type() === 'error' && page.errors.push(m.text()));
+  page.on(
+    'console',
+    (m) => m.type() === 'error' && page.errors.push(`${m.text()} ${m.location()?.url ?? ''}`),
+  );
   // Leaving an unsaved draft discards it; every other dialog is dismissed.
   page.on('dialog', (d) => (d.type() === 'beforeunload' ? d.accept() : d.dismiss()));
   await page.goto(`${base}/sign-in`);
@@ -62,9 +73,13 @@ const shot = (target, name, fullPage = false) =>
     quality: fullPage ? 45 : 60,
     ...(fullPage ? { fullPage } : {}),
   });
+// Wider content, or (on a phone) a layout viewport the browser zoomed out to fit it.
 const overflow = (page) =>
   page.evaluate(
-    () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    (width) =>
+      document.documentElement.scrollWidth > document.documentElement.clientWidth + 1 ||
+      window.innerWidth > width + 1,
+    page.viewportSize().width,
   );
 // Headings and disclosure summaries in reading order, panel height and missing-value words.
 const outline = (panel) =>

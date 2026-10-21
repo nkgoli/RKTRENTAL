@@ -1,0 +1,442 @@
+{
+  "base": "http://localhost:3100",
+  "at": "2026-10-21T00:27:43.174Z",
+  "widths": {
+    "390": {
+      "properties": {
+        "seed-property-maple": {
+          "caption": "Year 1 cash-on-cash · percentages rounded to one decimal place",
+          "heads": [
+            "Monthly rent (USD)",
+            "0.0% vacancy",
+            "3.0% vacancy",
+            "5.0% vacancy",
+            "6.0% vacancy",
+            "9.0% vacancy",
+            "12.0% vacancy",
+            "15.0% vacancy"
+          ],
+          "rows": [
+            [
+              "$16,100.00",
+              "-6.5%",
+              "-7.1%",
+              "-7.5%",
+              "-7.7%",
+              "-8.3%",
+              "-8.9%",
+              "-9.4%"
+            ],
+            [
+              "$19,550.00",
+              "-2.7%",
+              "-3.4%",
+              "-3.9%",
+              "-4.1%",
+              "-4.8%",
+              "-5.6%",
+              "-6.3%"
+            ],
+            [
+              "$23,000.00",
+              "1.1%",
+              "0.3%",
+              "-0.3%Base",
+              "-0.6%",
+              "-1.4%",
+              "-2.3%",
+              "-3.1%"
+            ],
+            [
+              "$26,450.00",
+              "4.9%",
+              "4.0%",
+              "3.3%",
+              "3.0%",
+              "2.0%",
+              "1.0%",
+              "0.0%"
+            ],
+            [
+              "$29,900.00",
+              "8.7%",
+              "7.6%",
+              "6.9%",
+              "6.5%",
+              "5.4%",
+              "4.3%",
+              "3.2%"
+            ]
+          ],
+          "base": "-0.3%Base",
+          "baseOutline": "2px solid rgb(8, 124, 145) | 0px none rgb(180, 35, 62) | none",
+          "negativeColor": "rgb(180, 35, 62)",
+          "footer": "Charts share the selected property and base assumptions. Tables show USD to the cent and rates to four decimal places (sensitivity rates to one), without hover.",
+          "spoken": "Monthly rent $19,550.00, vacancy 5%: Cash-on-Cash -3.8723%",
+          "overflow": 0
+        },
+        "seed-property-cedar": {
+          "caption": "Year 1 cash-on-cash · percentages rounded to one decimal place",
+          "heads": [
+            "Monthly rent (USD)",
+            "0.0% vacancy",
+            "3.0% vacancy",
+            "5.0% vacancy",
+            "6.0% vacancy",
+            "9.0% vacancy",
+            "12.0% vacancy",
+            "15.0% vacancy"
+          ],
+          "rows": [
+            [
+              "$9,240.00",
+              "-4.2%",
+              "-4.8%",
+              "-5.2%",
+              "-5.4%",
+              "-6.1%",
+              "-6.7%",
+              "-7.3%"
+            ],
+            [
+              "$11,220.00",
+              "-0.1%",
+              "-0.9%",
+              "-1.4%",
+              "-1.7%",
+              "-2.5%",
+              "-3.2%",
+              "-4.0%"
+            ],
+            [
+              "$13,200.00",
+              "3.9%",
+              "3.0%",
+              "2.4%Base",
+              "2.1%",
+              "1.2%",
+              "0.3%",
+              "-0.6%"
+            ],
+            [
+              "$15,180.00",
+              "7.9%",
+              "6.9%",
+              "6.2%",
+              "5.8%",
+              "4.8%",
+              "3.8%",
+              "2.7%"
+            ],
+            [
+              "$17,160.00",
+              "11.9%",
+              "10.8%",
+              "10.0%",
+              "9.6%",
+              "8.4%",
+              "7.2%",
+              "6.1%"
+            ]
+          ],
+          "base": "2.4%Base",
+          "baseOutline": "2px solid rgb(8, 124, 145) | 0px none rgb(8, 124, 145) | none",
+          "negativeColor": "rgb(180, 35, 62)",
+          "footer": "Charts share the selected property and base assumptions. Tables show USD to the cent and rates to four decimal places (sensitivity rates to one), without hover.",
+          "spoken": "Monthly rent $11,220.00, vacancy 5%: Cash-on-Cash -1.4253%",
+          "overflow": 0
+        },
+        "seed-property-harbor": {
+          "caption": "Year 1 cash-on-cash · percentages rounded to one decimal place",
+          "heads": [
+            "Monthly rent (USD)",
+            "0.0% vacancy",
+            "3.0% vacancy",
+            "5.0% vacancy",
+            "6.0% vacancy",
+            "9.0% vacancy",
+            "12.0% vacancy",
+            "15.0% vacancy"
+          ],
+          "rows": [
+            [
+              "$29,743.00",
+              "-5.4%",
+              "-6.1%",
+              "-6.5%",
+              "-6.7%",
+              "-7.4%",
+              "-8.1%",
+              "-8.7%"
+            ],
+            [
+              "$36,116.50",
+              "-1.2%",
+              "-2.0%",
+              "-2.5%",
+              "-2.8%",
+              "-3.6%",
+              "-4.4%",
+              "-5.2%"
+            ],
+            [
+              "$42,490.00",
+              "3.1%",
+              "2.1%",
+              "1.5%Base",
+              "1.2%",
+              "0.2%",
+              "-0.7%",
+              "-1.7%"
+            ],
+            [
+              "$48,863.50",
+              "7.3%",
+              "6.2%",
+              "5.5%",
+              "5.1%",
+              "4.0%",
+              "2.9%",
+              "1.8%"
+            ],
+            [
+              "$55,237.00",
+              "11.5%",
+              "10.3%",
+              "9.5%",
+              "9.0%",
+              "7.8%",
+              "6.6%",
+              "5.3%"
+            ]
+          ],
+          "base": "1.5%Base",
+          "baseOutline": "2px solid rgb(8, 124, 145) | 0px none rgb(8, 124, 145) | none",
+          "negativeColor": "rgb(180, 35, 62)",
+          "footer": "Charts share the selected property and base assumptions. Tables show USD to the cent and rates to four decimal places (sensitivity rates to one), without hover.",
+          "spoken": "Monthly rent $36,116.50, vacancy 5%: Cash-on-Cash -2.5134%",
+          "overflow": 0
+        }
+      },
+      "errors": []
+    },
+    "1440": {
+      "properties": {
+        "seed-property-maple": {
+          "caption": "Year 1 cash-on-cash · percentages rounded to one decimal place",
+          "heads": [
+            "Monthly rent (USD)",
+            "0.0% vacancy",
+            "3.0% vacancy",
+            "5.0% vacancy",
+            "6.0% vacancy",
+            "9.0% vacancy",
+            "12.0% vacancy",
+            "15.0% vacancy"
+          ],
+          "rows": [
+            [
+              "$16,100.00",
+              "-6.5%",
+              "-7.1%",
+              "-7.5%",
+              "-7.7%",
+              "-8.3%",
+              "-8.9%",
+              "-9.4%"
+            ],
+            [
+              "$19,550.00",
+              "-2.7%",
+              "-3.4%",
+              "-3.9%",
+              "-4.1%",
+              "-4.8%",
+              "-5.6%",
+              "-6.3%"
+            ],
+            [
+              "$23,000.00",
+              "1.1%",
+              "0.3%",
+              "-0.3%Base",
+              "-0.6%",
+              "-1.4%",
+              "-2.3%",
+              "-3.1%"
+            ],
+            [
+              "$26,450.00",
+              "4.9%",
+              "4.0%",
+              "3.3%",
+              "3.0%",
+              "2.0%",
+              "1.0%",
+              "0.0%"
+            ],
+            [
+              "$29,900.00",
+              "8.7%",
+              "7.6%",
+              "6.9%",
+              "6.5%",
+              "5.4%",
+              "4.3%",
+              "3.2%"
+            ]
+          ],
+          "base": "-0.3%Base",
+          "baseOutline": "2px solid rgb(8, 124, 145) | 0px none rgb(180, 35, 62) | none",
+          "negativeColor": "rgb(180, 35, 62)",
+          "footer": "Charts share the selected property and base assumptions. Tables show USD to the cent and rates to four decimal places (sensitivity rates to one), without hover.",
+          "spoken": "Monthly rent $26,450.00, vacancy 12%: Cash-on-Cash 1.0126%",
+          "overflow": 0
+        },
+        "seed-property-cedar": {
+          "caption": "Year 1 cash-on-cash · percentages rounded to one decimal place",
+          "heads": [
+            "Monthly rent (USD)",
+            "0.0% vacancy",
+            "3.0% vacancy",
+            "5.0% vacancy",
+            "6.0% vacancy",
+            "9.0% vacancy",
+            "12.0% vacancy",
+            "15.0% vacancy"
+          ],
+          "rows": [
+            [
+              "$9,240.00",
+              "-4.2%",
+              "-4.8%",
+              "-5.2%",
+              "-5.4%",
+              "-6.1%",
+              "-6.7%",
+              "-7.3%"
+            ],
+            [
+              "$11,220.00",
+              "-0.1%",
+              "-0.9%",
+              "-1.4%",
+              "-1.7%",
+              "-2.5%",
+              "-3.2%",
+              "-4.0%"
+            ],
+            [
+              "$13,200.00",
+              "3.9%",
+              "3.0%",
+              "2.4%Base",
+              "2.1%",
+              "1.2%",
+              "0.3%",
+              "-0.6%"
+            ],
+            [
+              "$15,180.00",
+              "7.9%",
+              "6.9%",
+              "6.2%",
+              "5.8%",
+              "4.8%",
+              "3.8%",
+              "2.7%"
+            ],
+            [
+              "$17,160.00",
+              "11.9%",
+              "10.8%",
+              "10.0%",
+              "9.6%",
+              "8.4%",
+              "7.2%",
+              "6.1%"
+            ]
+          ],
+          "base": "2.4%Base",
+          "baseOutline": "2px solid rgb(8, 124, 145) | 0px none rgb(8, 124, 145) | none",
+          "negativeColor": "rgb(180, 35, 62)",
+          "footer": "Charts share the selected property and base assumptions. Tables show USD to the cent and rates to four decimal places (sensitivity rates to one), without hover.",
+          "spoken": "Monthly rent $15,180.00, vacancy 12%: Cash-on-Cash 3.7555%",
+          "overflow": 0
+        },
+        "seed-property-harbor": {
+          "caption": "Year 1 cash-on-cash · percentages rounded to one decimal place",
+          "heads": [
+            "Monthly rent (USD)",
+            "0.0% vacancy",
+            "3.0% vacancy",
+            "5.0% vacancy",
+            "6.0% vacancy",
+            "9.0% vacancy",
+            "12.0% vacancy",
+            "15.0% vacancy"
+          ],
+          "rows": [
+            [
+              "$29,743.00",
+              "-5.4%",
+              "-6.1%",
+              "-6.5%",
+              "-6.7%",
+              "-7.4%",
+              "-8.1%",
+              "-8.7%"
+            ],
+            [
+              "$36,116.50",
+              "-1.2%",
+              "-2.0%",
+              "-2.5%",
+              "-2.8%",
+              "-3.6%",
+              "-4.4%",
+              "-5.2%"
+            ],
+            [
+              "$42,490.00",
+              "3.1%",
+              "2.1%",
+              "1.5%Base",
+              "1.2%",
+              "0.2%",
+              "-0.7%",
+              "-1.7%"
+            ],
+            [
+              "$48,863.50",
+              "7.3%",
+              "6.2%",
+              "5.5%",
+              "5.1%",
+              "4.0%",
+              "2.9%",
+              "1.8%"
+            ],
+            [
+              "$55,237.00",
+              "11.5%",
+              "10.3%",
+              "9.5%",
+              "9.0%",
+              "7.8%",
+              "6.6%",
+              "5.3%"
+            ]
+          ],
+          "base": "1.5%Base",
+          "baseOutline": "2px solid rgb(8, 124, 145) | 0px none rgb(8, 124, 145) | none",
+          "negativeColor": "rgb(180, 35, 62)",
+          "footer": "Charts share the selected property and base assumptions. Tables show USD to the cent and rates to four decimal places (sensitivity rates to one), without hover.",
+          "spoken": "Monthly rent $55,237.00, vacancy 12%: Cash-on-Cash 6.5802%",
+          "overflow": 0
+        }
+      },
+      "errors": []
+    }
+  }
+}

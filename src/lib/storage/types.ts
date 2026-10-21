@@ -59,7 +59,16 @@ export interface StoredDocument {
   isCover?: boolean;
   sortOrder?: number | null;
   caption?: string | null;
+  contentSha256?: string | null;
+  agreementFiles?: AgreementFileReference[];
   createdAt: Date;
+}
+
+export interface AgreementFileReference {
+  agreementId: string;
+  slot: string;
+  sha256: string;
+  agreement: { version: number; signedAt: Date | null; supersededAt?: Date | null; archiveStatus: string };
 }
 
 export interface StorageObject {

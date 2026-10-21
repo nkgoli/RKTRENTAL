@@ -365,11 +365,33 @@ model LeaseAgreement {
   supersededAt   DateTime?
   // A signing result is not proof that a PDF has been stored.
   archiveStatus  String   @default("AWAITING_SIGNATURES")
+  archiveAttempts Int     @default(0)
+  archiveNextAttemptAt DateTime?
+  archiveLastError String?
+  archivedAt     DateTime?
   parties        LeaseAgreementParty[]
+  files          LeaseAgreementFile[]
 
   @@unique([id, organizationId])
   @@unique([leaseId, version])
   @@index([organizationId, leaseId])
+  @@index([organizationId, archiveStatus, archiveNextAttemptAt])
+}
+
+// Pins each separate original or generated artifact to the exact reviewed version.
+model LeaseAgreementFile {
+  id             String @id @default(cuid())
+  organizationId String
+  agreementId    String
+  agreement      LeaseAgreement @relation(fields: [agreementId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  documentId     String
+  document       Document @relation(fields: [documentId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  slot           String
+  sha256         String
+
+  @@unique([agreementId, slot])
+  @@unique([agreementId, documentId])
+  @@index([documentId, organizationId])
 }
 
 model LeaseAgreementParty {
@@ -479,7 +501,10 @@ model Document {
   caption          String?
   createdAt        DateTime          @default(now())
   maintenancePhoto MaintenancePhoto?
+  contentSha256    String?
+  agreementFiles   LeaseAgreementFile[]
 
+  @@unique([id, organizationId])
   @@index([organizationId, leaseId])
   @@index([organizationId, propertyId])
   @@index([organizationId, unitId])

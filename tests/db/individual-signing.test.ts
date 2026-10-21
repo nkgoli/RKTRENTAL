@@ -137,7 +137,7 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')(
       consentVersion: SIGNATURE_CONSENT_VERSION,
     });
 
-    it('freezes owner plus two tenants, records each independently, serializes duplicates and concurrent signers without billing/PDF side effects', async () => {
+    it('freezes owner plus two tenants, records each independently, serializes duplicates and archives without billing side effects', async () => {
       const f = await fixture();
       const charges = await client.charge.findMany({ where: { leaseId: f.lease.id } });
       const [sent, resend] = await Promise.all([
@@ -163,7 +163,7 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')(
       );
       const completed = await getLeaseSignStatus(f.organizationId, f.lease.id, client);
       expect(completed.status).toBe('SIGNED');
-      expect(completed.archiveStatus).toBe('PDF_PENDING');
+      expect(completed.archiveStatus).toBe('ARCHIVED');
       const rows = await client.leaseAgreementParty.findMany({ where: { agreementId: sent.id } });
       expect(rows).toHaveLength(3);
       for (const row of rows) {
@@ -183,7 +183,7 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')(
       expect(
         await client.leaseEvent.count({ where: { leaseId: f.lease.id, kind: 'COMPLETED' } }),
       ).toBe(1);
-      expect(await client.document.count({ where: { leaseId: f.lease.id } })).toBe(0);
+      expect(await client.document.count({ where: { leaseId: f.lease.id } })).toBe(1);
       expect(await client.charge.findMany({ where: { leaseId: f.lease.id } })).toEqual(charges);
       expect((await sendLeaseForSignature(f.organizationId, f.lease.id, client)).id).toBe(sent.id);
       await expect(
@@ -214,7 +214,7 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')(
         id: sent.id,
         status: 'SIGNED',
         signedCount: 3,
-        archiveStatus: 'PDF_PENDING',
+        archiveStatus: 'ARCHIVED',
       });
     }, 30000);
 
@@ -308,7 +308,7 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')(
       await submitLeaseSignature(f.ownerSession, f.lease.id, input(sent, f.ownerSession), client);
       const before = await client.leaseAgreement.findUniqueOrThrow({
         where: { id: sent.id },
-        include: { parties: true },
+        include: { parties: { orderBy: { id: 'asc' } } },
       });
       await updateLeaseTerms(
         f.organizationId,
@@ -344,12 +344,15 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')(
         (
           await client.leaseAgreement.findUniqueOrThrow({
             where: { id: sent.id },
-            include: { parties: true },
+            include: { parties: { orderBy: { id: 'asc' } } },
           })
         ).snapshot,
       ).toEqual(before.snapshot);
       expect(
-        await client.leaseAgreementParty.findMany({ where: { agreementId: sent.id } }),
+        await client.leaseAgreementParty.findMany({
+          where: { agreementId: sent.id },
+          orderBy: { id: 'asc' },
+        }),
       ).toEqual(before.parties);
       await expect(
         submitLeaseSignature(f.ownerSession, f.lease.id, input(sent, f.ownerSession), client),
@@ -392,7 +395,7 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')(
         await submitLeaseSignature(session, f.lease.id, input(next, session), client);
       const completed = await client.leaseAgreement.findUniqueOrThrow({
         where: { id: next.id },
-        include: { parties: true },
+        include: { parties: { orderBy: { id: 'asc' } } },
       });
       await client.lease.update({ where: { id: f.lease.id }, data: { monthlyRent: '1700' } });
       const third = await sendLeaseForSignature(f.organizationId, f.lease.id, client);
@@ -400,7 +403,7 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')(
       expect(third.signers.every((party) => !party.signedAt)).toBe(true);
       const preserved = await client.leaseAgreement.findUniqueOrThrow({
         where: { id: next.id },
-        include: { parties: true },
+        include: { parties: { orderBy: { id: 'asc' } } },
       });
       expect(preserved.parties).toEqual(completed.parties);
       expect(preserved.signedAt).toEqual(completed.signedAt);
@@ -417,7 +420,7 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')(
       });
       const proof = await client.leaseAgreement.findUniqueOrThrow({
         where: { id: sent.id },
-        include: { parties: true },
+        include: { parties: { orderBy: { id: 'asc' } } },
       });
       const renewal = await createRenewalFromWizard(
         f.organizationId,
@@ -437,7 +440,7 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')(
       expect(
         await client.leaseAgreement.findUniqueOrThrow({
           where: { id: sent.id },
-          include: { parties: true },
+          include: { parties: { orderBy: { id: 'asc' } } },
         }),
       ).toEqual(proof);
       expect(

@@ -78,12 +78,99 @@
   background: var(--design-surface);
 }
 .basis {
+  font-size: 13px;
+  margin: 0;
+}
+.source {
   font-size: 12px;
-  margin: 12px 0 0;
+  margin: 10px 0 0;
 }
 .status {
   font-size: 12px;
   margin: 4px 0 0;
+}
+.status:empty {
+  display: none;
+}
+/* Summary-tab snapshot: a three-row actual/projected table and one action. */
+.snapshot {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.snapshot > * {
+  margin: 0;
+}
+.snapshot > button {
+  align-self: flex-start;
+  margin-top: auto;
+}
+.mini {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+.mini th,
+.mini td {
+  padding: 9px 0 9px 12px;
+  border-bottom: 1px solid var(--rr-subtle);
+  text-align: right;
+  white-space: nowrap;
+}
+.mini th:first-child {
+  padding-left: 0;
+  text-align: left;
+  white-space: normal;
+}
+.mini thead th {
+  padding-top: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--design-muted);
+}
+.mini thead th:nth-child(2) {
+  color: var(--rr-ok);
+}
+.mini thead th:nth-child(3) {
+  color: var(--design-primary);
+}
+.mini tbody th {
+  font-weight: 500;
+  color: var(--design-muted);
+}
+.mini td {
+  font-weight: 600;
+  color: var(--design-text);
+}
+.mini td[data-status='unavailable'] {
+  font-weight: 500;
+  color: var(--design-muted);
+}
+.mini td small {
+  font-weight: 500;
+  color: var(--rr-warn);
+}
+.categories {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  min-width: 200px;
+}
+.categories li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  text-transform: capitalize;
+}
+.categories li span:last-child {
+  text-transform: none;
+}
+.categories small {
+  color: var(--design-muted);
+  font-weight: 400;
 }
 .caption {
   position: absolute;
@@ -348,5 +435,9 @@
   .list dd {
     text-align: left;
     justify-items: start;
+  }
+  .categories {
+    width: 100%;
+    min-width: 0;
   }
 }

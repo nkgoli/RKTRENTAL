@@ -9,13 +9,15 @@ import {
   wealthAt,
   wholeDollars,
 } from '@/lib/analysis/chart-data';
-import { projectionRows, type ProjectionResult } from '@/lib/analysis/projections';
+import { dollars, projectionRows, type ProjectionResult } from '@/lib/analysis/projections';
 import {
   ChartCard,
   ComboChart,
   Donut,
+  ExactTable,
   InfoTip,
   MiniBar,
+  MoreDetail,
   Segmented,
   chartColors,
   useHorizon,
@@ -36,7 +38,8 @@ export function NetCashFlowCard({ result }: { result: ProjectionResult }) {
   return (
     <ChartCard
       title="Net Cash Flow by Year"
-      subtitle="After debt service · Positive = you keep cash, Negative = you contribute · projected · before tax and sale proceeds"
+      subtitle="What you keep (above zero) or contribute (below zero) each year after debt service and reserves."
+      basis={['Projected', 'USD per year', 'Before tax and sale proceeds']}
       controls={horizon}
     >
       <ComboChart
@@ -90,6 +93,13 @@ export function NetCashFlowCard({ result }: { result: ProjectionResult }) {
           };
         }}
       />
+      <MoreDetail summary={`Exact annual cash flow, all ${rows.length} years`}>
+        <ExactTable
+          caption="Annual cash flow"
+          headers={['Year', 'Cash flow', 'Cumulative']}
+          rows={rows.map((r) => [r.year, dollars(r.cashFlow), dollars(r.cumulativeCashFlow)])}
+        />
+      </MoreDetail>
     </ChartCard>
   );
 }
@@ -147,6 +157,7 @@ export function OutcomeCard({ result }: { result: ProjectionResult }) {
           </InfoTip>
         </>
       }
+      basis={['Projected', `Cumulative to year ${w.year}`, 'Before sale and tax']}
     >
       <p className={s.big} data-negative={w.total < 0 || undefined}>
         {wholeDollars(w.total)}
@@ -348,7 +359,8 @@ export function ProjectionMilestones({ result }: { result: ProjectionResult }) {
   return (
     <ChartCard
       title="Cash Flow & Equity Projections"
-      subtitle="Milestone years analysis · projected · whole dollars (exact cents in the annual tables) · before tax"
+      subtitle="Income, costs, cash flow and equity at milestone years."
+      basis={['Projected', 'USD, whole dollars', 'Before tax']}
       controls={
         <div className={s.tableControls}>
           <Segmented

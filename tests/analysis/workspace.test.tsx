@@ -79,7 +79,15 @@ async function open() {
   await screen.findByRole('button', { name: 'Save draft' });
 }
 const summaryCard = () => within(screen.getByRole('region', { name: 'Baseline assumptions' }));
-const glance = () => within(screen.getByRole('region', { name: 'Year 1 at a glance' }));
+// The headline figures; the same values repeat in the card's "How Year 1 adds up" statement,
+// and with no debt or reserves NOI equals cash flow, so `glance` reads the cash-flow metric.
+const glanceMetrics = () =>
+  within(
+    within(screen.getByRole('region', { name: 'Year 1 at a glance' })).getByRole('group', {
+      name: 'Year 1 metrics',
+    }),
+  );
+const glance = () => within(glanceMetrics().getByText('Annual cash flow').parentElement!);
 const href = (link: HTMLElement) => new URL(link.getAttribute('href')!, 'http://local.test');
 // Analysis-level edits that remain on the dashboard: the optional tax estimate and scenarios.
 const taxBox = () => screen.getByLabelText('Include explicit tax assumptions') as HTMLInputElement;
@@ -109,6 +117,18 @@ describe('property autofill and calculation sufficiency', () => {
     });
     await open();
     expect(glance().getByText('$10,800')).toBeTruthy();
+    // Headline figures carry their basis; the statement and exact years open on demand.
+    const card = within(screen.getByRole('region', { name: 'Year 1 at a glance' }));
+    expect(
+      within(card.getByRole('list', { name: 'Data basis' }))
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['Projected', 'USD per year', 'Before tax']);
+    const statement = card.getByText('How Year 1 adds up').closest('details')!;
+    expect(statement.open).toBe(false);
+    expect(within(statement).getByText('Annual cash flow')).toBeTruthy();
+    expect(screen.getByText(/^Exact annual cash flow, all \d+ years$/)).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Annual cash flow' })).toBeTruthy();
     expect(summaryCard().getByText('All cash')).toBeTruthy();
     expect(summaryCard().getByText('From property details · not saved yet')).toBeTruthy();
     expect(
@@ -133,6 +153,10 @@ describe('property autofill and calculation sufficiency', () => {
     });
     await open();
     expect(glance().queryByText('$10,800')).toBeNull();
+    // Missing projections read as not calculated, never as zero, and one empty state explains why.
+    expect(glanceMetrics().getAllByText('Not calculated').length).toBe(4);
+    expect(screen.getByRole('heading', { name: 'No projection yet' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Net Cash Flow by Year' })).toBeNull();
     expect(summaryCard().getByText('1 input needed to calculate.')).toBeTruthy();
     const complete = summaryCard().getByRole('link', { name: 'Complete assumptions' });
     expect(href(complete).searchParams.get('field')).toMatch(/^input\.expenses\.maintenance/);

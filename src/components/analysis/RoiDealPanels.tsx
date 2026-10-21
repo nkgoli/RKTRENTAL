@@ -634,7 +634,8 @@ export function FixMyDeal({
   return (
     <ChartCard
       title="Fix My Deal"
-      subtitle="Click levers to see impact · what-if only, never saved"
+      subtitle="Choose levers to see their Year-1 effect on cash flow."
+      basis={['What-if only', 'USD per year', 'Never saved']}
       controls={
         hasWhatIf ? (
           <div>

@@ -137,8 +137,21 @@ describe('actual versus projected in the ROI workspace', () => {
     expect(lastRequest()).toMatchObject({ propertyId: 'a' });
     // The Summary card already pairs recorded and projected income.
     expect(await screen.findByRole('heading', { name: 'Actual vs projected' })).toBeTruthy();
+    const snapshot = within(
+      await screen.findByRole('table', { name: /^Recorded and projected amounts/ }),
+    );
+    const snapshotIncome = within(snapshot.getByRole('row', { name: /Operating income/ }));
+    expect(snapshotIncome.getByText('$1,234')).toBeTruthy();
+    expect(
+      within(snapshot.getByRole('row', { name: /Operating expenses/ })).getByText('Not recorded'),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Actual vs projected' }));
     expect(window.location.search).toBe('?property=a&view=actual');
+    // Concise basis up front; the full method stays one click away.
+    expect(panel().getByText(/^Projection source: /)).toBeTruthy();
+    expect(
+      panel().getByText('How actual and projected are compared').closest('details')!.open,
+    ).toBe(false);
     const table = await panel().findByRole('table');
     const income = within(table).getByRole('row', { name: /Operating income/ });
     expect(within(income).getByText('$1,234')).toBeTruthy();

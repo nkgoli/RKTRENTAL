@@ -222,7 +222,14 @@ export async function terminateLease(
   return client.$transaction(async (tx) => {
     const lease = await tx.lease.findFirst({
       where: { id: leaseId, organizationId },
-      select: { id: true, unitId: true, startDate: true, endDate: true, status: true },
+      select: {
+        id: true,
+        unitId: true,
+        startDate: true,
+        endDate: true,
+        status: true,
+        eSignStatus: true,
+      },
     });
     if (!lease) throw new LeaseServiceError('Lease not found.');
     if (lease.status !== 'ACTIVE')
@@ -230,7 +237,13 @@ export async function terminateLease(
     await lockUnit(tx, organizationId, lease.unitId);
     await tx.lease.updateMany({
       where: { id: leaseId, organizationId },
-      data: { status: 'TERMINATED', endDate: terminationEnd(lease, today) },
+      // A termination records move-out without rewriting an already signed agreement's term.
+      data: {
+        status: 'TERMINATED',
+        ...(lease.eSignStatus === 'SIGNED' || lease.eSignStatus === 'PARTIALLY_SIGNED'
+          ? { moveOutDate: terminationEnd(lease, today) }
+          : { endDate: terminationEnd(lease, today) }),
+      },
     });
     const remaining = await tx.lease.count({
       where: { organizationId, unitId: lease.unitId, status: 'ACTIVE' },

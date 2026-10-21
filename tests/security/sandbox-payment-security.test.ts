@@ -26,7 +26,7 @@ describe('sandbox-only mock integration selection', () => {
         { subjectId: 'manager-1', organizationId: 'org-1', role: 'MANAGER' },
         'lease-1',
       ),
-    ).rejects.toThrow('Mock signing requires ROCKETRENTAL_SANDBOX=true');
+    ).rejects.toThrow('Each designated party must sign separately');
   });
 });
 
@@ -43,7 +43,10 @@ describe('server-generated payment idempotency', () => {
     };
     expect(serverPaymentIdempotencyKey(request)).toBe(serverPaymentIdempotencyKey(request));
     expect(serverPaymentIdempotencyKey(request)).not.toBe(
-      serverPaymentIdempotencyKey({ ...request, payments: [{ id: 'payment-1', amountCents: 25_000, status: 'PENDING' }] }),
+      serverPaymentIdempotencyKey({
+        ...request,
+        payments: [{ id: 'payment-1', amountCents: 25_000, status: 'PENDING' }],
+      }),
     );
   });
 });

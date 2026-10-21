@@ -5,8 +5,23 @@ import { LeaseServiceError } from '@/lib/leases/service';
 import { ensureLeaseSetupCharges } from '@/lib/ledger/lease-setup';
 import { hasOverlap, parseWizardTerms, renewalWindow, validateReview } from './validation';
 import { emptyDraft, type WizardDraft } from './types';
+import { contextFromDraft, createTermsSnapshot } from './templates';
 
 export { LeaseServiceError };
+
+function wizardSnapshot(draft: WizardDraft, renewsLeaseId: string | null = null) {
+  return {
+    templateId: draft.template?.id ?? null,
+    templateVersion: draft.template?.version ?? null,
+    termsSnapshot: {
+      ...(draft.template
+        ? createTermsSnapshot(draft.template, contextFromDraft(draft), draft.termOverrides)
+        : {}),
+      wizard: draft,
+      renewsLeaseId,
+    } as unknown as Prisma.InputJsonValue,
+  };
+}
 
 async function lockUnit(tx: Prisma.TransactionClient, organizationId: string, unitId: string) {
   const { count } = await tx.unit.updateMany({
@@ -64,7 +79,7 @@ export async function createLeaseFromWizard(
       throw new LeaseServiceError('Tenant not found.', 'tenantIds');
     if (status === 'ACTIVE') await assertAvailable(tx, organizationId, draft.unitId, terms);
     const lease = await tx.lease.create({
-      data: { organizationId, unitId: draft.unitId, ...terms, status },
+      data: { organizationId, unitId: draft.unitId, ...terms, ...wizardSnapshot(draft), status },
       select: { id: true },
     });
     await tx.leaseTenant.createMany({
@@ -106,7 +121,13 @@ export async function createRenewalFromWizard(
     await lockUnit(tx, organizationId, source.unitId);
     if (status === 'ACTIVE') await assertAvailable(tx, organizationId, source.unitId, terms);
     const lease = await tx.lease.create({
-      data: { organizationId, unitId: source.unitId, ...terms, status },
+      data: {
+        organizationId,
+        unitId: source.unitId,
+        ...terms,
+        ...wizardSnapshot(draft, source.id),
+        status,
+      },
       select: { id: true },
     });
     const tenantIds = draft.tenantIds.length
@@ -123,8 +144,7 @@ export async function createRenewalFromWizard(
             source.tenants.find((t) => t.tenantId === tenantId)?.isPrimary === true),
       })),
     });
-    if (status === 'ACTIVE')
-      await ensureLeaseSetupCharges(tx, organizationId, lease.id);
+    if (status === 'ACTIVE') await ensureLeaseSetupCharges(tx, organizationId, lease.id);
     await recordLeaseEvents(tx, organizationId, lease.id, [
       { kind: 'CREATED', message: 'Created as a renewal' },
       { kind: 'RENEWED', message: `Renews lease ${source.id}` },

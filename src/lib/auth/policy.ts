@@ -55,6 +55,10 @@ export function safeRedirectTarget(candidate: string | null | undefined, role: A
   ) {
     return roleHome(role);
   }
+  // A designated owner can authenticate directly into the narrow signing API.
+  // General owner navigation and manager permissions remain unchanged.
+  if (role !== 'ADMIN' && /^\/api\/leases\/[A-Za-z0-9_-]+\/signing$/.test(candidate))
+    return candidate;
   const requiredRole = requiredRoleForRoute(candidate);
   return requiredRole && canAccessRole(role, requiredRole) ? candidate : roleHome(role);
 }

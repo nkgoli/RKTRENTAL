@@ -417,7 +417,7 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')(
       });
       const proof = await client.leaseAgreement.findUniqueOrThrow({
         where: { id: sent.id },
-        include: { parties: true },
+        include: { parties: { orderBy: { id: 'asc' } } },
       });
       const renewal = await createRenewalFromWizard(
         f.organizationId,
@@ -437,7 +437,7 @@ describe.skipIf(process.env.RUN_DB_INTEGRATION !== '1')(
       expect(
         await client.leaseAgreement.findUniqueOrThrow({
           where: { id: sent.id },
-          include: { parties: true },
+          include: { parties: { orderBy: { id: 'asc' } } },
         }),
       ).toEqual(proof);
       expect(

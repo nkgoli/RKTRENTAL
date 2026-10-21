@@ -1,4 +1,4 @@
-﻿.metrics {
+.metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   padding: 16px 0;
@@ -411,6 +411,40 @@
   border: 1px solid var(--rr-border);
   border-radius: 12px;
   padding: 20px;
+}
+.roiDetails {
+  scroll-margin-top: 16px;
+}
+.roiNeeded {
+  padding: 12px 14px;
+  background: var(--rr-warn-bg);
+  color: var(--rr-warn);
+  border: 1px solid var(--rr-warn);
+  border-radius: 8px;
+  margin: 12px 0;
+}
+.roiNeeded p {
+  margin: 0 0 6px;
+}
+.roiNeeded ul {
+  margin: 0;
+  padding-left: 18px;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 13px;
+}
+.roiNeeded a {
+  color: inherit;
+}
+.roiReady {
+  padding: 10px 14px;
+  border: 1px solid var(--rr-border);
+  border-radius: 8px;
+  background: var(--design-background);
+}
+.roiNeededField {
+  font-size: 12px;
+  color: var(--rr-warn);
 }
 @media (max-width: 640px) {
   .grid {

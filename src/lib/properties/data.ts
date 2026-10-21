@@ -17,6 +17,7 @@ import {
   type UnitInput,
   type UnitStatusValue,
 } from './validation';
+import { syncSavedAnalysis } from '../analysis/property-sync';
 
 export type PropertyFilter = 'all' | 'multi' | 'single' | 'vacancies' | 'archived';
 export const PROPERTY_FILTERS: PropertyFilter[] = [
@@ -27,7 +28,9 @@ export const PROPERTY_FILTERS: PropertyFilter[] = [
   'archived',
 ];
 
-export type WriteResult = { ok: true; id: string } | { ok: false; errors: FieldErrors };
+export type WriteResult =
+  | { ok: true; id: string; analysis?: { revision: number; status: 'DRAFT' | 'READY' } }
+  | { ok: false; errors: FieldErrors };
 
 const num = (value: Prisma.Decimal | number | null | undefined) =>
   value == null ? null : Number(value);
@@ -379,6 +382,8 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
     id: string,
     input: PropertyInput,
     changedBasics?: string[],
+    /** An explicit Edit Property save also updates this property's saved ROI analysis. */
+    { syncAnalysis = false }: { syncAnalysis?: boolean } = {},
   ): Promise<WriteResult> {
     const ownerErr =
       !changedBasics || changedBasics.includes('ownerId') ? await ownerError(input.ownerId) : null;
@@ -409,6 +414,10 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
         data: { ...basics, ...roiStorage(current.roiInputs, roiInputs) },
       });
       if (roiInputs) await releaseDemoValues(tx, id, roiInputs);
+      const analysis =
+        syncAnalysis && roiInputs
+          ? await syncSavedAnalysis(tx, organizationId, id, roiInputs)
+          : null;
       if (current.type !== nextType) {
         if (nextType === 'MULTI_UNIT') {
           await tx.unit.updateMany({
@@ -432,7 +441,7 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
           });
         }
       }
-      return { ok: true, id };
+      return { ok: true, id, ...(analysis ? { analysis } : {}) };
     });
   }
 

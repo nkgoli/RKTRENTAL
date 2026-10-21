@@ -39,7 +39,6 @@ import { AnalysisTabs, RoiProjections } from './RoiProjections';
 import {
   allFields,
   applyValues,
-  groups,
   fieldLabel,
   friendlyIssues,
   taxFields,
@@ -49,6 +48,9 @@ import {
 } from './fields';
 import { NetCashFlowCard, OutcomeCard, ProjectionMilestones } from './RoiSummaryCharts';
 import { DealSnapshot, FixMyDeal } from './RoiDealPanels';
+import { AssumptionsSummary, isBaselinePath } from './AssumptionsSummary';
+import { assumptionsEditPath } from '@/lib/analysis/return-path';
+import { browser } from './browser';
 import styles from './analysis.module.css';
 
 type Result = ReturnType<typeof calculatePayload>['base'];
@@ -152,6 +154,9 @@ export function RoiWorkspace({
     }
   }, [payload, values, tax, benchmarks, customBenchmark, scenarios]);
   const errors = requestErrors.length ? requestErrors : projection.errors;
+  // Baseline gaps are completed in Edit Property; scenario, comparison and tax issues stay here.
+  const baselineErrors = errors.filter((e) => isBaselinePath(e.path));
+  const localErrors = errors.filter((e) => !isBaselinePath(e.path));
   const result = projection.result;
   const calculatedPayload = projection.payload;
   const stale = !result || !!requestErrors.length;
@@ -238,7 +243,7 @@ export function RoiWorkspace({
       setMessage(
         saved.data
           ? `Loaded ${saved.data.status.toLowerCase()} - revision ${saved.data.revision}`
-          : 'New analysis - saved property details are filled in. Add any missing assumptions below.',
+          : 'New analysis - saved property details are filled in. Use Edit assumptions to add any that are missing.',
       );
     } catch {
       if (request === token.current)
@@ -321,10 +326,12 @@ export function RoiWorkspace({
     document.addEventListener('click', onLink, true);
     return () => document.removeEventListener('click', onLink, true);
   });
+  // Set once the manager has decided to leave for the assumptions editor.
+  const leaving = useRef(false);
   useEffect(() => {
     if (!dirty) return;
     const warn = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
+      if (!leaving.current) e.preventDefault();
     };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
@@ -377,7 +384,36 @@ export function RoiWorkspace({
     setPending(null);
     queueMicrotask(() => returnFocus.current?.focus());
   }
+  /** Baseline assumptions are edited on the property; Save and Cancel come back here. */
+  function editHref(path?: string) {
+    return assumptionsEditPath(selected, propertyUrl(selected), path);
+  }
+  function editAssumptions(path?: string) {
+    const href = editHref(path);
+    if (dirty) {
+      returnFocus.current = document.activeElement as HTMLElement;
+      setPending(href);
+    } else continueTo(href);
+  }
+  /** A pending destination is either a property ID or an Edit Property address. */
+  function continueTo(next: string) {
+    if (next.startsWith('/')) {
+      leaving.current = true;
+      setPending(null);
+      browser.assign(next);
+    } else switchProperty(next);
+  }
+  /** After a failed validation: local editors take focus; baseline gaps point to the editor link. */
+  function reviewIssue(path: string | undefined) {
+    if (path && isBaselinePath(path))
+      setTimeout(() => document.getElementById('roi-complete-assumptions')?.focus(), 0);
+    else focusField(path ?? '');
+  }
   function focusField(path: string) {
+    if (!path || isBaselinePath(path)) {
+      editAssumptions(path || undefined);
+      return;
+    }
     changeView(
       path.startsWith('benchmarks')
         ? 'compare'
@@ -427,7 +463,7 @@ export function RoiWorkspace({
     if (dirty) {
       returnFocus.current = document.activeElement as HTMLElement;
       setPending(id);
-    } else switchProperty(id);
+    } else continueTo(id);
   }
   function edit(path: string, value: string) {
     setValues((v) => ({ ...v, [path]: value }));
@@ -472,7 +508,7 @@ export function RoiWorkspace({
       const found = friendlyIssues(missing.length ? missing : issues(error));
       setErrors(found);
       setMessage('Review the highlighted assumptions. Your entries are kept.');
-      if (pending === null) focusField(found[0]?.path);
+      if (pending === null) reviewIssue(found[0]?.path);
       return null;
     }
   }
@@ -495,13 +531,13 @@ export function RoiWorkspace({
         setConflict(saved.code === 'CONFLICT');
         setMessage(failure(saved.code));
         if (saved.issues?.length) {
-          if (pending === null) focusField(friendlyIssues(saved.issues)[0].path);
+          if (pending === null) reviewIssue(friendlyIssues(saved.issues)[0].path);
         }
         return;
       }
       install(saved.data.payload, saved.data.revision);
       setMessage(`Saved ${status.toLowerCase()} - revision ${saved.data.revision}`);
-      if (next !== undefined) switchProperty(next);
+      if (next !== undefined) continueTo(next);
     } catch {
       if (request === token.current)
         setMessage('Could not save analysis. Your entries are kept. Try again.');
@@ -576,7 +612,8 @@ export function RoiWorkspace({
       <div inert={pending !== null}>
         {recovery !== null && (
           <p className={styles.notice}>
-            Your property change is waiting. Correct the highlighted assumption, then{' '}
+            Your {recovery.startsWith('/') ? 'assumptions edit' : 'property change'} is waiting.
+            Correct the highlighted assumption, then{' '}
             <button onClick={() => choose(recovery)}>Continue property change</button>
             <button onClick={() => setRecovery(null)}>Cancel property change</button>
           </p>
@@ -605,8 +642,8 @@ export function RoiWorkspace({
               <p>
                 Saved property details fill your new ROI analysis automatically. Purchase and loan
                 terms, whole-property rent, operating budgets, reserves and growth assumptions
-                support the calculation. You can add missing details here or in the property’s ROI
-                details.
+                support the calculation. Add or change them in the property’s ROI assumptions;
+                Returns &amp; ROI links straight there.
               </p>
               <p>
                 Actual results come from the rent payments and expenses you record. Open a property
@@ -654,30 +691,37 @@ export function RoiWorkspace({
                     Reload saved analysis
                   </button>
                 </div>
-                <p role="status">
-                  {result && !stale
-                    ? 'Calculated automatically from your current assumptions.'
-                    : 'Add the missing assumptions to calculate automatically. You can save a draft at any time.'}
-                </p>
-                {!!demoFields.length && (
-                  <p className={styles.notice} data-demo-assumptions={demoFields.length}>
-                    Sample data: {demoFields.length} assumption
-                    {demoFields.length === 1 ? ' is' : 's are'} fictional demo values (
-                    {demoFields[0].demo}), not recorded actuals. Replace any value with your own to
-                    use it.
-                  </p>
-                )}
-                {!!errors.length && (
+                <AssumptionsSummary
+                  payload={calculatedPayload ?? applyValues(payload, values, tax)}
+                  result={result}
+                  stale={stale}
+                  missing={baselineErrors}
+                  incomplete={missingData(applyValues(payload, values, tax)).some((e) =>
+                    isBaselinePath(e.path),
+                  )}
+                  demoCount={demoFields.length}
+                  demoLabel={demoFields[0]?.demo}
+                  source={
+                    revision > 0
+                      ? `Saved analysis · revision ${revision}`
+                      : 'From property details · not saved yet'
+                  }
+                  editHref={editHref()}
+                  completeHref={editHref(baselineErrors[0]?.path)}
+                  onEdit={(event, path) => {
+                    if (!dirty) return;
+                    event.preventDefault();
+                    editAssumptions(path);
+                  }}
+                />
+                {!!localErrors.length && (
                   <details className={styles.notice} open>
                     <summary>
-                      Complete your calculation · {errors.length} assumptions to review
+                      {localErrors.length} {localErrors.length === 1 ? 'entry' : 'entries'} to
+                      review
                     </summary>
-                    <p>
-                      Your property is saved. ROI details are optional for property setup. Follow a
-                      link to enter or correct an assumption; no missing costs or rates are assumed.
-                    </p>
                     <ul>
-                      {errors.map((e, i) => (
+                      {localErrors.map((e, i) => (
                         <li key={i}>
                           <a
                             href={`#${e.path}`}
@@ -692,13 +736,6 @@ export function RoiWorkspace({
                       ))}
                     </ul>
                   </details>
-                )}
-                {stale && (
-                  <p className={styles.notice} role="status">
-                    {result
-                      ? 'Out of date - recalculate to update these prior results.'
-                      : 'Complete assumptions to calculate. No valid projection is available yet.'}
-                  </p>
                 )}
                 <AnalysisTabs
                   id="roi-section"
@@ -738,9 +775,7 @@ export function RoiWorkspace({
                     }
                     onPeriod={changePeriod}
                     onRetry={() => setActualsAttempt((n) => n + 1)}
-                    onReviewAssumptions={() =>
-                      focusField(errors[0]?.path ?? 'input.purchase.purchasePrice')
-                    }
+                    onReviewAssumptions={() => focusField(errors[0]?.path ?? '')}
                   />
                 </div>
                 {['benchmarks', 'compare'].map((panel) => (
@@ -811,7 +846,7 @@ export function RoiWorkspace({
                     calculationVersion={calculationVersion}
                     stale={stale}
                     saving={saving}
-                    onEdit={(path) => focusField(path ?? 'input.purchase.purchasePrice')}
+                    onEdit={(path) => focusField(path ?? errors[0]?.path ?? '')}
                   />
                 </div>
                 <div
@@ -829,33 +864,35 @@ export function RoiWorkspace({
                         payload={calculatedPayload}
                       />
                     )}
-                    <section className={styles.card} aria-label="Year 1 at a glance">
-                      <h2>Year 1 at a glance</h2>
-                      <div className={styles.metrics}>
-                        {[
-                          ['Annual cash flow', money(metrics?.annualCashFlow)],
-                          ['Cap rate', percent(metrics?.capRate)],
-                          ['Cash-on-cash', percent(metrics?.cashOnCash)],
-                          ['Hold-period leveraged IRR', percent(metrics?.irrLeveraged)],
-                        ].map(([label, value]) => (
-                          <div key={label}>
-                            <small>{label}</small>
-                            <strong>{value}</strong>
-                          </div>
-                        ))}
-                      </div>
-                      <p>
-                        Forecast estimates - {stale ? 'out of date' : 'current assumptions'} -
-                        before tax
-                      </p>
-                    </section>
-                    <ActualSnapshot
-                      window={range}
-                      state={actuals}
-                      projection={projectionYear}
-                      stale={stale}
-                      onOpen={() => changeView('actual')}
-                    />
+                    <div className={styles.pair}>
+                      <section className={styles.card} aria-label="Year 1 at a glance">
+                        <h2>Year 1 at a glance</h2>
+                        <div className={styles.metrics}>
+                          {[
+                            ['Annual cash flow', money(metrics?.annualCashFlow)],
+                            ['Cap rate', percent(metrics?.capRate)],
+                            ['Cash-on-cash', percent(metrics?.cashOnCash)],
+                            ['Hold-period leveraged IRR', percent(metrics?.irrLeveraged)],
+                          ].map(([label, value]) => (
+                            <div key={label}>
+                              <small>{label}</small>
+                              <strong>{value}</strong>
+                            </div>
+                          ))}
+                        </div>
+                        <p>
+                          Forecast estimates - {stale ? 'out of date' : 'current assumptions'} -
+                          before tax
+                        </p>
+                      </section>
+                      <ActualSnapshot
+                        window={range}
+                        state={actuals}
+                        projection={projectionYear}
+                        stale={stale}
+                        onOpen={() => changeView('actual')}
+                      />
+                    </div>
                     {result && <OutcomeCard key={`outcome-${selected}`} result={result} />}
                     {result && calculatedPayload && (
                       <FixMyDeal
@@ -951,6 +988,29 @@ export function RoiWorkspace({
                         ))}
                       </details>
                     )}
+                    <details className={styles.card}>
+                      <summary>Optional tax estimate</summary>
+                      <p>
+                        Tax assumptions belong to this analysis and are saved with it. Leave them
+                        off for before-tax results.
+                      </p>
+                      <fieldset disabled={saving}>
+                        <label className={styles.check}>
+                          <input
+                            type="checkbox"
+                            checked={tax}
+                            onChange={(e) => {
+                              setTax(e.target.checked);
+                              setDirty(true);
+                              setErrors([]);
+                              setCalculationVersion((v) => v + 1);
+                            }}
+                          />
+                          Include explicit tax assumptions
+                        </label>
+                        {tax && <div className={styles.fields}>{taxFields.map(renderField)}</div>}
+                      </fieldset>
+                    </details>
                     {facts && (
                       <details className={styles.card}>
                         <summary>Recorded source facts</summary>
@@ -979,49 +1039,6 @@ export function RoiWorkspace({
                       </details>
                     )}
                   </div>
-                  <section className={`${styles.card} ${styles.assumptions}`}>
-                    <h2>Assumptions</h2>
-                    <p>
-                      Blank means missing. Enter 0 explicitly where applicable. Fixed annual costs
-                      override the corresponding percentage; clear fixed amounts to use percentages.
-                      A fixed cost needs no percentage. A $0 loan needs no loan-only terms. Use the
-                      units shown beside each assumption.
-                    </p>
-                    <fieldset disabled={saving}>
-                      <button type="button" onClick={() => edit('input.financing.loanAmount', '0')}>
-                        Switch to cash purchase (set loan to $0)
-                      </button>
-                      <p>
-                        A $0 loan means no debt payments or lender costs. Loan-only details are not
-                        needed. Other saved loan details stay available if your plans change. To
-                        finance the purchase, enter a loan amount or clear it and enter a down
-                        payment percentage.
-                      </p>
-                      {groups.map((g) => (
-                        <details key={g.title} open>
-                          <summary>{g.title}</summary>
-                          <div className={styles.fields}>{g.fields.map(renderField)}</div>
-                        </details>
-                      ))}
-                      <details>
-                        <summary>Optional tax estimate</summary>
-                        <label className={styles.check}>
-                          <input
-                            type="checkbox"
-                            checked={tax}
-                            onChange={(e) => {
-                              setTax(e.target.checked);
-                              setDirty(true);
-                              setErrors([]);
-                              setCalculationVersion((v) => v + 1);
-                            }}
-                          />
-                          Include explicit tax assumptions
-                        </label>
-                        {tax && <div className={styles.fields}>{taxFields.map(renderField)}</div>}
-                      </details>
-                    </fieldset>
-                  </section>
                 </div>
               </>
             )}
@@ -1057,13 +1074,13 @@ export function RoiWorkspace({
             <h2>Keep your changes?</h2>
             <p>Save a draft before leaving, or discard these edits and load the saved workspace.</p>
             <p role="status">{message}</p>
-            {!!errors.length && (
+            {!!localErrors.length && (
               <button
                 disabled={saving}
                 onClick={() => {
                   setRecovery(pending);
                   setPending(null);
-                  focusField(errors[0].path);
+                  focusField(localErrors[0].path);
                 }}
               >
                 Correct highlighted assumption
@@ -1076,7 +1093,7 @@ export function RoiWorkspace({
               <button disabled={saving || conflict} onClick={() => save('DRAFT', pending)}>
                 Save draft and continue
               </button>
-              <button disabled={saving} onClick={() => switchProperty(pending)}>
+              <button disabled={saving} onClick={() => continueTo(pending)}>
                 Discard and continue
               </button>
             </div>

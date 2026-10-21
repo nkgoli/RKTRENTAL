@@ -57,7 +57,26 @@ it('sends only admitted changed basics with explicit clears and returns to the e
       roiInputs: expect.objectContaining({ cleared: ['input.purchase.purchasePrice'] }),
     }),
     ['name'],
+    { syncAnalysis: true },
   );
+});
+it('returns to a validated Returns & ROI address for the same property only', async () => {
+  const fromRoi = data();
+  fromRoi.set('returnTo', '/roi-analysis?property=owned-home&view=actual&period=QTD&x=1');
+  expect((await savePropertyPageAction({}, fromRoi)).destination).toBe(
+    '/roi-analysis?property=owned-home&view=actual&period=QTD',
+  );
+  for (const returnTo of [
+    'https://evil.example/roi-analysis?property=owned-home',
+    '//evil.example/roi-analysis?property=owned-home',
+    '/roi-analysis?property=other-home',
+    '/properties?property=owned-home',
+    'javascript:alert(1)',
+  ]) {
+    const forged = data();
+    forged.set('returnTo', returnTo);
+    expect((await savePropertyPageAction({}, forged)).destination).toBe('/properties/owned-home');
+  }
 });
 it('retains validation errors without writing or navigating', async () => {
   const invalid = data();

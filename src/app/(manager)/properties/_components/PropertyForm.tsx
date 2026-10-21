@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useActionState, useEffect, useId, useRef, useState } from 'react';
 import { Alert, Button, Field, FormRow, Input, Select } from '@/components/ui';
@@ -9,6 +9,7 @@ import {
   type FormState,
 } from '../actions';
 import { valuesFrom } from '@/components/analysis/fields';
+import type { AnalysisPayload } from '@/lib/analysis';
 import type { PropertyRoiInputs } from '@/lib/properties/roi-inputs';
 import { FieldError } from './FieldError';
 import { PropertyRoiFields } from './PropertyRoiFields';
@@ -31,16 +32,30 @@ export type EditableProperty = {
   roiInputs: PropertyRoiInputs;
 };
 
+/** Edit Property opened from Returns & ROI to change the analysis baseline. */
+export type RoiEditContext = {
+  /** Validated ROI address that Save and Cancel return to. */
+  returnTo: string;
+  /** The analysis baseline: the saved analysis, or the new analysis built from this property. */
+  payload: AnalysisPayload;
+  /** e.g. `draft revision 3`; null when no analysis has been saved yet. */
+  saved: string | null;
+  /** Assumption to focus first. */
+  field?: string;
+};
+
 export function PropertyForm({
   owners,
   cancelHref,
   initial,
   onCancel,
+  roi,
 }: {
   owners: OwnerOption[];
   cancelHref: string;
   initial?: EditableProperty;
   onCancel?: () => void;
+  roi?: RoiEditContext;
 }) {
   const [state, action, pending] = useActionState(async (previous: FormState, data: FormData) => {
     const next = await (initial ? savePropertyPageAction : createPropertyAction)(previous, data);
@@ -66,7 +81,10 @@ export function PropertyForm({
         )
       : { unitCount: '0' },
   );
-  const [originalRoi] = useState(() => (initial ? valuesFrom(initial.roiInputs) : undefined));
+  // From ROI, fields show the values the analysis uses; only fields you change are saved.
+  const [originalRoi] = useState(() =>
+    roi ? valuesFrom(roi.payload) : initial ? valuesFrom(initial.roiInputs) : undefined,
+  );
   const [roiValues, setRoiValues] = useState<Record<string, string>>(originalRoi ?? {});
   function inputProps(name: string) {
     return {
@@ -96,6 +114,7 @@ export function PropertyForm({
         aria-busy={saving}
       >
         {initial && <input type="hidden" name="propertyId" value={initial.id} />}
+        {roi && <input type="hidden" name="returnTo" value={roi.returnTo} />}
         {initial && (
           <input
             type="hidden"
@@ -248,13 +267,17 @@ export function PropertyForm({
           demo={initial?.roiInputs.demo}
           onChange={setRoiValues}
           errors={state.errors}
+          baseline={roi?.payload}
+          focusField={roi?.field}
+          saved={roi?.saved}
+          propertyValues={roi && initial ? valuesFrom(initial.roiInputs) : undefined}
         />
         <p className="muted" style={{ fontSize: 13 }}>
           Add cover photos from the property page after saving.
         </p>
         <div className={styles.formActions}>
           <Button type="submit" variant="primary" disabled={saving}>
-            {saving ? 'Saving…' : 'Save property'}
+            {saving ? 'Saving…' : roi ? 'Save and return to ROI' : 'Save property'}
           </Button>
           {onCancel ? (
             <Button type="button" variant="ghost" onClick={onCancel}>

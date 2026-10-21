@@ -312,6 +312,72 @@ describe.skipIf(process.env.RUN_ANALYSIS_DB !== '1')('property ROI database roun
         cleared.data.payload.evidence.filter((e) => e.path === 'input.income.monthlyRent'),
     ).toEqual([]);
   });
+  it('applies an explicit Edit Property save to that property saved analysis only', async () => {
+    const id = await create(source());
+    const other = await create(source());
+    const draft = await analysis.loadDraft(id);
+    if (!draft.ok) throw Error('draft failed');
+    const kept = structuredClone(draft.data.payload);
+    kept.input.expenses!.insurance = 777;
+    kept.scenarios = [{ id: 'stress', name: 'Stress', overrides: { income: { vacancyRate: 9 } } }];
+    for (const [propertyId, payload] of [
+      [id, kept],
+      [
+        other,
+        {
+          ...structuredClone(kept),
+          propertyId: other,
+          input: { ...kept.input, propertyId: other },
+        },
+      ],
+    ] as const)
+      expect(
+        (await analysis.save({ propertyId, expectedRevision: 0, status: 'READY', payload })).ok,
+      ).toBe(true);
+    const otherBefore = await analysis.loadSaved(other);
+    // Ordinary data updates (loaders, legacy forms) leave saved analyses as saved.
+    const before = await analysis.loadSaved(id);
+    await properties.updateProperty(
+      id,
+      parsed({ version: 1, input: { income: { vacancyRate: 3 } }, options: {} }),
+      [],
+    );
+    expect(await analysis.loadSaved(id)).toEqual(before);
+    expect(
+      await properties.updateProperty(
+        id,
+        parsed({ version: 1, input: { income: { vacancyRate: 5 } }, options: {} }),
+        [],
+        { syncAnalysis: true },
+      ),
+    ).toEqual({ ok: true, id, analysis: { revision: 2, status: 'READY' } });
+    const synced = await analysis.loadSaved(id);
+    if (!synced.ok || !synced.data) throw Error('sync failed');
+    expect(synced.data).toMatchObject({ revision: 2, status: 'READY' });
+    expect(synced.data.payload.input.income?.vacancyRate).toBe(5);
+    expect(synced.data.payload.input.expenses?.insurance).toBe(777);
+    expect(synced.data.payload.scenarios).toEqual(kept.scenarios);
+    // Clearing a required input keeps the analysis loadable as a draft.
+    await properties.updateProperty(
+      id,
+      parsed({ version: 1, input: {}, options: {}, cleared: ['input.income.monthlyRent'] }),
+      [],
+      { syncAnalysis: true },
+    );
+    const cleared = await analysis.loadSaved(id);
+    if (!cleared.ok || !cleared.data) throw Error('reload failed');
+    expect(cleared.data).toMatchObject({ revision: 3, status: 'DRAFT' });
+    expect(cleared.data.payload.input.income?.monthlyRent).toBeUndefined();
+    expect(cleared.data.missing.length).toBeGreaterThan(0);
+    // A basics-only save changes no assumption and no revision.
+    await properties.updateProperty(id, { ...parsed(), name: 'Renamed' }, ['name'], {
+      syncAnalysis: true,
+    });
+    expect((await analysis.loadSaved(id)).ok && (await analysis.loadSaved(id))).toMatchObject({
+      data: { revision: 3 },
+    });
+    expect(await analysis.loadSaved(other)).toEqual(otherBefore);
+  });
   it('clears canonical amounts and expenses while preserving concurrent edits and saved analyses', async () => {
     const id = await create(source());
     const draft = await analysis.loadDraft(id);

@@ -3,7 +3,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RoiWorkspace } from '@/components/analysis/RoiWorkspace';
-import { applyValues, valuesFrom } from '@/components/analysis/fields';
+import { allFields, applyValues, valuesFrom } from '@/components/analysis/fields';
+import { browser } from '@/components/analysis/browser';
 import { PayloadSchema, calculatePayload, issues } from '@/lib/analysis';
 import { payload } from './fixture';
 import { cashPayload } from './cash-fixture';
@@ -69,6 +70,7 @@ beforeEach(() => {
     };
   });
   window.history.replaceState(null, '', '/roi-analysis');
+  vi.spyOn(browser, 'assign').mockImplementation(() => {});
 });
 afterEach(cleanup);
 async function open() {
@@ -76,42 +78,73 @@ async function open() {
   fireEvent.click(screen.getByRole('button', { name: /Property a/ }));
   await screen.findByRole('button', { name: 'Save draft' });
 }
-const rent = () => document.getElementById('input.income.monthlyRent') as HTMLInputElement;
+const summaryCard = () => within(screen.getByRole('region', { name: 'Baseline assumptions' }));
+const glance = () => within(screen.getByRole('region', { name: 'Year 1 at a glance' }));
+const href = (link: HTMLElement) => new URL(link.getAttribute('href')!, 'http://local.test');
+// Analysis-level edits that remain on the dashboard: the optional tax estimate and scenarios.
+const taxBox = () => screen.getByLabelText('Include explicit tax assumptions') as HTMLInputElement;
+const taxField = () => document.getElementById('options.tax.marginalTaxRate') as HTMLInputElement;
+const scenarioName = () => document.getElementById('scenarios.0.name') as HTMLInputElement;
+function addScenario(name: string) {
+  fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Create scenario' }));
+  fireEvent.change(scenarioName(), { target: { value: name } });
+}
+/** True when the workspace let an ordinary link navigate (jsdom navigation is then suppressed). */
+function navigates(link: HTMLElement) {
+  let prevented = true;
+  const watch = (event: Event) => {
+    prevented = event.defaultPrevented;
+    event.preventDefault();
+  };
+  document.addEventListener('click', watch, { once: true });
+  fireEvent.click(link);
+  return !prevented;
+}
 describe('property autofill and calculation sufficiency', () => {
-  it('calculates cash with unknown loan terms and stops when its applicable cost basis is cleared', async () => {
+  it('summarizes a calculable baseline read-only and edits it through the property', async () => {
+    vi.mocked(loadRoiDraftAction).mockResolvedValueOnce({
+      ok: true,
+      data: { payload: cashPayload('a'), missing: [], facts },
+    });
+    await open();
+    expect(glance().getByText('$10,800')).toBeTruthy();
+    expect(summaryCard().getByText('All cash')).toBeTruthy();
+    expect(summaryCard().getByText('From property details · not saved yet')).toBeTruthy();
+    expect(
+      summaryCard().getByText('Calculated automatically from your current assumptions.'),
+    ).toBeTruthy();
+    // No inline baseline editor remains on the dashboard.
+    expect(document.getElementById('input.income.monthlyRent')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Switch to cash purchase/ })).toBeNull();
+    const edit = summaryCard().getByRole('link', { name: 'Edit assumptions' });
+    expect(href(edit).pathname).toBe('/properties/a/edit');
+    expect(href(edit).searchParams.get('returnTo')).toBe('/roi-analysis?property=a');
+    expect(href(edit).hash).toBe('#roi-details');
+    expect(navigates(edit)).toBe(true);
+    expect(browser.assign).not.toHaveBeenCalled();
+  });
+  it('shows a concise missing-input count and links to the first gap', async () => {
     const p = cashPayload('a');
+    delete p.input.expenses!.maintenance;
     vi.mocked(loadRoiDraftAction).mockResolvedValueOnce({
       ok: true,
       data: { payload: p, missing: [], facts },
     });
     await open();
-    const summary = () => within(screen.getByRole('region', { name: 'Year 1 at a glance' }));
-    const field = (path: string) => document.getElementById(path) as HTMLInputElement;
-    expect(summary().getByText('$10,800')).toBeTruthy();
-    expect(field('input.financing.loanTermYears').value).toBe('');
-    expect(field('input.expenses.maintenancePercent').value).toBe('');
-    fireEvent.change(field('input.expenses.maintenance'), { target: { value: '' } });
-    expect(summary().queryByText('$10,800')).toBeNull();
-    expect(
-      screen.getByRole('link', { name: /Maintenance.*fixed annual cost or percentage/ }),
-    ).toBeTruthy();
-    fireEvent.change(field('input.expenses.maintenancePercent'), { target: { value: '0' } });
-    expect(summary().getByText('$10,800')).toBeTruthy();
-    fireEvent.change(field('input.financing.loanAmount'), { target: { value: '50000' } });
-    expect(summary().queryByText('$10,800')).toBeNull();
-    expect(screen.getByRole('link', { name: /Interest rate.*financed purchase/ })).toBeTruthy();
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Switch to cash purchase (set loan to $0)' }),
-    );
-    expect(summary().getByText('$10,800')).toBeTruthy();
-    expect(field('input.financing.downPaymentPercent').value).toBe('');
-    expect(field('input.financing.loanTermYears').value).toBe('');
+    expect(glance().queryByText('$10,800')).toBeNull();
+    expect(summaryCard().getByText('1 input needed to calculate.')).toBeTruthy();
+    const complete = summaryCard().getByRole('link', { name: 'Complete assumptions' });
+    expect(href(complete).searchParams.get('field')).toMatch(/^input\.expenses\.maintenance/);
+    // The full field-level list belongs to the editor, not the dashboard.
+    expect(screen.queryByRole('link', { name: /Maintenance.*fixed annual cost/ })).toBeNull();
+    expect(document.body.textContent).not.toMatch(/input\.|options\.|Required/);
   });
-  it('chooses cash without overwriting saved financing assumptions', async () => {
+  it('saves ready with the loaded financing untouched', async () => {
     const p = make();
     p.input.financing = {
       ...p.input.financing,
-      loanAmount: 60000,
+      loanAmount: 0,
       downPaymentPercent: 40,
       interestRate: 5,
     };
@@ -120,12 +153,7 @@ describe('property autofill and calculation sufficiency', () => {
       data: { payload: p, missing: [], facts },
     });
     await open();
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Switch to cash purchase (set loan to $0)' }),
-    );
-    expect(
-      within(screen.getByRole('region', { name: 'Year 1 at a glance' })).getByText('$10,800'),
-    ).toBeTruthy();
+    expect(glance().getByText('$10,800')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
     await waitFor(() => expect(saveRoiAnalysisAction).toHaveBeenCalledOnce());
     expect(vi.mocked(saveRoiAnalysisAction).mock.calls[0][0]).toMatchObject({
@@ -157,14 +185,12 @@ describe('property autofill and calculation sufficiency', () => {
         currency: 'USD',
         maximumFractionDigits: 0,
       }).format(expected);
-      expect(
-        within(screen.getByRole('region', { name: 'Year 1 at a glance' })).getByText(formatted),
-      ).toBeTruthy();
-      expect(rent().value).toBe('1000');
+      expect(glance().getByText(formatted)).toBeTruthy();
+      expect(summaryCard().getByText('$1,000/mo')).toBeTruthy();
       expect(document.body.textContent).not.toContain('Required');
     },
   );
-  it('automatically calculates when the last missing assumption is entered and removes results when cleared', async () => {
+  it('keeps the view in the return address and guards unsaved edits before leaving', async () => {
     const p = make();
     delete p.input.income!.monthlyRent;
     vi.mocked(loadRoiDraftAction).mockResolvedValueOnce({
@@ -172,14 +198,28 @@ describe('property autofill and calculation sufficiency', () => {
       data: { payload: p, missing: [], facts },
     });
     await open();
-    expect(screen.getByRole('link', { name: /Scheduled rent.*Enter a value/ })).toBeTruthy();
-    expect(document.body.textContent).not.toContain('input.income');
-    fireEvent.change(rent(), { target: { value: '1000' } });
+    expect(summaryCard().getByText('1 input needed to calculate.')).toBeTruthy();
+    expect(summaryCard().getByText('Missing', { selector: 'dd' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: 'Actual vs projected' }));
+    const complete = () => summaryCard().getByRole('link', { name: 'Complete assumptions' });
+    expect(href(complete()).searchParams.get('field')).toBe('input.income.monthlyRent');
+    expect(href(complete()).searchParams.get('returnTo')).toBe(
+      '/roi-analysis?property=a&view=actual',
+    );
+    addScenario('Unsaved case');
+    expect(navigates(complete())).toBe(false);
+    expect(screen.getByRole('alertdialog')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
+    expect(browser.assign).not.toHaveBeenCalled();
+    expect(scenarioName().value).toBe('Unsaved case');
+    fireEvent.click(complete());
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
+    await waitFor(() => expect(browser.assign).toHaveBeenCalledOnce());
+    expect(vi.mocked(browser.assign).mock.calls[0][0]).toBe(complete().getAttribute('href'));
     expect(
-      within(screen.getByRole('region', { name: 'Year 1 at a glance' })).getByText('$10,800'),
-    ).toBeTruthy();
-    fireEvent.change(rent(), { target: { value: '' } });
-    expect(screen.queryByText('$10,800')).toBeNull();
+      (vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as { payload: ReturnType<typeof make> })
+        .payload.scenarios[0].name,
+    ).toBe('Unsaved case');
   });
   it('loads a saved zero and intentionally missing assumption ahead of complete property defaults', async () => {
     const p = make();
@@ -198,17 +238,19 @@ describe('property autofill and calculation sufficiency', () => {
       },
     });
     await open();
-    expect(rent().value).toBe('0');
-    expect((document.getElementById('input.expenses.insurance') as HTMLInputElement).value).toBe(
-      '',
-    );
-    expect(screen.getByRole('link', { name: /Insurance.*Enter a value/ })).toBeTruthy();
+    expect(summaryCard().getByText('$0/mo')).toBeTruthy();
+    expect(summaryCard().getByText('Saved analysis · revision 3')).toBeTruthy();
+    expect(
+      href(summaryCard().getByRole('link', { name: 'Complete assumptions' })).searchParams.get(
+        'field',
+      ),
+    ).toBe('input.expenses.insurance');
     fireEvent.click(screen.getByRole('button', { name: 'Reload saved analysis' }));
     await screen.findByText('Loaded draft - revision 3');
-    expect(rent().value).toBe('0');
+    expect(summaryCard().getByText('$0/mo')).toBeTruthy();
     expect(screen.queryByText('$10,800')).toBeNull();
   });
-  it('expands missing sections into real focus targets and keeps a recorded price', async () => {
+  it('expands missing sections into real editor targets and keeps a recorded price', async () => {
     const p = make();
     p.input = { purchase: { purchasePrice: 250000 } };
     p.options = {};
@@ -217,12 +259,15 @@ describe('property autofill and calculation sufficiency', () => {
       data: { payload: p, missing: [], facts },
     });
     await open();
-    expect(
-      (document.getElementById('input.purchase.purchasePrice') as HTMLInputElement).value,
-    ).toBe('250000');
-    const link = screen.getByRole('link', { name: /Property tax.*Enter a value/ });
-    fireEvent.click(link);
-    await waitFor(() => expect(document.activeElement?.id).toBe('input.expenses.propertyTax'));
+    expect(summaryCard().getByText('$250,000')).toBeTruthy();
+    expect(summaryCard().getByText(/\d+ inputs needed to calculate\./)).toBeTruthy();
+    const complete = summaryCard().getByRole('link', { name: 'Complete assumptions' });
+    const field = href(complete).searchParams.get('field');
+    expect(allFields.some((f) => f.path === field)).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
+    expect(saveRoiAnalysisAction).not.toHaveBeenCalled();
+    await waitFor(() => expect(document.activeElement).toBe(complete));
+    expect(browser.assign).not.toHaveBeenCalled();
     expect(document.body.textContent).not.toMatch(/input\.|options\.|Required/);
   });
 });
@@ -236,11 +281,11 @@ describe('ROI summary workspace', () => {
     await user.tab();
     await user.keyboard('{Enter}');
     await screen.findByRole('button', { name: 'Save draft' });
-    fireEvent.change(rent(), { target: { value: '' } });
-    const disclosure = rent().closest('details')!;
+    fireEvent.click(taxBox());
+    const disclosure = taxField().closest('details')!;
     disclosure.open = false;
     fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
-    await waitFor(() => expect(document.activeElement).toBe(rent()));
+    await waitFor(() => expect(document.activeElement).toBe(taxField()));
     expect(disclosure.open).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
     const keep = screen.getByRole('button', { name: 'Keep editing' });
@@ -253,7 +298,8 @@ describe('ROI summary workspace', () => {
     expect(document.activeElement).toBe(keep);
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('alertdialog')).toBeNull();
-    expect(rent().value).toBe('');
+    expect(taxBox().checked).toBe(true);
+    expect(taxField().value).toBe('');
   });
   it('requires explicit searchable selection and rejects foreign URLs', async () => {
     const { unmount } = render(<RoiWorkspace selection={{ ok: true, data: properties }} />);
@@ -266,22 +312,45 @@ describe('ROI summary workspace', () => {
     expect(loadRoiDraftAction).not.toHaveBeenCalled();
   });
   it('calculates automatically, preserves zero, and clears invalid prior results', async () => {
+    const p = make();
+    p.input.income!.monthlyRent = 0;
+    vi.mocked(loadRoiDraftAction).mockResolvedValueOnce({
+      ok: true,
+      data: { payload: p, missing: [], facts },
+    });
     await open();
     expect(
       screen.getByText('Calculated automatically from your current assumptions.'),
     ).toBeTruthy();
-    fireEvent.change(rent(), { target: { value: '0' } });
-    expect(
-      within(screen.getByRole('region', { name: 'Year 1 at a glance' })).getByText('-$1,200'),
-    ).toBeTruthy();
-    fireEvent.change(rent(), { target: { value: '' } });
+    expect(glance().getByText('-$1,200')).toBeTruthy();
+    fireEvent.click(taxBox());
     expect(screen.queryByText('-$1,200')).toBeNull();
     expect(screen.getByText(/No valid projection is available yet/)).toBeTruthy();
-    expect(rent().value).toBe('');
+    fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    expect(saveRoiAnalysisAction).not.toHaveBeenCalled();
+    fireEvent.click(taxBox());
+    expect(glance().getByText('-$1,200')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    await waitFor(() => expect(saveRoiAnalysisAction).toHaveBeenCalled());
+    const saved = (
+      vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as { payload: ReturnType<typeof make> }
+    ).payload;
+    expect(saved.input.income?.monthlyRent).toBe(0);
+    expect(saved.options.tax).toBeUndefined();
+  });
+  it('saves a draft with missing baseline inputs but not a ready analysis', async () => {
+    const p = make();
+    delete p.input.income!.monthlyRent;
+    vi.mocked(loadRoiDraftAction).mockResolvedValueOnce({
+      ok: true,
+      data: { payload: p, missing: [], facts },
+    });
+    await open();
     fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
     expect(saveRoiAnalysisAction).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
-    await waitFor(() => expect(saveRoiAnalysisAction).toHaveBeenCalled());
+    await screen.findByText('Saved draft - revision 1');
     expect(
       (vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as { payload: ReturnType<typeof make> })
         .payload.input.income?.monthlyRent,
@@ -291,7 +360,7 @@ describe('ROI summary workspace', () => {
     await open();
     fireEvent.click(screen.getByRole('button', { name: 'Save ready' }));
     await screen.findByText('Saved ready - revision 1');
-    fireEvent.change(rent(), { target: { value: '1200' } });
+    addScenario('Kept case');
     vi.mocked(saveRoiAnalysisAction).mockResolvedValueOnce({
       ok: false,
       code: 'CONFLICT',
@@ -299,15 +368,15 @@ describe('ROI summary workspace', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
     await screen.findByText(/A newer revision exists/);
-    expect(rent().value).toBe('1200');
+    expect(scenarioName().value).toBe('Kept case');
     fireEvent.click(screen.getByRole('button', { name: 'Reload saved analysis' }));
     fireEvent.click(screen.getByRole('button', { name: 'Discard and continue' }));
     await screen.findByText(/New analysis/);
     vi.mocked(saveRoiAnalysisAction).mockRejectedValueOnce(Error('offline'));
-    fireEvent.change(rent(), { target: { value: '1400' } });
+    addScenario('Offline case');
     fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
     await screen.findByText(/Could not save/);
-    expect(rent().value).toBe('1400');
+    expect(scenarioName().value).toBe('Offline case');
   });
   it('guards property change with save/discard and ignores a late property response', async () => {
     let resolve!: (v: Awaited<ReturnType<typeof loadRoiDraftAction>>) => void;
@@ -324,7 +393,7 @@ describe('ROI summary workspace', () => {
     await screen.findByRole('button', { name: 'Save draft' });
     await act(async () => resolve({ ok: true, data: { payload: make('a'), missing: [], facts } }));
     expect(window.location.search).toBe('?property=b');
-    fireEvent.change(rent(), { target: { value: '2222' } });
+    addScenario('Case b');
     fireEvent.click(screen.getByRole('button', { name: 'Change property' }));
     expect(screen.getByRole('alertdialog')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
@@ -374,15 +443,15 @@ describe('ROI summary workspace', () => {
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="a" />,
     );
     await screen.findByRole('button', { name: 'Save draft' });
-    fireEvent.change(rent(), { target: { value: 'invalid rent' } });
-    rent().focus();
+    addScenario('');
+    scenarioName().focus();
     view.rerender(
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="b" />,
     );
     expect(screen.getByRole('alertdialog')).toBeTruthy();
     expect(window.location.search).toBe('?property=a');
     fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
-    await waitFor(() => expect(document.activeElement).toBe(rent()));
+    await waitFor(() => expect(document.activeElement).toBe(scenarioName()));
     const change = screen.getByRole('button', { name: 'Change property' });
     change.focus();
     fireEvent.click(change);
@@ -390,10 +459,10 @@ describe('ROI summary workspace', () => {
     expect(saveRoiAnalysisAction).not.toHaveBeenCalled();
     expect(screen.getByRole('alertdialog').contains(document.activeElement)).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Correct highlighted assumption' }));
-    await waitFor(() => expect(document.activeElement).toBe(rent()));
+    await waitFor(() => expect(document.activeElement).toBe(scenarioName()));
     expect(screen.queryByRole('alertdialog')).toBeNull();
-    expect(rent().value).toBe('invalid rent');
-    fireEvent.change(rent(), { target: { value: '0' } });
+    expect(scenarioName().value).toBe('');
+    fireEvent.change(scenarioName(), { target: { value: 'Named case' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue property change' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
     await screen.findByRole('searchbox');
@@ -406,14 +475,14 @@ describe('ROI summary workspace', () => {
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="a" />,
     );
     await screen.findByRole('button', { name: 'Save draft' });
-    fireEvent.change(rent(), { target: { value: 'bad' } });
+    addScenario('');
     view.rerender(
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="b" />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Discard and continue' }));
     await screen.findByRole('button', { name: 'Save draft' });
     expect(screen.getByText('Property b', { selector: 'strong' })).toBeTruthy();
-    expect(rent().value).not.toBe('bad');
+    expect(scenarioName()).toBeNull();
     view.rerender(<RoiWorkspace selection={{ ok: true, data: [] }} initialPropertyId="b" />);
     await screen.findByText(/unavailable or archived/);
     expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull();
@@ -421,8 +490,8 @@ describe('ROI summary workspace', () => {
   it('keeps failed draft focus visible and resumes navigation after correction', async () => {
     const user = userEvent.setup();
     await open();
-    fireEvent.change(rent(), { target: { value: 'not a number' } });
-    const disclosure = rent().closest('details')!;
+    fireEvent.click(taxBox());
+    const disclosure = taxField().closest('details')!;
     disclosure.open = false;
     await user.click(screen.getByRole('button', { name: 'Change property' }));
     await user.click(screen.getByRole('button', { name: 'Save draft and continue' }));
@@ -430,10 +499,9 @@ describe('ROI summary workspace', () => {
     expect(dialog.contains(document.activeElement)).toBe(true);
     await user.click(screen.getByRole('button', { name: 'Correct highlighted assumption' }));
     expect(screen.queryByRole('alertdialog')).toBeNull();
-    expect(document.activeElement).toBe(rent());
+    await waitFor(() => expect(document.activeElement).toBe(taxField()));
     expect(disclosure.open).toBe(true);
-    expect(rent().value).toBe('not a number');
-    fireEvent.change(rent(), { target: { value: '1111' } });
+    fireEvent.click(taxBox());
     fireEvent.click(screen.getByRole('button', { name: 'Continue property change' }));
     fireEvent.click(screen.getByRole('button', { name: 'Discard and continue' }));
     await screen.findByRole('searchbox');
@@ -443,13 +511,13 @@ describe('ROI summary workspace', () => {
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="a" />,
     );
     await screen.findByRole('button', { name: 'Save draft' });
-    fireEvent.change(rent(), { target: { value: 'bad' } });
+    addScenario('');
     view.rerender(
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="b" />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
     fireEvent.click(screen.getByRole('button', { name: 'Correct highlighted assumption' }));
-    fireEvent.change(rent(), { target: { value: '0' } });
+    fireEvent.change(scenarioName(), { target: { value: 'Named case' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue property change' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
     await screen.findByText('Property b', { selector: 'strong' });
@@ -507,7 +575,7 @@ describe('ROI summary workspace', () => {
       </>,
     );
     await screen.findByRole('button', { name: 'Save draft' });
-    fireEvent.change(rent(), { target: { value: 'bad' } });
+    addScenario('bad');
     const link = screen.getByRole('link', { name: 'ROI sidebar entry' });
     expect(fireEvent.click(link, { ctrlKey: true })).toBe(true);
     expect(screen.queryByRole('alertdialog')).toBeNull();
@@ -515,7 +583,7 @@ describe('ROI summary workspace', () => {
     expect(screen.getByRole('alertdialog')).toBeTruthy();
     fireEvent.keyDown(screen.getByRole('alertdialog'), { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
-    expect(rent().value).toBe('bad');
+    expect(scenarioName().value).toBe('bad');
     fireEvent.click(screen.getByRole('link', { name: 'Other property route' }));
     fireEvent.click(screen.getByRole('button', { name: 'Discard and continue' }));
     await screen.findByText('Property b', { selector: 'strong' });
@@ -571,7 +639,7 @@ describe('ROI projection interactions', () => {
 
   it('preserves typed invalid assumptions across tabs and focuses their recovery from Charts', async () => {
     await open();
-    fireEvent.change(rent(), { target: { value: 'not-rent' } });
+    fireEvent.click(taxBox());
     tab('Charts');
     tab('Sensitivity');
     expect(screen.queryByRole('button', { name: 'Update sensitivity' })).toBeNull();
@@ -580,10 +648,10 @@ describe('ROI projection interactions', () => {
     ).toBeTruthy();
     expect(screen.queryByRole('table', { name: /Year 1 cash-on-cash/ })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
-    await waitFor(() => expect(document.activeElement).toBe(rent()));
+    await waitFor(() => expect(document.activeElement).toBe(taxField()));
     expect(screen.getByRole('tab', { name: 'Summary' }).getAttribute('aria-selected')).toBe('true');
-    expect(rent().value).toBe('not-rent');
-    fireEvent.change(rent(), { target: { value: '2000' } });
+    expect(taxBox().checked).toBe(true);
+    fireEvent.click(taxBox());
     fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
     tab('Charts');
     expect(screen.getByRole('tab', { name: 'Sensitivity' }).getAttribute('aria-selected')).toBe(
@@ -592,9 +660,8 @@ describe('ROI projection interactions', () => {
     expect(screen.getByRole('table', { name: /Year 1 cash-on-cash/ })).toBeTruthy();
     tab('Cash Flow');
     const table = screen.getByRole('table', { name: /Projection amounts/ });
-    expect(within(table).getAllByText('$22,800.00')).toHaveLength(3);
+    expect(within(table).getAllByText('$10,800.00')).toHaveLength(3);
   });
-
   it('recovers invalid probe ranges, retains probe controls across tabs and saves only the base', async () => {
     await open();
     tab('Charts');
@@ -655,7 +722,7 @@ describe('ROI projection interactions', () => {
     ).toBe('1');
   });
 
-  it('recovers incomplete and overflow drafts without losing strings or exposing stale probes', async () => {
+  it('sends incomplete charts to the property editor and keeps overflow drafts saveable', async () => {
     const incomplete = make();
     delete incomplete.input.income!.monthlyRent;
     vi.mocked(loadRoiDraftAction).mockResolvedValueOnce({
@@ -669,32 +736,30 @@ describe('ROI projection interactions', () => {
       screen.getByRole('heading', { name: 'Complete your assumptions to see charts' }),
     ).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Review assumptions' }));
-    await waitFor(() =>
-      expect(screen.getByRole('tab', { name: 'Summary' }).getAttribute('aria-selected')).toBe(
-        'true',
-      ),
-    );
-    fireEvent.change(rent(), { target: { value: '10000000000' } });
-    const growth = document.getElementById('input.income.annualRentGrowth')!;
-    const hold = document.getElementById('input.appreciationExit.holdingPeriodYears')!;
-    fireEvent.change(growth, { target: { value: '100' } });
-    fireEvent.change(hold, { target: { value: '50' } });
+    const target = new URL(vi.mocked(browser.assign).mock.calls[0][0], 'http://local.test');
+    expect(target.pathname).toBe('/properties/a/edit');
+    expect(target.searchParams.get('field')).toBe('input.income.monthlyRent');
+    expect(target.searchParams.get('returnTo')).toBe('/roi-analysis?property=a');
+    cleanup();
+    const overflow = make();
+    overflow.input.income!.monthlyRent = 10000000000;
+    overflow.input.income!.annualRentGrowth = 100;
+    overflow.input.appreciationExit!.holdingPeriodYears = 50;
+    vi.mocked(loadRoiDraftAction).mockResolvedValueOnce({
+      ok: true,
+      data: { payload: overflow, missing: [], facts },
+    });
+    await open();
     fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
     expect(screen.getAllByText(/safe monetary precision/).length).toBeGreaterThan(0);
-    expect(rent().value).toBe('10000000000');
     fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
     await screen.findByText('Saved draft - revision 1');
     expect(screen.getAllByText(/safe monetary precision/).length).toBeGreaterThan(0);
-    fireEvent.change(hold, { target: { value: '1' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
-    tab('Charts');
-    tab('Exit Analysis');
-    expect(screen.getByRole('table', { name: /Exit horizon comparison/ })).toBeTruthy();
+    expect(summaryCard().getByText('$10,000,000,000/mo')).toBeTruthy();
   });
-
   it('keeps chart edits guarded and clears all panels on accepted property history changes', async () => {
     await open();
-    fireEvent.change(rent(), { target: { value: '2222' } });
+    addScenario('Chart case');
     tab('Charts');
     tab('Equity');
     act(() => {

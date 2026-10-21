@@ -7,6 +7,7 @@ import { db } from '@/lib/db/client';
 import { propertiesDb } from '@/lib/properties/data';
 import { parsePropertyInput, parseUnitInput, type FieldErrors } from '@/lib/properties/validation';
 import { parseRoiInputs } from '@/lib/properties/roi-inputs';
+import { roiReturnPath } from '@/lib/analysis/return-path';
 
 export type FormState = {
   ok?: boolean;
@@ -72,16 +73,19 @@ export async function savePropertyPageAction(
   } catch {
     return failed({ _form: 'Reload this property and try saving again.' });
   }
+  // Opened from Returns & ROI: return there, never to an unvalidated address.
+  const returnTo = roiReturnPath(formData.get('returnTo'), propertyId);
   const result = await propertiesDb(session.organizationId).updateProperty(
     propertyId,
     parsed.data,
     changes,
+    { syncAnalysis: true },
   );
   if (!result.ok) return failed(result.errors);
   revalidatePath('/properties');
   revalidatePath(`/properties/${propertyId}`, 'layout');
   revalidatePath('/roi-analysis');
-  return { ok: true, destination: `/properties/${propertyId}` };
+  return { ok: true, destination: returnTo ?? `/properties/${propertyId}` };
 }
 
 export async function updatePropertyRoiAction(

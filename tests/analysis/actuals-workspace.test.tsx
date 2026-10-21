@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RoiWorkspace } from '@/components/analysis/RoiWorkspace';
+import { browser } from '@/components/analysis/browser';
 import { computeActualReturns, actualPeriod } from '@/lib/returns/actual';
 import { payload } from './fixture';
 import {
@@ -198,13 +199,15 @@ describe('actual versus projected in the ROI workspace', () => {
     expect(panel().getByRole('link', { name: 'Add a lease' }).getAttribute('href')).toBe(
       '/properties/a/leases',
     );
+    // Baseline assumptions are completed in the property's editor, returning to this view.
+    const assign = vi.spyOn(browser, 'assign').mockImplementation(() => {});
     fireEvent.click(panel().getByRole('button', { name: 'Review assumptions' }));
-    await waitFor(() =>
-      expect(screen.getByRole('tab', { name: 'Summary' }).getAttribute('aria-selected')).toBe(
-        'true',
-      ),
-    );
-    expect(window.location.search).toBe('?property=a');
+    const href = new URL(assign.mock.calls[0][0], 'http://local.test');
+    expect(href.pathname).toBe('/properties/a/edit');
+    expect(href.searchParams.get('returnTo')).toBe('/roi-analysis?property=a&view=actual');
+    expect(href.searchParams.get('field')).toBe('input.income.monthlyRent');
+    expect(href.hash).toBe('#roi-details');
+    assign.mockRestore();
   });
 
   it('restores view and period from the complete URL on Back, including absent parameters', async () => {

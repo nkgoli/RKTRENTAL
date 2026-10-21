@@ -120,9 +120,74 @@
 }
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr);
   gap: var(--rr-gap);
-  align-items: start;
+}
+/* Two compact cards share a row on wide screens; charts and tables keep the full width. */
+.pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: var(--rr-gap);
+  align-items: stretch;
+}
+.summary {
+  margin: 16px 0;
+}
+.summary h2 {
+  margin: 0;
+}
+.summary p {
+  margin: 12px 0 0;
+}
+.summaryHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.summaryHead p {
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+.workspace a.editLink {
+  color: var(--design-text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px 20px;
+  margin: 16px 0 0;
+}
+.summaryGrid div {
+  min-width: 0;
+}
+.summaryGrid dt {
+  font-size: 12px;
+  color: var(--design-muted);
+}
+.summaryGrid dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.summaryGrid dd.missingValue {
+  color: var(--rr-warn);
+  font-weight: 500;
+}
+.summary p.missing {
+  padding: 10px 12px;
+  background: var(--rr-warn-bg);
+  color: var(--rr-warn);
+  border: 1px solid var(--rr-warn);
+  border-radius: 8px;
+}
+.summary p.missing a {
+  color: inherit;
+  font-weight: 600;
+}
+.summary p.demo {
+  font-size: 13px;
 }
 .stack {
   display: grid;
@@ -192,13 +257,6 @@
   grid-template-columns: 1fr 1fr;
   gap: 14px;
   padding: 16px 0;
-}
-.assumptions p {
-  font-size: 12px;
-}
-.assumptions details {
-  border-top: 1px solid var(--rr-border);
-  padding: 14px 0;
 }
 .workspace summary {
   cursor: pointer;
@@ -301,14 +359,6 @@
 .workspace a {
   color: var(--design-primary);
 }
-@media (max-width: 1000px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-  .assumptions {
-    order: 1;
-  }
-}
 @media (max-width: 480px) {
   .heading {
     align-items: flex-start;
@@ -337,6 +387,17 @@
   }
   .context span:last-child {
     margin-left: 0;
+  }
+  .summaryHead {
+    flex-direction: column;
+  }
+  .workspace a.editLink {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .summaryGrid {
+    grid-template-columns: 1fr 1fr;
   }
   .card {
     padding: 16px;

@@ -10,6 +10,7 @@ it('retains native multipart semantics, labelled choices and whitespace validati
   expect(form.method).toBe('post');
   expect(form.getAttribute('action')).toBe('/repairs/submit');
   expect(form.enctype).toBe('multipart/form-data');
+  expect(form.noValidate).toBe(true);
   expect(screen.getByLabelText('Category').tagName).toBe('SELECT');
   expect(screen.getByLabelText('Urgency').getAttribute('aria-describedby')).toBe('urgency-help');
   expect(screen.getByLabelText('Vendor may enter with manager key')).toHaveProperty(
@@ -17,7 +18,8 @@ it('retains native multipart semantics, labelled choices and whitespace validati
     true,
   );
   expect(screen.getByLabelText('Choose files').getAttribute('accept')).toContain('.heic');
-  expect(screen.getByText('0 of 5 photos')).toBeTruthy();
+  expect(screen.getByText('JPG, PNG or HEIC · up to 5 photos')).toBeTruthy();
+  expect(screen.queryByText('0 of 5 photos')).toBeNull();
   fireEvent.change(description, { target: { value: '   ' } });
   expect(fireEvent.submit(form)).toBe(false);
   expect(document.activeElement).toBe(description);
@@ -52,6 +54,6 @@ it('retains uploader limit, failed-file retry and removal feedback', () => {
       ),
     },
   });
-  expect(screen.getByText('5 of 5 photos')).toBeTruthy();
+  expect(screen.getAllByText('Ready to submit')).toHaveLength(5);
   expect(screen.getByRole('alert').textContent).toContain('1 file was not added');
 });

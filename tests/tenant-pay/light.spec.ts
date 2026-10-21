@@ -25,17 +25,17 @@ for (const width of [1280, 390]) {
     );
     await amount.fill('500.00');
     await amount.press('Enter');
-    const review = page.getByRole('group', { name: 'Confirm payment' });
-    await expect(review).toBeFocused();
+    const review = page.getByRole('dialog', { name: 'Confirm payment' });
+    await expect(review.getByRole('button', { name: 'Cancel' })).toBeFocused();
     await expect(review).toContainText('$500');
     await page.keyboard.press('Tab');
-    await expect(page.getByRole('button', { name: 'Confirm payment' })).toBeFocused();
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Enter');
+    await expect(review.getByRole('button', { name: 'Pay $500' })).toBeFocused();
+    await page.keyboard.press('Escape');
     await expect(page.getByRole('button', { name: 'Pay $500' })).toBeFocused();
     await page.getByRole('radio', { name: /^Card/ }).check();
     await page.getByRole('button', { name: /^Pay \$/ }).click();
-    await expect(review).toContainText('$14.50 card fee');
+    await expect(review).toContainText('Card fee (2.9%)');
+    await expect(review).toContainText('$14.50');
     await expect(review).toContainText('$514.50');
     await page.screenshot({
       path: `tests/tenant-pay/evidence/${process.env.PAY_EVIDENCE_PHASE ?? 'after'}-review-${width}.png`,

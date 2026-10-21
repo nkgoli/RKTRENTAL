@@ -2,6 +2,16 @@
 
 All notable changes to RocketRental. This project uses semantic versioning.
 
+## [Unreleased] — 2026-10-21
+
+### UX pass
+
+- Refined manager lists, property and leasing forms, financial analysis, shared confirmations and feedback in the preceding manager UX pass.
+- Gave the tenant portal desktop navigation, a two-column Home, one rent action, dismissible renewal reminders, contextual account controls and clearer lease documents.
+- Added a focused payment-review dialog, a compact method chooser, accurate autopay guidance, inline repair validation and consistent request cards with photo previews.
+- Preserved sign-in email on errors, added email-and-token password recovery through the sandbox outbox, simplified sign-out and explained role redirects. Reset links expire after 15 minutes; password changes invalidate prior links and sessions.
+- Improved shared field accessibility, dialog focus, toast timing, keyboard states and responsive controls. Review findings include explicit reasons for the six remaining cross-cutting P2 deferrals.
+
 ## [1.0.0] - 2026-10-14
 
 First production release: a complete rental property management app for

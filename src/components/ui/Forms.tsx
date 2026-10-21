@@ -1,10 +1,15 @@
 ﻿'use client';
 
-import type {
-  InputHTMLAttributes,
-  ReactNode,
-  SelectHTMLAttributes,
-  TextareaHTMLAttributes,
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  useId,
+  type AriaAttributes,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
 } from 'react';
 import { cx } from './cx';
 
@@ -24,16 +29,41 @@ export function Field({
   children: ReactNode;
   className?: string;
 }) {
+  const fieldId = useId();
+  const labelId = `${fieldId}-label`;
+  const hintId = `${fieldId}-hint`;
+  const errorId = `${fieldId}-error`;
+  const controls = Children.map(children, (child) => {
+    if (
+      !isValidElement<AriaAttributes>(child) ||
+      ![Input, Select, Textarea, 'input', 'select', 'textarea'].includes(child.type as typeof Input)
+    ) {
+      return child;
+    }
+    return cloneElement(child, {
+      'aria-labelledby':
+        child.props['aria-labelledby'] ?? (child.props['aria-label'] ? undefined : labelId),
+      'aria-describedby':
+        [child.props['aria-describedby'], hint && hintId, error && errorId]
+          .filter(Boolean)
+          .join(' ') || undefined,
+      'aria-invalid': error ? true : child.props['aria-invalid'],
+    });
+  });
   return (
     <label className={cx('field', className)}>
-      <span className="field-label">
+      <span className="field-label" id={labelId}>
         {label}
         {optional && <span className="optional">Optional</span>}
       </span>
-      {children}
-      {hint && <span className="hint">{hint}</span>}
+      {controls}
+      {hint && (
+        <span className="hint" id={hintId}>
+          {hint}
+        </span>
+      )}
       {error && (
-        <span className="field-error" role="alert">
+        <span className="field-error" id={errorId} role="alert">
           {error}
         </span>
       )}

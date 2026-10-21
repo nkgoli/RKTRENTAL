@@ -67,21 +67,23 @@ export async function findTenantLeaseForPortal(
   return client.lease.findFirst({ where, include: leaseInclude });
 }
 
-async function managerName(client: Client, organizationId: string): Promise<string> {
+async function managerContact(client: Client, organizationId: string) {
   const manager = await client.user.findFirst({
     where: { organizationId, role: 'MANAGER' },
     orderBy: { createdAt: 'asc' },
-    select: { name: true },
+    select: { name: true, email: true },
   });
-  return manager?.name ?? 'your property manager';
+  return { name: manager?.name ?? 'your property manager', email: manager?.email ?? null };
 }
 
 export type TenantRepair = {
   id: string;
   title: string;
+  description: string | null;
   status: 'NEW' | 'ASSIGNED' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED';
   vendorName: string | null;
   createdAt: Date;
+  photos: Array<{ id: string; src: string; alt: string }>;
 };
 
 export type TenantHomeView = {
@@ -89,6 +91,7 @@ export type TenantHomeView = {
   leaseId: string;
   premises: string;
   managerName: string;
+  managerEmail?: string | null;
   term: { start: Date; end: Date };
   pay: TenantPayView;
   activity: ActivityItem[];
@@ -106,7 +109,7 @@ export async function loadTenantHome(
   if (!lease) return null;
   const [pay, manager, repair] = await Promise.all([
     loadTenantPayView(organizationId, tenantId, now, client),
-    managerName(client, organizationId),
+    managerContact(client, organizationId),
     client.maintenanceRequest.findFirst({
       where: {
         organizationId,
@@ -114,6 +117,12 @@ export async function loadTenantHome(
         status: { in: ['NEW', 'ASSIGNED', 'IN_PROGRESS'] },
       },
       orderBy: { createdAt: 'desc' },
+      include: {
+        photos: {
+          include: { document: { select: { id: true, name: true, leaseId: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     }),
   ]);
   // loadTenantPayView resolves the tenant's own active lease the same way; they must agree.
@@ -123,18 +132,33 @@ export async function loadTenantHome(
     tenantName: tenant?.name ?? pay.tenantName,
     leaseId: lease.id,
     premises: unitLabel(lease.unit.property, lease.unit),
-    managerName: manager,
+    managerName: manager.name,
+    managerEmail: manager.email,
     term: { start: lease.startDate, end: lease.endDate },
     pay,
     activity: buildActivity(pay.receipts),
-    notice: leaseNotice(lease, manager, now),
+    notice: leaseNotice(lease, manager.name, now),
     openRepair: repair
       ? {
           id: repair.id,
           title: repair.title,
+          description: repair.description,
           status: repair.status,
           vendorName: repair.vendorName,
           createdAt: repair.createdAt,
+          photos: repair.photos.flatMap(({ id, document }) =>
+            document && (!document.leaseId || document.leaseId === lease.id)
+              ? [
+                  {
+                    id,
+                    src: document.leaseId
+                      ? `/api/files/${document.id}/preview`
+                      : `/lease/photos/${document.id}`,
+                    alt: `${repair.title} photo: ${document.name}`,
+                  },
+                ]
+              : [],
+          ),
         }
       : null,
   };
@@ -225,14 +249,18 @@ export async function loadTenantLease(
   const files =
     options.files ?? (await (await import('@/lib/storage/service')).createPrismaFileService());
   const [manager, autopay, documents, photoRows] = await Promise.all([
-    managerName(client, organizationId),
+    managerContact(client, organizationId),
     client.autopaySetting.findUnique({
       where: { leaseId_tenantId: { leaseId: lease.id, tenantId } },
     }),
     listTenantLeaseDocuments(scope, lease.id, files),
     client.document.findMany({
       where: { organizationId, unitId: lease.unitId, kind: 'PHOTO' },
-      orderBy: [{ isCover: 'desc' }, { sortOrder: { sort: 'asc', nulls: 'last' } }, { createdAt: 'asc' }],
+      orderBy: [
+        { isCover: 'desc' },
+        { sortOrder: { sort: 'asc', nulls: 'last' } },
+        { createdAt: 'asc' },
+      ],
     }),
   ]);
   const me = lease.tenants.find((t) => t.tenantId === tenantId)?.tenant;
@@ -241,7 +269,7 @@ export async function loadTenantLease(
     tenantName: me?.name ?? 'Tenant',
     premises: unitLabel(lease.unit.property, lease.unit),
     propertyName: lease.unit.property.name,
-    managerName: manager,
+    managerName: manager.name,
     status: lease.status,
     term: { start: lease.startDate, end: lease.endDate },
     monthlyRentCents: cents(lease.monthlyRent),
@@ -250,7 +278,7 @@ export async function loadTenantLease(
     autopayOn: autopay?.enabled ?? false,
     occupants: parseOccupants(lease.occupants),
     coTenants: lease.tenants.filter((t) => t.tenantId !== tenantId).map((t) => t.tenant.name),
-    notice: leaseNotice(lease, manager, now),
+    notice: leaseNotice(lease, manager.name, now),
     documents,
     photos: photoRows.map((p) => ({
       id: p.id,

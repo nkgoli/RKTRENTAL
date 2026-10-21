@@ -11,7 +11,8 @@ export async function GET() {
   if (session.role !== 'MANAGER' && session.role !== 'OWNER')
     return Response.json({ error: 'Manager access required' }, { status: 403 });
   const deliveries = await db.emailDelivery.findMany({
-    where: { organizationId: session.organizationId },
+    // Recovery links are bearer credentials, never organization-wide notification history.
+    where: { organizationId: session.organizationId, kind: { not: 'PASSWORD_RESET' } },
     orderBy: { sentAt: 'desc' },
     take: 100,
   });

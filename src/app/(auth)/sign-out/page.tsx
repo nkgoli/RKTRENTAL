@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/Button';
+import Link from 'next/link';
 import { Icon } from '@/components/shell/Icons';
 import { getSession } from '@/lib/auth/server-session';
 import { roleHome } from '@/lib/auth/policy';
@@ -20,7 +21,6 @@ export default async function SignOutPage() {
             </span>
           </div>
           <div className={styles.heading}>
-            <p className={styles.eyebrow}>Secure account access</p>
             <h1 id="sign-out-title">Sign out</h1>
             <p className={styles.description}>
               {session ? `You are signed in as ${session.name}.` : 'You are already signed out.'}
@@ -33,9 +33,9 @@ export default async function SignOutPage() {
               <Button type="submit" variant="primary" block>
                 Sign out of RocketRental
               </Button>
-              <Button href={roleHome(session.role)} block>
+              <Link className={styles.textLink} href={roleHome(session.role)}>
                 Stay signed in
-              </Button>
+              </Link>
             </form>
           ) : (
             <Button href="/sign-in" variant="primary" block>

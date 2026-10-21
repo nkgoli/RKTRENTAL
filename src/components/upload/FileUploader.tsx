@@ -70,6 +70,8 @@ export type UploadFileFn = (
 export interface FileUploaderProps {
   /** Hide the inline count when a parent upload area presents its own photo counter. */
   showCounter?: boolean;
+  /** Context-specific format and count guidance shown beneath the dropzone title. */
+  hint?: string;
   accept?: string;
   kind: FileUploaderKind | 'PHOTO' | 'DOCUMENT';
   /** Where files are stored. Omit with formField to submit files with an enclosing form. */
@@ -391,8 +393,7 @@ export function FileUploader(props: FileUploaderProps) {
       >
         <p className={styles.dropTitle}>Drag and drop files here or browse</p>
         <p className={styles.dropHint}>
-          {kind === 'photo' ? 'JPG, PNG or HEIC photos' : 'PDF, JPG, PNG, HEIC or Word'} · up to{' '}
-          {Math.round(MAX_FILE_BYTES / (1024 * 1024))} MB each
+          {props.hint ?? `${kind === 'photo' ? 'JPG, PNG or HEIC photos' : 'PDF, JPG, PNG, HEIC or Word'} · up to ${Math.round(MAX_FILE_BYTES / (1024 * 1024))} MB each`}
         </p>
         <button
           type="button"

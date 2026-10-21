@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { EmptyState } from '../RouteStates';
 
 export function KanbanBoard({ children }: { children: ReactNode }) {
   return <div className="kanban">{children}</div>;
@@ -19,7 +20,7 @@ export function KanbanColumn({
         <span>{title}</span>
         {count !== undefined && <span>{count}</span>}
       </h4>
-      {children}
+      {count === 0 ? <EmptyState size="inline" title="No requests" /> : children}
     </section>
   );
 }

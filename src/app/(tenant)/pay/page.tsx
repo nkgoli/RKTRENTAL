@@ -110,7 +110,18 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
         </p>
       </header>
 
-      {notice && <PaymentNotice tone={notice.tone} text={notice.text} code={params.notice} />}
+      {notice && (
+        <PaymentNotice
+          tone={notice.tone}
+          text={notice.text}
+          code={params.notice}
+          toastText={
+            ['paid', 'pending'].includes(params.notice ?? '') && view.receipts[0]
+              ? `Payment of ${formatUsd(view.receipts[0].amountCents)} submitted`
+              : undefined
+          }
+        />
+      )}
 
       <section className={`card ${styles.hero}`} aria-labelledby="amount-due-title">
         <div className="card-header">
@@ -167,6 +178,11 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
           totalDueCents={amountDue.totalDueCents}
           passFees={view.passFees}
           methods={view.methods}
+          autopay={{
+            ...view.autopay,
+            monthlyRentCents: view.monthlyRentCents,
+            rentDueDay: view.rentDueDay,
+          }}
         />
       ) : (
         <section aria-labelledby="payment-method-title">
@@ -180,13 +196,16 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
         </section>
       )}
 
-      <AutopayToggle
-        leaseId={view.leaseId}
-        enabled={view.autopay.enabled}
-        paymentMethodId={autopayMethodId}
-        monthlyRentCents={view.monthlyRentCents}
-        rentDueDay={view.rentDueDay}
-      />
+      {amountDue.totalDueCents === 0 && (
+        <AutopayToggle
+          leaseId={view.leaseId}
+          enabled={view.autopay.enabled}
+          paymentMethodId={autopayMethodId}
+          paymentMethodLabel={view.methods.find((method) => method.id === autopayMethodId)?.label}
+          monthlyRentCents={view.monthlyRentCents}
+          rentDueDay={view.rentDueDay}
+        />
+      )}
 
       <section className={`card ${styles.receipts}`} aria-labelledby="receipts-title">
         <div className="card-header">

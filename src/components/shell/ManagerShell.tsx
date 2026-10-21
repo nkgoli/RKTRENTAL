@@ -9,6 +9,8 @@ import { Icon } from './Icons';
 import { PageHeaderContext, type PageHeaderConfig } from './PageHeader';
 import { findManagerItem, isItemActive, managerNav } from './nav';
 import { ToastProvider } from '../ui/Toast';
+import { RoleNotice } from './RoleNotice';
+import { signOutAction } from '@/app/(auth)/sign-out/actions';
 import focus from './focus.module.css';
 
 export type ManagerUser = { name: string; role: string; initials: string };
@@ -27,7 +29,8 @@ export function ManagerShell({
     (/^\/properties\/[^/]+(?:\/|$)/.test(pathname) &&
       pathname !== '/properties/new' &&
       !pathname.endsWith('/edit')) ||
-      pathname === '/roi-analysis' || pathname === '/leases/new';
+    pathname === '/roi-analysis' ||
+    pathname === '/leases/new';
   const current = findManagerItem(pathname);
   const [override, setOverride] = useState<PageHeaderConfig | null>(null);
   const eyebrow = override?.eyebrow ?? current?.group.label ?? 'RocketRental';
@@ -161,9 +164,11 @@ export function ManagerShell({
               <strong>{user.name}</strong>
               <small>{user.role}</small>
             </div>
-            <a className="sidebar-signout" href="/sign-out" title="Sign out" aria-label="Sign out">
-              <Icon name="sign-out" />
-            </a>
+            <form action={signOutAction}>
+              <button type="submit" className="sidebar-signout" aria-label="Sign out">
+                <Icon name="sign-out" />
+              </button>
+            </form>
           </div>
         </aside>{' '}
         <main className="main" id="main-content" tabIndex={-1} inert={open}>
@@ -224,6 +229,7 @@ export function ManagerShell({
             )}
           </header>
           <div className="page">
+            <RoleNotice role="manager" />
             <PageHeaderContext.Provider value={setOverride}>{children}</PageHeaderContext.Provider>
           </div>
         </main>

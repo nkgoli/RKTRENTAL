@@ -13,8 +13,11 @@
 }
 
 .header :global(.brand-mark) {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
+}
+.topTabs {
+  display: none;
 }
 .body {
   gap: 20px;
@@ -104,13 +107,15 @@
   justify-content: center;
   font-size: 12px;
   font-weight: 600;
+  border-top: 3px solid transparent;
+  border-radius: 0 0 8px 8px;
 }
 .navigation a:global(.active) {
   background: var(--rr-primary-tint);
+  border-top-color: var(--design-primary);
 }
 .navigation a::before {
-  height: 2px;
-  width: 20px;
+  display: none;
 }
 
 @media (min-width: 600px) {
@@ -131,4 +136,37 @@
   width: 18px;
   height: 18px;
   flex: none;
+}
+
+@media (min-width: 900px) {
+  .shell {
+    max-width: 808px;
+  }
+  .body {
+    padding: 24px 24px 48px;
+  }
+  .navigation {
+    display: none;
+  }
+  .topTabs {
+    display: flex;
+    gap: 28px;
+    padding: 0 24px;
+    background: var(--design-surface);
+    border-bottom: 1px solid var(--rr-border);
+  }
+  .topTabs a {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    border-bottom: 3px solid transparent;
+    color: var(--design-muted);
+    font-size: 14px;
+    text-decoration: none;
+  }
+  .topTabs a[aria-current] {
+    border-color: var(--design-primary);
+    color: var(--design-primary);
+    font-weight: 600;
+  }
 }

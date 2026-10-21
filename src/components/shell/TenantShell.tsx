@@ -7,15 +7,20 @@ import { Icon } from './Icons';
 import { AccountMenu } from './AccountMenu';
 import { findTenantTab, isActive, tenantTabs } from './nav';
 import { ToastProvider } from '../ui/Toast';
+import { RoleNotice } from './RoleNotice';
 import focus from './focus.module.css';
 import styles from './tenant-shell.module.css';
 
 export function TenantShell({
   children,
   initials = 'AR',
+  name,
+  premises,
 }: {
   children: ReactNode;
   initials?: string;
+  name?: string;
+  premises?: string;
 }) {
   const pathname = usePathname() ?? '';
   const current = findTenantTab(pathname);
@@ -31,9 +36,21 @@ export function TenantShell({
             <Icon name="brand" />
           </a>
           <span className="title">{current?.label ?? 'RocketRental'}</span>
-          <AccountMenu initials={initials} />
+          <AccountMenu initials={initials} name={name} description={premises} />
         </header>
+        <nav className={styles.topTabs} aria-label="Tenant desktop">
+          {tenantTabs.map((tab) => (
+            <a
+              key={tab.href}
+              href={tab.href}
+              aria-current={isActive(pathname, tab.href) ? 'page' : undefined}
+            >
+              {tab.label}
+            </a>
+          ))}
+        </nav>
         <main className={`phone-body ${styles.body}`} id="tenant-main" tabIndex={-1}>
+          <RoleNotice role="tenant" />
           {children}
         </main>
         <nav className={`tabbar ${styles.navigation}`} aria-label="Tenant">

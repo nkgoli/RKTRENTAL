@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/Button';
+import { Dialog } from '@/components/ui/Dialog';
 import { cx } from '@/components/ui/cx';
 import { cardFeeCents, formatUsd, MOCK_TOKENS } from '@/lib/tenant-pay/core';
 import type { SavedMethod } from '@/lib/tenant-pay/service';
@@ -10,8 +11,9 @@ import { addPaymentMethodAction } from './actions';
 import portal from '../portal.module.css';
 import styles from './pay.module.css';
 import { PayIcon } from './PayIcon';
+import { AutopayToggle } from './AutopayToggle';
 
-function ConfirmButton({ pending }: { pending: boolean }) {
+function ConfirmButton({ pending, total }: { pending: boolean; total: number }) {
   return (
     <Button
       type="submit"
@@ -21,7 +23,7 @@ function ConfirmButton({ pending }: { pending: boolean }) {
       disabled={pending}
       aria-busy={pending}
     >
-      {pending ? 'Submitting payment…' : 'Confirm payment'}
+      {pending ? 'Submitting payment…' : `Pay ${formatUsd(total)}`}
     </Button>
   );
 }
@@ -30,9 +32,7 @@ function AddMethodButton({ type }: { type: 'ach' | 'card' }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" variant="secondary" block disabled={pending}>
-      {pending
-        ? 'Adding method…'
-        : `+ Add ${type === 'ach' ? 'bank account' : 'card'} (${MOCK_TOKENS[type].detail})`}
+      {pending ? 'Adding method…' : `Add ${type === 'ach' ? 'bank account' : 'card'}`}
     </Button>
   );
 }
@@ -58,11 +58,18 @@ export function PayForm({
   totalDueCents,
   passFees,
   methods,
+  autopay,
 }: {
   leaseId: string;
   totalDueCents: number;
   passFees: boolean;
   methods: SavedMethod[];
+  autopay?: {
+    enabled: boolean;
+    paymentMethodId: string | null;
+    monthlyRentCents: number;
+    rentDueDay: number;
+  };
 }) {
   const options = useMemo<Option[]>(() => {
     const saved: Option[] = methods.map((m) => ({
@@ -90,11 +97,12 @@ export function PayForm({
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const submitted = useRef(false);
-  const confirmation = useRef<HTMLDivElement>(null);
   const amountInput = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (confirming) confirmation.current?.focus();
-  }, [confirming]);
+  const closeConfirmation = () => {
+    if (submitted.current) return;
+    setConfirming(false);
+    requestAnimationFrame(() => document.getElementById('review-payment')?.focus());
+  };
   useEffect(() => {
     const restore = (event: PageTransitionEvent) => {
       if (!event.persisted) return;
@@ -226,77 +234,100 @@ export function PayForm({
           Save this payment method
         </label>
 
-        {!confirming ? (
-          <Button
-            id="review-payment"
-            variant="primary"
-            block
-            disabled={!amountValid || !selected}
-            onClick={() => setConfirming(true)}
-          >
-            <PayIcon name="pay" /> Pay {formatUsd(chargedCents || totalDueCents)}
-          </Button>
-        ) : (
-          <div
-            ref={confirmation}
-            tabIndex={-1}
-            className={`${portal.confirmation} ${styles.confirmation}`}
-            role="group"
-            aria-labelledby="confirm-payment-title"
-          >
-            <h3 id="confirm-payment-title">Confirm payment</h3>
-            <p>
-              Pay {formatUsd(amountCents)} by {selected?.title.toLowerCase()}
-              {feeCents > 0 ? ` plus a ${formatUsd(feeCents)} card fee` : ''} —{' '}
-              {formatUsd(chargedCents)} in total?
-            </p>
-            <dl className={styles.reviewTotals}>
-              <dt>Amount</dt>
-              <dd>{formatUsd(amountCents)}</dd>
-              {feeCents > 0 && (
-                <>
-                  <dt>Card fee (2.9%)</dt>
-                  <dd>{formatUsd(feeCents)}</dd>
-                </>
-              )}
-              <dt>Total charged</dt>
-              <dd>{formatUsd(chargedCents)}</dd>
-            </dl>
-            <div className={portal.confirmationActions}>
-              <ConfirmButton pending={submitting} />
-              <Button
-                disabled={submitting}
-                onClick={() => {
-                  setConfirming(false);
-                  requestAnimationFrame(() => document.getElementById('review-payment')?.focus());
-                }}
-              >
-                Back
+        <Button
+          id="review-payment"
+          variant="primary"
+          block
+          disabled={!amountValid || !selected}
+          onClick={() => setConfirming(true)}
+        >
+          <PayIcon name="pay" /> Pay {formatUsd(chargedCents || totalDueCents)}
+        </Button>
+        <Dialog
+          open={confirming}
+          onClose={closeConfirmation}
+          title="Confirm payment"
+          size="sm"
+          className={styles.confirmation}
+          footer={
+            <>
+              <Button data-autofocus disabled={submitting} onClick={closeConfirmation}>
+                Cancel
               </Button>
-            </div>
-          </div>
-        )}
+              <ConfirmButton pending={submitting} total={chargedCents} />
+            </>
+          }
+        >
+          <p>
+            Pay {formatUsd(amountCents)} by{' '}
+            {selected?.type === 'ach' ? 'bank transfer (ACH)' : 'card'}?
+          </p>
+          <p className="muted">{selected?.detail}</p>
+          <dl className={styles.reviewTotals}>
+            <dt>Amount</dt>
+            <dd>{formatUsd(amountCents)}</dd>
+            <dt>{feeCents > 0 ? 'Card fee (2.9%)' : 'Fee'}</dt>
+            <dd>{formatUsd(feeCents)}</dd>
+            <dt>Total charged</dt>
+            <dd>{formatUsd(chargedCents)}</dd>
+          </dl>
+        </Dialog>
         <p className="muted" style={{ fontSize: 12, textAlign: 'center' }}>
           Secured by your payment provider · No card data is stored by RocketRental.
         </p>
       </form>
 
       <AddPaymentMethods />
+      {autopay && (
+        <AutopayToggle
+          leaseId={leaseId}
+          enabled={autopay.enabled}
+          paymentMethodId={autopay.enabled ? autopay.paymentMethodId : (selected?.methodId ?? null)}
+          paymentMethodLabel={
+            autopay.enabled
+              ? methods.find((method) => method.id === autopay.paymentMethodId)?.label
+              : selected?.methodId
+                ? methods.find((method) => method.id === selected.methodId)?.label
+                : selected?.detail.split(' · ')[0]
+          }
+          monthlyRentCents={autopay.monthlyRentCents}
+          rentDueDay={autopay.rentDueDay}
+        />
+      )}
     </section>
   );
 }
 
 /** Adds a method through the provider's hosted fields (mock tokens in this demo). */
 export function AddPaymentMethods() {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="stack" style={{ gap: 8, marginTop: 10 }}>
-      {(['ach', 'card'] as const).map((type) => (
-        <form key={type} action={addPaymentMethodAction}>
-          <input type="hidden" name="method" value={type} />
-          <input type="hidden" name="providerToken" value={MOCK_TOKENS[type].token} />
-          <AddMethodButton type={type} />
-        </form>
-      ))}
+    <div className={styles.addMethods}>
+      <Button variant="ghost" onClick={() => setOpen(true)}>
+        Add a payment method
+      </Button>
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Add a payment method"
+        description="Choose bank transfer or card. Your provider securely stores the account details."
+        size="sm"
+        className={styles.confirmation}
+      >
+        <div className={styles.methodChoices}>
+          {(['ach', 'card'] as const).map((type) => (
+            <form key={type} action={addPaymentMethodAction}>
+              <input type="hidden" name="method" value={type} />
+              <input type="hidden" name="providerToken" value={MOCK_TOKENS[type].token} />
+              <p>
+                <strong>{type === 'ach' ? 'Bank transfer (ACH)' : 'Card'}</strong>
+              </p>
+              <p className="muted">{MOCK_TOKENS[type].detail}</p>
+              <AddMethodButton type={type} />
+            </form>
+          ))}
+        </div>
+      </Dialog>
     </div>
   );
 }

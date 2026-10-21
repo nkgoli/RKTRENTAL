@@ -1,0 +1,55 @@
+.root {
+  position: relative;
+}
+.trigger {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--rr-border);
+  border-radius: 50%;
+  cursor: pointer;
+  background: var(--design-surface);
+}
+.panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 40;
+  width: min(272px, calc(100vw - 32px));
+  padding: 8px;
+  border: 1px solid var(--rr-border);
+  border-radius: var(--design-radius);
+  background: var(--design-surface);
+  box-shadow: 0 8px 24px #17243b1f;
+}
+.identity {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-bottom: 1px solid var(--rr-border);
+  overflow-wrap: anywhere;
+}
+.identity strong {
+  font-size: 14px;
+}
+.identity small {
+  color: var(--design-muted);
+  font-size: 12px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .panel {
+    animation: appear 120ms ease-out;
+  }
+  @keyframes appear {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

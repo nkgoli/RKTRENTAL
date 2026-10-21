@@ -41,36 +41,66 @@ const ToastContext = createContext<ToastApi>({
 const MAX_VISIBLE = 3;
 const DEFAULT_MS = 4000;
 
+function ToastMessage({ item, dismiss }: { item: ToastItem; dismiss: (id: number) => void }) {
+  const duration = item.duration ?? (item.tone === 'error' ? 0 : DEFAULT_MS);
+  const remaining = useRef(duration);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const paused = hovered || focused;
+
+  useEffect(() => {
+    if (paused || duration <= 0) return;
+    const started = Date.now();
+    const timer = setTimeout(() => dismiss(item.id), remaining.current);
+    return () => {
+      clearTimeout(timer);
+      remaining.current = Math.max(0, remaining.current - (Date.now() - started));
+    };
+  }, [dismiss, duration, item.id, paused]);
+
+  return (
+    <div
+      className={cx('toast', item.tone && item.tone !== 'info' && item.tone)}
+      role={item.tone === 'error' ? 'alert' : 'status'}
+      aria-atomic="true"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
+      }}
+    >
+      <span className="toast-dot" aria-hidden="true" />
+      <span className="toast-text">{item.message}</span>
+      {item.action && (
+        <a className="toast-action" href={item.action.href}>
+          {item.action.label}
+        </a>
+      )}
+      <button
+        type="button"
+        className="toast-close"
+        aria-label="Dismiss"
+        onClick={() => dismiss(item.id)}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
 /** Mount once per shell; renders the toast region bottom-left (above the tenant tab bar). */
 export function ToastProvider({ children, offset }: { children: ReactNode; offset?: 'tabbar' }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const nextId = useRef(1);
-  const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
 
   const dismiss = useCallback((id: number) => {
-    const timer = timers.current.get(id);
-    if (timer) clearTimeout(timer);
-    timers.current.delete(id);
     setItems((list) => list.filter((item) => item.id !== id));
   }, []);
 
-  const push = useCallback(
-    (toast: ToastInput) => {
-      const id = nextId.current++;
-      setItems((list) => [...list, { ...toast, id }].slice(-MAX_VISIBLE));
-      const duration = toast.duration ?? (toast.tone === 'error' ? 0 : DEFAULT_MS);
-      if (duration > 0)
-        timers.current.set(
-          id,
-          setTimeout(() => dismiss(id), duration),
-        );
-    },
-    [dismiss],
-  );
-
-  useEffect(() => {
-    const active = timers.current;
-    return () => active.forEach((timer) => clearTimeout(timer));
+  const push = useCallback((toast: ToastInput) => {
+    const id = nextId.current++;
+    setItems((list) => [...list, { ...toast, id }].slice(-MAX_VISIBLE));
   }, []);
 
   const api = useMemo<ToastApi>(
@@ -88,27 +118,7 @@ export function ToastProvider({ children, offset }: { children: ReactNode; offse
       {children}
       <div className={cx('toaster', offset === 'tabbar' && 'toaster-tabbar')}>
         {items.map((item) => (
-          <div
-            key={item.id}
-            className={cx('toast', item.tone && item.tone !== 'info' && item.tone)}
-            role={item.tone === 'error' ? 'alert' : 'status'}
-          >
-            <span className="toast-dot" aria-hidden="true" />
-            <span className="toast-text">{item.message}</span>
-            {item.action && (
-              <a className="toast-action" href={item.action.href}>
-                {item.action.label}
-              </a>
-            )}
-            <button
-              type="button"
-              className="toast-close"
-              aria-label="Dismiss"
-              onClick={() => dismiss(item.id)}
-            >
-              ×
-            </button>
-          </div>
+          <ToastMessage key={item.id} item={item} dismiss={dismiss} />
         ))}
       </div>
     </ToastContext.Provider>

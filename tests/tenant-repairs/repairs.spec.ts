@@ -73,7 +73,7 @@ test('Alex submits a repair with a photo, then follows the manager status change
   await expect(page).toHaveURL(/\/repairs\?notice=submitted/);
   await expect(page.getByText('Repair request sent.')).toBeVisible();
   const card = page.locator('article').filter({ hasText: title });
-  await expect(card.getByText('Received')).toBeVisible();
+  await expect(card.getByText('Received').first()).toBeVisible();
   await expect(card.getByText('Electrical ·')).toBeVisible();
   await expect(card.getByRole('img', { name: /fan\.png/ })).toBeVisible();
   const overflow = await page.evaluate(
@@ -118,7 +118,10 @@ test('Alex submits a repair with a photo, then follows the manager status change
   await expect
     .poll(async () =>
       prisma.maintenanceEvent.count({
-        where: { maintenanceRequest: { title: { startsWith: title } }, body: 'Vendor visit confirmed.' },
+        where: {
+          maintenanceRequest: { title: { startsWith: title } },
+          body: 'Vendor visit confirmed.',
+        },
       }),
     )
     .toBeGreaterThan(0);
@@ -138,7 +141,7 @@ test('Alex submits a repair with a photo, then follows the manager status change
     fullPage: true,
   });
 
-  await updated.getByLabel(/^Comment on/).fill('Thanks, I will be home.');
+  await updated.getByLabel(/^Add a comment to/).fill('Thanks, I will be home.');
   await updated.getByRole('button', { name: 'Send' }).click();
   await expect(
     page.locator('article').filter({ hasText: title }).getByText('You: Thanks, I will be home.'),

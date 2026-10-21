@@ -37,10 +37,12 @@ for (const width of [390, 1280]) {
       await lastLink.focus();
       await lastLink.scrollIntoViewIfNeeded();
       const linkBox = await lastLink.boundingBox();
-      const navBox = await page
-        .getByRole('navigation', { name: 'Tenant', exact: true })
-        .boundingBox();
-      expect(linkBox!.y + linkBox!.height).toBeLessThanOrEqual(navBox!.y);
+      if (width < 900) {
+        const navBox = await page
+          .getByRole('navigation', { name: 'Tenant', exact: true })
+          .boundingBox();
+        expect(linkBox!.y + linkBox!.height).toBeLessThanOrEqual(navBox!.y);
+      } else expect(linkBox!.y + linkBox!.height).toBeLessThanOrEqual(844);
       await expect(lastLink).toBeFocused();
       expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
         false,
@@ -79,13 +81,13 @@ for (const width of [390, 1280]) {
     for (const [path, title, tab] of [
       ['home', 'Welcome home', 'Home'],
       ['pay', /Pay .* rent/, 'Pay'],
-      ['lease', 'Alex Rivera', 'Lease'],
+      ['lease', 'Your lease', 'Lease'],
       ['repairs', 'Repairs', 'Repairs'],
     ] as const) {
       await page.goto(`/${path}`);
       await expect(page.getByRole('heading', { name: title, level: 1 })).toBeVisible();
       const current = page
-        .getByRole('navigation', { name: 'Tenant', exact: true })
+        .getByRole('navigation', { name: width >= 900 ? 'Tenant desktop' : 'Tenant', exact: true })
         .getByRole('link', { name: tab, exact: true });
       await expect(current).toHaveAttribute('aria-current', 'page');
       const bounds = await current.boundingBox();
@@ -97,10 +99,8 @@ for (const width of [390, 1280]) {
       const accessibility = await new AxeBuilder({ page }).analyze();
       expect(accessibility.violations).toEqual([]);
     }
-    await page.goto('/lease');
-    const documents = page
-      .getByRole('navigation', { name: 'Lease sections' })
-      .getByRole('link', { name: /^Documents/ });
+    await page.goto('/home');
+    const documents = page.getByRole('link', { name: /^Documents/ });
     await documents.focus();
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/#documents$/);
@@ -117,13 +117,14 @@ for (const width of [390, 1280]) {
     await expect(page.getByRole('main').getByRole('alert')).toContainText('two decimal places');
     await amount.fill('1850.00');
     await amount.press('Enter');
-    await expect(page.getByRole('group', { name: 'Confirm payment' })).toBeFocused();
-    const reviewBounds = await page.getByRole('group', { name: 'Confirm payment' }).boundingBox();
-    const navigationBounds = await page
-      .getByRole('navigation', { name: 'Tenant', exact: true })
-      .boundingBox();
-    expect(reviewBounds!.y + reviewBounds!.height).toBeLessThanOrEqual(navigationBounds!.y);
-    await page.getByRole('button', { name: 'Back', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Confirm payment' });
+    await expect(dialog.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();
+    await dialog.evaluate((el) =>
+      Promise.all(el.getAnimations().map((animation) => animation.finished)),
+    );
+    const reviewBounds = await dialog.boundingBox();
+    expect(reviewBounds!.y + reviewBounds!.height).toBeLessThanOrEqual(844);
+    await page.keyboard.press('Escape');
     await expect(page.getByRole('button', { name: 'Pay $1,850', exact: true })).toBeFocused();
 
     await page.goto('/repairs');
@@ -146,6 +147,10 @@ for (const width of [390, 1280]) {
     await expect(page).toHaveURL(/\/home$/);
     await page.goto('/');
     await expect(page).toHaveURL(/\/home$/);
+    await page.getByRole('button', { name: 'Account menu' }).click();
+    await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await expect(page).toHaveURL(/\/sign-in\?loggedOut=1$/);
+    await expect(page.getByRole('status')).toContainText('You have been signed out.');
   });
 }
 
@@ -158,8 +163,18 @@ test('account recovery is readable and keyboard accessible at phone width', asyn
   await page.keyboard.press('Enter');
   await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('type', 'text');
   await page.getByRole('button', { name: 'Hide characters' }).click();
+  await page.getByRole('link', { name: 'Forgot password?' }).click();
+  await expect(page).toHaveURL(/\/recover$/);
+  await expect(page.getByRole('heading', { name: 'Reset your password' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Send reset link' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.getByRole('link', { name: 'Back to sign in' }).click();
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Check your sign-in details.');
+  await expect(page.getByLabel('Email address')).toBeFocused();
   await page.goto('/a-page-that-does-not-exist');
   await expect(page.getByRole('heading', { name: 'Page not found', exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Return to your account' }).click();
+  await page.getByRole('link', { name: 'Sign in', exact: true }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
 });

@@ -27,7 +27,7 @@ test('approved Repairs phone/desktop labels, focus, photo controls and feedback'
       fullPage: true,
     });
   }
-  const description = page.getByLabel('What needs fixing?', { exact: true });
+  const description = page.getByLabel(/^What needs fixing\?/);
   await description.fill('   ');
   await page.getByRole('button', { name: 'Submit request', exact: true }).click();
   await expect(description).toBeFocused();
@@ -43,19 +43,17 @@ test('approved Repairs phone/desktop labels, focus, photo controls and feedback'
   const chooser = page.waitForEvent('filechooser');
   await page.keyboard.press('Enter');
   await (await chooser).setFiles({ name: 'tap.png', mimeType: 'image/png', buffer: PNG });
-  await expect(page.getByText('1 of 5 photos', { exact: true })).toBeVisible();
+  await expect(page.getByText('JPG, PNG or HEIC · up to 5 photos', { exact: true })).toBeVisible();
   await expect(page.getByText('Ready to submit', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Remove tap.png', exact: true }).click();
-  await page
-    .getByLabel('Choose files', { exact: true })
-    .setInputFiles(
-      Array.from({ length: 6 }, (_, i) => ({
-        name: `tap-${i}.png`,
-        mimeType: 'image/png',
-        buffer: PNG,
-      })),
-    );
-  await expect(page.getByText('5 of 5 photos', { exact: true })).toBeVisible();
+  await page.getByLabel('Choose files', { exact: true }).setInputFiles(
+    Array.from({ length: 6 }, (_, i) => ({
+      name: `tap-${i}.png`,
+      mimeType: 'image/png',
+      buffer: PNG,
+    })),
+  );
+  await expect(page.getByText('Ready to submit', { exact: true })).toHaveCount(5);
   await expect(page.getByRole('alert').filter({ hasText: 'Photo limit reached' })).toBeVisible();
   await page.screenshot({
     path: 'tests/tenant-repairs/evidence/repairs-limit-390.png',

@@ -15,13 +15,31 @@ describe('tenant repair description', () => {
     });
   });
 
-  it('treats manager-written descriptions as Other', () => {
+  it('uses General for manager-written descriptions without recorded category', () => {
     expect(parseDescription('Loose latch')).toEqual({
-      category: 'Other',
+      category: 'General',
       entry: null,
       text: 'Loose latch',
     });
     expect(parseDescription(null).text).toBe('');
+    expect(parseDescription('Category: \n\nLoose latch')).toEqual({
+      category: 'General',
+      entry: null,
+      text: 'Loose latch',
+    });
+  });
+
+  it('preserves an explicit category without an entry header and accepts Windows line endings', () => {
+    expect(parseDescription('Category: Plumbing\r\n\r\nLeaking tap')).toEqual({
+      category: 'Plumbing',
+      entry: null,
+      text: 'Leaking tap',
+    });
+    expect(
+      parseDescription(
+        composeDescription('Electrical', 'key', 'Light flickers').replaceAll('\n', '\r\n'),
+      ).category,
+    ).toBe('Electrical');
   });
 
   it('derives a short title from the first sentence', () => {

@@ -56,9 +56,14 @@ test('Alex Rivera pays $1,850 by card with the mock provider', async ({ page }) 
   await page.getByRole('radio', { name: /Card/ }).check();
   await expect(page.getByText(/fee \(2\.9%\)/)).toBeVisible();
   await page.getByRole('button', { name: /Pay \$/ }).click();
-  await expect(page.getByRole('button', { name: 'Confirm payment' })).toBeVisible();
+  await expect(
+    page.getByRole('dialog', { name: 'Confirm payment' }).getByRole('button', { name: /^Pay \$/ }),
+  ).toBeVisible();
   await page.screenshot({ path: 'test-results/tenant-pay-confirm.png', fullPage: true });
-  await page.getByRole('button', { name: 'Confirm payment' }).click();
+  await page
+    .getByRole('dialog', { name: 'Confirm payment' })
+    .getByRole('button', { name: /^Pay \$/ })
+    .click();
 
   await expect(page.getByText('Payment received.')).toBeVisible();
   await expect(page.getByText(/all paid up/)).toBeVisible();
@@ -69,6 +74,7 @@ test('Alex Rivera pays $1,850 by card with the mock provider', async ({ page }) 
 test('autopay turns on with a saved method and back off', async ({ page }) => {
   await signIn(page);
   await page.goto('/pay');
+  await page.getByRole('button', { name: 'Add a payment method' }).click();
   await page.getByRole('button', { name: /Add bank account/ }).click();
   await expect(page.getByText('Payment method added.')).toBeVisible();
 
@@ -141,7 +147,10 @@ test('native failure returns visible focused feedback without charging or auto r
     body.set('leaseId', 'not-the-tenants-lease');
     await route.continue({ postData: body.toString() });
   });
-  await page.getByRole('button', { name: 'Confirm payment' }).click();
+  await page
+    .getByRole('dialog', { name: 'Confirm payment' })
+    .getByRole('button', { name: /^Pay \$/ })
+    .click();
   await expect(page).toHaveURL(/notice=payment-failed#payment-result$/);
   await expect(page.locator('#payment-result').getByRole('alert')).toContainText(
     'Nothing was charged.',
@@ -165,7 +174,10 @@ test('partial ACH payment navigates directly to pending receipt feedback', async
   await page.goto('/pay');
   await page.getByRole('textbox', { name: 'Amount' }).fill('500.00');
   await page.getByRole('button', { name: 'Pay $500' }).click();
-  await page.getByRole('button', { name: 'Confirm payment' }).click();
+  await page
+    .getByRole('dialog', { name: 'Confirm payment' })
+    .getByRole('button', { name: /^Pay \$/ })
+    .click();
   await expect(page).toHaveURL(/notice=pending#payment-result$/);
   await expect(page.getByText('Bank payment started.')).toBeVisible();
   await expect(page.locator('.badge', { hasText: 'Pending' })).toBeVisible();

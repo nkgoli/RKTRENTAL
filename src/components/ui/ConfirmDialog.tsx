@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { Button, type ButtonVariant } from './Button';
 import { Dialog } from './Dialog';
 import type { IconKey } from '../shell/Icons';
@@ -43,7 +43,7 @@ export function ConfirmDialog({
   /** Optional extra inputs (a date, a note) shown above the footer. */
   children?: ReactNode;
 }) {
-  const formId = 'confirm-' + (typeof title === 'string' ? title : 'dialog').replace(/\W+/g, '-');
+  const formId = useId();
   const confirm = (
     <Button
       type={action ? 'submit' : 'button'}

@@ -23,9 +23,15 @@ export function composeDescription(category: string, entry: EntryChoice, text: s
 }
 
 export function parseDescription(description: string | null) {
-  const match = /^Category: (.*)\nEntry permission: (.*)\n\n([\s\S]*)$/.exec(description ?? '');
-  if (!match) return { category: 'Other', entry: null, text: description ?? '' };
-  return { category: match[1], entry: match[2], text: match[3] };
+  const text = (description ?? '').replace(/\r\n/g, '\n');
+  const match =
+    /^Category:[ \t]*([^\n]*)\n(?:Entry permission:[ \t]*([^\n]*)\n)?\n?([\s\S]*)$/.exec(text);
+  if (!match) return { category: 'General', entry: null, text };
+  return {
+    category: match[1].trim() || 'General',
+    entry: match[2]?.trim() || null,
+    text: match[3],
+  };
 }
 
 export function titleFrom(text: string) {

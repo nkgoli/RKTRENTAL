@@ -6,7 +6,13 @@ import styles from '../auth.module.css';
 import { SignInForm } from './SignInForm';
 
 type SignInPageProps = {
-  searchParams: Promise<{ error?: string; loggedOut?: string; next?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    loggedOut?: string;
+    next?: string;
+    email?: string;
+    reset?: string;
+  }>;
 };
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
@@ -27,15 +33,14 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             </span>
           </div>
           <div className={styles.heading}>
-            <p className={styles.eyebrow}>Secure account access</p>
             <h1 id="sign-in-title">Welcome back</h1>
             <p className={styles.description}>Sign in to manage your rental account.</p>
           </div>
         </div>
         <div className={styles.cardBody}>
-          {params.error === 'invalid' && (
-            <p id="sign-in-error" className={styles.error} role="alert">
-              Email or password was not recognized. Check your details and try again.
+          {params.reset === '1' && (
+            <p className={styles.success} role="status">
+              Your password has been changed. Sign in with your new password.
             </p>
           )}
           {params.loggedOut && (
@@ -44,10 +49,12 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             </p>
           )}
 
-          <SignInForm next={params.next ?? ''} invalid={params.error === 'invalid'} />
-          <p className={styles.footnote}>
-            Need access or help signing in? Contact your property manager or account administrator.
-          </p>
+          <SignInForm
+            next={params.next ?? ''}
+            invalid={params.error === 'invalid'}
+            email={params.email?.slice(0, 254) ?? ''}
+          />
+          <p className={styles.footnote}>Need an account? Ask your property manager.</p>
         </div>
       </section>
     </main>

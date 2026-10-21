@@ -7,6 +7,7 @@ import { managerNav } from '@/components/shell/nav';
 
 let pathname = '/dashboard';
 vi.mock('next/navigation', () => ({ usePathname: () => pathname }));
+vi.mock('@/app/(auth)/sign-out/actions', () => ({ signOutAction: vi.fn() }));
 
 beforeEach(() => {
   pathname = '/dashboard';
@@ -137,7 +138,7 @@ describe('ManagerShell drawer', () => {
     const hidden = document.createElement('button');
     hidden.hidden = true;
     sidebar().append(hidden);
-    const last = within(sidebar()).getByRole('link', { name: 'Sign out' });
+    const last = within(sidebar()).getByRole('button', { name: 'Sign out' });
     last.focus();
     await user.tab();
     expect(document.activeElement).toBe(

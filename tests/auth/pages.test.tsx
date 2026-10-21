@@ -11,6 +11,8 @@ vi.mock('@/app/(auth)/sign-out/actions', () => ({ signOutAction: vi.fn() }));
 
 import SignInPage from '@/app/(auth)/sign-in/page';
 import SignOutPage from '@/app/(auth)/sign-out/page';
+import RecoverPage from '@/app/(auth)/recover/page';
+import NotFound from '@/app/not-found';
 
 beforeEach(() => {
   getSession.mockReset();
@@ -62,3 +64,28 @@ it('offers sign-in when the visitor is already signed out', async () => {
   expect(html).toContain('href="/sign-in"');
   expect(html).toContain('Go to sign in');
 });
+
+it('offers the email recovery form and a return to sign-in', () => {
+  const html = renderToStaticMarkup(<RecoverPage />);
+  expect(html).toContain('Reset your password');
+  expect(html).toContain('Send reset link');
+  expect(html).toContain('autoComplete="email"');
+  expect(html).toContain('href="/sign-in"');
+  expect(html).toContain('<form');
+});
+
+it.each([
+  [null, '/sign-in', 'Sign in'],
+  ['TENANT', '/home', 'Back to home'],
+  ['MANAGER', '/dashboard', 'Back to dashboard'],
+])(
+  'returns a %s visitor to the right destination from an unknown page',
+  async (role, href, label) => {
+    getSession.mockResolvedValue(role ? { role } : null);
+    const html = renderToStaticMarkup(await NotFound());
+    expect(html).toContain(`href="${href}"`);
+    expect(html).toContain(label);
+    expect(html).toContain('Go back');
+    expect(html).not.toContain('Page unavailable');
+  },
+);

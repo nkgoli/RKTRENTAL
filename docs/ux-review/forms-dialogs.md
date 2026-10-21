@@ -4,22 +4,22 @@ Evidence: every list page (Properties, Tenants, Applications, Leases, Payments, 
 
 | ID | Where | Severity | Finding | Status |
 | --- | --- | :-: | --- | :-: |
-| FD-01 | all list pages | P1 | Filters need "Apply filters"/"Search" buttons, and the pattern differs page to page | Fixed |
-| FD-02 | destructive actions | P1 | Four confirm patterns (inline row, disabled + hint, bare danger button, none); no shared dialog | Fixed |
-| FD-03 | Create charge / Record payment / New request dialogs | P2 | Text-link "Close", left-aligned primary, no Cancel, no footer | Fixed |
-| FD-04 | app-wide | P1 | No toast system; saves either show a page banner or nothing | Fixed |
-| FD-05 | tables | P2 | Six table styles across the app | Deferred |
-| FD-06 | badges | P2 | Dot badges used for descriptors; uppercase and count variants | Fixed |
-| FD-07 | disclosures | P2 | "▸ Something" `<details>` triangles are the main control on 15+ screens | Deferred |
-| FD-08 | empty states | P2 | Three empty-state shapes (card with icon, bordered box with a sentence, bare heading) | Deferred |
-| FD-09 | loading | P2 | Whole-page skeleton with a "Loading page…" label replaces the header | Fixed |
-| FD-10 | error | P2 | Error boundary replaces the page; no reference id; no secondary link on manager routes | Fixed |
-| FD-11 | motion | P2 | No transitions: drawer, dialogs and tabs snap | Fixed |
-| FD-12 | form fields | P2 | 44px desktop inputs, inconsistent optional/required marking, helper text placement varies | Deferred |
-| FD-13 | date inputs | P2 | Native `mm/dd/yyyy` inputs as filters with no presets | Deferred |
-| FD-14 | focus | P2 | After some actions focus lands on the "Skip to main content" link, which then shows on screen | Fixed |
-| FD-15 | header actions | P2 | Primary buttons use a typed "+" ("+ Add property") instead of the icon | Deferred |
-| FD-16 | sticky form bars | P2 | Add/Edit property Save bar floats over the form with no border or backdrop | Fixed |
+| FD-01 | all list pages | P1 | Filters need "Apply filters"/"Search" buttons, and the pattern differs page to page | Fixed — Lists apply filters automatically. |
+| FD-02 | destructive actions | P1 | Four confirm patterns (inline row, disabled + hint, bare danger button, none); no shared dialog | Fixed — Shared confirmations name the action and preserve focus. |
+| FD-03 | Create charge / Record payment / New request dialogs | P2 | Text-link "Close", left-aligned primary, no Cancel, no footer | Fixed — Shared shell provides close, cancel and action footer. |
+| FD-04 | app-wide | P1 | No toast system; saves either show a page banner or nothing | Fixed — Both app shells use accessible, dismissible toasts. |
+| FD-05 | tables | P2 | Six table styles across the app | Deferred — Shared rows and numeric alignment are consistent; specialized analysis statements need a separate consumer migration. |
+| FD-06 | badges | P2 | Dot badges used for descriptors; uppercase and count variants | Fixed — Status, descriptor and count treatments are distinct. |
+| FD-07 | disclosures | P2 | "▸ Something" `<details>` triangles are the main control on 15+ screens | Deferred — Primary maintenance/upload actions use dialogs; legacy financial disclosures still need explicit migration. |
+| FD-08 | empty states | P2 | Three empty-state shapes (card with icon, bordered box with a sentence, bare heading) | Deferred — Shared page/inline states cover primary lists and empty kanban columns; financial sections retain specialized layouts. |
+| FD-09 | loading | P2 | Whole-page skeleton with a "Loading page…" label replaces the header | Fixed — Proportional skeletons use hidden loading text and retain shell navigation. |
+| FD-10 | error | P2 | Error boundary replaces the page; no reference id; no secondary link on manager routes | Fixed — Error cards show a reference and dashboard recovery link. |
+| FD-11 | motion | P2 | No transitions: drawer, dialogs and tabs snap | Fixed — Brief transitions respect reduced motion. |
+| FD-12 | form fields | P2 | 44px desktop inputs, inconsistent optional/required marking, helper text placement varies | Deferred — Shared fields have ordered, linked guidance and responsive sizing; specialized builder/financial forms still need migration. |
+| FD-13 | date inputs | P2 | Native `mm/dd/yyyy` inputs as filters with no presets | Deferred — Returns presets disclose custom dates; maintenance preset semantics require a separate filter change. |
+| FD-14 | focus | P2 | After some actions focus lands on the "Skip to main content" link, which then shows on screen | Fixed — Shared dialogs and ROI actions restore the trigger; tenant form outcomes retain contextual focus. |
+| FD-15 | header actions | P2 | Primary buttons use a typed "+" ("+ Add property") instead of the icon | Deferred — Shared Button and major page headers use the plus icon; secondary legacy labels remain for explicit migration. |
+| FD-16 | sticky form bars | P2 | Add/Edit property Save bar floats over the form with no border or backdrop | Fixed — Footer has a border, backdrop and bottom clearance. |
 
 ---
 
@@ -57,7 +57,7 @@ Evidence: every list page (Properties, Tenants, Applications, Leases, Payments, 
 - **Premium looks like:** A toast (bottom-left on desktop, above the bottom nav on phone), 4s, `role="status"`, optional action ("Undo", "View"), stacking up to 3, respects reduced motion.
 - **Fix:** Add `src/components/ui/Toast.tsx` + a `ToastProvider` mounted in both shells; server actions return `{ ok, message }` and the client calls `toast.success(message)`; for pure server-rendered forms, read `?toast=` once and render the same component. Replace the Integrations and sign-in query banners with toasts (keep the signed-out notice inline since there is no shell).
 - **Files:** new `src/components/ui/Toast.tsx`, `src/components/shell/ManagerShell.tsx`, `src/components/shell/TenantShell.tsx`, `src/styles/globals.css`; consumers above.
-- **Status:** Fixed - Manager shell mounts ToastProvider; property, tenant, integration, maintenance, payment, document and rent-comps successes use the shared toast path.
+- **Status:** Fixed - Manager and tenant shells mount ToastProvider; property, tenant, integration, maintenance, payment, document and rent-comps successes use the shared toast path. Toasts pause dismissal while hovered or keyboard-focused, errors remain until dismissed, and phone dismiss controls are 44px.
 
 ### FD-05
 - **Where:** `/payments` (avatar rows, 58px, blue amounts), `/leases` (avatar + email rows, link dates), `/tenants?view=directory` (avatar rows, dual links), `/properties/:id` units (two-line unit cell, "Open" link), `/rent-analysis` (plain 36px rows, caps status), ROI "Cash Flow & Equity Projections" (grouped rows with icons), `/ui` kit table (the intended one). Screenshots: [payments-1280.jpg](screenshots/payments-1280.jpg), [leases-1280.jpg](screenshots/leases-1280.jpg), [rent-analysis-maple-1280.jpg](screenshots/rent-analysis-maple-1280.jpg), [ui-kit-1280.jpg](screenshots/ui-kit-1280.jpg).
@@ -66,7 +66,7 @@ Evidence: every list page (Properties, Tenants, Applications, Leases, Payments, 
 - **Premium looks like:** One `Table` contract (design: caption, 12px muted header, row header bold, right-aligned tabular numbers, 44px rows, hover row background, one link per row).
 - **Fix:** Make `src/components/ui/Table.tsx` the only table renderer: props for `columns` (`align: 'num'`), `rowHref`, `density`, `mobile: 'cards'`; move the shared CSS into `globals.css` (`.table`) and delete per-page overrides in `payments.module.css`, `leases-ux.module.css`, `tenants.module.css`, `rent.module.css`.
 - **Files:** `src/components/ui/Table.tsx`, `src/styles/globals.css`, the four module files above.
-- **Status:** Deferred - Main manager lists now share responsive table/card conventions; specialized analysis statements retain their numeric table structures to preserve exact-value access.
+- **Status:** Deferred - Main manager lists share responsive table/card conventions, 44px rows and right-aligned tabular numeric cells. Specialized analysis statements retain their numeric table structures to preserve exact-value access; replacing their renderers requires a separate migration and responsive verification of those statements.
 
 ### FD-06
 - **Where:** property header ("● Multi-unit"), lease detail ("● One property · one unit", "● 1 tenant"), lease payments ("● Rent"), Applications ("● CONNECTED"), Leases tabs ("Active 41" count pill), Properties chips ("All 4"). Screenshots: [lease-detail-overview-1280.jpg](screenshots/lease-detail-overview-1280.jpg), [applications-1280.jpg](screenshots/applications-1280.jpg).
@@ -84,7 +84,7 @@ Evidence: every list page (Properties, Tenants, Applications, Leases, Payments, 
 - **Premium looks like:** Buttons for actions; for optional detail, a 44px summary row with a right-aligned plus/minus (design `ls-details`).
 - **Fix:** Actions (Manage request, Upload files, Edit terms, Record notice, More actions) become `Button variant="secondary"` or links that reveal a panel/dialog. Data disclosures keep `<details>` but with the design style: `summary { min-height: 44px; display: flex; font-weight: 600 } summary::after { content: '+' }` and a bordered body; hide the default marker.
 - **Files:** `src/styles/globals.css` (details/summary), `src/components/ui/Feedback.tsx` (Disclosure), consumers listed above.
-- **Status:** Deferred - Primary maintenance, upload and add actions now use links or dialogs; optional financial disclosures retain native controls pending a full visual sweep.
+- **Status:** Deferred - Primary maintenance, upload and add actions use links or dialogs; the shared disclosure style provides 44px plus/minus rows. Legacy financial and builder disclosures still need explicit consumer migration: applying a global summary override would also change unrelated account and document menus.
 
 ### FD-08
 - **Where:** Properties / Tenants / Documents no-match (card with icon, title, sentence, button), Leases "Drafts 0"/"Past 0" ("No drafts in progress." in a bordered box), Documents "Nothing uploaded for properties yet" (28px heading inside a list card), Maintenance board empty columns (nothing), Compare tab ("No reference selected" plain card), ROI chooser. Screenshots: [properties-no-match-1280.jpg](screenshots/properties-no-match-1280.jpg), [property-leases-1280.jpg](screenshots/property-leases-1280.jpg), [documents-1280.jpg](screenshots/documents-1280.jpg), [roi-compare-1280.jpg](screenshots/roi-compare-1280.jpg).
@@ -93,7 +93,7 @@ Evidence: every list page (Properties, Tenants, Applications, Leases, Payments, 
 - **Premium looks like:** One component with two sizes: `size="page"` (icon, 20px title, sentence, button) and `size="inline"` (one muted sentence with an optional link) for sections inside cards.
 - **Fix:** Extend `EmptyState` with `size`; use `inline` for lease groups, documents sections, kanban columns ("No requests") and compare; use `page` for list no-match. Keep copy from the design where it exists ("No active lease yet", "No properties match your search").
 - **Files:** `src/components/RouteStates.tsx`, `src/components/route-states.module.css`, consumers.
-- **Status:** Deferred - Shared EmptyState supports inline/page sizes and major empty lists use it; individual financial/kanban empty cases retain domain-specific copy and layouts.
+- **Status:** Deferred - Shared EmptyState supports inline/page sizes, major empty lists use it, and empty KanbanColumn sections now show the shared inline "No requests" state. Individual financial comparison and statement sections retain domain-specific copy and layouts until their renderers are migrated and verified together.
 
 ### FD-09
 - **Where:** `src/components/RouteStates.tsx` `LoadingState` used by `src/app/(manager)/loading.tsx` and tenant loading boundaries; visible in the `/ui` kit ([ui-kit-1280.jpg](screenshots/ui-kit-1280.jpg), "Page states").
@@ -129,7 +129,7 @@ Evidence: every list page (Properties, Tenants, Applications, Leases, Payments, 
 - **Premium looks like:** One `Field` with label, optional tag, control, hint, error in a fixed order; 36px controls on desktop, 44px on phone; required marked by absence of "Optional".
 - **Fix:** Extend `Forms.tsx` `Field` with `optional` and `hint` props and enforce the order; set `--rr-control: 36px` desktop / 44px `(max-width: 640px)`; sweep forms to use `Field`. Add property: mark the Owner/Year built/Units as Optional where they are.
 - **Files:** `src/components/ui/Forms.tsx`, `src/styles/globals.css` (input sizing), the property, maintenance, tenant, lease-builder and tenant-portal forms.
-- **Status:** Deferred - Shared Field supports optional labels, hints and errors; remaining specialized financial/builder controls retain their existing sizing and validation presentation.
+- **Status:** Deferred - Shared Field supports optional labels, control-linked hints and errors, and consistent label/control/hint/error order. Shared controls use 36px desktop and 44px phone sizing with 16px phone text; remaining specialized financial/builder controls retain their existing sizing and validation presentation until their consumer migration.
 
 ### FD-13
 - **Where:** Maintenance "Created from / Created to", Returns "From / To", lease builder custom end date. Screenshots: [maintenance-1280.jpg](screenshots/maintenance-1280.jpg), [returns-1280.jpg](screenshots/returns-1280.jpg).
@@ -147,7 +147,7 @@ Evidence: every list page (Properties, Tenants, Applications, Leases, Payments, 
 - **Premium looks like:** Focus stays on, or returns to, the control that triggered the change, or moves to the newly revealed region (the confirm box, the error summary).
 - **Fix:** For client transitions, keep the triggering button mounted (do not swap the button for the confirm box) and call `focus()` on the revealed region's heading (`tabIndex={-1}`); for server-action re-renders, restore focus by `id` after navigation (`useEffect` with the last-focused id in `sessionStorage`); make the skip link show only on `:focus-visible`.
 - **Files:** `src/styles/accessibility.css` (skip link), `src/app/(tenant)/pay/PayForm.tsx`, `src/app/(tenant)/repairs/RepairForm.tsx`, `src/components/analysis/RoiWorkspace.tsx`.
-- **Status:** Fixed - Manager ROI guard preserves and restores trigger focus; validation opens the relevant Scenarios controls. Tenant-only focus findings remain outside this task.
+- **Status:** Fixed - Shared dialogs preserve and restore their connected trigger; the tenant payment confirmation initially focuses Cancel and keeps its Pay trigger mounted. Repair validation focuses the description control with its linked inline error. Manager ROI guard preserves trigger focus and opens the relevant Scenarios controls for validation. Scoped interaction tests cover dialog focus restoration and tenant form validation.
 
 ### FD-15
 - **Where:** `+ Add property`, `+ Add tenant`, `+ Record payment`, `+ New lease`, `+ Create lease`, `+ New request`, `+ Add unit`, `+ Add expense`. Screenshots: [properties-grid-1280.jpg](screenshots/properties-grid-1280.jpg), [payments-1280.jpg](screenshots/payments-1280.jpg).

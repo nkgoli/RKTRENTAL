@@ -11,6 +11,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace, push: vi.fn() }),
   usePathname: () => pathname.value,
 }));
+vi.mock('@/app/(auth)/sign-out/actions', () => ({ signOutAction: vi.fn() }));
 
 import { PageHeader } from '@/components/shell/PageHeader';
 import { ManagerShell } from '@/components/shell/ManagerShell';
@@ -367,11 +368,12 @@ describe('PageHeader meta and back link in the manager shell', () => {
     expect(document.querySelectorAll('h1')).toHaveLength(1);
   });
 
-  it('keeps a single compact sidebar foot with an accessible sign-out link', () => {
+  it('keeps a single compact sidebar foot with an accessible sign-out submit button', () => {
     pathname.value = '/dashboard';
     render(<ManagerShell>x</ManagerShell>);
-    const signOut = screen.getByRole('link', { name: 'Sign out' });
+    const signOut = screen.getByRole('button', { name: 'Sign out' });
     expect(signOut.className).toBe('sidebar-signout');
+    expect(signOut.getAttribute('type')).toBe('submit');
     expect(document.querySelector('.sidebar-foot strong')!.textContent).toBe('Jordan Mills');
   });
 });

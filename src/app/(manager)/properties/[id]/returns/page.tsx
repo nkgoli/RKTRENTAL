@@ -1,4 +1,4 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { ReturnsWorkspace } from '@/components/workspace/ReturnsWorkspace';
 import { requireManagerRole } from '@/lib/auth/access';
 import { loadPropertyWorkspaceReturns } from '@/lib/metrics';
@@ -12,17 +12,8 @@ export default async function PropertyReturnsPage({ params, searchParams }: {
 }) {
   const [session, { id }, query] = await Promise.all([requireManagerRole(), params, searchParams]);
   const unitId = first(query.unit);
-  // Whole-property returns live in the combined Returns & ROI workspace, beside the
-  // projection for the same period. Unit drill-downs keep this allocated report.
-  if (!unitId) {
-    if (!(await propertiesDb(session.organizationId).getProperty(id))) notFound();
-    const target = new URLSearchParams({ property: id, view: 'actual' });
-    for (const name of ['period', 'from', 'to'] as const) {
-      const value = first(query[name]);
-      if (value) target.set(name, name === 'period' ? value.toUpperCase() : value);
-    }
-    redirect(`/roi-analysis?${target}`);
-  }
+  // Keep both report scopes in the workspace so its tabs, unit switcher and
+  // browser history stay available. The report links to property-wide analysis.
   const now = new Date();
   const period = await resolveReturnsPeriod(
     session.organizationId,

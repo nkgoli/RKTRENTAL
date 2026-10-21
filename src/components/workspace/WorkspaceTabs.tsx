@@ -50,7 +50,7 @@ export function WorkspaceTabs({ propertyId, unitId, activeTab }: { propertyId: s
       const TabLink = tab.key === 'returns' ? 'a' : Link;
       return <TabLink
       key={tab.key}
-      href={workspaceTabHref(propertyId, tab.key, selectedUnit)}
+      href={workspaceTabHref(propertyId, tab.key, selectedUnit, searchParams)}
       className={`${styles.tab} ${selected === tab.key ? styles.active : ''}`}
       aria-current={selected === tab.key ? 'page' : undefined}
     >{tab.label}</TabLink>;

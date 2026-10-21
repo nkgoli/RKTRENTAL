@@ -1027,7 +1027,7 @@ export function RoiProjections({
       ))}
       <p>
         Charts share the selected property and base assumptions. Tables show USD to the cent and
-        rates to four decimal places, without hover.
+        rates to four decimal places (sensitivity rates to one), without hover.
       </p>
     </div>
   );

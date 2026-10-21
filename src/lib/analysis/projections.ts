@@ -10,8 +10,12 @@ export const dollars = (value: number | null | undefined) =>
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }).format(Object.is(value, -0) ? 0 : value);
-export const rate = (value: number | null | undefined) =>
-  value == null || !Number.isFinite(value) ? 'Unavailable' : `${(value * 100).toFixed(4)}%`;
+export const rate = (value: number | null | undefined, digits = 4) => {
+  if (value == null || !Number.isFinite(value)) return 'Unavailable';
+  const text = (value * 100).toFixed(digits);
+  // Display only: a tiny negative that rounds to zero reads as 0.0%, not -0.0%.
+  return `${Number(text) === 0 ? (0).toFixed(digits) : text}%`;
+};
 
 // Presentation reconciliation only. The public schedule already deducts reserves
 // below NOI, but does not expose them as a separate annual column.

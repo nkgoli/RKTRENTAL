@@ -573,13 +573,13 @@ export function Sensitivity({
             aria-label="Sensitivity grid"
           >
             <table>
-              <caption>{label} · percentages · exact</caption>
+              <caption>{label} · percentages rounded to one decimal place</caption>
               <thead>
                 <tr>
                   <th scope="col">Monthly rent (USD)</th>
                   {grid.vacancies.map((v) => (
                     <th key={v} scope="col">
-                      {v.toFixed(4)}% vacancy
+                      {v.toFixed(1)}% vacancy
                     </th>
                   ))}
                 </tr>
@@ -600,7 +600,7 @@ export function Sensitivity({
                           data-negative={v != null && v < 0}
                           className={base ? chartStyles.base : undefined}
                         >
-                          {rate(v)}
+                          {rate(v, 1)}
                           {base && <small>Base</small>}
                           {v === null && <small>{reason(cell)}</small>}
                         </td>

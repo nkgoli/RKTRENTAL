@@ -522,6 +522,18 @@ describe('RealROI expense, amortization, exit and sensitivity charts', () => {
       `Monthly rent ${dollars(2800)}, vacancy 5%: Cash-on-Cash ${rate(base.cashOnCash)} (your assumptions)`,
     );
     expect(p.getByText('0% Break-even')).toBeTruthy();
+    // The table rounds for display only; the grid keeps engine precision.
+    const table = p.getByRole('table', {
+      name: 'Year 1 cash-on-cash · percentages rounded to one decimal place',
+    });
+    const heads = [...table.querySelectorAll('thead th')].map((th) => th.textContent);
+    expect(heads.slice(1)).toEqual(
+      ['0.0', '3.0', '5.0', '6.0', '9.0', '12.0', '15.0'].map((v) => `${v}% vacancy`),
+    );
+    const baseCell = table.querySelector('tbody tr:nth-child(3) td:nth-child(4)')!;
+    expect(baseCell.textContent).toBe(`${((base.cashOnCash ?? 0) * 100).toFixed(1)}%Base`);
+    expect(table.querySelector('tbody th')!.textContent).toBe('$1,960.00');
+    expect(base.cashOnCash).toBe(engine.summaryMetrics.cashOnCash);
     const before = cells[0].getAttribute('fill');
     fireEvent.click(p.getByLabelText('Colorblind-safe'));
     expect(map.querySelectorAll('rect')[0].getAttribute('fill')).not.toBe(before);

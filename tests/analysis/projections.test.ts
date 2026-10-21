@@ -31,6 +31,12 @@ describe('projection adapters and public model reconciliation', () => {
     expect(dollars(0)).toBe('$0.00');
     expect(dollars(-1200.21)).toBe('-$1,200.21');
     expect(rate(null)).toBe('Unavailable');
+    expect(rate(-0.093871)).toBe('-9.3871%');
+    // Sensitivity display rounds to one place; whole percentages keep their .0.
+    expect(rate(-0.093871, 1)).toBe('-9.4%');
+    expect(rate(-0.118086, 1)).toBe('-11.8%');
+    expect(rate(0.05, 1)).toBe('5.0%');
+    expect(rate(-0.0004, 1)).toBe('0.0%');
   });
 
   it('uses engine all-cash and balloon schedules, including the maturity outflow', () => {

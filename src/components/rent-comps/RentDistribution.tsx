@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { fixedDomainScale } from '@/lib/analysis/chart-data';
 import { rentDistribution } from '@/lib/comps/distribution';
-import { chartColors } from '@/components/analysis/RoiChart';
+import { Basis, chartColors } from '@/components/analysis/RoiChart';
 import c from '@/components/analysis/roi-chart.module.css';
 import s from './rent-distribution.module.css';
 
@@ -42,7 +42,31 @@ export function RentDistribution({
     return () => o.disconnect();
   }, []);
   const d = rentDistribution(rents, subjectRent);
-  if (!d) return null;
+  const heading = (
+    <h2 id={`${id}-h`}>
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+        <path
+          d="M22 7 13.5 15.5 8.5 10.5 2 17M16 7h6v6"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      Rental Distribution
+    </h2>
+  );
+  if (!d)
+    return (
+      <section className={s.card} aria-labelledby={`${id}-h`}>
+        <header className={s.head}>{heading}</header>
+        <p className={s.empty} role="status">
+          No comparable rents are included, so there is no distribution to show. Include at least
+          one comp in the table below.
+        </p>
+      </section>
+    );
   const h = 224;
   const m = { top: 25, right: 30, bottom: 26, left: 30 };
   const iw = Math.max(1, width - m.left - m.right);
@@ -73,27 +97,22 @@ export function RentDistribution({
   return (
     <section className={s.card} aria-labelledby={`${id}-h`}>
       <header className={s.head}>
-        <h2 id={`${id}-h`}>
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-            <path
-              d="M22 7 13.5 15.5 8.5 10.5 2 17M16 7h6v6"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          Rental Distribution
-        </h2>
+        {heading}
         <p>
-          {subjectRent != null ? `Your ${subjectLabel} compared to` : 'Spread of'} {d.comps.length}{' '}
-          comparable rental
-          {d.comps.length === 1 ? '' : 's'}
+          {d.subject ? `Your ${subjectLabel} compared to` : 'Spread of'} the {d.comps.length}{' '}
+          included comparable rental{d.comps.length === 1 ? '' : 's'}.
         </p>
+        <Basis
+          items={[
+            'Comparable rents',
+            'USD per month',
+            `${d.comps.length} included`,
+            ...(d.subject ? ['Yours not in the statistics'] : []),
+          ]}
+        />
       </header>
       <div className={s.body}>
-        <dl className={s.stats}>
+        <dl className={s.stats} data-count={d.subject ? 4 : 3}>
           <div>
             <dt>Low</dt>
             <dd>{usd(d.low)}</dd>
@@ -106,6 +125,16 @@ export function RentDistribution({
             <dt>High</dt>
             <dd>{usd(d.high)}</dd>
           </div>
+          {d.subject && (
+            <div data-tone="accent">
+              <dt>Yours vs average</dt>
+              <dd>
+                {Math.round(d.subject.rent) === Math.round(d.mean)
+                  ? 'Even'
+                  : `${d.subject.rent > d.mean ? '+' : '−'}${usd(Math.abs(d.subject.rent - d.mean))}`}
+              </dd>
+            </div>
+          )}
         </dl>
         <div
           ref={wrap}
@@ -267,21 +296,26 @@ export function RentDistribution({
         <ul className={c.legend}>
           {d.subject && (
             <li>
-              <i className={s.you} /> Your {subjectLabel}
+              <i className={s.you} /> Your {subjectLabel} {usd(d.subject.rent)}
             </li>
           )}
           <li>
             <i className={s.comp} /> Comparables
           </li>
+          <li>
+            <i className={s.avg} /> Average
+          </li>
           {band && (
             <li>
-              <i className={s.band} /> Suggested range
+              <i className={s.band} /> Suggested range {usd(rangeLow!)}–{usd(rangeHigh!)}
             </li>
           )}
         </ul>
         <p className={s.note}>
-          Curve: a normal distribution with the comps&apos; mean and standard deviation, scaled to
-          its peak. It describes the spread of these comps only.
+          {d.low === d.high
+            ? `${d.comps.length === 1 ? 'Only one comparable is included' : 'All included comparables have the same rent'}, so the curve width is an assumed ±10% spread, not a measured one.`
+            : `Curve: a normal distribution with the comps' average and standard deviation (${usd(d.sd)}), scaled to its peak.`}{' '}
+          It describes the spread of these comps only, not the chance of renting at a price.
         </p>
       </div>
     </section>

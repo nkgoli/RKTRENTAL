@@ -11,7 +11,65 @@
 .picker legend {
   width: 100%;
   margin-bottom: 8px;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--design-text);
+}
+.picker legend span {
+  margin-left: 8px;
+  font-weight: 400;
+  color: var(--design-muted);
+}
+/* Intro card: one sentence, basis tags, a short caveat, then the picker and its disclosure. */
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.intro > * {
+  min-width: 0;
+  margin: 0 !important;
+}
+.caveat,
+.hint {
+  font-size: 12px !important;
+  color: var(--design-muted) !important;
+}
+.hint {
+  margin: 0 !important;
+}
+.feedback:empty {
+  display: none;
+}
+.feedback {
+  font-size: 13px !important;
+  color: var(--rr-warn) !important;
+  font-weight: 600;
+}
+.method {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--design-text);
+}
+.method b {
+  font-weight: 600;
+}
+.empty {
+  display: grid;
+  gap: 4px;
+}
+.empty h3 {
+  margin: 0;
+  font-size: var(--rr-h3);
+  font-weight: 600;
+  color: var(--design-text);
+}
+.empty p {
+  margin: 0;
+  font-size: 14px;
   color: var(--design-muted);
 }
 .propertyChip,
@@ -303,18 +361,6 @@ button.assetCard.assetCard:hover {
 .assetCard dd[data-tone='bad'] {
   color: var(--rr-bad);
 }
-.footer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  margin: 0 !important;
-  padding: 0 4px;
-  font-size: 12px !important;
-  color: var(--design-muted) !important;
-}
-.footerRight {
-  margin-left: auto;
-}
 .winners {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -428,7 +474,6 @@ button.assetCard.assetCard:hover {
   .banner {
     padding: 16px;
   }
-  .footerRight,
   .tableFoot span:last-child {
     margin-left: 0;
   }

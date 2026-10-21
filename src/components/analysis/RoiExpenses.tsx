@@ -16,11 +16,11 @@ import {
   Figure,
   Icon,
   InfoTip,
+  MoreDetail,
   Tiles,
   chartColors,
   useHorizon,
 } from './RoiChart';
-import styles from './analysis.module.css';
 import chartStyles from './projections.module.css';
 import d from './detail-charts.module.css';
 
@@ -203,17 +203,26 @@ function OperatingExpenses({ result }: { result: ProjectionResult }) {
       title="Operating Expenses"
       subtitle={
         <>
-          Breakdown by category · Year {year}
+          Where the operating budget goes in year {year}, largest cost first.
           {data.growth != null && Math.abs(data.growth) >= 0.005 && (
             <b className={d.growth} data-tone={data.growth > 0 ? 'red' : 'teal'}>
               ({data.growth > 0 ? '+' : ''}
               {(data.growth * 100).toFixed(0)}% vs Y1)
             </b>
-          )}{' '}
-          · projected · before tax
+          )}
         </>
       }
-      controls={horizon}
+      basis={['Projected', 'USD per year', `Year ${year}`, 'Before tax']}
+      controls={
+        horizon && (
+          <div>
+            <span className={d.controlLabel} aria-hidden="true">
+              Year shown
+            </span>
+            {horizon}
+          </div>
+        )
+      }
     >
       <Tiles
         items={[
@@ -342,30 +351,32 @@ function OperatingExpenses({ result }: { result: ProjectionResult }) {
           Both are budgeted; CapEx is a reserve deducted below NOI.
         </span>
       </p>
-      <ExactTable
-        caption={`Expense categories · year ${year} · USD per year`}
-        headers={['Category', 'Amount', 'Share of operating expenses', 'Change vs year 1']}
-        rows={[
-          ...byAmount.map((c) => [
-            c.name,
-            dollars(c.value),
-            share(c.percent, 1),
-            dollars(c.change),
-          ]),
-          [
-            'Operating expenses',
-            dollars(data.total),
-            share(data.total > 0 ? 1 : null, 1),
-            dollars(data.total - data.year1Total),
-          ],
-          [
-            'CapEx reserve (below NOI)',
-            dollars(data.reserves),
-            'Not operating',
-            dollars(data.reserves - data.reservesYear1),
-          ],
-        ]}
-      />
+      <MoreDetail summary={`Exact amounts by category, year ${year}`}>
+        <ExactTable
+          caption={`Expense categories · year ${year} · USD per year`}
+          headers={['Category', 'Amount', 'Share of operating expenses', 'Change vs year 1']}
+          rows={[
+            ...byAmount.map((c) => [
+              c.name,
+              dollars(c.value),
+              share(c.percent, 1),
+              dollars(c.change),
+            ]),
+            [
+              'Operating expenses',
+              dollars(data.total),
+              share(data.total > 0 ? 1 : null, 1),
+              dollars(data.total - data.year1Total),
+            ],
+            [
+              'CapEx reserve (below NOI)',
+              dollars(data.reserves),
+              'Not operating',
+              dollars(data.reserves - data.reservesYear1),
+            ],
+          ]}
+        />
+      </MoreDetail>
     </ChartCard>
   );
 }
@@ -377,7 +388,12 @@ export function Expenses({ result, onEdit }: { result: ProjectionResult; onEdit:
   return (
     <div className={chartStyles.stack}>
       <OperatingExpenses result={result} />
-      <ChartCard title="Expense growth" subtitle="Projected · USD per year" controls={horizon}>
+      <ChartCard
+        title="Expense growth"
+        subtitle="Operating expenses (solid) and the capital reserve set aside below NOI (dashed), each year."
+        basis={['Projected', 'USD per year', 'Before tax']}
+        controls={horizon}
+      >
         <ComboChart
           label="Operating expenses and capital reserves"
           years={visible.map((r) => r.year)}
@@ -385,35 +401,39 @@ export function Expenses({ result, onEdit }: { result: ProjectionResult; onEdit:
             {
               label: 'Operating expenses',
               values: visible.map((r) => r.operatingExpenses),
-              color: chartColors.muted,
+              color: chartColors.primaryDark,
             },
             {
               label: 'Capital reserves',
               values: visible.map((r) => r.reserves),
-              color: chartColors.primary,
+              color: chartColors.warn,
               dashed: true,
             },
           ]}
         />
-        <p>
-          A fixed dollar input replaces its percentage. Year-one percentage-based dollar costs grow
-          at the expense-growth assumption; they are not recalculated from later rent.
-        </p>
-        <p>NOI excludes capital reserves. Reserves reduce spendable cash after debt service.</p>
+        <MoreDetail summary="How expenses grow">
+          <p className={d.detailText}>
+            A fixed dollar input replaces its percentage. Year-one percentage-based dollar costs
+            grow at the expense-growth assumption; they are not recalculated from later rent.
+          </p>
+          <p className={d.detailText}>
+            NOI excludes capital reserves. Reserves reduce spendable cash after debt service.
+          </p>
+        </MoreDetail>
+        <MoreDetail summary={`Exact expense projections, all ${rows.length} years`}>
+          <ExactTable
+            caption="Expense projections · USD per year"
+            headers={['Year', 'Effective income', 'Operating expenses', 'Capital reserves']}
+            rows={rows.map((r) => [
+              r.year,
+              ...[r.effectiveGrossIncome, r.operatingExpenses, r.reserves].map(dollars),
+            ])}
+          />
+        </MoreDetail>
         <div>
           <button onClick={onEdit}>Edit expense assumptions</button>
         </div>
       </ChartCard>
-      <section className={styles.card}>
-        <ExactTable
-          caption="Expense projections · USD per year"
-          headers={['Year', 'Effective income', 'Operating expenses', 'Capital reserves']}
-          rows={rows.map((r) => [
-            r.year,
-            ...[r.effectiveGrossIncome, r.operatingExpenses, r.reserves].map(dollars),
-          ])}
-        />
-      </section>
     </div>
   );
 }

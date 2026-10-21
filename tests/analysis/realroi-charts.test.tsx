@@ -45,6 +45,7 @@ import {
   OutcomeCard,
   ProjectionMilestones,
 } from '@/components/analysis/RoiSummaryCharts';
+import { cashPayload } from './cash-fixture';
 import { payload } from './fixture';
 import { realRoiSample } from './realroi-sample';
 
@@ -107,12 +108,17 @@ describe('RealROI chart adapters', () => {
     expect(fixedDomainScale(1500, 2500).ticks).toEqual([1500, 1750, 2000, 2250, 2500]);
   });
 
-  it('draws Equity Composition on the reference $950k domain', () => {
+  it('draws Equity Composition on one evenly spaced axis, without a mirrored debt axis', () => {
     charts();
     const plot = screen.getByRole('img', { name: /Equity composition and loan balance/i });
-    const labels = [...plot.querySelectorAll('text')].map((t) => t.textContent);
-    for (const tick of ['$0k', '$250k', '$500k', '$950k']) expect(labels).toContain(tick);
-    expect(labels).not.toContain('$1000k');
+    const labels = [...plot.querySelectorAll('text')].map((t) => t.textContent!);
+    // The uneven reference domain ($0k, $250k, $500k, $950k) is gone: equal steps from $0k.
+    const ticks = labels.filter((l) => /^\$\d+k$/.test(l)).map((l) => Number(l.slice(1, -1)));
+    expect(ticks[0]).toBe(0);
+    expect(new Set(ticks.slice(1).map((v, i) => v - ticks[i])).size).toBe(1);
+    expect(labels).not.toContain('$950k');
+    expect(labels).toContain('USD, year-end');
+    expect(labels).not.toContain('Debt');
   });
 
   it('uses the reference year ticks and a non-overshooting monotone curve', () => {
@@ -323,7 +329,8 @@ describe('RealROI cash-flow and equity charts', () => {
     expect(plot.textContent).toContain('Breakeven');
     // Pre- and post-breakeven bands.
     expect(plot.querySelectorAll('svg > rect')).toHaveLength(2);
-    expect(panel.getByText('24.5%')).toBeTruthy();
+    // The insight and the recovered-cash tile agree at one decimal.
+    expect(panel.getAllByText('24.5%')).toHaveLength(2);
     // Custom horizon down to Y4: never breaks even, so the whole range is pre-breakeven.
     const horizon = screen.getByRole('group', { name: 'Cash flow chart horizon' });
     fireEvent.click(within(horizon).getByRole('button', { name: 'Custom' }));
@@ -412,7 +419,8 @@ describe('RealROI expense, amortization, exit and sensitivity charts', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Amortization' }));
     const p = panel(container, 'amortization');
     const plot = p.getByRole('group', { name: /Loan balance and cumulative principal/ });
-    expect(plot.querySelectorAll('path[fill-opacity="0.6"]')).toHaveLength(3);
+    // Light fills under solid lines keep the three overlapping series readable.
+    expect(plot.querySelectorAll('path[fill-opacity="0.15"]')).toHaveLength(3);
     expect(plot.textContent).toContain('Year 1');
     expect(plot.textContent).toContain('Year 3');
     const years = loanYears(r);
@@ -613,5 +621,74 @@ describe('RealROI Summary charts', () => {
     expect(within(table).getByText('Scheduled rent')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Cash Flow' }));
     expect(within(table).queryByText('Annual Cash Flow')).toBeNull();
+  });
+});
+
+describe('Core chart presentation: basis, legends and disclosures', () => {
+  const legend = (plot: HTMLElement) =>
+    [...plot.parentElement!.querySelectorAll('ul[aria-label$="legend"] li')].map(
+      (li) => li.textContent,
+    );
+
+  it('names only what is drawn: no after-breakeven key on a range that never breaks even', () => {
+    charts();
+    fireEvent.click(screen.getByRole('tab', { name: 'Cash Flow' }));
+    const plot = screen.getByRole('group', { name: /Annual and cumulative operating cash flow/ });
+    expect(legend(plot)).toEqual(
+      expect.arrayContaining(['Before breakeven', 'After breakeven', 'Negative year']),
+    );
+    const horizon = screen.getByRole('group', { name: 'Cash flow chart horizon' });
+    fireEvent.click(within(horizon).getByRole('button', { name: 'Custom' }));
+    fireEvent.change(screen.getByLabelText('Cash flow chart horizon: custom years'), {
+      target: { value: '4' },
+    });
+    expect(legend(plot)).toContain('Before breakeven');
+    expect(legend(plot)).not.toContain('After breakeven');
+    // Basis tags carry kind, unit and tax instead of a "·" list in the subtitle.
+    const card = plot.closest('section')!;
+    expect(
+      within(card.querySelector('header')!)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['Projected', 'USD', 'After debt service and reserves', 'Before tax']);
+  });
+
+  it('keeps exact tables to the cent one disclosure away under each group', () => {
+    const { container } = charts();
+    for (const [tab, table, summary] of [
+      ['Equity', /Exact year-end balances/, /Exact year-end balances, all 30 years/],
+      ['Cash Flow', /Projection amounts/, /Exact annual amounts, all 30 years/],
+      ['Expenses', /Expense projections/, /Exact expense projections, all 30 years/],
+      ['Amortization', /Annual loan payments/, /Exact annual payments, all 30 years/],
+    ] as const) {
+      fireEvent.click(screen.getByRole('tab', { name: tab }));
+      const details = screen.getByRole('table', { name: table }).closest('details')!;
+      expect(details.open).toBe(false);
+      expect(details.querySelector('summary')!.textContent).toMatch(summary);
+    }
+    // The monthly schedule still follows its year picker.
+    fireEvent.change(screen.getByLabelText('Loan schedule year'), { target: { value: '2' } });
+    expect(screen.getByRole('table', { name: /Monthly loan payments · year 2/ })).toBeTruthy();
+    expect(container.textContent).toContain('Year shown');
+  });
+
+  it('shows an all-cash purchase without a mortgage line, principal key or loan schedule', () => {
+    const p = cashPayload();
+    const { container } = charts(p);
+    expect(screen.getByRole('heading', { name: 'Equity Composition' })).toBeTruthy();
+    const composition = screen.getByRole('group', { name: /Equity composition and loan balance/ });
+    expect(legend(composition)).not.toContain('Mortgage balance');
+    expect(legend(composition)).not.toContain('Principal paid');
+    expect(screen.getByRole('heading', { name: 'Property Value & Equity' })).toBeTruthy();
+    const value = screen.getByRole('group', { name: /Property value and mortgage balance/ });
+    expect(legend(value)).toEqual(['Property value', 'Equity (shaded)']);
+    fireEvent.keyDown(value, { key: 'Home' });
+    // The visual tooltip says "No loan"; the spoken readout keeps the exact $0.00.
+    expect(value.textContent).toContain('No loan');
+    expect(live(value)).toContain('− Mortgage Balance $0.00');
+    expect(value.textContent).toContain('Start');
+    fireEvent.click(screen.getByRole('tab', { name: 'Amortization' }));
+    expect(container.textContent).toMatch(/All-cash purchase · debt service \$0\.00/);
+    expect(screen.queryByRole('table', { name: /Annual loan payments/ })).toBeNull();
   });
 });

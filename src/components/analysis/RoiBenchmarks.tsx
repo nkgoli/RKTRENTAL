@@ -1,5 +1,5 @@
 'use client';
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { getAllBenchmarks, type BenchmarkData } from '@/lib/roi';
 import {
   calculatePayload,
@@ -19,6 +19,7 @@ import {
 import { dollars, rate } from '@/lib/analysis/projections';
 import { wholeDollars } from '@/lib/analysis/chart-data';
 import {
+  Basis,
   ChartCard,
   chartColors,
   ComboChart,
@@ -27,6 +28,7 @@ import {
   Icon,
   InfoTip,
   Insight,
+  MoreDetail,
   Segmented,
   Tiles,
 } from './RoiChart';
@@ -161,6 +163,16 @@ function GrowthChart({
   );
 }
 
+/** Missing-comparison card: says what is missing and how it appears, never a blank panel. */
+function Empty({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className={`${styles.card} ${b.empty}`} role="status">
+      <h3>{title}</h3>
+      <p>{children}</p>
+    </section>
+  );
+}
+
 export function RoiBenchmarks({
   selected,
   custom,
@@ -210,10 +222,16 @@ export function RoiBenchmarks({
   }, [compare, stale, snapshot]);
   const cocYield = (r: { summaryMetrics: { cashOnCash: number | null } } | undefined) =>
     r?.summaryMetrics.cashOnCash == null ? null : r.summaryMetrics.cashOnCash * 100;
+  const basis = ['Projected property', 'Hypothetical markets', 'USD', 'Lump sum', 'Before tax'];
+  const noProjection = snapshot
+    ? 'The current assumptions have issues, so there is no up-to-date projection. Fix them in the Assumptions band above and this updates automatically.'
+    : 'The property has no projection yet. Complete the missing assumptions (Edit assumptions above) and this appears automatically.';
 
   const picker = (
     <fieldset disabled={saving} className={b.picker}>
-      <legend>Reference assets - {selected.length} selected (up to two)</legend>
+      <legend>
+        Reference assets <span>{selected.length} of 2 selected</span>
+      </legend>
       <span className={b.propertyChip}>
         <i aria-hidden="true" />
         {propertyName}
@@ -291,23 +309,25 @@ export function RoiBenchmarks({
 
   return (
     <div className={s.wrap}>
-      <section className={styles.card}>
+      <section className={`${styles.card} ${b.intro}`}>
         <h2>{compare ? 'Asset Comparison' : 'Benchmarks'}</h2>
         <p>
           {compare
-            ? `Compare ${propertyName} against market references (select up to 2). `
-            : `${propertyName} against the S&P 500, Nasdaq 100 and US Bonds on the same capital and hold, like the RealROI Benchmarks tab. This set is read-only; your saved selection is on Compare. `}
-          Reference assumptions, not live market data. Imported historical preset periods and rates
-          have not been refreshed. Source claims are supplied by RealROI and have not been
-          independently verified.
+            ? `How the cash you put into ${propertyName} compares with investing it in up to two assets you choose, for the same hold.`
+            : `How the cash you put into ${propertyName} compares with investing it in the S&P 500, Nasdaq 100 or US Bonds for the same hold.`}
+        </p>
+        <Basis items={basis} />
+        <p className={b.caveat}>
+          Market figures are fixed historical assumptions supplied by RealROI, not live or verified
+          data.
+          {!compare && ' This set is fixed; choose your own references on Compare.'}
         </p>
         {compare && (
           <>
-            <p>
-              {propertyName} is always included. Choose up to two distinct reference assets. Remove
-              one before selecting a third. No selection produces no comparison.
-            </p>
             {picker}
+            <p className={b.hint}>
+              {propertyName} is always included. To pick another reference, remove one first.
+            </p>
           </>
         )}
         {compare && selected.some((x) => x.type === 'custom') && (
@@ -348,11 +368,10 @@ export function RoiBenchmarks({
             })}
           </fieldset>
         )}
-        <p role="status" aria-live="polite">
+        <p role="status" aria-live="polite" className={b.feedback}>
           {feedback}
         </p>
-        <details>
-          <summary>Reference provenance & method</summary>
+        <MoreDetail summary="Where the market figures come from, and how they are compared">
           <div
             className={styles.table}
             role="region"
@@ -383,27 +402,41 @@ export function RoiBenchmarks({
               </tbody>
             </table>
           </div>
-          <p>
-            Lump sum, same starting capital and modeled hold, before tax. Benchmark total-return
-            assumptions reinvest distributions; yield is not added again. Property cash is held
-            without reinvestment. Liquidity, leverage and tax treatment differ.
-          </p>
+          <ul className={b.method}>
+            <li>
+              <b>Same start, same hold.</b> Each reference starts with the property&apos;s initial
+              cash as a lump sum and grows at its annual total return for the modeled hold.
+            </li>
+            <li>
+              <b>Property wealth.</b> Equity plus cumulative cash flow (held, not reinvested); the
+              final year deducts selling costs and the loan payoff. Leverage is included.
+            </li>
+            <li>
+              <b>Before tax.</b> No income or capital-gains tax on either side, and no fund fees or
+              trading costs on the market side. Liquidity and tax treatment differ in practice.
+            </li>
+            <li>
+              <b>Yield.</b> Total returns already include reinvested distributions, so yield is
+              shown for reference and never added again.
+            </li>
+            <li>
+              <b>Risk.</b> Reference volatility is source metadata, not a forecast. The
+              property&apos;s volatility is not measured, so it never gets a volatility position or
+              a risk-adjusted score.
+            </li>
+            <li>
+              <b>Custom references</b> keep the source and period you enter. Add or edit one on
+              Compare; the results update as you type, and Save draft or Save ready keeps it for
+              this property.
+            </li>
+          </ul>
           <button disabled>Match cash flows - unavailable</button>
-          <p>
-            Saved custom assumptions keep their supplied source. Open Compare and use Add custom
-            reference, or edit the existing custom name, return, yield, volatility and source.
-            Recalculate to review the results, then Save draft or Save ready to keep them for this
-            property. Property volatility and risk-adjusted return remain unavailable: the
-            property&apos;s volatility is not measured, so it is never placed on a volatility axis.
-          </p>
-        </details>
+        </MoreDetail>
       </section>
 
       {!compare &&
         (!market || !baseResult ? (
-          <p role="status">
-            {stale ? 'Comparison needs recalculation.' : 'Complete assumptions and recalculate.'}
-          </p>
+          <Empty title="No projection to compare">{noProjection}</Empty>
         ) : (
           <BenchmarksView
             market={market}
@@ -418,8 +451,15 @@ export function RoiBenchmarks({
         ))}
 
       {compare &&
-        (!comparison || stale ? (
-          <p role="status">{stale ? 'Comparison needs recalculation.' : error}</p>
+        (stale || !snapshot ? (
+          <Empty title="No projection to compare">{noProjection}</Empty>
+        ) : !snapshot.benchmarks.length ? (
+          <Empty title="No reference selected">
+            Choose at least one reference asset above to compare with {propertyName}. The comparison
+            appears as soon as you pick one.
+          </Empty>
+        ) : !comparison ? (
+          <Empty title="Comparison unavailable">{error}</Empty>
         ) : (
           <CompareView
             comparison={comparison}
@@ -500,9 +540,8 @@ function BenchmarksView({
             </div>
           </dl>
           <p className={b.disclaimer}>
-            Assumes lump-sum investment, leverage included, property cash flows not reinvested,
-            taxes excluded. Final property value is net of selling costs and loan payoff. Market
-            returns use historical CAGR (not guaranteed).
+            Property value is the sale after selling costs and the loan payoff, plus cumulative cash
+            flow. Market values grow at historical average returns, which are not guaranteed.
           </p>
         </div>
         <dl className={b.bannerKpis}>
@@ -568,7 +607,14 @@ function BenchmarksView({
 
       <ChartCard
         title={`Investment Comparison (${hold}-Year Hold)`}
-        subtitle="Same initial cash · before tax"
+        subtitle={`What ${wholeDollars(initial)} becomes in each investment by the end of the hold.`}
+        basis={[
+          'Projected property',
+          'Hypothetical markets',
+          'USD',
+          `${hold}-year hold`,
+          'Before tax',
+        ]}
       >
         <div className={s.tableWrap} role="region" tabIndex={0} aria-label="Investment comparison">
           <table className={s.table}>
@@ -627,7 +673,16 @@ function BenchmarksView({
 
       <ChartCard
         title="Investment Growth Over Time"
-        subtitle={indexed ? 'Indexed to 100 at start' : 'Dollar values'}
+        subtitle={
+          indexed
+            ? 'Each investment indexed to 100 at the start, so 200 means it doubled.'
+            : 'Value of each investment at the end of every year.'
+        }
+        basis={[
+          'Projected property',
+          'Hypothetical markets',
+          indexed ? 'Index, start = 100' : 'USD',
+        ]}
         controls={
           <div>
             <span className={s.label}>Scale:</span>
@@ -696,11 +751,53 @@ function BenchmarksView({
             </tbody>
           </table>
         </div>
+        <p className={b.hint}>Select a market to highlight it in the chart.</p>
+        <div className={b.cards}>
+          {refs.map((a) => {
+            const on = focus === a.id;
+            const vs = property.finalValue - a.finalValue;
+            const ref = markets.find((x) => x.type === a.id);
+            return (
+              <button
+                key={a.id}
+                type="button"
+                className={b.assetCard}
+                aria-pressed={on}
+                style={{
+                  borderTopColor: a.color,
+                  ...(on ? { boxShadow: `0 0 0 2px white, 0 0 0 4px ${a.color}` } : {}),
+                }}
+                onClick={() => setFocus(on ? null : a.id)}
+              >
+                <b>{a.name}</b>
+                <small>{a.description}</small>
+                <dl>
+                  <div>
+                    <dt>Annual return used:</dt>
+                    <dd>{ref == null ? 'Unavailable' : `${ref.historicalCAGR}%`}</dd>
+                  </div>
+                  <div>
+                    <dt>Volatility:</dt>
+                    <dd>{a.volatility == null ? 'Not measured' : `${a.volatility}%`}</dd>
+                  </div>
+                  <div>
+                    <dt>Property vs this:</dt>
+                    <dd data-tone={vs > 0 ? 'good' : 'bad'}>{signedMoney(vs)}</dd>
+                  </div>
+                </dl>
+                <span className={s.srOnly}>
+                  {on ? 'Focused in the growth chart' : 'Focus in the growth chart'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </ChartCard>
 
       <ChartCard
         title="Risk vs Return"
-        subtitle="Higher return with lower volatility is better (top-left)"
+        subtitle="Higher return with lower volatility is better, so top-left is best."
+        basis={['Hypothetical markets', '% per year', 'Property volatility not measured']}
       >
         <ScatterChart
           label="Reference volatility against annualized return"
@@ -739,47 +836,6 @@ function BenchmarksView({
         </p>
       </ChartCard>
 
-      <div className={b.cards}>
-        {refs.map((a) => {
-          const on = focus === a.id;
-          const vs = property.finalValue - a.finalValue;
-          const ref = markets.find((x) => x.type === a.id);
-          return (
-            <button
-              key={a.id}
-              type="button"
-              className={b.assetCard}
-              aria-pressed={on}
-              style={{
-                borderTopColor: a.color,
-                ...(on ? { boxShadow: `0 0 0 2px white, 0 0 0 4px ${a.color}` } : {}),
-              }}
-              onClick={() => setFocus(on ? null : a.id)}
-            >
-              <b>{a.name}</b>
-              <small>{a.description}</small>
-              <dl>
-                <div>
-                  <dt>CAGR (used):</dt>
-                  <dd>{ref?.historicalCAGR}%</dd>
-                </div>
-                <div>
-                  <dt>Volatility:</dt>
-                  <dd>{a.volatility}%</dd>
-                </div>
-                <div>
-                  <dt>vs Property:</dt>
-                  <dd data-tone={vs > 0 ? 'good' : 'bad'}>{signedMoney(vs)}</dd>
-                </div>
-              </dl>
-              <span className={s.srOnly}>
-                {on ? 'Focused in the growth chart' : 'Focus in the growth chart'}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
       <Insight>
         {propertyBest ? (
           <>
@@ -805,16 +861,6 @@ function BenchmarksView({
           </>
         )}
       </Insight>
-      <p className={b.footer}>
-        <span>Hold: {hold}y</span>
-        <span aria-hidden="true">•</span>
-        <span>Method: Lump sum</span>
-        <span aria-hidden="true">•</span>
-        <span>Taxes: Excluded</span>
-        <span className={b.footerRight}>
-          Market returns based on historical CAGR, not guaranteed
-        </span>
-      </p>
       <details className={styles.card}>
         <summary>Exact growth by year (USD / index)</summary>
         <ExactTable
@@ -858,7 +904,7 @@ const compareMetrics = [
     group: 'Growth',
     key: 'final',
     label: 'Final Value',
-    info: 'Value at the end of the hold (property: net sale proceeds plus cash received).',
+    info: 'Value at the end of the hold (property: net sale proceeds plus cumulative cash flow).',
     impact: 3,
     higher: true,
     get: (a: Asset) => a.finalValue,
@@ -953,7 +999,8 @@ function CompareView({
 
       <ChartCard
         title="Side-by-Side Comparison"
-        subtitle={`${hold}-year holding period · same ${wholeDollars(initial)} initial cash · before tax`}
+        subtitle={`Every metric for the same ${wholeDollars(initial)} start; Best and Worst mark each row's leader and laggard.`}
+        basis={['Projected property', 'Hypothetical references', `${hold}-year hold`, 'Before tax']}
         controls={
           <div>
             <span className={s.label}>View:</span>
@@ -1065,7 +1112,7 @@ function CompareView({
                                     {d > 0 ? '+' : '−'}
                                     {m.key === 'final' || m.key === 'growth'
                                       ? wholeDollars(Math.abs(d))
-                                      : `${Math.abs(d).toFixed(1)}%`}
+                                      : `${Math.abs(d).toFixed(1)} pp`}
                                   </small>
                                 )}
                               </td>
@@ -1088,11 +1135,18 @@ function CompareView({
           </span>
           <span>●●● = High impact metric</span>
         </p>
+        {delta && (
+          <p className={s.foot}>
+            Arrows show each reference against {propertyName}; percentage differences are in
+            percentage points (pp).
+          </p>
+        )}
       </ChartCard>
 
       <ChartCard
         title="Investment Growth Over Time"
-        subtitle="Projected portfolio value comparison · USD"
+        subtitle="Value of the same starting cash in each asset at the end of every year."
+        basis={['Projected property', 'Hypothetical references', 'USD']}
       >
         <GrowthChart
           assets={assets}
@@ -1105,7 +1159,8 @@ function CompareView({
 
       <ChartCard
         title="Annualized Returns Comparison"
-        subtitle="Year-over-year return rates by asset class"
+        subtitle="Average yearly growth of each asset over the whole hold."
+        basis={['Projected property', 'Hypothetical references', '% per year', `${hold}-year hold`]}
       >
         <ComboChart
           label="Annualized return by asset"
@@ -1137,7 +1192,8 @@ function CompareView({
 
       <ChartCard
         title="Multi-Dimensional Comparison"
-        subtitle="Normalized scores across Return, Yield, Stability, and Risk-Adjusted Return"
+        subtitle="Each dimension scored 0–100 against the best selected asset; a bigger shape is stronger."
+        basis={['Projected property', 'Hypothetical references', 'Relative score']}
       >
         <RadarChart
           label="Normalized comparison scores"
@@ -1149,19 +1205,24 @@ function CompareView({
           }))}
         />
         <p className={s.foot}>
-          Scores are 0–100 relative to the best selected asset (RealROI method; risk-free rate 4%).
-          Hypothetical inputs: reference CAGR, yield and volatility are unverified source metadata;
-          the property&apos;s Yield is its Year-1 cash-on-cash. Its Stability and Risk-Adj are not
-          measured, so its shape is open (dashed) there instead of an invented value.
+          {propertyName}&apos;s Stability and Risk-Adj are not measured, so its shape stays open
+          (dashed) there instead of showing an invented score.
         </p>
-        <ExactTable
-          caption="Radar scores (0–100)"
-          headers={['Dimension', ...assets.map((a) => a.name)]}
-          rows={radar.map((r) => [
-            r.metric,
-            ...r.values.map((v) => (v == null ? 'Not measured' : v.toFixed(1))),
-          ])}
-        />
+        <MoreDetail summary="Radar scores and how they are calculated">
+          <p className={s.foot}>
+            RealROI method with a 4% risk-free rate. Reference return, yield and volatility are
+            unverified source metadata; the property&apos;s Yield is its projected Year-1
+            cash-on-cash.
+          </p>
+          <ExactTable
+            caption="Radar scores (0–100)"
+            headers={['Dimension', ...assets.map((a) => a.name)]}
+            rows={radar.map((r) => [
+              r.metric,
+              ...r.values.map((v) => (v == null ? 'Not measured' : v.toFixed(1))),
+            ])}
+          />
+        </MoreDetail>
       </ChartCard>
 
       <div className={b.cards}>
@@ -1198,11 +1259,17 @@ function CompareView({
         ))}
       </div>
 
-      <section className={styles.card}>
-        <h2>Exact comparison</h2>
-        <p>
-          Same {dollars(initial)} initial cash - {hold}-year horizon - before tax
-        </p>
+      <ChartCard
+        title="Exact comparison"
+        subtitle="The same results to the cent, for checking or copying."
+        basis={[
+          'Projected property',
+          'Hypothetical references',
+          `Same ${dollars(initial)} start`,
+          `${hold}-year hold`,
+          'Before tax',
+        ]}
+      >
         <div
           className={styles.table}
           role="region"
@@ -1259,12 +1326,14 @@ function CompareView({
             </tbody>
           </table>
         </div>
-        <p>
-          Interim property values are equity + accumulated cash; final wealth deducts selling costs
-          and debt payoff. Annualized wealth growth differs from timing-aware Summary IRR. Negative
-          final wealth has no annualized growth rate.
-        </p>
-      </section>
+        <MoreDetail summary="How property wealth and growth are measured">
+          <p className={s.foot}>
+            Interim property values are equity + accumulated cash; final wealth deducts selling
+            costs and debt payoff. Annualized wealth growth differs from timing-aware Summary IRR.
+            Negative final wealth has no annualized growth rate.
+          </p>
+        </MoreDetail>
+      </ChartCard>
     </>
   );
 }

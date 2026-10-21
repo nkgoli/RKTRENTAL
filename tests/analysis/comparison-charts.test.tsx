@@ -10,7 +10,14 @@ import {
   runInput,
   targetFixes,
 } from '@/lib/analysis/deal-insights';
-import { marketComparison, MARKET_TYPES, radarScores } from '@/lib/analysis/benchmarks';
+import {
+  customDraft,
+  marketComparison,
+  MARKET_TYPES,
+  radarScores,
+} from '@/lib/analysis/benchmarks';
+import { RoiBenchmarks } from '@/components/analysis/RoiBenchmarks';
+import { RentDistribution } from '@/components/rent-comps/RentDistribution';
 import { scenarioColors, scenarioDifferences } from '@/lib/analysis/scenarios';
 import { getAllBenchmarks } from '@/lib/roi';
 import { DealSnapshot, FixMyDeal } from '@/components/analysis/RoiDealPanels';
@@ -178,5 +185,103 @@ describe('Scenario and comparison data (C18–C23)', () => {
     expect(table().textContent).toContain('Optimistic');
     fireEvent.click(chips.getByRole('button', { name: /^Optimistic/ }));
     expect(table().textContent).not.toContain('Optimistic');
+  });
+});
+
+describe('Benchmarks and Compare presentation (C19–C24)', () => {
+  const view = (props: Partial<Parameters<typeof RoiBenchmarks>[0]> = {}) =>
+    render(
+      <RoiBenchmarks
+        selected={[]}
+        custom={customDraft([])}
+        onCustomChange={() => {}}
+        errors={[]}
+        onChange={() => {}}
+        snapshot={{ ...sample, benchmarks: [] }}
+        stale={false}
+        saving={false}
+        compare
+        propertyName="Maple Court"
+        {...props}
+      />,
+    );
+  it('labels the data basis and keeps the method one click away', () => {
+    view({ compare: false });
+    const tags = screen.getAllByRole('list', { name: 'Data basis' });
+    expect(tags[0].textContent).toContain('Projected property');
+    expect(tags[0].textContent).toContain('Hypothetical markets');
+    expect(screen.getByText(/not live or verified data/)).toBeTruthy();
+    const method = screen.getByText(/Where the market figures come from/).closest('details')!;
+    expect(method.open).toBe(false);
+    expect(within(method).getByRole('region', { name: 'Benchmark provenance' })).toBeTruthy();
+    // Every market card states its volatility; none reads "null%".
+    expect(document.body.textContent).not.toMatch(/null%|undefined%/);
+  });
+  it('explains an empty selection and a missing projection in a card', () => {
+    view();
+    expect(screen.getByText('No reference selected')).toBeTruthy();
+    expect(screen.getByText(/Choose at least one reference asset/)).toBeTruthy();
+    cleanup();
+    view({ snapshot: null, stale: true, selected: [markets[0]] });
+    expect(screen.getByText('No projection to compare')).toBeTruthy();
+    expect(screen.getByText(/Complete the missing assumptions/)).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Side-by-side comparison' })).toBeNull();
+  });
+  it('selects, limits and removes references through the chips', () => {
+    const changes: string[][] = [];
+    view({
+      selected: [markets[0], markets[1]],
+      snapshot: { ...sample, benchmarks: [markets[0], markets[1]] },
+      onChange: (next) => changes.push(next.map((b) => b.type)),
+    });
+    expect(screen.getByText('2 of 2 selected')).toBeTruthy();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'US Bonds' }));
+    expect(screen.getByText(/Selection limit/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Nasdaq 100' }));
+    expect(changes).toEqual([['sp500']]);
+  });
+  it('shows percentage differences in percentage points in the vs Property view', () => {
+    view({
+      selected: [markets[0]],
+      snapshot: { ...sample, benchmarks: [markets[0]] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'vs Property' }));
+    const table = screen.getByRole('region', { name: 'Side-by-side comparison' });
+    expect(table.textContent).toMatch(/\d pp/);
+    expect(table.textContent).not.toMatch(/[+−]\d+\.\d%/);
+    expect(screen.getByRole('region', { name: 'Same-capital asset comparison' })).toBeTruthy();
+    const radar = screen.getByRole('group', { name: /Normalized comparison scores/ });
+    const ticks = [...radar.querySelectorAll('svg > text')].map((t) => t.textContent);
+    expect(ticks).toEqual(expect.arrayContaining(['20', '40', '60', '80', '100']));
+    expect(ticks).not.toContain('25');
+  });
+});
+
+describe('Rental Distribution (C25) presentation', () => {
+  it('states the basis, the gap to the average and the suggested range', () => {
+    render(
+      <RentDistribution
+        rents={[1700, 1800, 1900, 2000]}
+        subjectRent={1600}
+        subjectLabel="unit (listed rent)"
+        rangeLow={1750}
+        rangeHigh={1950}
+      />,
+    );
+    const card = screen.getByRole('region', { name: 'Rental Distribution' });
+    expect(within(card).getByRole('list', { name: 'Data basis' }).textContent).toContain(
+      'USD per month',
+    );
+    expect(within(card).getByText('Yours vs average').nextSibling!.textContent).toBe('−$250');
+    expect(card.textContent).toContain('Suggested range $1,750–$1,950');
+    expect(card.textContent).toContain('standard deviation ($112)');
+  });
+  it('shows a truthful empty state and flags an assumed spread', () => {
+    render(<RentDistribution rents={[]} subjectRent={1600} subjectLabel="unit" />);
+    expect(screen.getByRole('status').textContent).toMatch(/No comparable rents are included/);
+    cleanup();
+    render(<RentDistribution rents={[1800]} subjectRent={null} subjectLabel="unit" />);
+    expect(screen.getByText(/assumed ±10% spread/)).toBeTruthy();
+    expect(screen.queryByText('Yours vs average')).toBeNull();
   });
 });

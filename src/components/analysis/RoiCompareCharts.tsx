@@ -172,6 +172,23 @@ export function ScatterChart({
                 style={{ cursor: 'pointer' }}
               />
             ))}
+            {/* Direct labels on wide charts, so the points read without the key. */}
+            {!narrow &&
+              points.map((p) => {
+                const right = x(p.x) < m.left + iw * 0.75;
+                return (
+                  <text
+                    key={`l${p.label}`}
+                    className={c.xtick}
+                    x={x(p.x) + (right ? 1 : -1) * ((p.r ?? 9) + 6)}
+                    y={y(p.y) + 4}
+                    textAnchor={right ? 'start' : 'end'}
+                    style={{ fontWeight: 600, fill: chartColors.ink }}
+                  >
+                    {p.label}
+                  </text>
+                );
+              })}
           </g>
         </svg>
         {point && (
@@ -307,13 +324,16 @@ export function RadarChart({
               </g>
             );
           })}
-          {[0, 25, 50, 75, 100].map((t) => {
-            const a = -Math.PI / 2 + Math.PI / 6;
+          {/* Ring values, read along the bisector of the first two axes so they clear the
+              axis labels; they match the 20-point rings drawn above. */}
+          {[20, 40, 60, 80, 100].map((t) => {
+            const a = angle(0) + Math.PI / axes.length;
             return (
               <text
                 key={t}
-                x={cx + (Math.cos(a) * (R * t)) / 100 + 2}
-                y={cy + (Math.sin(a) * (R * t)) / 100}
+                className={c.xtick}
+                x={cx + (Math.cos(a) * (R * t)) / 100 + 3}
+                y={cy + (Math.sin(a) * (R * t)) / 100 - 2}
                 style={{ fontSize: 10 }}
               >
                 {t}

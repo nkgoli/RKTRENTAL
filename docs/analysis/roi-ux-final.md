@@ -104,15 +104,15 @@ removes it and saves again.
 
 Results (all on the isolated 3201/5551 runtime):
 
-| Run                                                         | Before (`8a4b926`)                                                                   | After                         |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------ | ----------------------------- |
-| `ux-final-runtime.mjs`                                      | 18 failures: chooser during load, no failure card, repeated status, no tab cue, no tint | 52 checks, 0 failures       |
-| `ux-overview-runtime.mjs`                                   | 42 checks, 0 failures                                                                | 42, 0                         |
-| `ux-core-runtime.mjs`                                       | 198, 0                                                                               | 198, 0                        |
-| `ux-decisions-runtime.mjs`                                  | 182, 0                                                                               | 182, 0                        |
-| `ux-decisions-runtime.mjs` + `UX_DECISIONS_WRITE` / `_MISSING` | —                                                                                 | 208, 0                        |
-| `ux-comparison-runtime.mjs` (the comparisons checklist)     | 48, 0                                                                                | 48, 0                         |
-| `compact-roundtrip-runtime.mjs flow` / `capture`            | —                                                                                    | 14, 0 / 6, 0                  |
+| Run                                                            | Before (`8a4b926`)                                                                      | After                 |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------- | --------------------- |
+| `ux-final-runtime.mjs`                                         | 18 failures: chooser during load, no failure card, repeated status, no tab cue, no tint | 52 checks, 0 failures |
+| `ux-overview-runtime.mjs`                                      | 42 checks, 0 failures                                                                   | 42, 0                 |
+| `ux-core-runtime.mjs`                                          | 198, 0                                                                                  | 198, 0                |
+| `ux-decisions-runtime.mjs`                                     | 182, 0                                                                                  | 182, 0                |
+| `ux-decisions-runtime.mjs` + `UX_DECISIONS_WRITE` / `_MISSING` | —                                                                                       | 208, 0                |
+| `ux-comparison-runtime.mjs` (the comparisons checklist)        | 48, 0                                                                                   | 48, 0                 |
+| `compact-roundtrip-runtime.mjs flow` / `capture`               | —                                                                                       | 14, 0 / 6, 0          |
 
 - The `after` final run includes `UX_FINAL_WRITE` on Harbor View: Compare selection saved
   (revision 1), restored (revision 2).

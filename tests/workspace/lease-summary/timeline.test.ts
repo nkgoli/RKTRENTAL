@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildTimeline,
   daysBetween,
+  isTerminalStatus,
   leaseStatusLabel,
   leaseTiming,
   unitLeaseStatus,
@@ -31,6 +32,17 @@ describe('lease summary wording', () => {
     expect(leaseStatusLabel('vacant')).toBe('Vacant');
   });
 
+  it('keeps the original terminal status in the label', () => {
+    expect(isTerminalStatus('ENDED')).toBe(true);
+    expect(isTerminalStatus('TERMINATED')).toBe(true);
+    expect(isTerminalStatus('ACTIVE')).toBe(false);
+    expect(isTerminalStatus('DRAFT')).toBe(false);
+    expect(isTerminalStatus(undefined)).toBe(false);
+    expect(leaseStatusLabel('past', 'ENDED')).toBe('Ended');
+    expect(leaseStatusLabel('past', 'TERMINATED')).toBe('Terminated');
+    expect(leaseStatusLabel('current', 'ACTIVE')).toBe('Current');
+  });
+
   it('describes a current lease, including the ends-today boundary', () => {
     expect(leaseTiming('current', day('2026-01-01'), day('2026-10-21'), today)).toBe('Ends today');
     expect(leaseTiming('current', day('2026-01-01'), day('2026-10-22'), today)).toBe('Ends tomorrow');
@@ -48,6 +60,17 @@ describe('lease summary wording', () => {
     expect(leaseTiming('past', day('2025-01-01'), day('2026-10-21'), today)).toBe('Ended today');
     expect(leaseTiming('past', day('2025-01-01'), day('2026-10-20'), today)).toBe('Ended yesterday');
     expect(leaseTiming('past', day('2025-01-01'), day('2026-09-30'), today)).toBe('Ended 21 days ago');
+    expect(leaseTiming('past', day('2025-01-01'), day('2026-06-30'), today)).toBe('Ended 4 months ago');
+  });
+
+  it('never measures elapsed time from a terminal lease scheduled end', () => {
+    // A terminated lease scheduled through 2026-12-31 must not read "Ended 71 days ago".
+    expect(leaseTiming('past', day('2026-01-01'), day('2026-12-31'), today, 'ENDED')).toBe('Ended early');
+    expect(leaseTiming('past', day('2026-01-01'), day('2026-12-31'), today, 'TERMINATED')).toBe('Terminated early');
+    // A terminal lease whose scheduled end has passed is still neutral: the actual end is unknown.
+    expect(leaseTiming('past', day('2025-01-01'), day('2026-06-30'), today, 'ENDED')).toBe('Ended');
+    expect(leaseTiming('past', day('2025-01-01'), day('2026-06-30'), today, 'TERMINATED')).toBe('Terminated');
+    // A non-terminal past lease keeps its real term-end wording.
     expect(leaseTiming('past', day('2025-01-01'), day('2026-06-30'), today)).toBe('Ended 4 months ago');
   });
 
@@ -74,6 +97,24 @@ describe('lease summary data', () => {
     // The axis is clamped for layout, but the summary reads the real dates above.
     expect(segment.left).toBeGreaterThanOrEqual(0);
     expect(segment.left + segment.width).toBeLessThanOrEqual(100);
+  });
+
+  it('retains the original terminal status on each segment', () => {
+    const timeline = buildTimeline([{ id: 'u1', label: 'Unit 1' }], [
+      lease({ id: 'ended', status: 'ENDED', startDate: day('2026-01-01'), endDate: day('2026-12-31') }),
+      lease({ id: 'terminated', status: 'TERMINATED', startDate: day('2025-01-01'), endDate: day('2025-12-31') }),
+    ], today);
+
+    const past = timeline.rows[0].segments.filter((segment) => segment.kind === 'past');
+    expect(past.map((segment) => segment.status)).toEqual(['TERMINATED', 'ENDED']);
+  });
+
+  it('does not treat a terminal lease with a future scheduled end as current', () => {
+    const timeline = buildTimeline([{ id: 'u1', label: 'Unit 1' }], [
+      lease({ id: 'terminated', status: 'TERMINATED', startDate: day('2026-01-01'), endDate: day('2026-12-31') }),
+    ], today);
+
+    expect(unitLeaseStatus(timeline.rows[0].segments)).toBe('vacant');
   });
 
   it('classifies a unit by its present lease, then upcoming, then draft, then vacancy', () => {

@@ -113,8 +113,10 @@ node tests/analysis/app-style-runtime.mjs http://127.0.0.1:3191 <outDir>
 ```
 
 `roi-app-style/after/` holds every chart family at 1440 and 390 px, the ROI page
-and both app reference screens, plus `app-style-report.json`. `roi-app-style/before/`
-holds a representative subset of the RealROI-styled build: the page, Deal Snapshot,
+and both app reference screens, plus `app-style-report.json`. The "before" set was
+moved out of the tracked tree to the ignored `.data/roi-evidence-archive/roi-app-style-before/`
+(17 files, about 0.5 MB) to keep the repository within its size limit. It holds a
+representative subset of the RealROI-styled build: the page, Deal Snapshot,
 C1, C6, C8, C10, C11, C14, C15, C18, C19, C24 and C25. The "before" ROI page was a
 read-only view of the live 3100 app, which then still served `1a6c913`.
 

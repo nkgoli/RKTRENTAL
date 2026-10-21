@@ -99,7 +99,9 @@ values; touch and keyboard readouts; reduced motion.
 
 ## 3. Evidence and verification
 
-Untracked evidence lives in `evidence/roi-ux-core/` (146 files, about 14.5 MB). There are
+Evidence is kept out of the working tree, in the ignored `.data/roi-evidence-archive/`.
+The full set is in `roi-ux-core-full/` (146 files, about 14.5 MB), and the reports plus the Elm,
+Cash Purchase and missing-data captures are also in `roi-ux-core/`. There are
 `before/` and `after/` sets. Each set has every group for 7 properties at 1440 and 390 px
 (`<group>-<property>-<width>.jpg`), `*-expanded` captures with every disclosure open, the
 equity tooltip and controls captures, and `ux-core-report.json`. `after/` adds the

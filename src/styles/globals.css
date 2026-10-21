@@ -1825,19 +1825,25 @@ h4 {
   text-overflow: ellipsis;
 }
 .sidebar-signout {
-  display: inline-flex;
-  align-items: center;
-  min-height: 30px;
-  padding: 0 8px;
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
   border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
   color: var(--design-muted);
-  white-space: nowrap;
+}
+.sidebar-signout svg {
+  width: 18px;
+  height: 18px;
 }
 .sidebar-signout:hover {
   background: var(--rr-hover);
   color: var(--design-text);
+}
+.sidebar-foot .avatar {
+  background: var(--rr-primary-tint);
+  color: var(--design-primary);
+  font-size: 11px;
 }
 .app.drawer-open .sidebar {
   animation: rr-slide-in 160ms ease-out;

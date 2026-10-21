@@ -42,7 +42,9 @@ export function Stat({
       {delta !== undefined && (
         <span className={cx('delta', tone !== 'neutral' && tone)}>{delta}</span>
       )}
-      {progress !== undefined && <Progress value={progress} label={`${label} progress`} style={{ marginTop: 10 }} />}
+      {progress !== undefined && (
+        <Progress value={progress} label={`${label} progress`} style={{ marginTop: 10 }} />
+      )}
     </div>
   );
 }

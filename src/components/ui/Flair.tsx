@@ -57,11 +57,7 @@ export function OccupancyRing({
   const c = 2 * Math.PI * r;
   return (
     <div className={cx('ring', warm && 'warm')}>
-      <svg
-        viewBox="0 0 52 52"
-        role="img"
-        aria-label={label ?? `${Math.round(pct)}% occupied`}
-      >
+      <svg viewBox="0 0 52 52" role="img" aria-label={label ?? `${Math.round(pct)}% occupied`}>
         <circle className="ring-track" cx="26" cy="26" r={r} fill="none" strokeWidth="6" />
         <circle
           className="ring-fill"
@@ -105,26 +101,47 @@ const art: Record<CoverKind, ReactNode> = {
     <>
       <rect x="60" y="40" width="90" height="120" fill="#fff" opacity=".85" />
       <rect x="150" y="70" width="70" height="90" fill="#fff" opacity=".7" />
-      <path d="M72 56h12M96 56h12M120 56h12M72 80h12M96 80h12M120 80h12M72 104h12M96 104h12M120 104h12" stroke="#1e3a8a" strokeWidth="6" opacity=".35" />
+      <path
+        d="M72 56h12M96 56h12M120 56h12M72 80h12M96 80h12M120 80h12M72 104h12M96 104h12M120 104h12"
+        stroke="#1e3a8a"
+        strokeWidth="6"
+        opacity=".35"
+      />
     </>
   ),
   lofts: (
     <>
       <rect x="40" y="60" width="130" height="100" fill="#3a2f6b" opacity=".6" />
       <rect x="170" y="85" width="80" height="75" fill="#3a2f6b" opacity=".45" />
-      <path d="M52 78h24M88 78h24M124 78h24M52 108h24M88 108h24M124 108h24" stroke="#f1dcc2" strokeWidth="8" opacity=".7" />
+      <path
+        d="M52 78h24M88 78h24M124 78h24M52 108h24M88 108h24M124 108h24"
+        stroke="#f1dcc2"
+        strokeWidth="8"
+        opacity=".7"
+      />
     </>
   ),
   townhomes: (
     <>
-      <path d="M30 160V90l25-20 25 20v70zM80 160V90l25-20 25 20v70zM130 160V90l25-20 25 20v70z" fill="#fff" opacity=".75" />
+      <path
+        d="M30 160V90l25-20 25 20v70zM80 160V90l25-20 25 20v70zM130 160V90l25-20 25 20v70z"
+        fill="#fff"
+        opacity=".75"
+      />
       <path d="M48 120h14M98 120h14M148 120h14" stroke="#1e3a8a" strokeWidth="8" opacity=".3" />
     </>
   ),
   house: (
     <>
       <path d="M70 160V100l55-42 55 42v60z" fill="#fff" opacity=".85" />
-      <path d="M60 104l65-50 65 50" fill="none" stroke="#e0a283" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M60 104l65-50 65 50"
+        fill="none"
+        stroke="#e0a283"
+        strokeWidth="8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
       <rect x="112" y="124" width="26" height="36" fill="#1e3a8a" opacity=".35" />
     </>
   ),
@@ -145,7 +162,12 @@ export function Cover({
       className={cx('cover', `cover--${kind}`, src && 'has-img')}
       style={src ? { backgroundImage: `url("${src.replace(/"/g, '%22')}")` } : undefined}
     >
-      <svg className="art" viewBox="0 0 250 160" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <svg
+        className="art"
+        viewBox="0 0 250 160"
+        preserveAspectRatio="xMidYMax slice"
+        aria-hidden="true"
+      >
         {art[kind]}
       </svg>
       {children}

@@ -42,7 +42,9 @@ export function Pagination({
             ‹ Prev
           </Link>
         ) : (
-          <span className="chip" aria-disabled="true">‹ Prev</span>
+          <span className="chip" aria-disabled="true">
+            ‹ Prev
+          </span>
         )}
         <span className="chip active" aria-current="page">
           {page} / {pages}
@@ -52,7 +54,9 @@ export function Pagination({
             Next ›
           </Link>
         ) : (
-          <span className="chip" aria-disabled="true">Next ›</span>
+          <span className="chip" aria-disabled="true">
+            Next ›
+          </span>
         )}
       </span>
     </nav>

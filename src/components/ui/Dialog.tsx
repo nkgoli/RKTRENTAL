@@ -41,7 +41,7 @@ export function Dialog({
     if (open && !el.open) {
       el.showModal();
       const target =
-        el.querySelector<HTMLElement>('[autofocus]') ??
+        el.querySelector<HTMLElement>('[data-autofocus], [autofocus]') ??
         el.querySelector<HTMLElement>('input, select, textarea') ??
         el.querySelector<HTMLElement>('.dialog-close');
       target?.focus();
@@ -69,7 +69,12 @@ export function Dialog({
           {eyebrow && <p className="eyebrow">{eyebrow}</p>}
           <h2 id={titleId}>{title}</h2>
         </div>
-        <button type="button" className="icon-btn dialog-close" aria-label="Close" onClick={onClose}>
+        <button
+          type="button"
+          className="icon-btn dialog-close"
+          aria-label="Close"
+          onClick={onClose}
+        >
           <Icon name="close" />
         </button>
       </div>

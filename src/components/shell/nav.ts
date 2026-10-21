@@ -66,7 +66,9 @@ export const managerNav: ManagerNavGroup[] = [
         label: 'Properties',
         href: '/properties',
         icon: 'properties',
-        actions: [{ label: 'Add property', href: '/properties?add=1', primary: true, icon: 'plus' }],
+        actions: [
+          { label: 'Add property', href: '/properties?add=1', primary: true, icon: 'plus' },
+        ],
       },
       {
         label: 'Tenants',

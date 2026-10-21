@@ -157,8 +157,8 @@ export function ManagerShell({
               <strong>{user.name}</strong>
               <small>{user.role}</small>
             </div>
-            <a className="sidebar-signout" href="/sign-out" title="Sign out">
-              Sign out
+            <a className="sidebar-signout" href="/sign-out" title="Sign out" aria-label="Sign out">
+              <Icon name="sign-out" />
             </a>
           </div>
         </aside>{' '}

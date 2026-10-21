@@ -67,7 +67,13 @@ export function ConfirmDialog({
       className="dialog-confirm"
       footer={
         <>
-          <Button type="button" variant="secondary" onClick={onClose} autoFocus disabled={pending}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            data-autofocus=""
+            disabled={pending}
+          >
             Cancel
           </Button>
           {confirm}

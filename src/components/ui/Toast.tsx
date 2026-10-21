@@ -59,7 +59,11 @@ export function ToastProvider({ children, offset }: { children: ReactNode; offse
       const id = nextId.current++;
       setItems((list) => [...list, { ...toast, id }].slice(-MAX_VISIBLE));
       const duration = toast.duration ?? (toast.tone === 'error' ? 0 : DEFAULT_MS);
-      if (duration > 0) timers.current.set(id, setTimeout(() => dismiss(id), duration));
+      if (duration > 0)
+        timers.current.set(
+          id,
+          setTimeout(() => dismiss(id), duration),
+        );
     },
     [dismiss],
   );

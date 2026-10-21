@@ -312,13 +312,7 @@ const icons = {
     </svg>
   ),
   more: (
-    <svg
-      focusable="false"
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      stroke="none"
-    >
+    <svg focusable="false" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" stroke="none">
       <circle cx="5" cy="12" r="1.8"></circle>
       <circle cx="12" cy="12" r="1.8"></circle>
       <circle cx="19" cy="12" r="1.8"></circle>
@@ -394,6 +388,20 @@ const icons = {
     >
       <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path>
       <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+  ),
+  'sign-out': (
+    <svg
+      focusable="false"
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M10 4H5v16h5M14 8l5 4-5 4M19 12H9"></path>
     </svg>
   ),
   trash: (

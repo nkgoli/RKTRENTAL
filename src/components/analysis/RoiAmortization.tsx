@@ -15,6 +15,7 @@ import {
   ExactTable,
   Icon,
   InfoTip,
+  MoreDetail,
   Tiles,
   chartColors,
   type IconName,
@@ -42,7 +43,8 @@ function PrincipalVsInterest({ result }: { result: ProjectionResult }) {
   return (
     <ChartCard
       title="Principal vs Interest Over Time"
-      subtitle="Loan balance, principal paid, and interest paid over the loan term · scheduled loan · full term, including years beyond the holding period"
+      subtitle="What is still owed, and how much principal and interest you have paid so far."
+      basis={['Scheduled loan', 'USD', 'Running totals', `Full ${rows.length}-year term`]}
     >
       <ComboChart
         label="Loan balance and cumulative principal and interest"
@@ -56,21 +58,21 @@ function PrincipalVsInterest({ result }: { result: ProjectionResult }) {
             label: 'Loan Balance',
             values: rows.map((r) => r.balance),
             color: loanColors.balance,
-            width: 1.5,
+            width: 2.5,
             dot: 0,
           },
           {
             label: 'Principal Paid',
             values: rows.map((r) => r.cumulativePrincipal),
             color: loanColors.principal,
-            width: 1.5,
+            width: 2.5,
             dot: 0,
           },
           {
             label: 'Interest Paid',
             values: rows.map((r) => r.cumulativeInterest),
             color: loanColors.interest,
-            width: 1.5,
+            width: 2.5,
             dot: 0,
           },
         ]}
@@ -79,19 +81,19 @@ function PrincipalVsInterest({ result }: { result: ProjectionResult }) {
             upper: rows.map((r) => r.balance),
             lower: zero,
             color: loanColors.balance,
-            opacity: 0.6,
+            opacity: 0.15,
           },
           {
             upper: rows.map((r) => r.cumulativePrincipal),
             lower: zero,
             color: loanColors.principal,
-            opacity: 0.6,
+            opacity: 0.15,
           },
           {
             upper: rows.map((r) => r.cumulativeInterest),
             lower: zero,
             color: loanColors.interest,
-            opacity: 0.6,
+            opacity: 0.15,
           },
         ]}
         legend={[
@@ -123,9 +125,8 @@ function PrincipalVsInterest({ result }: { result: ProjectionResult }) {
         })}
       />
       <p>
-        Scheduled payment {dollars(result.summaryMetrics.monthlyDebtService)} / month. Final payment
-        may differ. Principal and interest paid are cumulative. The full loan schedule is shown,
-        including payments beyond the analysis holding period.
+        The chart covers the whole loan, including years after the planned sale. Until the principal
+        line rises above the interest line, you have paid more in interest than you have repaid.
       </p>
       {balloon && (
         <p className={styles.notice}>
@@ -174,7 +175,7 @@ function InsightCard({
 }
 
 /** C12 / C13 / C17 · Loan Amortization Schedule (reference AmortizationTable). */
-function Schedule({ result }: { result: ProjectionResult }) {
+function Schedule({ result, children }: { result: ProjectionResult; children?: ReactNode }) {
   const loan = result.summaryMetrics.loanAmount;
   const years = loanSummaries(loanYears(result), loan);
   const [mode, setMode] = useState<'summary' | 'detailed'>('summary');
@@ -200,7 +201,8 @@ function Schedule({ result }: { result: ProjectionResult }) {
   return (
     <ChartCard
       title="Loan Amortization Schedule"
-      subtitle={`${years.length}-year breakdown with monthly details · scheduled · USD`}
+      subtitle="How each year's payments split between principal and interest; choose Detailed to see every month."
+      basis={['Scheduled loan', 'USD, whole dollars', `${years.length}-year term`]}
       controls={
         <div className={d.dotKey} aria-hidden="true">
           <span>
@@ -504,6 +506,7 @@ function Schedule({ result }: { result: ProjectionResult }) {
           )}
         </InsightCard>
       </div>
+      {children}
     </ChartCard>
   );
 }
@@ -516,7 +519,8 @@ export function Amortization({ result }: { result: ProjectionResult }) {
       <div className={chartStyles.stack}>
         <ChartCard
           title="Principal vs Interest Over Time"
-          subtitle="Scheduled loan · full term, including years beyond the holding period"
+          subtitle="There is no loan to repay, so there is no schedule to chart."
+          basis={['All-cash purchase', 'USD']}
         >
           <p>
             All-cash purchase · debt service $0.00. Debt coverage is not applicable; no loan
@@ -528,20 +532,19 @@ export function Amortization({ result }: { result: ProjectionResult }) {
   return (
     <div className={chartStyles.stack}>
       <PrincipalVsInterest result={result} />
-      <Schedule result={result} />
-      <section className={styles.card}>
-        <h2>Amortization schedule</h2>
-        <ExactTable
-          caption="Annual loan payments · USD · full loan term"
-          headers={['Year', 'Payment', 'Principal', 'Interest', 'Ending balance']}
-          rows={rows.map((r) => [
-            r.year,
-            ...[r.payment, r.principal, r.interest, r.balance].map(dollars),
-          ])}
-        />
-        <details className={chartStyles.disclosure}>
-          <summary>Monthly schedule</summary>
-          <label className={styles.field}>
+      <Schedule result={result}>
+        <MoreDetail summary={`Exact annual payments, all ${rows.length} years`}>
+          <ExactTable
+            caption="Annual loan payments · USD · full loan term"
+            headers={['Year', 'Payment', 'Principal', 'Interest', 'Ending balance']}
+            rows={rows.map((r) => [
+              r.year,
+              ...[r.payment, r.principal, r.interest, r.balance].map(dollars),
+            ])}
+          />
+        </MoreDetail>
+        <MoreDetail summary="Exact monthly payments, by year">
+          <label className={`${styles.field} ${d.yearPick}`}>
             Loan schedule year
             <select value={year} onChange={(e) => setYear(Number(e.target.value))}>
               {rows.map((r) => (
@@ -562,8 +565,8 @@ export function Amortization({ result }: { result: ProjectionResult }) {
                 ...[r.payment, r.principal, r.interest, r.balance].map(dollars),
               ])}
           />
-        </details>
-      </section>
+        </MoreDetail>
+      </Schedule>
     </div>
   );
 }

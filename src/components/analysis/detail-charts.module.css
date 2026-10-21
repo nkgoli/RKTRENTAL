@@ -1285,3 +1285,20 @@
     transition: fill 200ms ease;
   }
 }
+
+/* ---- Shared by the core groups: header control label and disclosure text ---- */
+.controlLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--design-muted);
+  white-space: nowrap;
+}
+.detailText {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--design-muted);
+}
+.yearPick {
+  max-width: 220px;
+  margin-bottom: 8px;
+}

@@ -253,3 +253,12 @@
 .grew[data-negative] {
   color: var(--rr-bad);
 }
+.big[data-negative] {
+  color: var(--design-danger);
+}
+/* Page-level note under the Charts sub-tabs. */
+.pageNote {
+  margin: 16px 0 0;
+  font-size: 12px;
+  color: var(--design-muted);
+}

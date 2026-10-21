@@ -334,9 +334,79 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
 }
+/* ---- Scenario-only: example chips, hints, table key and phone-width metrics table ---- */
+.addRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.chips[data-kind='add'].chips button {
+  border-style: dashed;
+  color: var(--design-muted);
+}
+.hint {
+  margin: 0 !important;
+  font-size: 13px !important;
+  color: var(--design-muted) !important;
+}
+.metricsTable {
+  min-width: 0;
+}
+.key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 12px;
+  color: var(--design-muted);
+}
+.key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.key i {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--rr-border);
+}
+.key i[data-kind='best'] {
+  background: var(--rr-ok-bg);
+}
+.key i[data-kind='worst'] {
+  background: var(--rr-bad-bg);
+}
+.key span {
+  color: var(--rr-ok);
+  letter-spacing: -1px;
+}
+.breakevens > .label {
+  padding: 0;
+  filter: none;
+}
 @media (max-width: 640px) {
   .card {
     padding: 16px;
+  }
+  /* Two or three cases fit at 390 px when labels wrap instead of forcing a scroll. */
+  .metricsTable tbody th[scope='row'] {
+    white-space: normal;
+    min-width: 96px;
+  }
+  .metricsTable td,
+  .metricsTable thead th,
+  .metricsTable tbody th[scope='row'] {
+    padding: 8px 8px;
+  }
+  .metricsTable thead th {
+    white-space: normal;
+  }
+  .metricsTable .impact {
+    display: none;
   }
   .tableWrap {
     margin: -12px;

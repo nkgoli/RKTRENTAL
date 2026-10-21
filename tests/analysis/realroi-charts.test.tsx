@@ -40,6 +40,7 @@ import {
   sensitivityControls,
 } from '@/lib/analysis/projections';
 import { RoiProjections } from '@/components/analysis/RoiProjections';
+import { RoiScenarios } from '@/components/analysis/RoiScenarios';
 import {
   NetCashFlowCard,
   OutcomeCard,
@@ -672,6 +673,67 @@ describe('Core chart presentation: basis, legends and disclosures', () => {
     expect(container.textContent).toContain('Year shown');
   });
 
+  it('labels an exit probe against the saved exit, resets it and keeps exact figures one click away', () => {
+    const p0 = realRoiSample();
+    charts(p0);
+    fireEvent.click(screen.getByRole('tab', { name: 'Exit Analysis' }));
+    const probe = within(screen.getByRole('region', { name: 'Exit probe' }));
+    expect(probe.getAllByRole('listitem').map((li) => li.textContent)).toContain(
+      'Saved assumptions',
+    );
+    expect(probe.queryByText('Showing probe:')).toBeNull();
+    const year = probe.getByLabelText('Probe exit year', { exact: true });
+    fireEvent.change(year, { target: { value: '12' } });
+    // A pending edit hides results until it is applied, and says so next to the form.
+    expect(screen.getByText(/^Not applied yet/)).toBeTruthy();
+    fireEvent.change(probe.getByLabelText('Probe sale price override ($)', { exact: true }), {
+      target: { value: '1' },
+    });
+    fireEvent.click(probe.getByRole('button', { name: 'Update exit comparison' }));
+    expect(probe.getByText('Showing probe:').parentElement!.textContent).toContain(
+      'exit year 12 · selling costs',
+    );
+    expect(probe.getAllByRole('listitem').map((li) => li.textContent)).toContain('Temporary probe');
+    // A $1 sale loses money in every year: the insight says so instead of calling a year optimal.
+    expect(screen.getByText(/No compared exit year gets back the cash you put in/)).toBeTruthy();
+    expect(screen.queryByText(/optimal/)).toBeNull();
+    const table = screen.getByRole('table', { name: /Exit horizon comparison/ });
+    expect(table.closest('details')!.open).toBe(false);
+    expect(table.closest('details')!.querySelector('summary')!.textContent).toBe(
+      'Exact exit comparison, 3 exit years',
+    );
+    expect(screen.getByText('Exact sale statement, year 12')).toBeTruthy();
+    fireEvent.click(probe.getByRole('button', { name: 'Reset to saved' }));
+    expect((year as HTMLInputElement).value).toBe(exitControls(p0).years);
+    expect(probe.queryByText('Showing probe:')).toBeNull();
+    expect(probe.queryByRole('button', { name: 'Reset to saved' })).toBeNull();
+  });
+
+  it('names sensitivity ranges, flags a base outside them and keeps the one-decimal grid disclosed', () => {
+    charts();
+    fireEvent.click(screen.getByRole('tab', { name: 'Sensitivity' }));
+    const table = screen.getByRole('table', { name: /Year 1 cash-on-cash · percentages rounded/ });
+    expect(table.closest('details')!.open).toBe(false);
+    expect(table.closest('details')!.querySelector('summary')!.textContent).toBe(
+      'Exact grid to one decimal, 5 rents × 7 vacancy rates',
+    );
+    expect(
+      screen.getByText(/^Rent \$1,960–\$3,640\/mo \(5 values\) · vacancy 0%–15%/),
+    ).toBeTruthy();
+    expect(screen.getByText('Default ranges')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Customize Ranges' }));
+    fireEvent.change(screen.getByLabelText('Minimum rent ($ / month)', { exact: true }), {
+      target: { value: '3000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Update sensitivity' }));
+    expect(screen.getByText('Temporary custom ranges')).toBeTruthy();
+    expect(screen.getByText(/saved rent or vacancy is outside these ranges/)).toBeTruthy();
+    expect(screen.queryByText('Your saved assumptions')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Reset to defaults/ }));
+    expect(screen.getByText('Default ranges')).toBeTruthy();
+    expect(screen.getByText('Your saved assumptions')).toBeTruthy();
+  });
+
   it('shows an all-cash purchase without a mortgage line, principal key or loan schedule', () => {
     const p = cashPayload();
     const { container } = charts(p);
@@ -690,5 +752,66 @@ describe('Core chart presentation: basis, legends and disclosures', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Amortization' }));
     expect(container.textContent).toMatch(/All-cash purchase · debt service \$0\.00/);
     expect(screen.queryByRole('table', { name: /Annual loan payments/ })).toBeNull();
+  });
+});
+
+describe('Scenario decision view: results first, honest empty states', () => {
+  const scenarios = (props: Partial<Parameters<typeof RoiScenarios>[0]> = {}) => {
+    const base = realRoiSample();
+    return render(
+      <RoiScenarios
+        drafts={[]}
+        onChange={() => {}}
+        snapshot={base}
+        stale={false}
+        errors={[]}
+        base={base}
+        saving={false}
+        {...props}
+      />,
+    );
+  };
+
+  it('keeps rules and examples one click away and separates example chips from shown cases', () => {
+    scenarios();
+    expect(screen.getByText('0 of 20 scenarios')).toBeTruthy();
+    expect(screen.getByText('How scenarios inherit the base').closest('details')!.open).toBe(false);
+    expect(
+      screen.getByLabelText('Example scenario').closest('details')!.querySelector('summary')!
+        .textContent,
+    ).toBe('Start from an example');
+    const shown = screen.getByRole('list', { name: 'Scenarios shown' });
+    expect(
+      within(shown)
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['Base Case']);
+    const add = screen.getByRole('list', { name: 'Add an example:' });
+    expect(within(add).getByRole('button', { name: /Best Case.*\(add example\)/ })).toBeTruthy();
+    // One case has no best or worst, so the table key stays hidden.
+    expect(screen.queryByRole('list', { name: 'Table key' })).toBeNull();
+    expect(screen.getByText('Initial cash recovered:')).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Scenario metrics' }).closest('details')!.open).toBe(
+      false,
+    );
+  });
+
+  it('explains missing results without inventing values and counts overrides per scenario', () => {
+    const drafts = [{ id: 'a', name: 'Rent case', values: { 'income.monthlyRent': '9999' } }];
+    const { unmount } = scenarios({ snapshot: null, stale: true, drafts });
+    expect(screen.getByRole('heading', { name: 'No scenario results yet' })).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toMatch(/^No projection yet/);
+    expect(screen.queryByRole('region', { name: 'Scenario metrics' })).toBeNull();
+    expect(document.body.textContent).not.toMatch(/\$0\.00|NaN/);
+    expect(screen.getByText(/Assumptions and overrides · 1 overridden/)).toBeTruthy();
+    unmount();
+    scenarios({
+      snapshot: null,
+      stale: true,
+      drafts,
+      errors: [{ path: 'scenarios.0.overrides.income.monthlyRent', message: 'Too high.' }],
+    });
+    expect(screen.getByRole('heading', { name: 'Scenario results paused' })).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toBe('Too high.');
   });
 });

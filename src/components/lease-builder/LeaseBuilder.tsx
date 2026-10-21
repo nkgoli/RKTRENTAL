@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import {
   STEP,
   STEP_COUNT,
@@ -11,7 +11,6 @@ import {
 } from '@/lib/lease-create/types';
 import { validateStep, withResolvedEnd } from '@/lib/lease-create/validation';
 import {
-  completeSigningAction,
   saveWizardStepAction,
   sendWizardLeaseAction,
   type WizardActionState,
@@ -35,8 +34,11 @@ import {
   type TemplateDefinition,
 } from '@/lib/lease-create/templates';
 import { useBuilderShell } from './useBuilderShell';
+import { SigningPanel } from '@/components/lease-signing/SigningPanel';
+import { SendAgreementButton } from '@/components/lease-signing/SendAgreementButton';
 
 export type LeaseBuilderProps = {
+  lessorSigner?: { name: string; email: string } | null;
   /** Property and unit shown in the top bar. */
   placeLabel: string;
   tenants: TenantOption[];
@@ -88,7 +90,6 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState<WizardActionState>(idle);
   const [pending, startTransition] = useTransition();
-  const [signState, signAction, signing] = useActionState(completeSigningAction, idle);
   const top = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const errorSummary = useRef<HTMLDivElement>(null);
@@ -212,7 +213,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
   }
 
   const created = Boolean(sent.ok && sent.leaseId);
-  const esignStatus = signState.esignStatus ?? sent.esignStatus;
+  const esignStatus = sent.esignStatus;
   const unresolvedTerms = draft.template
     ? resolveTerms(
         draft.template,
@@ -276,6 +277,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
     <LessorStep key="lessor" draft={draft} update={update} errors={errors} />,
     <ReviewStep
       key="review"
+      lessorSigner={props.lessorSigner}
       draft={draft}
       errors={errors}
       unitLabel={props.placeLabel}
@@ -312,7 +314,9 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
         </div>
         <span className={styles.saveStatus} role="status">
           {created
-            ? 'Lease sent'
+            ? esignStatus === 'NOT_SENT'
+              ? 'Active lease · not sent'
+              : 'Ready for signatures'
             : pending
               ? 'Saving…'
               : dirty
@@ -435,27 +439,25 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
 
             {created ? (
               <div>
-                <div className={`${styles.alert} ${styles.success}`} role="status">
-                  {signState.message ?? sent.message}
+                <div
+                  className={`${styles.alert} ${esignStatus === 'NOT_SENT' ? '' : styles.success}`}
+                  role="status"
+                >
+                  {sent.message}
                 </div>
-                <p className={styles.sub}>
-                  Lease status: <strong>{esignStatus ?? 'NOT_SENT'}</strong>
-                  {esignStatus === 'SIGNED' &&
-                    ' · Signed lease agreement.pdf is stored on the lease.'}
-                </p>
                 <div className={styles.created}>
-                  <Link className={styles.link} href={`/leases/${sent.leaseId}`}>
+                  <a className={styles.link} href={`/leases/${sent.leaseId}`}>
                     View lease detail
-                  </Link>
-                  {esignStatus === 'SENT' && (
-                    <form action={signAction}>
-                      <input type="hidden" name="leaseId" value={sent.leaseId} />
-                      <button type="submit" className={styles.btn} disabled={signing}>
-                        {signing ? 'Signing…' : 'Complete mock signing'}
-                      </button>
-                    </form>
-                  )}
+                  </a>
                 </div>
+                {esignStatus === 'NOT_SENT' ? (
+                  <SendAgreementButton leaseId={sent.leaseId!} />
+                ) : (
+                  <SigningPanel
+                    leaseId={sent.leaseId!}
+                    documentsHref={`/leases/${sent.leaseId}?tab=documents`}
+                  />
+                )}
               </div>
             ) : (
               <>

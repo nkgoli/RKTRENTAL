@@ -4,6 +4,13 @@ All notable changes to RocketRental. This project uses semantic versioning.
 
 ## [Unreleased] — 2026-10-21
 
+### Individual lease signing
+
+- Connected Create lease and Renew lease to authenticated owner / lessor and individual tenant signatures, with full agreement review, separate addendum links, required contact details and deliberate consent.
+- Added owner signing pages, resumable per-party status, manager send recovery, and tenant access to current, upcoming and previous agreements and documents. Removed mock completion controls and notification claims.
+- Show saved signatures separately from PDF processing, retryable archival failure and verified Documents availability. Preserved manager-only actions, billing behavior and existing light layouts.
+- Verified synthetic owner-first new lease and tenant-first renewal flows with two tenants, refresh persistence, stale-hash recovery, preview/download, retained prior files and desktop/phone screenshots. See `docs/leases/signing-ui.md`.
+
 ### UX pass
 
 - Refined manager lists, property and leasing forms, financial analysis, shared confirmations and feedback in the preceding manager UX pass.

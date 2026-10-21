@@ -85,6 +85,17 @@ function DocumentCard({
         </small>
       </div>
       <div className={styles.documentControls}>
+        {(document.mimeType === 'application/pdf' || document.mimeType.startsWith('image/')) && (
+          <a
+            className="btn btn-secondary btn-sm"
+            href={`/api/files/${document.id}/preview`}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`Preview ${document.name} (opens in a new tab)`}
+          >
+            Preview
+          </a>
+        )}
         <a className="btn btn-secondary btn-sm" href={`/api/files/${document.id}/download`}>
           Download
         </a>

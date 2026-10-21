@@ -42,19 +42,22 @@ describe('authentication access policy', () => {
   it('rejects cross-role and external post-login destinations', () => {
     expect(safeRedirectTarget('/dashboard/properties', 'MANAGER')).toBe('/dashboard/properties');
     expect(safeRedirectTarget('/dashboard', 'TENANT')).toBe('/home');
-    expect(safeRedirectTarget('/dashboard', 'OWNER')).toBe('/sign-out');
+    expect(safeRedirectTarget('/dashboard', 'OWNER')).toBe('/sign');
     expect(safeRedirectTarget('//attacker.example', 'TENANT')).toBe('/home');
     expect(safeRedirectTarget('/sign-in', 'MANAGER')).toBe('/dashboard');
-    expect(roleHome('OWNER')).toBe('/sign-out');
+    expect(roleHome('OWNER')).toBe('/sign');
     expect(roleHome('ADMIN')).toBe('/sign-out');
   });
 
-  it('allows owners to return only to the scoped signing endpoint', () => {
+  it('allows owners to return only to signing surfaces while preserving manager restrictions', () => {
+    expect(safeRedirectTarget('/sign', 'OWNER')).toBe('/sign');
+    expect(safeRedirectTarget('/sign/leases/lease-1', 'OWNER')).toBe('/sign/leases/lease-1');
+    expect(safeRedirectTarget('/sign/leases/lease-1/other', 'OWNER')).toBe('/sign');
     expect(safeRedirectTarget('/api/leases/lease-1/signing', 'OWNER')).toBe(
       '/api/leases/lease-1/signing',
     );
-    expect(safeRedirectTarget('/api/files', 'OWNER')).toBe('/sign-out');
-    expect(safeRedirectTarget('/api/leases/lease-1/signing/other', 'OWNER')).toBe('/sign-out');
+    expect(safeRedirectTarget('/api/files', 'OWNER')).toBe('/sign');
+    expect(safeRedirectTarget('/api/leases/lease-1/signing/other', 'OWNER')).toBe('/sign');
     expect(safeRedirectTarget('/api/leases/lease-1/signing', 'ADMIN')).toBe('/sign-out');
     expect(canAccessRole('OWNER', 'MANAGER')).toBe(false);
   });

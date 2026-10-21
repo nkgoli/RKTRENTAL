@@ -1,3 +1,5 @@
+import { SigningPanel } from '@/components/lease-signing/SigningPanel';
+import { SendAgreementButton } from '@/components/lease-signing/SendAgreementButton';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/shell/PageHeader';
@@ -113,15 +115,7 @@ export default async function LeaseDetailPage({
           { date: lease.createdAt, text: 'Lease created' },
         ]),
   ].sort((a, b) => b.date.getTime() - a.date.getTime());
-  const signerStatus = lease.tenants.map(({ tenant }) => {
-    const latest = lease.events.find(
-      (e) => e.tenantId === tenant.id && ['SENT', 'SIGNED', 'DECLINED'].includes(e.kind),
-    );
-    return { tenant, event: latest };
-  });
   const noticeGiven = lease.noticeGivenAt != null;
-  // A lease marked signed without per-signer events was signed outside the e-sign flow.
-  const signedOnPaper = lease.eSignStatus === 'SIGNED';
 
   const activeTab = LEASE_TABS.find((tab) => tab.key === query.tab)?.key ?? 'overview';
   // Derive scope from the authorized lease, never from caller-supplied IDs.
@@ -197,6 +191,14 @@ export default async function LeaseDetailPage({
           </span>
         </section>
 
+        <div className={styles.section}>
+          <a className="btn btn-primary" href={tabHref('agreement')}>
+            Review agreement & signatures
+          </a>
+          <p className="muted">
+            Owner / lessor signing link: <a href={`/sign/leases/${lease.id}`}>Open signing page</a>
+          </p>
+        </div>
         {/* Document links avoid the reproduced stalled client section transition. */}
         <LeaseSectionNavigation activeTab={activeTab} className={styles.tabs}>
           {LEASE_TABS.map((tab) => (
@@ -342,6 +344,18 @@ export default async function LeaseDetailPage({
           )}
           {activeTab === 'agreement' && (
             <>
+              {lease.eSignStatus !== 'NOT_SENT' && (
+                <details>
+                  <summary>Prepare current signing version</summary>
+                  <SendAgreementButton leaseId={lease.id} />
+                </details>
+              )}
+              {lease.eSignStatus === 'NOT_SENT' ? (
+                <SendAgreementButton leaseId={lease.id} />
+              ) : (
+                <SigningPanel leaseId={lease.id} documentsHref={tabHref('documents')} />
+              )}
+
               {(saved === 'activated' || saved === 'terminated') && (
                 <Alert tone="success">{leaseResultMessages[saved]}</Alert>
               )}
@@ -556,42 +570,9 @@ export default async function LeaseDetailPage({
                       ? 'Marked signed; signature time was not recorded.'
                       : 'No completed signature recorded yet.'}
                 </p>
-                {signerStatus.length > 0 && (
-                  <div aria-label="Signers" style={{ marginTop: 12 }}>
-                    {signerStatus.map(({ tenant, event }) => (
-                      <div className="list-item" key={tenant.id}>
-                        <Avatar initials={initials(tenant.name)} size="sm" />
-                        <span className="file-meta">
-                          <strong>{tenant.name}</strong>
-                          <small>
-                            {event
-                              ? `${EVENT_LABEL[event.kind]} · ${formatDate(event.createdAt)}`
-                              : signedOnPaper
-                                ? `Signed${lease.signedAt ? ` · ${formatDate(lease.signedAt)}` : ''}`
-                                : 'Not sent'}
-                          </small>
-                        </span>
-                        <Badge
-                          tone={
-                            event?.kind === 'SIGNED' || (!event && signedOnPaper)
-                              ? 'success'
-                              : event?.kind === 'DECLINED'
-                                ? 'danger'
-                                : 'info'
-                          }
-                        >
-                          {event?.kind === 'SIGNED' || (!event && signedOnPaper)
-                            ? 'Signed'
-                            : event?.kind === 'DECLINED'
-                              ? 'Declined'
-                              : event
-                                ? 'Awaiting'
-                                : 'Draft'}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <a className="btn btn-secondary" href={tabHref('agreement')}>
+                  See each party&apos;s current signature status
+                </a>
               </section>
               <section className={styles.section}>
                 <SectionHeader title="Activity" />

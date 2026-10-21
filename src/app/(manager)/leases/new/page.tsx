@@ -236,8 +236,15 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
     select: { id: true, applicantName: true, applicantEmail: true, status: true },
     orderBy: { appliedAt: 'desc' },
   });
+  const lessorSigner = unit.property.ownerId
+    ? await db.user.findFirst({
+        where: { id: unit.property.ownerId, organizationId },
+        select: { name: true, email: true },
+      })
+    : null;
   return (
     <LeaseBuilder
+      lessorSigner={lessorSigner}
       key={snapshot?.leaseId ?? 'new'}
       placeLabel={unitLabel(unit.property, unit)}
       tenants={options.tenants.map((t) => ({ id: t.id, name: t.name, email: t.email }))}

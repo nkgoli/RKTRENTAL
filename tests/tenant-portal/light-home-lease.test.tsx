@@ -112,7 +112,7 @@ it('renders settled balance and omits absent repair and renewal content', async 
   expect(html).not.toContain('Pay now');
 });
 it('preserves MIME-gated authenticated document links and conditional photo/occupant sections', async () => {
-  const html = renderToStaticMarkup(await Lease());
+  const html = renderToStaticMarkup(await Lease({}));
   expect(html).toContain('href="/api/files/pdf/preview"');
   expect(html).toContain('target="_blank" rel="noreferrer"');
   expect(html).not.toContain('href="/api/files/other/preview"');
@@ -138,7 +138,7 @@ it('retains move-out dates, enabled autopay, empty documents and authenticated p
     },
     photos: [{ id: 'photo', url: '/lease/photos/photo', caption: 'Live room', name: 'room' }],
   });
-  const html = renderToStaticMarkup(await Lease());
+  const html = renderToStaticMarkup(await Lease({}));
   for (const text of [
     'Other Occupant',
     'Notice given',
@@ -156,7 +156,7 @@ it('offers route-specific retry for an unassigned tenant', async () => {
   loaders.lease.mockResolvedValue(null);
   for (const [page, route] of [
     [await Home(), '/home'],
-    [await Lease(), '/lease'],
+    [await Lease({}), '/lease'],
   ] as const) {
     const html = renderToStaticMarkup(page);
     expect(html).toContain('No active lease yet');

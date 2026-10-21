@@ -469,3 +469,126 @@ export async function getMaintenanceRequest(
     },
   });
 }
+
+/** Dedicated editor data; board queries deliberately keep their smaller projections. */
+export async function getMaintenanceEditor(
+  organizationId: string,
+  id: string,
+  scope: ScopeFilter = {},
+) {
+  return db.maintenanceRequest.findFirst({
+    where: { id, organizationId, ...directScopeWhere(scope) },
+    select: {
+      ...boardSelect,
+      updatedAt: true,
+      photos: {
+        where: { documentId: { not: null } },
+        select: { documentId: true, createdAt: true, document: { select: { name: true } } },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      },
+      events: {
+        select: {
+          id: true,
+          kind: true,
+          body: true,
+          fromStatus: true,
+          toStatus: true,
+          createdAt: true,
+          actor: { select: { name: true } },
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      },
+    },
+  });
+}
+
+/** One commit for staged fields, with the same assignment/status and notification semantics. */
+export async function saveMaintenanceEditor(
+  session: AuthSession,
+  requestId: string,
+  input: Pick<CreateMaintenanceInput, 'title' | 'description' | 'priority'> & {
+    vendorId: string | null;
+    status: MaintenanceStatus;
+    updatedAt: string;
+  },
+  scope: ScopeFilter,
+) {
+  manager(session);
+  const title = required(input.title, 'Title', 160);
+  const description = input.description?.trim() || null;
+  if (description && description.length > 3000)
+    throw new MaintenanceError('Description is too long');
+  const priority = input.priority ?? MaintenancePriority.NORMAL;
+  if (!Object.values(MaintenancePriority).includes(priority))
+    throw new MaintenanceError('Invalid priority');
+  if (!Object.values(MaintenanceStatus).includes(input.status))
+    throw new MaintenanceError('Invalid status');
+  const revision = new Date(input.updatedAt);
+  if (!Number.isFinite(revision.getTime()))
+    throw new MaintenanceError('Refresh this request before saving. Your changes are still here.');
+  const statusEventId = await db.$transaction(async (tx) => {
+    const where = {
+      id: requestId,
+      organizationId: session.organizationId,
+      ...directScopeWhere(scope),
+    };
+    const request = await tx.maintenanceRequest.findFirst({ where });
+    if (!request) throw new MaintenanceError('Request not found in this scope');
+    const vendorChanged = input.vendorId !== request.vendorId;
+    if (vendorChanged && !input.vendorId)
+      throw new MaintenanceError('Choose a vendor from your portfolio');
+    const vendor =
+      vendorChanged && input.vendorId
+        ? await tx.vendor.findFirst({
+            where: { id: input.vendorId, organizationId: session.organizationId },
+          })
+        : null;
+    if (vendorChanged && !vendor) throw new MaintenanceError('Vendor not found in your portfolio');
+    const status =
+      vendorChanged && request.status === 'NEW' && input.status === 'NEW'
+        ? 'ASSIGNED'
+        : input.status;
+    const detailsChanged =
+      title !== request.title ||
+      description !== request.description ||
+      priority !== request.priority;
+    if (!detailsChanged && !vendorChanged && status === request.status) return null;
+    // Compare-and-set is inside the transaction: concurrent saves cannot create duplicate events.
+    const result = await tx.maintenanceRequest.updateMany({
+      where: { ...where, updatedAt: revision },
+      data: {
+        title,
+        description,
+        priority,
+        status,
+        ...(vendor ? { vendorId: vendor.id, vendorName: vendor.name } : {}),
+        ...(status !== request.status
+          ? { completedAt: status === 'DONE' ? new Date() : null }
+          : {}),
+      },
+    });
+    if (!result.count)
+      throw new MaintenanceError(
+        'This request changed since you opened it. Your changes are still here. Open the latest request in another tab to compare before reloading.',
+      );
+    const event = {
+      organizationId: session.organizationId,
+      maintenanceRequestId: requestId,
+      actorId: session.subjectId,
+    };
+    if (detailsChanged)
+      await tx.maintenanceEvent.create({ data: { ...event, kind: 'DETAILS_UPDATED' } });
+    if (vendor)
+      await tx.maintenanceEvent.create({
+        data: { ...event, kind: 'VENDOR_ASSIGNED', body: vendor.name },
+      });
+    if (status !== request.status) {
+      const saved = await tx.maintenanceEvent.create({
+        data: { ...event, kind: 'STATUS_CHANGED', fromStatus: request.status, toStatus: status },
+      });
+      return saved.id;
+    }
+    return null;
+  });
+  if (statusEventId) await publishStatusWithoutBlocking(session.organizationId, statusEventId);
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import {
   STEP,
   STEP_COUNT,
@@ -36,6 +36,7 @@ import {
 import { useBuilderShell } from './useBuilderShell';
 import { SigningPanel } from '@/components/lease-signing/SigningPanel';
 import { SendAgreementButton } from '@/components/lease-signing/SendAgreementButton';
+import { DeleteDraftButton } from '@/components/lease-create/DeleteDraftButton';
 
 export type LeaseBuilderProps = {
   lessorSigner?: { name: string; email: string } | null;
@@ -90,6 +91,14 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState<WizardActionState>(idle);
   const [pending, startTransition] = useTransition();
+  // A confirmed delete holds every write: a save after it would fail, and a send must not race it.
+  const [deleting, setDeleting] = useState(false);
+  const deletingRef = useRef(false);
+  const onDeletePending = useCallback((value: boolean) => {
+    deletingRef.current = value;
+    setDeleting(value);
+  }, []);
+  const busy = pending || deleting;
   const top = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const errorSummary = useRef<HTMLDivElement>(null);
@@ -119,6 +128,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
 
   /** Saves the current step as the lease draft and reports whether it went through. */
   async function save(from: number, to: number, strict: boolean): Promise<boolean> {
+    if (deletingRef.current) return false;
     try {
       const result = await saveWizardStepAction({
         leaseId: leaseId ?? undefined,
@@ -192,7 +202,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
       return;
     }
     startTransition(async () => {
-      if (!leaseId) return;
+      if (!leaseId || deletingRef.current) return;
       try {
         const result = await sendWizardLeaseAction({
           leaseId,
@@ -317,19 +327,33 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
             ? esignStatus === 'NOT_SENT'
               ? 'Active lease · not sent'
               : 'Ready for signatures'
-            : pending
-              ? 'Saving…'
-              : dirty
-                ? 'Unsaved changes'
-                : leaseId
-                  ? 'Draft saved'
-                  : 'Not saved yet'}
+            : deleting
+              ? 'Deleting draft…'
+              : pending
+                ? 'Saving…'
+                : dirty
+                  ? 'Unsaved changes'
+                  : leaseId
+                    ? 'Draft saved'
+                    : 'Not saved yet'}
         </span>
+        {leaseId && !created && (
+          <DeleteDraftButton
+            leaseId={leaseId}
+            placeLabel={props.placeLabel}
+            tenantName={tenants.find((tenant) => tenant.id === draft.primaryTenantId)?.name}
+            renewal={Boolean(props.renewId)}
+            fileCount={attachments.length}
+            className={styles.deleteDraft}
+            disabled={busy}
+            onPendingChange={onDeletePending}
+          />
+        )}
         <button
           type="button"
           className={styles.exit}
           onClick={saveAndExit}
-          disabled={pending || created}
+          disabled={busy || created}
         >
           Save and exit
         </button>
@@ -373,7 +397,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
                       type="button"
                       className={className}
                       onClick={() => jump(index)}
-                      disabled={pending}
+                      disabled={busy}
                     >
                       <span className={styles.marker}>{marker}</span>
                       <span className={styles.stepLabel}>{label}</span>
@@ -463,7 +487,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
               <>
                 <fieldset
                   className={styles.stepFields}
-                  disabled={pending}
+                  disabled={busy}
                   aria-label={WIZARD_STEPS[step]}
                 >
                   {body}
@@ -490,7 +514,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
                   <button
                     type="button"
                     className={styles.btn}
-                    disabled={step === 0 || pending}
+                    disabled={step === 0 || busy}
                     onClick={() => jump(step - 1)}
                   >
                     Back
@@ -499,7 +523,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
                     <button
                       type="button"
                       className={`${styles.btn} ${styles.primary}`}
-                      disabled={pending}
+                      disabled={busy}
                       onClick={next}
                       data-next-step={step + 1}
                       aria-busy={pending || undefined}
@@ -531,7 +555,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
                     <button
                       type="button"
                       className={`${styles.btn} ${styles.primary}`}
-                      disabled={pending || unresolvedTerms.length > 0}
+                      disabled={busy || unresolvedTerms.length > 0}
                       onClick={send}
                     >
                       {pending ? 'Sending…' : 'Send for e-signature'}

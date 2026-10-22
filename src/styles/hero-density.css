@@ -1,5 +1,7 @@
 /* Hero density: compact page headers and summary bands (Designs/redisgn palette, type and
-   16px shapes unchanged). Loaded after redisgn.css so these sizes win without editing it. */
+   16px shapes unchanged). Loaded after redisgn.css so these sizes win without editing it.
+   Stat rules are scoped to .summary-band-stats: .summary-stat cards elsewhere (such as the
+   application Screening report) keep their own layout. */
 :root {
   /* One gap between a hero and the content that follows it, from the 8px spacing scale. */
   --hero-gap: 24px;
@@ -44,9 +46,15 @@
 .summary-band-foot {
   margin-top: 4px;
 }
+/* Text links beside a footer action keep at least a 24px target. */
+.summary-band-foot > a:not(.btn) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
 
-/* Stats wrap side by side on tablets instead of scrolling off-screen; on phones and beside
-   the lead figure on desktop each stat is one short row: label and detail left, figure right. */
+/* Stats wrap side by side on tablets instead of scrolling off-screen; beside the lead figure
+   on desktop each stat is one short row: label and detail left, figure right. */
 .summary-band-stats {
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
@@ -60,14 +68,14 @@
     padding-bottom: 0;
   }
 }
-.summary-stat {
+.summary-band-stats .summary-stat {
   padding: 12px 14px;
 }
-.summary-stat strong {
+.summary-band-stats .summary-stat strong {
   margin: 2px 0;
   font-size: 22px;
 }
-.summary-stat small {
+.summary-band-stats .summary-stat small {
   line-height: 1.35;
 }
 
@@ -100,23 +108,90 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 8px;
   }
-  .summary-stat {
+  .summary-band-stats .summary-stat {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     column-gap: 12px;
     padding: 10px 14px;
   }
-  .summary-stat .summary-stat-label,
-  .summary-stat small {
+  .summary-band-stats .summary-stat .summary-stat-label,
+  .summary-band-stats .summary-stat small {
     grid-column: 1;
   }
-  .summary-stat strong {
+  .summary-band-stats .summary-stat strong {
     grid-column: 2;
     grid-row: 1 / span 2;
     margin: 0;
     font-size: 20px;
     text-align: right;
+  }
+}
+
+/* Phones: tighter inner spacing, and the stats become one inset list (same surface, border
+   and 16px corners) with divider rows instead of three separately padded cards. */
+@media (max-width: 599px) {
+  .summary-band {
+    gap: 12px;
+    padding: 14px 16px 16px;
+  }
+  .summary-band-main {
+    gap: 2px;
+  }
+  .summary-band-value {
+    font-size: 30px;
+  }
+  .summary-band-progress {
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .summary-band-foot {
+    gap: 8px 16px;
+    margin-top: 6px;
+  }
+  .summary-band-stats {
+    gap: 0;
+    border: 1px solid var(--rr-border);
+    border-radius: var(--rr-card-radius);
+    background: var(--design-background);
+  }
+  .summary-band-stats .summary-stat {
+    min-height: 44px;
+    padding: 7px 14px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    line-height: 1.3;
+  }
+  .summary-band-stats > * + *,
+  .summary-band-stats > .summary-stat + .summary-stat {
+    border-top: 1px solid var(--rr-border);
+  }
+  .summary-band-stats > :first-child,
+  .summary-band-stats > :first-child .summary-stat {
+    border-top-left-radius: calc(var(--rr-card-radius) - 1px);
+    border-top-right-radius: calc(var(--rr-card-radius) - 1px);
+  }
+  .summary-band-stats > :last-child,
+  .summary-band-stats > :last-child .summary-stat {
+    border-bottom-left-radius: calc(var(--rr-card-radius) - 1px);
+    border-bottom-right-radius: calc(var(--rr-card-radius) - 1px);
+  }
+  .summary-band-stats a.summary-stat:hover {
+    background: var(--rr-primary-tint);
+  }
+  .summary-band-stats .summary-stat small {
+    line-height: 1.3;
+  }
+  /* Long details (ROI, Rent analysis) run full width under the label and figure. */
+  .summary-band-stats.stack-details .summary-stat {
+    align-items: baseline;
+  }
+  .summary-band-stats.stack-details .summary-stat strong {
+    grid-row: 1;
+  }
+  .summary-band-stats.stack-details .summary-stat small {
+    grid-column: 1 / -1;
   }
 }
 

@@ -231,7 +231,7 @@ export function DealSnapshot({
           ))}
         </details>
       </div>
-      <div className="summary-band-stats">
+      <div className="summary-band-stats stack-details">
         <Popover
           variant="stat"
           title="Cash-on-cash return"

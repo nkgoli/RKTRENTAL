@@ -1,0 +1,351 @@
+{
+  "note": "Rendered budgets for measure.mjs --check: final heights and following-panel positions plus 6px tolerance, exact hero gaps, required content, and the original (pre-hero-density) Screening report layout. \"original\" is the pre-hero-density height for reference.",
+  "heroes": {
+    "/dashboard @desktop": {
+      "height": 241,
+      "nextTop": 411,
+      "gap": 24,
+      "text": ["Rent collection", "Open rent roll", "Portfolio occupancy", "Open repairs"]
+    },
+    "/dashboard @tablet": {
+      "height": 320,
+      "nextTop": 550,
+      "gap": 24,
+      "text": ["Rent collection", "Open rent roll", "Portfolio occupancy", "Open repairs"]
+    },
+    "/dashboard @mobile": {
+      "height": 416,
+      "nextTop": 690,
+      "gap": 24,
+      "text": ["Rent collection", "Open rent roll", "Portfolio occupancy", "Open repairs"]
+    },
+    "/properties @desktop": {
+      "height": 241,
+      "nextTop": 411,
+      "gap": 24
+    },
+    "/properties @tablet": {
+      "height": 280,
+      "nextTop": 490,
+      "gap": 24
+    },
+    "/properties @mobile": {
+      "height": 311,
+      "nextTop": 565,
+      "gap": 24
+    },
+    "/tenants @desktop": {
+      "height": 237,
+      "nextTop": 496,
+      "gap": 24,
+      "text": ["Review open balances", "Active tenants", "Leases ending in 60 days"]
+    },
+    "/tenants @tablet": {
+      "height": 276,
+      "nextTop": 575,
+      "gap": 24,
+      "text": ["Review open balances", "Active tenants", "Leases ending in 60 days"]
+    },
+    "/tenants @mobile": {
+      "height": 359,
+      "nextTop": 699,
+      "gap": 24,
+      "text": ["Review open balances", "Active tenants", "Leases ending in 60 days"]
+    },
+    "/leases @desktop": {
+      "height": 241,
+      "nextTop": 411,
+      "gap": 24,
+      "text": ["Active leases", "Expiring in 60 days", "Awaiting e-signature"]
+    },
+    "/leases @tablet": {
+      "height": 256,
+      "nextTop": 466,
+      "gap": 24,
+      "text": ["Active leases", "Expiring in 60 days", "Awaiting e-signature"]
+    },
+    "/leases @mobile": {
+      "height": 293,
+      "nextTop": 602,
+      "gap": 24,
+      "text": ["Active leases", "Expiring in 60 days", "Awaiting e-signature"]
+    },
+    "/applications @desktop": {
+      "height": 241,
+      "nextTop": 411,
+      "gap": 24
+    },
+    "/applications @tablet": {
+      "height": 327,
+      "nextTop": 536,
+      "gap": 24
+    },
+    "/applications @mobile": {
+      "height": 400,
+      "nextTop": 654,
+      "gap": 24
+    },
+    "/payments @desktop": {
+      "height": 210,
+      "nextTop": 381,
+      "gap": 24
+    },
+    "/payments @tablet": {
+      "height": 311,
+      "nextTop": 520,
+      "gap": 24
+    },
+    "/payments @mobile": {
+      "height": 370,
+      "nextTop": 680,
+      "gap": 24
+    },
+    "/maintenance @desktop": {
+      "height": 241,
+      "nextTop": 411,
+      "gap": 24
+    },
+    "/maintenance @tablet": {
+      "height": 239,
+      "nextTop": 448,
+      "gap": 24
+    },
+    "/maintenance @mobile": {
+      "height": 272,
+      "nextTop": 525,
+      "gap": 24
+    },
+    "/documents @desktop": {
+      "height": 178,
+      "nextTop": 349,
+      "gap": 24
+    },
+    "/documents @tablet": {
+      "height": 279,
+      "nextTop": 488,
+      "gap": 24
+    },
+    "/documents @mobile": {
+      "height": 348,
+      "nextTop": 622,
+      "gap": 24
+    },
+    "/properties/:id @desktop": {
+      "height": 220,
+      "nextTop": 490,
+      "gap": 24
+    },
+    "/properties/:id @tablet": {
+      "height": 320,
+      "nextTop": 703,
+      "gap": 24
+    },
+    "/properties/:id @mobile": {
+      "height": 315,
+      "nextTop": 852,
+      "gap": 24
+    },
+    "/properties/:id/returns @desktop": {
+      "height": 232,
+      "nextTop": 640,
+      "gap": 24
+    },
+    "/properties/:id/returns @tablet": {
+      "height": 310,
+      "nextTop": 830,
+      "gap": 24
+    },
+    "/properties/:id/returns @mobile": {
+      "height": 361,
+      "nextTop": 1077,
+      "gap": 24
+    },
+    "/roi-analysis @desktop": {
+      "height": 326,
+      "nextTop": 671,
+      "gap": 24,
+      "text": ["Monthly", "Annual", "Compare with actuals", "Debt service coverage"]
+    },
+    "/roi-analysis @tablet": {
+      "height": 390,
+      "nextTop": 854,
+      "gap": 24,
+      "text": ["Monthly", "Annual", "Compare with actuals", "Debt service coverage"]
+    },
+    "/roi-analysis @mobile": {
+      "height": 573,
+      "nextTop": 982,
+      "gap": 24,
+      "text": ["Monthly", "Annual", "Compare with actuals", "Debt service coverage"]
+    },
+    "/rent-analysis @desktop": {
+      "height": 294,
+      "nextTop": 671,
+      "gap": 24,
+      "text": ["Suggested rent", "Comp median", "Listed rent", "Saved market rent"]
+    },
+    "/rent-analysis @tablet": {
+      "height": 359,
+      "nextTop": 775,
+      "gap": 24,
+      "text": ["Suggested rent", "Comp median", "Listed rent", "Saved market rent"]
+    },
+    "/rent-analysis @mobile": {
+      "height": 490,
+      "nextTop": 984,
+      "gap": 24,
+      "text": ["Suggested rent", "Comp median", "Listed rent", "Saved market rent"]
+    },
+    "/home @desktop": {
+      "height": 209,
+      "nextTop": 454,
+      "gap": 20,
+      "text": ["Pay now", "your property manager"]
+    },
+    "/home @tablet": {
+      "height": 190,
+      "nextTop": 385,
+      "gap": 20,
+      "text": ["Pay now", "your property manager"]
+    },
+    "/home @mobile": {
+      "height": 243,
+      "nextTop": 431,
+      "gap": 20,
+      "text": ["Pay now", "your property manager"]
+    },
+    "/pay @desktop": {
+      "height": 188,
+      "nextTop": 464,
+      "gap": 20,
+      "text": ["Amount due", "Total due"]
+    },
+    "/pay @tablet": {
+      "height": 188,
+      "nextTop": 415,
+      "gap": 20,
+      "text": ["Amount due", "Total due"]
+    },
+    "/pay @mobile": {
+      "height": 188,
+      "nextTop": 406,
+      "gap": 20,
+      "text": ["Amount due", "Total due"]
+    }
+  },
+  "original": {
+    "/dashboard @desktop": 435,
+    "/dashboard @tablet": 388,
+    "/dashboard @mobile": 479,
+    "/properties @desktop": 435,
+    "/properties @tablet": 340,
+    "/properties @mobile": 364,
+    "/tenants @desktop": 428,
+    "/tenants @tablet": 336,
+    "/tenants @mobile": 390,
+    "/leases @desktop": 455,
+    "/leases @tablet": 310,
+    "/leases @mobile": 334,
+    "/applications @desktop": 435,
+    "/applications @tablet": 396,
+    "/applications @mobile": 479,
+    "/payments @desktop": 326,
+    "/payments @tablet": 378,
+    "/payments @mobile": 462,
+    "/maintenance @desktop": 435,
+    "/maintenance @tablet": 310,
+    "/maintenance @mobile": 310,
+    "/documents @desktop": 307,
+    "/documents @tablet": 338,
+    "/documents @mobile": 450,
+    "/properties/:id @desktop": 307,
+    "/properties/:id @tablet": 388,
+    "/properties/:id @mobile": 419,
+    "/properties/:id/returns @desktop": 307,
+    "/properties/:id/returns @tablet": 370,
+    "/properties/:id/returns @mobile": 487,
+    "/roi-analysis @desktop": 471,
+    "/roi-analysis @tablet": 484,
+    "/roi-analysis @mobile": 617,
+    "/rent-analysis @desktop": 455,
+    "/rent-analysis @tablet": 431,
+    "/rent-analysis @mobile": 539,
+    "/home @desktop": 273,
+    "/home @tablet": 198,
+    "/home @mobile": 263,
+    "/pay @desktop": 226,
+    "/pay @tablet": 210,
+    "/pay @mobile": 208
+  },
+  "report": {
+    "screening report @desktop": [
+      {
+        "display": "block",
+        "padding": "16px",
+        "height": 112,
+        "valueSize": "24px",
+        "valueAlign": "start"
+      },
+      {
+        "display": "block",
+        "padding": "16px",
+        "height": 112,
+        "valueSize": "24px",
+        "valueAlign": "start"
+      },
+      {
+        "display": "block",
+        "padding": "16px",
+        "height": 112,
+        "valueSize": "24px",
+        "valueAlign": "start"
+      }
+    ],
+    "screening report @tablet": [
+      {
+        "display": "block",
+        "padding": "16px",
+        "height": 112,
+        "valueSize": "24px",
+        "valueAlign": "start"
+      },
+      {
+        "display": "block",
+        "padding": "16px",
+        "height": 112,
+        "valueSize": "24px",
+        "valueAlign": "start"
+      },
+      {
+        "display": "block",
+        "padding": "16px",
+        "height": 112,
+        "valueSize": "24px",
+        "valueAlign": "start"
+      }
+    ],
+    "screening report @mobile": [
+      {
+        "display": "block",
+        "padding": "16px",
+        "height": 112,
+        "valueSize": "24px",
+        "valueAlign": "start"
+      },
+      {
+        "display": "block",
+        "padding": "16px",
+        "height": 112,
+        "valueSize": "24px",
+        "valueAlign": "start"
+      },
+      {
+        "display": "block",
+        "padding": "16px",
+        "height": 112,
+        "valueSize": "24px",
+        "valueAlign": "start"
+      }
+    ]
+  }
+}

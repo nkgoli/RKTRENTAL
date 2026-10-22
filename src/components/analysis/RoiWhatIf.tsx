@@ -258,6 +258,7 @@ export function WhatIfPanel({
   onDrafts,
   errors,
   saving,
+  busy = false,
   dirty,
   saveLabel,
   onSave,
@@ -279,6 +280,8 @@ export function WhatIfPanel({
   onDrafts: (next: ScenarioDraft[]) => void;
   errors: ValidationIssue[];
   saving: boolean;
+  /** True while a save request is in flight: saved-case edits wait so the reply cannot drop them. */
+  busy?: boolean;
   dirty: boolean;
   saveLabel: string;
   onSave: () => void;
@@ -359,7 +362,10 @@ export function WhatIfPanel({
     : simulation && !simulation.ok
       ? simulation.errors.filter((e) => !e.path)
       : [];
+  // Saved-case entries are part of the analysis being saved; they are locked until the reply.
+  const caseLocked = !!saved && busy;
   const setValues = (next: Record<string, string>, name?: string) => {
+    if (caseLocked) return;
     if (saved) onDrafts(drafts.map((d, i) => (i === savedIndex ? { ...d, values: next } : d)));
     else onState({ ...state, values: next, ...(name ? { name } : {}) });
   };
@@ -404,6 +410,7 @@ export function WhatIfPanel({
           <select
             id={id}
             value={values[path] ?? ''}
+            disabled={caseLocked}
             aria-invalid={!!error}
             aria-describedby={error ? `${id}-error` : undefined}
             onChange={(e) => setValues({ ...values, [path]: e.target.value })}
@@ -419,6 +426,7 @@ export function WhatIfPanel({
             type={spec.kind === 'date' ? 'date' : 'text'}
             inputMode={spec.kind === 'date' ? undefined : 'decimal'}
             value={values[path] ?? ''}
+            disabled={caseLocked}
             placeholder={`Baseline ${baseText(base, path)}`}
             aria-invalid={!!error}
             aria-describedby={error ? `${id}-error` : undefined}
@@ -572,6 +580,11 @@ export function WhatIfPanel({
               Blank fields inherit the baseline. Edits to a saved case are kept with the analysis
               when you save it.
             </p>
+            {caseLocked && (
+              <p className={w.hint} role="status">
+                Saving… this case can be edited again when the save finishes.
+              </p>
+            )}
           </div>
         ) : (
           <>
@@ -676,6 +689,7 @@ export function WhatIfPanel({
               </p>
               <button
                 type="button"
+                disabled={caseLocked}
                 onClick={() =>
                   onDrafts(
                     drafts.map((d, i) => (i === savedIndex ? { ...d, options: undefined } : d)),

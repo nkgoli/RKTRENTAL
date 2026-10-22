@@ -138,15 +138,22 @@ describe('entry links and the retired Scenarios address', () => {
     expect(href.pathname).toBe('/roi-analysis');
     expect(whatIfEntryFrom(href.searchParams)).toEqual({
       open: true,
+      kind: 'rent',
       unitId: 'u3a',
       rentChange: 240,
     });
     expect(whatIfEntryFrom(new URLSearchParams('whatif=rent&unit=u1&rentChange=1e9'))).toEqual({
       open: true,
+      kind: 'rent',
       unitId: 'u1',
       rentChange: null,
     });
     expect(whatIfEntryFrom(new URLSearchParams('whatif=rent&unit=%3Cx%3E'))?.unitId).toBeNull();
+    expect(whatIfEntryFrom(new URLSearchParams('whatif=open'))).toMatchObject({
+      kind: 'open',
+      unitId: null,
+      rentChange: null,
+    });
     expect(whatIfEntryFrom(new URLSearchParams('property=p1'))).toBeNull();
     expect(
       new URL(rentWhatIfHref('p1', 'u1', null), 'http://x').searchParams.has('rentChange'),

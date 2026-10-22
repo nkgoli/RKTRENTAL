@@ -1,0 +1,134 @@
+/* Hero density: compact page headers and summary bands (Designs/redisgn palette, type and
+   16px shapes unchanged). Loaded after redisgn.css so these sizes win without editing it. */
+:root {
+  /* One gap between a hero and the content that follows it, from the 8px spacing scale. */
+  --hero-gap: 24px;
+}
+
+/* ---------- Page header ---------- */
+.topbar {
+  padding: 16px 16px 12px;
+}
+@media (min-width: 768px) {
+  .topbar {
+    padding: 24px 32px 20px;
+  }
+}
+@media (min-width: 1024px) {
+  .topbar {
+    padding: 32px var(--rr-gutter) 24px;
+  }
+}
+@media (max-width: 600px) {
+  .topbar {
+    padding-inline: 16px;
+  }
+}
+
+/* ---------- Summary band ---------- */
+.summary-band {
+  gap: 16px;
+  padding: 16px;
+}
+.summary-band-main {
+  gap: 4px;
+}
+.summary-band-value {
+  font-size: 32px;
+}
+.summary-band-detail {
+  font-size: 15px;
+  line-height: 1.4;
+}
+.summary-band-progress,
+.summary-band-foot {
+  margin-top: 4px;
+}
+
+/* Stats wrap side by side on tablets instead of scrolling off-screen; on phones and beside
+   the lead figure on desktop each stat is one short row: label and detail left, figure right. */
+.summary-band-stats {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+@media (max-width: 1023px) {
+  .summary-band-stats {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    overflow-x: visible;
+    scroll-snap-type: none;
+    padding-bottom: 0;
+  }
+}
+.summary-stat {
+  padding: 12px 14px;
+}
+.summary-stat strong {
+  margin: 2px 0;
+  font-size: 22px;
+}
+.summary-stat small {
+  line-height: 1.35;
+}
+
+@media (min-width: 768px) {
+  .summary-band {
+    padding: 20px 24px;
+  }
+  .summary-band-stats {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+}
+@media (min-width: 1024px) {
+  .summary-band {
+    grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr);
+    gap: 24px;
+  }
+  .summary-band.single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .summary-band-value {
+    font-size: 40px;
+  }
+  .summary-band-detail {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 599px), (min-width: 1024px) {
+  .summary-band-stats {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .summary-stat {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 12px;
+    padding: 10px 14px;
+  }
+  .summary-stat .summary-stat-label,
+  .summary-stat small {
+    grid-column: 1;
+  }
+  .summary-stat strong {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    margin: 0;
+    font-size: 20px;
+    text-align: right;
+  }
+}
+
+/* ---------- Hero-to-content spacing ---------- */
+/* Flex and grid parents of a band use the shared hero gap (row-gap is inert on block parents). */
+main :has(> .summary-band),
+main :has(> * > .summary-band:only-child) {
+  row-gap: var(--hero-gap);
+}
+/* Block parents (no gap of their own) opt in to the same rhythm. */
+.hero-flow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hero-gap);
+}

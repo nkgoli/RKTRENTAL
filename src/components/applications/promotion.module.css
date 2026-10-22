@@ -1,0 +1,32 @@
+.promotion {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.promotion h4,
+.promotion p {
+  margin: 0;
+}
+.promotion p {
+  line-height: 1.55;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.match {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--rr-border);
+  border-radius: 12px;
+}
+.match span {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 540px) {
+  .actions > * {
+    flex: 1 1 auto;
+  }
+}

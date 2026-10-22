@@ -99,6 +99,18 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('light application review preserves eligibility and context', () => {
+  it('offers promotion for already-approved applications and no unapproved applications', async () => {
+    mocks.findMany.mockResolvedValue([
+      { ...application(), status: 'APPROVED', consents: [], reports: [], promotedTenantId: null },
+    ]);
+    render(await ApplicationsPage({ searchParams: Promise.resolve({ applicant: 'app' }) }));
+    expect(screen.getByRole('button', { name: 'Promote to tenant' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Create lease' })).toBeNull();
+    cleanup();
+    mocks.findMany.mockResolvedValue([{ ...application(), status: 'DECLINED' }]);
+    render(await ApplicationsPage({ searchParams: Promise.resolve({ applicant: 'app' }) }));
+    expect(screen.queryByRole('button', { name: 'Promote to tenant' })).toBeNull();
+  });
   it('requires a written reason and confirmation before recording a decline', async () => {
     const action = vi.fn().mockResolvedValue(undefined);
     render(

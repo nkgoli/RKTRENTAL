@@ -354,6 +354,7 @@ model Unit {
 }
 
 model Tenant {
+  promotedApplications         Application[]
   agreementParties             LeaseAgreementParty[]
   id                           String               @id @default(cuid())
   organizationId               String
@@ -835,6 +836,10 @@ model Application {
   applicationGroup   ApplicationGroup?  @relation(fields: [applicationGroupId, organizationId], references: [id, organizationId])
   applicantName      String
   applicantEmail     String
+  promotedTenantId   String?
+  promotedTenant     Tenant?            @relation(fields: [promotedTenantId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  promotedAt         DateTime?
+  promotedBy         String?
   status             ApplicationStatus  @default(SUBMITTED)
   decisionReason     String?
   decidedBy          String?
@@ -849,6 +854,7 @@ model Application {
   @@unique([id, organizationId])
   @@index([organizationId, status, appliedAt])
   @@index([applicationGroupId])
+  @@index([promotedTenantId, organizationId])
 }
 
 // Invitations do not enter screening, household or lease workflows until submitted.

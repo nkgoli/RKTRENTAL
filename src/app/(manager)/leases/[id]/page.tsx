@@ -22,13 +22,9 @@ import { leasesDb } from '@/lib/leases/queries';
 import { formatAddress, formatDate, initials } from '@/lib/properties/format';
 import { EditTermsForm, LeaseStatusActions, NoticeForm } from '../LeaseForms';
 import type { TemplateItem } from '@/lib/lease-create/templates';
-
-const CHARGE_LABEL: Record<string, string> = {
-  RENT: 'Rent',
-  DEPOSIT: 'Deposit',
-  LATE_FEE: 'Late fee',
-  OTHER: 'Fee',
-};
+import { RentLedger, RentLedgerRows } from '@/components/payments/RentLedger';
+import { toLastPayment, toLedgerRows } from '@/components/payments/ledger-view';
+import { ensureRentCharges, formatMoney, leaseLedger, periodLabel } from '@/lib/ledger';
 
 const showSignedBody = (body: string) =>
   body
@@ -67,6 +63,9 @@ export default async function LeaseDetailPage({
 }) {
   const session = await requireManagerRole();
   const [{ id }, query] = await Promise.all([params, searchParams]);
+  // The property Payments tab runs the same catch-up, so both read identical stored rent charges.
+  if (!query.tab || query.tab === 'overview' || query.tab === 'payments')
+    await ensureRentCharges(session.organizationId, new Date());
   const lease = await leasesDb(session.organizationId).detail(id);
   if (!lease) notFound();
   const property = lease.unit.property;
@@ -88,13 +87,10 @@ export default async function LeaseDetailPage({
     (await db.providerConnection.count({
       where: { organizationId: session.organizationId, kind: 'PAYMENTS', status: 'CONNECTED' },
     })) > 0;
-  const charges = lease.charges.filter((c) => c.dueDate <= new Date());
-  const charged = charges.reduce((sum, c) => sum + Number(c.amount), 0);
-  const paid = lease.payments
-    .filter((p) => p.status === 'SUCCEEDED')
-    .reduce((sum, p) => sum + Number(p.amount), 0);
-  const balance = Math.max(0, charged - paid);
-  const lastPayment = lease.payments.find((p) => p.status === 'SUCCEEDED');
+  // The same statement the property and unit Payments tabs show for this lease.
+  const ledger = leaseLedger(lease, new Date());
+  const lastPayment = toLastPayment(ledger.lastPayment);
+  const ledgerRows = toLedgerRows(ledger.rows);
   const terms = {
     startDate: dateInput(lease.startDate),
     endDate: dateInput(lease.endDate),
@@ -394,14 +390,10 @@ export default async function LeaseDetailPage({
                     }
                   />
                   <dl className={styles.compactFacts}>
-                    <dt>Balance due</dt>
-                    <dd>{money(balance)}</dd>
+                    <dt>{ledger.balanceCents < 0 ? 'Credit on account' : 'Balance due'}</dt>
+                    <dd>{formatMoney(Math.abs(ledger.balanceCents))}</dd>
                     <dt>Last payment</dt>
-                    <dd>
-                      {lastPayment
-                        ? formatDate(lastPayment.paidAt ?? lastPayment.createdAt)
-                        : 'None yet'}
-                    </dd>
+                    <dd>{lastPayment ? lastPayment.dateLabel : 'None yet'}</dd>
                   </dl>
                   <a className={styles.secondaryLink} href={tabHref('documents')}>
                     <ActionGlyph name="documents" />
@@ -570,53 +562,54 @@ export default async function LeaseDetailPage({
             </section>
           )}
           {activeTab === 'payments' && (
-            <section className={styles.section}>
-              <SectionHeader
-                title="Rent ledger"
-                action={
+            <RentLedger
+              scope={[
+                'This lease only',
+                lease.unit.isImplicit ? 'Whole property' : lease.unit.number,
+                periodLabel({ start: lease.startDate, end: lease.endDate }, ledger.rows),
+                lease.status === 'ACTIVE' ? '' : statusLabel(lease.status),
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+              balanceCents={ledger.balanceCents}
+              lastPayment={lastPayment}
+              actions={
+                <span className="action-group">
+                  {lease.status === 'ACTIVE' && (
+                    <Action
+                      icon="payments"
+                      text="Record payment"
+                      label="Record payment"
+                      tone="secondary"
+                      href={`${paymentsHref}${paymentsHref.includes('?') ? '&' : '?'}record=1`}
+                      document
+                    />
+                  )}
                   <Action
                     icon="arrow-right"
                     trailing
-                    text="View payments"
-                    label="View payments"
+                    text={lease.unit.isImplicit ? 'Property payments' : 'Unit payments'}
+                    label={`Open ${lease.unit.isImplicit ? 'property' : 'unit'} Payments to create charges and send reminders`}
                     href={paymentsHref}
                     document
                   />
-                }
+                </span>
+              }
+            >
+              <RentLedgerRows
+                groups={[
+                  {
+                    id: lease.id,
+                    heading: title,
+                    meta: '',
+                    balanceCents: ledger.balanceCents,
+                    active: lease.status === 'ACTIVE',
+                    rows: ledgerRows,
+                  },
+                ]}
+                groupHeadings={false}
               />
-              <div className={styles.ledgerFacts}>
-                <div>
-                  <small>Balance due</small>
-                  <strong>
-                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
-                      balance,
-                    )}
-                  </strong>
-                </div>
-                <div>
-                  <small>Last payment</small>
-                  <strong>
-                    {lastPayment
-                      ? formatDate(lastPayment.paidAt ?? lastPayment.createdAt)
-                      : 'None yet'}
-                  </strong>
-                </div>
-              </div>
-              {charges.slice(0, 3).map((charge) => (
-                <div className={styles.ledgerLine} key={charge.id}>
-                  <Badge>{CHARGE_LABEL[charge.kind] ?? 'Charge'}</Badge>
-                  <span className="file-meta">
-                    <strong>{money(charge.amount)}</strong>
-                    <small>Due {formatDate(charge.dueDate)}</small>
-                  </span>
-                </div>
-              ))}
-              {!charges.length && (
-                <p className="muted" style={{ marginTop: 12 }}>
-                  No charges due yet.
-                </p>
-              )}
-            </section>
+            </RentLedger>
           )}
           {activeTab === 'activity' && (
             <div className={styles.overviewGrid}>

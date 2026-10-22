@@ -9,6 +9,7 @@ import {
   summarizeUnits,
 } from '@/lib/ledger';
 import type { ScopeFilter } from '@/lib/workspace/scope';
+import { ledgerDate, toLastPayment, toLedgerRows } from '@/components/payments/ledger-view';
 import { PaymentsBoard, type BoardGroup } from './PaymentsBoard';
 import styles from './leasing.module.css';
 
@@ -24,28 +25,21 @@ const notices: Record<string, { tone: 'success' | 'warning'; text: string }> = {
   },
 };
 
-const dateParts = (date: Date) => ({
-  month: date.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }),
-  day: String(date.getUTCDate()).padStart(2, '0'),
-  label: date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }),
-});
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-/** Charge ledger for one property (and optionally one unit) with balance summary and charge/payment actions. */
+/** Rent ledger for one property (and optionally one unit) with balance summary and charge/payment actions. */
 export async function PaymentsPanel({
   organizationId,
   scope,
   recording,
   notice,
+  remindersHref,
 }: {
   organizationId: string;
   scope: ScopeFilter;
   recording: boolean;
   notice?: string;
+  remindersHref?: string;
 }) {
   const now = new Date();
   await ensureRentCharges(organizationId, now);
@@ -70,29 +64,26 @@ export async function PaymentsPanel({
     place: group.singleUnit ? '' : group.unitLabel,
     active: group.active,
     tenantNames: group.tenants.map((t) => t.name).join(', '),
-    rows: group.rows.map((row) => {
-      const due = dateParts(row.dueDate);
-      return {
-        key: row.key,
-        type: row.typeLabel,
-        description: row.description,
-        month: due.month,
-        day: due.day,
-        dateLabel: due.label,
-        amountCents: row.amountCents,
-        paidCents: row.paidCents,
-        balanceCents: row.balanceCents,
-        status: row.status,
-        derived: row.derived,
-        applied: row.applied.map((a) => ({
-          id: a.paymentId,
-          amountCents: a.amountCents,
-          dateLabel: a.date ? dateParts(a.date).label : 'unknown date',
-          method: a.method,
-        })),
-      };
-    }),
+    balanceCents: group.balanceCents,
+    rows: toLedgerRows(group.rows),
   }));
+  // Say exactly what the balance covers so unit, property and lease views can be compared.
+  const scoped = ledger.groups.find((g) => g.active) ?? ledger.groups[0];
+  const place = scope.unitId
+    ? scoped && !scoped.singleUnit
+      ? scoped.unitLabel
+      : 'This unit'
+    : unitCount > 1
+      ? `All ${unitCount} units`
+      : 'Whole property';
+  const ended = ledger.groups.length - ledger.activeLeaseCount;
+  const scopeLabel = [
+    place,
+    plural(ledger.activeLeaseCount, 'active lease'),
+    ended ? plural(ended, 'ended lease') : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <section className={styles.panel} aria-label="Payments">
@@ -106,9 +97,13 @@ export async function PaymentsPanel({
         key={`${scope.propertyId}:${scope.unitId ?? 'all'}`}
         propertyId={scope.propertyId ?? ''}
         unitId={scope.unitId}
+        scopeLabel={scopeLabel}
         balanceCents={ledger.balanceCents}
+        lastPayment={toLastPayment(ledger.lastPayment)}
+        endedBalanceCents={ledger.endedBalanceCents}
         providerLabel={paymentsProviderLabel(connection, providerName)}
         providerConnected={Boolean(providerName)}
+        remindersHref={remindersHref}
         tenants={ledger.tenants}
         groups={groups}
         summary={
@@ -122,7 +117,7 @@ export async function PaymentsPanel({
               balanceCents: u.balanceCents,
               status: u.status,
               nextDue: u.nextDue && {
-                dateLabel: dateParts(u.nextDue.dueDate).label,
+                dateLabel: ledgerDate(u.nextDue.dueDate),
                 amountCents: u.nextDue.amountCents,
               },
             })),

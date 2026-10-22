@@ -1,18 +1,21 @@
 import type { ChargeKind, PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
 import { unitScopeWhere, type ScopeFilter } from '@/lib/workspace/scope';
-import { centsToDecimal, type Cents } from './core';
+import { centsToDecimal, type Cents, type LedgerPayment } from './core';
 import { leaseTerms, toLedgerCharge, toLedgerPayment } from './store';
 import {
   buildLeaseStatement,
   isReservedDescription,
   periodLabel,
+  type LeaseStatement,
   type StatementRow,
 } from './statement';
 
 type Client = PrismaClient;
 
 export type LedgerTenant = { id: string; name: string; initials: string };
+
+export type LastPayment = { date: Date; amountCents: Cents };
 
 export type LedgerGroup = {
   leaseId: string;
@@ -21,6 +24,7 @@ export type LedgerGroup = {
   unitLabel: string;
   /** Charges minus settled payments due by now for this lease. */
   balanceCents: Cents;
+  lastPayment: LastPayment | null;
   singleUnit: boolean;
   active: boolean;
   tenants: LedgerTenant[];
@@ -31,8 +35,47 @@ export type PropertyLedger = {
   groups: LedgerGroup[];
   /** Charges minus settled payments across the active leases in scope; negative is credit. */
   balanceCents: Cents;
+  /** Most recent settled payment across the active leases in scope. */
+  lastPayment: LastPayment | null;
+  /** Balance still open on ended or terminated leases; listed per group, not in balanceCents. */
+  endedBalanceCents: Cents;
+  activeLeaseCount: number;
   tenants: LedgerTenant[];
 };
+
+/** Most recent settled payment (by paid date, else recorded date); failed and pending ones never count. */
+export function lastSettledPayment(payments: LedgerPayment[]): LastPayment | null {
+  let last: LastPayment | null = null;
+  for (const p of payments) {
+    const date = p.paidAt ?? p.createdAt;
+    if (p.status !== 'SUCCEEDED' || p.amountCents <= 0 || !date) continue;
+    if (!last || date > last.date) last = { date, amountCents: p.amountCents };
+  }
+  return last;
+}
+
+type LedgerLeaseRow = Parameters<typeof leaseTerms>[0] & {
+  charges: Parameters<typeof toLedgerCharge>[0][];
+  payments: Parameters<typeof toLedgerPayment>[0][];
+};
+
+/**
+ * One lease's Rent ledger: the same statement, balance and last payment the property and unit
+ * Payments tabs show for that lease, so every scope reads the same numbers.
+ */
+export function leaseLedger(
+  lease: LedgerLeaseRow,
+  asOf: Date,
+): LeaseStatement & { lastPayment: LastPayment | null } {
+  const payments = lease.payments.map(toLedgerPayment);
+  const statement = buildLeaseStatement({
+    lease: leaseTerms(lease),
+    charges: lease.charges.map(toLedgerCharge),
+    payments,
+    asOf,
+  });
+  return { ...statement, lastPayment: lastSettledPayment(payments) };
+}
 
 const initialsOf = (name: string) =>
   name
@@ -65,21 +108,24 @@ export async function loadPropertyLedger(
   });
   const groups: LedgerGroup[] = [];
   let balanceCents = 0;
+  let endedBalanceCents = 0;
+  let lastPayment: LastPayment | null = null;
   for (const lease of leases) {
     const active = lease.status === 'ACTIVE';
-    if (!active && lease.charges.length === 0) continue;
-    const statement = buildLeaseStatement({
-      lease: leaseTerms(lease),
-      charges: lease.charges.map(toLedgerCharge),
-      payments: lease.payments.map(toLedgerPayment),
-      asOf,
-    });
-    if (active) balanceCents += statement.balanceCents;
+    // Ended leases stay listed whenever they carry any history, charges or payments.
+    if (!active && lease.charges.length === 0 && lease.payments.length === 0) continue;
+    const statement = leaseLedger(lease, asOf);
+    if (active) {
+      balanceCents += statement.balanceCents;
+      if (statement.lastPayment && (!lastPayment || statement.lastPayment.date > lastPayment.date))
+        lastPayment = statement.lastPayment;
+    } else endedBalanceCents += statement.balanceCents;
     groups.push({
       leaseId: lease.id,
       label: periodLabel({ start: lease.startDate, end: lease.endDate }, statement.rows),
       unitId: lease.unitId,
       balanceCents: statement.balanceCents,
+      lastPayment: statement.lastPayment,
       unitLabel: lease.unit.number,
       singleUnit: lease.unit.isImplicit,
       active,
@@ -97,7 +143,14 @@ export async function loadPropertyLedger(
     .filter((g) => g.active)
     .flatMap((g) => g.tenants)
     .filter((t) => !seen.has(t.id) && seen.add(t.id));
-  return { groups, balanceCents, tenants };
+  return {
+    groups,
+    balanceCents,
+    lastPayment,
+    endedBalanceCents,
+    activeLeaseCount: groups.filter((g) => g.active).length,
+    tenants,
+  };
 }
 
 export type UnitHealth = 'LATE' | 'DUE' | 'CURRENT';

@@ -9,6 +9,10 @@ vi.mock('@/lib/db/client', () => ({ db: { providerConnection: { count: async () 
 vi.mock('@/lib/leases/queries', () => ({
   leasesDb: () => ({ detail: async () => fixture.lease }),
 }));
+vi.mock('@/lib/ledger', async (original) => ({
+  ...(await original<typeof import('@/lib/ledger')>()),
+  ensureRentCharges: vi.fn(),
+}));
 vi.mock('@/components/shell/PageHeader', () => ({ PageHeader: () => null }));
 vi.mock('@/app/(manager)/leases/LeaseForms', () => ({
   EditTermsForm: () => <form aria-label="Edit lease terms" />,
@@ -186,5 +190,73 @@ describe('lease workspace', () => {
     expect(html).toContain('/properties/property-1/leases?unit=unit-1');
     expect(html).toContain('/properties/property-1/payments?unit=unit-1');
     expect(html).toContain('propertyId=property-1&amp;unitId=unit-1&amp;tab=activity');
+  });
+
+  it('shows the full Rent ledger from the shared statement, not a three-row excerpt', async () => {
+    const charge = (month: string, amount = '1850.00', description = `rent:lease-1:${month}`) => ({
+      id: `c-${month}-${description}`,
+      leaseId: 'lease-1',
+      kind: description.startsWith('rent:') ? 'RENT' : 'OTHER',
+      amount,
+      dueDate: day(`${month}-01`),
+      description,
+    });
+    fixture.lease.charges = [
+      ...['2026-07', '2026-08', '2026-09', '2026-10'].map((m) => charge(m)),
+      charge('2026-10', '75.00', 'Pet fee'),
+    ];
+    fixture.lease.payments = [
+      {
+        id: 'p-fail',
+        leaseId: 'lease-1',
+        amount: '1850.00',
+        status: 'FAILED',
+        paidAt: day('2026-10-04'),
+        createdAt: day('2026-10-04'),
+        providerReference: null,
+      },
+      ...['2026-07', '2026-08', '2026-09'].map((m) => ({
+        id: `p-${m}`,
+        leaseId: 'lease-1',
+        amount: '1850.00',
+        status: 'SUCCEEDED',
+        paidAt: day(`${m}-02`),
+        createdAt: day(`${m}-02`),
+        providerReference: null,
+      })),
+      {
+        id: 'p-part',
+        leaseId: 'lease-1',
+        amount: '500.00',
+        status: 'SUCCEEDED',
+        paidAt: day('2026-10-03'),
+        createdAt: day('2026-10-03'),
+        providerReference: null,
+      },
+    ];
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-15T12:00:00Z'));
+    const html = await render({ tab: 'payments' }).finally(() => vi.useRealTimers());
+    expect(html).toContain('Rent ledger');
+    expect(html).toContain('This lease only · 4B');
+    // 4 × 1,850 + 75 due, minus 3 × 1,850 + 500 settled; the failed attempt never counts.
+    expect(html).toContain('$1,425.00');
+    expect(html).toMatch(/Last payment<\/dt><dd[^>]*>Oct 3, 2026<small>\$500\.00/);
+    for (const text of [
+      'July rent',
+      'August rent',
+      'September rent',
+      'October rent',
+      'Pet fee',
+      'November rent',
+    ])
+      expect(html).toContain(text);
+    expect(html).toContain('$1,350.00 left');
+    expect(html).toContain('/properties/property-1/payments?unit=unit-1&amp;record=1');
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-15T12:00:00Z'));
+    const overview = await render().finally(() => vi.useRealTimers());
+    expect(overview).toContain('$1,425.00');
+    expect(overview).toContain('Oct 3, 2026');
   });
 });

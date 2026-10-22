@@ -51,6 +51,10 @@
   font-size: 12px;
   color: var(--design-muted);
 }
+/* Draft-only destructive action, kept at the end of the summary row. */
+.summaryAction {
+  margin-left: auto;
+}
 .metaItem {
   display: inline-flex;
   align-items: center;

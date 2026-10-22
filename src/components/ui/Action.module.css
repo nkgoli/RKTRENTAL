@@ -1,0 +1,7 @@
+/* Destructive tone for ui/Action; doubled with the global class to outrank `.action`. */
+:global(.action).danger {
+  color: var(--design-danger);
+}
+:global(.action).danger:hover {
+  background: color-mix(in srgb, var(--design-danger) 8%, transparent);
+}

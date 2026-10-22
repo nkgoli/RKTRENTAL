@@ -5,7 +5,9 @@ const fixture = vi.hoisted(() => ({ leases: [] as LeaseListItem[] }));
 vi.mock('@/lib/auth/access', () => ({
   requireManagerRole: async () => ({ organizationId: 'org' }),
 }));
-vi.mock('@/lib/db/client', () => ({ db: {} }));
+vi.mock('@/lib/db/client', () => ({
+  db: { $queryRaw: async () => [{ leaseId: 'lease-22', renewId: 'lease-0' }] },
+}));
 vi.mock('@/components/workspace/ScopedWorkspace', () => ({ ScopedWorkspace: () => null }));
 vi.mock('@/components/shell/PageHeader', () => ({ PageHeader: () => null }));
 vi.mock('@/lib/leases/queries', () => ({
@@ -29,7 +31,7 @@ beforeEach(() => {
       ({
         id: `lease-${i}`,
         status: i === 22 ? 'DRAFT' : i === 23 ? 'ENDED' : 'ACTIVE',
-        eSignStatus: 'SIGNED',
+        eSignStatus: i === 22 ? 'NOT_SENT' : 'SIGNED',
         unitId: 'unit-1',
         startDate: new Date('2026-01-01'),
         endDate: new Date('2026-11-30'),
@@ -80,6 +82,8 @@ it('search and empty reset preserve the selected view and scope', async () => {
   const draft = await list({ tab: 'drafts' });
   expect(draft).toContain('draft=lease-22');
   expect(draft).not.toContain('renew=lease-22');
+  expect(draft).toContain('aria-label="Delete draft lease for Maple Court · Unit 4B"');
+  expect(match).not.toContain('Delete draft lease');
   expect(await list({ tab: 'ended' })).toContain('Tenant 23');
   expect(await list({ tab: 'expiring' })).toContain('22 expiring leases');
 });
@@ -92,6 +96,7 @@ it('scoped current, draft and past sections keep setup, resume and renewal conte
     'Continue setup',
     'draft=lease-22',
     'renew=lease-0',
+    'Delete draft lease for Maple Court · Unit 4B',
     'propertyId=property-1&amp;unitId=unit-1&amp;property=property-1&amp;unit=unit-1',
   ])
     expect(html).toContain(text);

@@ -1,5 +1,7 @@
 import { SigningPanel } from '@/components/lease-signing/SigningPanel';
 import { SendAgreementButton } from '@/components/lease-signing/SendAgreementButton';
+import { DeleteDraftButton } from '@/components/lease-create/DeleteDraftButton';
+import { draftRenewalSources } from '@/lib/lease-create/delete-draft';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/shell/PageHeader';
@@ -116,6 +118,16 @@ export default async function LeaseDetailPage({
         ]),
   ].sort((a, b) => b.date.getTime() - a.date.getTime());
   const noticeGiven = lease.noticeGivenAt != null;
+  // The server re-checks every rule (and locks) on delete; this only decides whether to offer it.
+  const deletable =
+    lease.status === 'DRAFT' &&
+    lease.eSignStatus === 'NOT_SENT' &&
+    !lease.signedAt &&
+    !lease.charges.length &&
+    !lease.payments.length;
+  const renewal = deletable
+    ? (await draftRenewalSources(session.organizationId, [lease.id])).has(lease.id)
+    : false;
 
   const activeTab = LEASE_TABS.find((tab) => tab.key === query.tab)?.key ?? 'overview';
   // Derive scope from the authorized lease, never from caller-supplied IDs.
@@ -205,6 +217,18 @@ export default async function LeaseDetailPage({
             <ActionGlyph name="payments" />
             Online payments {onlinePaymentsEnabled ? 'enabled' : 'not connected'}
           </span>
+          {deletable && (
+            <span className={styles.summaryAction}>
+              <DeleteDraftButton
+                leaseId={lease.id}
+                placeLabel={title}
+                tenantName={lease.tenants.map(({ tenant }) => tenant.name).join(', ') || undefined}
+                renewal={renewal}
+                fileCount={lease.documents.length}
+                returnTo={returnScope ?? 'leases'}
+              />
+            </span>
+          )}
         </section>
 
         {/* One-line signing context; the Agreement tab holds the full signer panel. */}

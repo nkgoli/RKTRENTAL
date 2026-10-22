@@ -14,6 +14,10 @@ import styles from './leases-ux.module.css';
 import { Table } from '@/components/ui/Table';
 import { SearchField } from '@/components/ui/SearchField';
 import { RowMenu } from '@/components/ui/RowMenu';
+import { NoticeToast } from '@/components/ui/Toast';
+import { DeleteDraftButton } from '@/components/lease-create/DeleteDraftButton';
+import { draftNotice } from '@/components/lease-create/draft-notice';
+import { draftRenewalSources } from '@/lib/lease-create/delete-draft';
 
 const PAGE_SIZE = 10;
 
@@ -59,6 +63,7 @@ export default async function LeasesPage({
     page?: string;
     propertyId?: string;
     unitId?: string;
+    notice?: string;
   }>;
 }) {
   const session = await requireManagerRole();
@@ -84,6 +89,11 @@ export default async function LeasesPage({
     Math.max(1, Math.ceil(rows.length / PAGE_SIZE)),
   );
   const shown = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const renewals = await draftRenewalSources(
+    session.organizationId,
+    shown.filter((lease) => lease.status === 'DRAFT').map((lease) => lease.id),
+  );
+  const notice = draftNotice(params.notice);
   const leaseStatusLabel = tab === 'drafts' ? 'draft' : tab;
   const values = {
     active: counts.active,
@@ -94,6 +104,7 @@ export default async function LeasesPage({
 
   return (
     <div className={styles.page}>
+      {notice && <NoticeToast message={notice} tone="success" />}
       <ScopedWorkspace organizationId={session.organizationId} filter={scope} activeTab="leases" />
       <PageHeader
         eyebrow="Leasing"
@@ -275,6 +286,18 @@ export default async function LeasesPage({
                           >
                             Continue setup
                           </Link>
+                        )}
+                        {lease.status === 'DRAFT' && lease.eSignStatus === 'NOT_SENT' && (
+                          <DeleteDraftButton
+                            leaseId={lease.id}
+                            placeLabel={
+                              property.name +
+                              (lease.unit.isImplicit ? '' : ` · Unit ${lease.unit.number}`)
+                            }
+                            tenantName={tenant?.name}
+                            renewal={renewals.has(lease.id)}
+                            text="Delete"
+                          />
                         )}
                         {lease.status === 'ACTIVE' &&
                         lease.endDate >= today &&

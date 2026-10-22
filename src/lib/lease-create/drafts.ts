@@ -334,7 +334,12 @@ export async function saveLeaseDraft(
         { kind: 'CREATED', message: renewId ? 'Saved as a renewal draft' : 'Saved as draft' },
       ]);
     } else {
-      await tx.lease.update({ where: { id: leaseId }, data: columns });
+      // A draft deleted, sent or activated meanwhile is not rewritten.
+      const { count } = await tx.lease.updateMany({
+        where: { id: leaseId, organizationId, status: 'DRAFT' },
+        data: columns,
+      });
+      if (!count) throw new LeaseServiceError('This draft is no longer open.');
     }
 
     await tx.leaseTenant.deleteMany({ where: { leaseId, organizationId } });
@@ -407,14 +412,15 @@ export async function activateDraftLease(
         'startDate',
       );
     const snapshot = draft.template ? createTermsSnapshot(draft.template, contextFromDraft(draft), draft.termOverrides) : null;
-    await tx.lease.update({
-      where: { id: leaseId },
+    const { count } = await tx.lease.updateMany({
+      where: { id: leaseId, organizationId, status: 'DRAFT' },
       data: { ...terms, status: 'ACTIVE',
         templateId: draft.template?.id ?? null,
         templateVersion: draft.template?.version ?? null,
         termsSnapshot: snapshot ? snapshot as unknown as Prisma.InputJsonValue : Prisma.JsonNull,
       },
     });
+    if (!count) throw new LeaseServiceError('This draft is no longer open.');
     await tx.leaseTenant.deleteMany({ where: { leaseId, organizationId } });
     await tx.leaseTenant.createMany({
       data: draft.tenantIds.map((tenantId) => ({

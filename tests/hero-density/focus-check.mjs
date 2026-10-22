@@ -118,13 +118,19 @@ async function roiControls(page, w) {
       const rows = [...d.querySelectorAll('div')].every(
         (row) => row.scrollWidth <= row.clientWidth + 1,
       );
+      // In-place panels (below 1024px) sit under their trigger and inside their stat's box.
+      const trigger = d.parentElement.querySelector('button').getBoundingClientRect();
+      const box = d.parentElement.getBoundingClientRect();
+      const inPlace = getComputedStyle(d).position === 'static';
       return {
         title: d.getAttribute('aria-label'),
         onScreen: r.left >= 0 && r.right <= document.documentElement.clientWidth,
         clipped: clipped || !rows,
+        overlaps: inPlace && (r.top < trigger.bottom - 1 || r.bottom > box.bottom + 1),
       };
     });
     if (!fit.onScreen) fail(`ROI @${w}: "${fit.title}" runs off screen`);
+    if (fit.overlaps) fail(`ROI @${w}: "${fit.title}" overlaps its stat or the next row`);
     if (fit.clipped) fail(`ROI @${w}: "${fit.title}" has clipped text`);
     if (w === 1280) await page.screenshot({ path: `${shots}roi-popover-${i}-${w}.png` });
     if (w === 390) {

@@ -1113,6 +1113,15 @@
 }
 /* Below the desktop layout breakdowns open in place, under their stat. */
 @media (max-width: 1023px) {
+  /* The stat fills its tile above the open panel instead of covering it. */
+  .band .statPop {
+    display: flex;
+    flex-direction: column;
+  }
+  .band .stat.stat {
+    flex: 1 0 auto;
+    height: auto;
+  }
   .band .popPanel {
     position: static;
     width: auto;

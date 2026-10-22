@@ -1,119 +1,269 @@
-# Hero density — verification
+# Hero density: verification
 
-Compact hero and summary panels on every manager page, plus a 24px gap between the Leases
-summary and Lease portfolio.
+Compact hero and summary panels on every page, a 24px gap between each manager hero and the
+content after it (including Leases, which had none), and noticeably shorter heroes on phones.
 
 ## What changed
 
-- `src/styles/hero-density.css` (new, imported after `redisgn.css` in `src/app/layout.tsx`):
-  - **Page header (`.topbar`)**: padding 48/32 → 32/24px on desktop, 32/24 → 24/20px on
-    tablet, 20/16 → 16/12px on phones.
-  - **Summary band**: padding 32 → 20/24px (desktop/tablet) and 24 → 16px (phone); inner gap
-    40 → 24px; lead figure 52 → 40px (desktop) and 40 → 32px (phone).
-  - **Stats**: on desktop they are compact rows beside the lead figure (label and detail on the
-    left, figure on the right; 112px cards → 59px rows). On tablets they wrap side by side. On
-    phones they are the same compact rows, so the side-scrolling strip that hid two of three
-    stats off-screen is gone.
-  - **Spacing**: one `--hero-gap: 24px` (from the 8px scale) between a band and the content
-    after it. Flex and grid parents of a band get it as `row-gap`, so margins are never doubled.
-    Block parents opt in with `.hero-flow`.
-- `src/app/(manager)/leases/page.tsx`: the page wrapper was a plain block, so the band touched
-  Lease portfolio (0px gap). It now uses `hero-flow`. I also removed a stray `{' '}` text node.
-- `SummaryBand.tsx` needed no markup change; I added no CSS module.
-- Unchanged: palette, fonts, 16px radius, every label, value, detail, action and link.
+### First pass (`fed0a9c`)
+
+- `src/styles/hero-density.css` is imported after `redisgn.css` in `src/app/layout.tsx`.
+  - **Page header (`.topbar`)**: padding goes from 48/32 to 32/24px on desktop, 32/24 to 24/20px
+    on tablet, and 20/16 to 16/12px on phones.
+  - **Summary band**: padding and inner gaps are smaller, and the lead figure goes from 52 to
+    40px on desktop.
+  - **Stats**: compact rows beside the lead figure on desktop; on tablets they wrap side by
+    side.
+  - **Spacing**: one `--hero-gap: 24px` before the content that follows a band.
+- `src/app/(manager)/leases/page.tsx` uses `hero-flow`, which gives the 0 → 24px Leases gap.
+
+### This pass
+
+- **Phones (< 600px), every SummaryBand**: the three stats are now one inset list (same
+  surface, border and 16px corners) with divider rows, instead of three separately padded
+  cards. Band spacing is tighter and the lead figure is 30px. Rows stay at least 44px tall and
+  text stays at least 12px.
+- **Scope fix**: every stat rule is now under `.summary-band-stats`. The first pass styled every
+  `.summary-stat`, which also restyled the selected application's **Screening report** cards
+  on `/applications`. Those cards now render exactly as before hero density (see
+  [Screening report](#screening-report-unrelated-cards)).
+- **ROI Deal Snapshot** (`RoiDealPanels.tsx`, `deal-panels.module.css`):
+  - Stat buttons use the compact padding, with room kept for the ⓘ marker.
+  - On phones the stats join the inset list, and the Monthly/Annual toggle sits beside the
+    eyebrow instead of on its own row.
+  - Stat details run full width under the label and figure (`stack-details`).
+  - "How returns are calculated →" has a 24px target.
+  - **Bug fixed:** below 1024px an open breakdown no longer covers the stat after it. The stat
+    button used to stretch to `height: 100%` of its wrapper.
+- **Rent analysis** (`CompsWorkbench.tsx`): the suggested-rent band passes `stackDetails`, a
+  new optional `SummaryBand` prop. On phones it runs long stat details full width.
+  - Text links in a band footer get a 24px minimum target.
+- **Tenant Home `RentHero`** (`portal.module.css`): this is the whole `.rentHero` card, not just
+  its 36px `heroTop` row.
+  - The rhythm is tighter at all widths.
+  - On phones: smaller icon chip, 36px amount, and Pay now stays 44px tall.
+  - From 1200px the amount and Pay now sit side by side again.
+- **Tenant Pay amount-due card** (`pay/page.tsx`, `pay.module.css`):
+  - Card padding is 20/24px, and 14/16px on phones.
+  - Grid gap is 8px, and the two notes use a `note` class instead of inline margins.
+  - Every line item, the total and the notes are unchanged.
+- **Unchanged**: palette, fonts, 16px radius, and every label, value, detail, action and link.
+  The merged button-label fix (`68792dd`, `.card-header > a`) is untouched.
 
 ## Hero inventory
 
-| Route                                                        | Hero                                                            | Covered by                                                          |
-| ------------------------------------------------------------ | --------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `/dashboard`                                                 | SummaryBand (rent collection, progress, footer action, 3 stats) | shared CSS                                                          |
-| `/properties`                                                | SummaryBand                                                     | shared CSS                                                          |
-| `/properties/[id]`                                           | SummaryBand via WorkspaceOverview (wrapped in `.band`)          | shared CSS + wrapper gap rule                                       |
-| `/properties/[id]/returns`                                   | SummaryBand via ReturnsWorkspace                                | shared CSS                                                          |
-| `/tenants`                                                   | SummaryBand                                                     | shared CSS                                                          |
-| `/leases`                                                    | SummaryBand                                                     | shared CSS + `hero-flow`                                            |
-| `/leases/[id]/ledger`                                        | SummaryBand                                                     | shared CSS                                                          |
-| `/applications`, `/payments`, `/maintenance`, `/documents`   | SummaryBand                                                     | shared CSS                                                          |
-| `/rent-comps`                                                | SummaryBand only after a comps analysis has run                 | shared CSS (not measured; see limitations)                          |
-| All manager pages                                            | `.topbar` page header (eyebrow, title, meta, actions)           | shared CSS                                                          |
-| `/leases/[id]`, `/tenants/[id]`, `/returns`, `/integrations` | topbar only, no band                                            | topbar CSS                                                          |
-| Tenant `/pay`                                                | bespoke amount-due card (`pay.module.css`)                      | not changed: 208px on a phone, already compact, outside owned paths |
-| Tenant `/home`                                               | bespoke `heroTop` greeting row (36px)                           | not changed: already compact                                        |
-| Loading skeleton (`RouteStates` hero)                        | `aria-hidden` shimmer                                           | not changed                                                         |
+| Route                                                                 | Hero                                                                                                                                         | How it is covered                                                                                   |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `/dashboard`                                                          | SummaryBand: rent collection, progress, footer action, 3 linked stats                                                                        | shared CSS                                                                                          |
+| `/properties`, `/tenants` (People), `/applications`, `/payments`      | SummaryBand                                                                                                                                  | shared CSS                                                                                          |
+| `/maintenance`, `/documents`                                          | SummaryBand                                                                                                                                  | shared CSS                                                                                          |
+| `/leases`                                                             | SummaryBand                                                                                                                                  | shared CSS + `hero-flow`                                                                            |
+| `/properties/[id]`, `/properties/[id]/returns`, `/leases/[id]/ledger` | SummaryBand in the workspace                                                                                                                 | shared CSS                                                                                          |
+| `/roi-analysis?property=…`                                            | **Deal Snapshot**: custom `summary-band` with Monthly/Annual toggle, a lead popover and 3 stat popovers, risk meter, Compare and How actions | shared CSS + `deal-panels.module.css`; measured populated (Maple Court) and every control exercised |
+| `/rent-analysis?property=…&unit=…`                                    | Suggested-rent SummaryBand, shown only once the unit's comps analysis has run                                                                | shared CSS + `stackDetails`; measured after running the analysis (Maple Court, first unit)          |
+| `/rent-comps`                                                         | Redirects to the unit's Listing tab, which uses the Listing layout with no summary band                                                      | nothing to compact; confirmed in the browser                                                        |
+| All manager pages                                                     | `.topbar` page header                                                                                                                        | shared CSS                                                                                          |
+| `/returns`, `/integrations`, `/leases/[id]`, `/tenants/[id]`          | topbar only                                                                                                                                  | topbar CSS                                                                                          |
+| Tenant `/home`                                                        | **RentHero**: the full `.rentHero` card (eyebrow + icon, amount, Pay now, premises/autopay, manager)                                         | `portal.module.css`                                                                                 |
+| Tenant `/pay`                                                         | **Amount-due card**: header + badge, line items, total, notes                                                                                | `pay.module.css`                                                                                    |
+| Loading skeleton (`RouteStates` hero)                                 | `aria-hidden` shimmer                                                                                                                        | not changed                                                                                         |
 
 ## Measurements (px, Chromium, demo seed)
 
-Command: `node tests/hero-density/measure.mjs <label>` against a local dev server. "Before" is
-base `95c8f29` (stylesheet import and Leases change temporarily disabled). "After" is this
-change. Raw JSON is in `tests/hero-density/out/`; it is git-ignored.
+Command: `node tests/hero-density/measure.mjs <label> [baseURL] [--check]` against a local
+`next dev` server.
 
-| Route @ width                  | Band before → after | Gap to next before → after | Topbar before → after |
-| ------------------------------ | ------------------- | -------------------------- | --------------------- |
-| /leases @1280                  | 455 → 235           | **0 → 24**                 | 170 → 146             |
-| /leases @820                   | 310 → 250           | **0 → 24**                 | 136 → 124             |
-| /leases @390                   | 334 → 345\*         | **0 → 24**                 | 232 → 224             |
-| /dashboard @1280               | 435 → 235           | 32 → 24                    | 170 → 146             |
-| /dashboard @820                | 388 → 314           | 24 → 24                    | 157 → 145             |
-| /dashboard @390                | 479 → 474           | 24 → 24                    | 197 → 189             |
-| /properties @1280              | 435 → 235           | 32 → 24                    | 170 → 146             |
-| /properties/[id] @1280         | 331 → 268           | 24 → 24                    | —                     |
-| /properties/[id] @820          | 442 → 369           | 16 → 24                    | —                     |
-| /properties/[id] @390          | 573 → 501           | 16 → 24                    | —                     |
-| /properties/[id]/returns @1280 | 307 → 226           | 24 → 24                    | —                     |
-| /tenants @1280                 | 428 → 231           | 20 → 24                    | 170 → 146             |
-| /tenants @390                  | 390 → 411\*         | 20 → 24                    | 176 → 168             |
-| /applications @1280            | 435 → 235           | 24 → 24                    | 170 → 146             |
-| /applications @390             | 479 → 454           | 24 → 24                    | 176 → 168             |
-| /payments @1280                | 326 → 204           | 32 → 24                    | 170 → 146             |
-| /payments @390                 | 462 → 407           | 24 → 24                    | 232 → 224             |
-| /maintenance @1280             | 435 → 235           | 32 → 24                    | 170 → 146             |
-| /documents @1280               | 307 → 172           | 16 → 24                    | 170 → 146             |
-| /documents @390                | 450 → 386           | 16 → 24                    | 197 → 189             |
-| /leases/[id]/ledger @1280      | 324 → 186           | 24 → 24                    | 173 → 149             |
-| /leases/[id]/ledger @390       | 423 → 380           | 24 → 24                    | 172 → 164             |
+- **Original**: base `fed0a9c~1`, before any hero-density change, measured by temporarily
+  restoring those files.
+- **Prior**: `fed0a9c`, the first pass.
+- **Now**: this change.
+- **Following panel top**: the page y-position of the first block after the hero, so it also
+  reflects page-header savings.
 
-\* On phones the old band showed one stat and pushed the other two into a side-scrolling
-strip. Now all three are visible, which adds 11px on Leases and 21px on Tenants. Every desktop
-and tablet band is shorter: 455 → 235 on Leases and 435 → 235 on Dashboard (about 46%).
+Raw JSON is in `tests/hero-density/out/{before,prior,after}.json`, which is git-ignored.
 
-No route reported horizontal page overflow or a clipped element inside a band at 1280, 820 or
-390px (the script checks `scrollWidth` and `overflow: hidden|clip` children).
+| Route @ width                    | Hero height: original → prior → now | vs original | Following panel top: original → now | Gap original → now |
+| -------------------------------- | ----------------------------------- | ----------- | ----------------------------------- | ------------------ |
+| /dashboard @desktop              | 435 → 235 → **235**                 | -46%        | 637 → **405**                       | 32 → 24            |
+| /dashboard @tablet               | 388 → 314 → **314**                 | -19%        | 630 → **544**                       | 24 → 24            |
+| /dashboard @mobile               | 479 → 474 → **410**                 | -14%        | 761 → **684**                       | 24 → 24            |
+| /properties @desktop             | 435 → 235 → **235**                 | -46%        | 637 → **405**                       | 32 → 24            |
+| /properties @tablet              | 340 → 274 → **274**                 | -19%        | 561 → **484**                       | 24 → 24            |
+| /properties @mobile              | 364 → 365 → **305**                 | -16%        | 625 → **559**                       | 24 → 24            |
+| /tenants @desktop                | 428 → 231 → **231**                 | -46%        | 703 → **490**                       | 20 → 24            |
+| /tenants @tablet                 | 336 → 270 → **270**                 | -20%        | 638 → **569**                       | 20 → 24            |
+| /tenants @mobile                 | 390 → 411 → **353**                 | -9%         | 730 → **693**                       | 20 → 24            |
+| /leases @desktop                 | 455 → 235 → **235**                 | -48%        | 625 → **405**                       | **0 → 24**         |
+| /leases @tablet                  | 310 → 250 → **250**                 | -19%        | 507 → **460**                       | **0 → 24**         |
+| /leases @mobile                  | 334 → 345 → **287**                 | -14%        | 627 → **596**                       | **0 → 24**         |
+| /applications @desktop           | 435 → 235 → **235**                 | -46%        | 629 → **405**                       | 24 → 24            |
+| /applications @tablet            | 396 → 321 → **321**                 | -19%        | 618 → **530**                       | 24 → 24            |
+| /applications @mobile            | 479 → 454 → **394**                 | -18%        | 740 → **648**                       | 24 → 24            |
+| /payments @desktop               | 326 → 204 → **204**                 | -37%        | 529 → **375**                       | 32 → 24            |
+| /payments @tablet                | 378 → 305 → **305**                 | -19%        | 600 → **514**                       | 24 → 24            |
+| /payments @mobile                | 462 → 407 → **364**                 | -21%        | 780 → **674**                       | 24 → 24            |
+| /maintenance @desktop            | 435 → 235 → **235**                 | -46%        | 637 → **405**                       | 32 → 24            |
+| /maintenance @tablet             | 310 → 233 → **233**                 | -25%        | 531 → **442**                       | 24 → 24            |
+| /maintenance @mobile             | 310 → 324 → **266**                 | -14%        | 571 → **519**                       | 24 → 24            |
+| /documents @desktop              | 307 → 172 → **172**                 | -44%        | 493 → **343**                       | 16 → 24            |
+| /documents @tablet               | 338 → 273 → **273**                 | -19%        | 552 → **482**                       | 16 → 24            |
+| /documents @mobile               | 450 → 386 → **342**                 | -24%        | 724 → **616**                       | 16 → 24            |
+| /properties/:id @desktop         | 307 → 214 → **214**                 | -30%        | 577 → **484**                       | 24 → 24            |
+| /properties/:id @tablet          | 388 → 314 → **314**                 | -19%        | 762 → **697**                       | 16 → 24            |
+| /properties/:id @mobile          | 419 → 350 → **309**                 | -26%        | 949 → **846**                       | 16 → 24            |
+| /properties/:id/returns @desktop | 307 → 226 → **226**                 | -26%        | 714 → **634**                       | 24 → 24            |
+| /properties/:id/returns @tablet  | 370 → 304 → **304**                 | -18%        | 890 → **824**                       | 24 → 24            |
+| /properties/:id/returns @mobile  | 487 → 399 → **355**                 | -27%        | 1185 → **1071**                     | 15 → 24            |
+| /roi-analysis @desktop           | 471 → 324 → **320**                 | -32%        | 816 → **665**                       | 24 → 24            |
+| /roi-analysis @tablet            | 484 → 392 → **384**                 | -21%        | 947 → **848**                       | 24 → 24            |
+| /roi-analysis @mobile            | 617 → 697 → **567**                 | -8%\*       | 1026 → **976**                      | 24 → 24            |
+| /rent-analysis @desktop          | 455 → 288 → **288**                 | -37%        | 856 → **665**                       | 24 → 24            |
+| /rent-analysis @tablet           | 431 → 353 → **353**                 | -18%        | 860 → **769**                       | 24 → 24            |
+| /rent-analysis @mobile           | 539 → 584 → **484**                 | -10%\*      | 1041 → **978**                      | 24 → 24            |
+| tenant /home @desktop            | 273 → 273 → **203**                 | -26%        | 518 → **448**                       | 20 → 20            |
+| tenant /home @tablet             | 198 → 198 → **184**                 | -7%         | 393 → **379**                       | 20 → 20            |
+| tenant /home @mobile             | 263 → 263 → **237**                 | -10%        | 452 → **425**                       | 20 → 20            |
+| tenant /pay @desktop             | 226 → 226 → **182**                 | -19%        | 502 → **458**                       | 20 → 20            |
+| tenant /pay @tablet              | 210 → 210 → **182**                 | -13%        | 437 → **409**                       | 20 → 20            |
+| tenant /pay @mobile              | 208 → 208 → **182**                 | -12%        | 426 → **400**                       | 20 → 20            |
+
+\* The original phone ROI and Rent analysis bands showed one stat and hid the other two in a
+side-scrolling strip (the script flags those stats as escaping the band). Now all three stats
+are visible, and the band is still shorter.
+
+- **Phones**: the prior pass made Leases (+11px), People (+21px), Maintenance, ROI (+80px) and
+  Rent analysis (+45px) taller and left Home almost unchanged (479 → 474px). Every phone hero
+  is now shorter than the original:
+  - Home: −69px.
+  - Leases: −47px.
+  - People: −37px.
+  - Applications: −85px.
+  - Payments: −98px.
+  - ROI: −50px.
+  - Rent analysis: −55px.
+- **Desktop and tablet**: the first pass's gains are kept, and ROI is 4–8px shorter again.
+- **Gaps**: every manager hero is followed by a 24px gap. The tenant portal keeps its existing
+  20px rhythm.
+
+On every route at 1280, 820 and 390px:
+
+- No horizontal page overflow.
+- No clipped content and nothing escaping a hero.
+- No hero text under 12px.
+- No button-like hero control under 30px tall.
+- No standalone text link under 24px.
+
+## Screening report (unrelated cards)
+
+`/applications?applicant=seed-application-marcus` renders the selected application's Screening
+report with `.summary-stat` cards outside any hero.
+
+| Width | Original                 | Prior (unscoped rules)           | Now                      |
+| ----- | ------------------------ | -------------------------------- | ------------------------ |
+| 1280  | block, 112px, value 24px | grid row, 79px, value 20px right | block, 112px, value 24px |
+| 820   | block, 112px, value 24px | block, 94px, padding 12/14, 22px | block, 112px, value 24px |
+| 390   | block, 112px, value 24px | grid row, 59px, value 20px right | block, 112px, value 24px |
+
+`budgets.json` stores the original layout of these cards, and `measure.mjs --check` fails if
+any card's display, padding, height, value size or alignment differs.
+
+## Controls, keyboard and touch
+
+`node tests/hero-density/focus-check.mjs` passed. It runs at 1280, 1024, 820 and 390px on these
+routes:
+
+- Manager: `/dashboard`, `/leases`, `/tenants`, `/payments`, `/properties/seed-property-elm`,
+  ROI (Maple Court) and Rent analysis (Maple Court, first unit).
+- Tenant: `/home` and `/pay`.
+
+It checks:
+
+- **Focus**: every link, button and disclosure in the hero is reached with Tab, shows a focus
+  ring and sits fully inside the hero.
+- **Phone touch targets**: controls are at least 24px tall, and stat rows at least 44px.
+- **ROI**:
+  - **Annual** switches the lead to "/ year" and sets `aria-pressed`, and **Monthly** switches
+    it back.
+  - Each of the four breakdowns (Cash flow, Cash-on-cash, Cap rate, Debt service coverage)
+    opens with Enter, stays on screen with no clipped text, and closes with Escape with focus
+    back on its trigger.
+  - Below 1024px an open breakdown stays under its stat and inside its tile. This last check
+    caught the overlap bug that is now fixed.
+  - Compare with actuals and How returns are calculated are reached and focus-ringed. Clicking
+    them changes the view or scrolls, so the script does not click them.
+
+Long ROI labels and values, such as "Year 1 NOI ÷ debt service · lenders look for 1.20×+" and
+"$161,424", stay readable in the desktop popovers and in the phone in-place panels. See
+`shots/controls/roi-popover-*-1280.png` and `-390.png`.
+
+## Rendered budget check
+
+`node tests/hero-density/measure.mjs <label> [baseURL] --check` compares a run with
+`tests/hero-density/budgets.json` and fails if any of the following is true:
+
+- A hero is more than 6px taller than now.
+- The following panel starts more than 6px lower.
+- A hero gap is not exactly what it is now.
+- A hero is missing required content (for example "Open rent roll", "Debt service coverage",
+  "Pay now").
+- Content is clipped or the page overflows.
+- Text is under 12px, a control under 24px, or a standalone text link under 20px.
+- The Screening report differs from its original layout.
+
+As a regression test I temporarily restored the prior stylesheet. The check failed with 27
+problems: every phone band over budget, and the Screening report changed at all three widths.
+With this change the check passes.
 
 ## Screenshots (local, git-ignored)
 
-`tests/hero-density/shots/before/` and `tests/hero-density/shots/after/` hold:
+Under `tests/hero-density/shots/`, for desktop 1280, tablet 820 and mobile 390:
 
-- `leases-desktop.png` and `leases-mobile.png`: the first supplied example.
-- `dashboard-desktop.png` and `dashboard-mobile.png`: the second supplied example (Home).
-- `properties_id-desktop.png` and `properties_id-mobile.png`: the bespoke workspace band with
-  actions.
-- `payments-*.png`, plus tenant `pay-*.png` and `home-*.png`.
+- `before/` and `after/` hold the page view (`<route>-<width>.png`) and the whole hero
+  (`<route>-<width>-hero.png`) for:
+  - `dashboard` (Home)
+  - `leases`
+  - `tenants` (People)
+  - `payments`
+  - `properties_id`
+  - `roi-analysis` (populated)
+  - `rent-analysis` (populated)
+  - tenant `home` and `pay`
 
-`after/` also has `leases-820.png` and `leases-1024.png` (tablet wrapping).
+  Fixed bars are hidden in the hero crops.
 
-## Checks
+- `before/` and `after/` also hold `screening-report-desktop.png` and
+  `screening-report-mobile.png`.
+- `controls/` holds `roi-popover-{0..3}-1280.png` and `roi-popover-{0..3}-390.png`, each with a
+  breakdown open.
 
-- `node tests/hero-density/focus-check.mjs` passed. On `/dashboard`, `/leases`, `/payments` and
-  `/properties/seed-property-elm` at 1280, 1024, 820 and 390px, every link and button in the
-  band is reachable with Tab, shows a focus ring and sits fully inside the band.
-- `npx vitest run tests/hero-density`: 4 passed. They check the stylesheet order, that the
-  stats strip no longer scrolls, the shared gap, and the Leases `hero-flow` wiring.
-- `npx vitest run tests/ui tests/dashboard/page.test.tsx`: 81 passed (8 files).
-- `npx tsc --noEmit`, ESLint on the changed files and `prettier --check` all passed.
+## Other checks
+
+- `npx vitest run tests/hero-density`: 5 passed.
+  - Stylesheet order.
+  - Every stat rule is scoped to `.summary-band-stats`.
+  - SummaryBand renders `stack-details` only when asked.
+  - The Leases `hero-flow` wiring.
+  - Every requested hero's budget is at or below its original height.
+- Related suites passed:
+  - `tests/ui`, `tests/dashboard/page.test.tsx` and `tests/analysis`: 289 passed.
+  - `tests/tenant-pay`, `tenant-portal`, `rent-analysis`, `rent-comps`, `comps`, `roi`,
+    `applications`, `screening` and `hero-density`: 219 passed.
+- `npx tsc --noEmit`, ESLint on the changed files and `prettier --check` passed.
 
 ## Concurrent work
 
-- The button-label fix (`68792dd`, on `main` after this branch's base) changes only the
-  `.card-header > a` rules in `redisgn.css` and `accessibility.css`. This change doesn't touch
-  those files or selectors, so both apply.
-- No property-navigation commit was visible on any branch at verification time. This change
-  doesn't edit property-list navigation, `redisgn.css`, `globals.css` or the shared
+- This change does not touch property navigation (`task:360f8a58…`) or Returns Cancel
+  (`task:83e2a197…`) files, `redisgn.css`, `globals.css`, `accessibility.css` or the shared
   Button/Card components.
+- The button-label rules (`.card-header > a`) are unchanged.
 
 ## Limitations
 
-- The `/rent-comps` band appears only after an analysis runs, so I didn't measure it. It uses
-  the same shared CSS.
-- I left the tenant `/pay` amount-due card unchanged. It is bespoke, already compact (about
-  208px on a phone) and lives in `pay.module.css`, which this Task doesn't own.
-- The measurements come from a local `next dev` server on the demo seed, not a managed Preview.
+- Measurements come from a local `next dev` server on the demo seed with a temporary local auth
+  secret, not from a managed Preview.
+- Tablet heights are the same as after the first pass, except for ROI, tenant Home and Pay,
+  which are shorter. Those tablet layouts already lay the stats out side by side.
+- Tenant pages keep their 20px panel rhythm. The 24px hero gap applies to manager pages.
+- ROI and Rent analysis on phones are 8–10% shorter than the original rather than ~15%. They
+  carry more required content (a three-line detail, the risk meter, two actions and a
+  disclosure), and all of it is kept.

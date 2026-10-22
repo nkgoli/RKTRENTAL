@@ -27,6 +27,6 @@ Reference captures: [Home r134, 1280px](../../.playwright-mcp/analytics-design-h
 
 ## Limitations and retained evidence
 
-These are static design inspections and browser geometry observations. Selects, Save analysis, Apply to Unit 3A and other controls were not exercised as application workflows; no records were changed. The completed navigation review was not repeated because no destination changed. No application code, deployment or executable application tests were involved. No remaining visual defect was observed at the requested widths; the existing phone metric carousels remain intentional.
+These are static design inspections and browser geometry observations. Selects, Save analysis, Apply to Unit 3A and other controls were not exercised as application workflows; no records were changed. A supplemental browser capture pass encountered `MCP_SESSION_NOT_FOUND` after the successful geometry/style observations; the final linked evidence uses the exact-width Design mode renders. The completed navigation review was not repeated because no destination changed. No application code, deployment or executable application tests were involved. No remaining visual defect was observed at the requested widths; the existing phone metric carousels remain intentional.
 
 Screenshots remain local, outside Git, in this retained checkout: `C:/Users/nkgol/RocketRental/.orchestra/workspaces/@3yuua96hcj68vlm2me8/repository`. The links above identify individual evidence files; they do not copy those images into another checkout.

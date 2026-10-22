@@ -54,14 +54,57 @@ cut off.
     inside `dialog`. Before, the dialog's buttons lost their borders and its description was
     cut off.
 
+## Send late-rent reminder
+
+Late rows' menus have **Send late-rent reminder**, after Open ledger. It is a plain link to the
+existing reminder review: `/notifications?leaseId=…&tenantId=…&from=rent-roll`, plus the rent
+roll's property or unit scope. Following it never previews or sends anything.
+
+- **Targeting.** The review selects the row's lease and preselects the row's tenant when that
+  tenant is an eligible recipient for the chosen channel. Co-tenants stay an explicit choice. If
+  the row's tenant has no eligible contact, nobody is preselected and a co-tenant is never
+  substituted. The excluded list says why (missing contact or opted out).
+- **Fresh eligibility.** `/notifications` is rendered per request from the current ledger and
+  contacts, so a Late label that predates a payment does not carry over. Such a lease shows
+  "All caught up", with a note that it may have been paid since the rent roll loaded, and has no
+  Preview button. A lease that is no longer available in the scope shows an alert and selects
+  nothing.
+- **Existing protections.** Unchanged: channel and content are reviewed in a preview, and only
+  the explicit confirm button sends. The server rechecks the balance, contacts, preferences and
+  transport at preview and at send (`STALE_PREVIEW`, `NOT_OVERDUE`). It refuses a second send
+  for the same balance and channel (`REMINDER_ALREADY_DISPATCHED`) and keeps unresolved or
+  uncertain sends for recovery. Sandbox attempts are recorded as "Sandbox · not delivered".
+- **Return.** The breadcrumb reads "Rent roll" and returns to the late rent roll in the same
+  scope.
+
 ## Verification
 
+The `payments` Playwright project in `playwright.config.ts` runs `tests/payments/*.spec.ts`
+through the normal runner (`npm run test:e2e`, or `-- --project=payments`). It runs last because
+`rent-roll-menu.spec.ts` changes the seed. The reminder and consumer specs build a synthetic
+property ("Synthetic Reminder Court", `e2e-reminder-` IDs, `example.invalid` contacts) before
+each test from `tests/payments/fixtures.ts`, and remove it afterwards. They run in sandbox mode,
+so nothing is delivered.
+
+- `tests/payments/rent-roll-reminder.spec.ts`, at 1440px and 390px:
+  - two rows open the review for their own lease and tenant, without creating a preview
+  - edit, SMS/email switch and preview, then an explicit sandbox send, with history and a
+    refused duplicate
+  - paid after the rent roll rendered, and paid between preview and confirmation
+  - a tenant with no contact, and an unavailable SMS channel
+  - reaching the action with the keyboard
+- `tests/payments/row-menu-consumers.spec.ts`: the lease list, the property Leases tab and the
+  tenant directory at 1440px and 390px. Checks anchoring, stacking, Escape with focus restored,
+  and that links target the row.
+- `tests/notifications/rent-roll-reminder.test.tsx`: the workspace's preselection, no
+  co-tenant substitution, paid-since-render and missing-lease states.
 - `tests/ui/row-menu.test.tsx` covers ARIA state, one-open, outside click, keys, focus restore,
   cancel versus confirm, and links.
 - `tests/payments/rent-roll-menu.test.tsx` uses a mocked synthetic rent roll. It checks that
-  Record payment hrefs and the posted late-fee `leaseId` belong to the selected row.
-- `tests/payments/rent-roll-menu.spec.ts` is the Playwright spec. Run it only against a
-  throwaway seeded database, because it adds one late fee and records a $1.00 payment. It covers:
+  Record payment and reminder hrefs and the posted late-fee `leaseId` belong to the selected row.
+- `tests/payments/rent-roll-menu.spec.ts` runs on the seeded demo rent roll, so use the
+  throwaway database `npm run test:e2e` provisions: it adds one late fee and records a $1.00
+  payment. It covers:
   - hit tests over neighbouring rows
   - anchoring at 1440px and 390px
   - the first and last rows, and flipping at the viewport edge

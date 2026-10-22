@@ -2218,6 +2218,12 @@ h4 {
   position: relative;
   display: inline-block;
 }
+/* Consumers may raise every `.row-menu` (e.g. z-index: 2 in the workspace lease list), which makes
+   each one a stacking context at the same level: later rows' menus would paint over this panel.
+   The open menu must outrank its neighbours whatever the consumer's selector specificity. */
+.row-menu.row-menu-open {
+  z-index: 31 !important;
+}
 .row-menu-open > .icon-btn {
   background: var(--rr-hover);
   color: var(--design-text);

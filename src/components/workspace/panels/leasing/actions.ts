@@ -41,19 +41,25 @@ export async function recordPropertyPaymentAction(data: FormData) {
     redirect(withUnit(`/properties/${propertyId}/payments`, unitId, { notice }));
   const amount = text(data, 'amount').replace(/[$,\s]/g, '');
   if (!/^\d+(\.\d{1,2})?$/.test(amount) || toCents(amount) <= 0) return back('invalid-amount');
-  const lease = await db.lease.findFirst({
-    where: {
-      id: text(data, 'leaseId'),
-      organizationId: session.organizationId,
-      unit: { propertyId, ...(unitId ? { id: unitId } : {}) },
-    },
-    select: { id: true },
-  });
+  // Only an active lease in this property (and unit) can take the payment; a stale or foreign id
+  // fails instead of landing on another lease.
+  const leaseId = text(data, 'leaseId');
+  const lease = leaseId
+    ? await db.lease.findFirst({
+        where: {
+          id: leaseId,
+          organizationId: session.organizationId,
+          status: 'ACTIVE',
+          unit: { propertyId, ...(unitId ? { id: unitId } : {}) },
+        },
+        select: { id: true },
+      })
+    : null;
   if (!lease) return back('payment-failed');
   try {
     const result = await recordPayment({
       organizationId: session.organizationId,
-      leaseId: text(data, 'leaseId'),
+      leaseId: lease.id,
       amountCents: toCents(amount),
       idempotencyKey: randomUUID(),
     });

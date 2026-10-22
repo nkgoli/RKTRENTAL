@@ -49,6 +49,7 @@ const group: BoardGroup = {
   tenantNames: 'Jamie Doe',
   balanceCents: 0,
   rows: [],
+  payments: [],
 };
 const boardProps = {
   propertyId: 'property',

@@ -374,7 +374,8 @@ body {
   font-size: var(--rr-h2);
   font-weight: 500;
 }
-.card-header > a,
+/* Text links only: button-styled links (.btn, .action) keep their own colour, size and no underline. */
+.card-header > a:not(.btn, .action),
 .section-link {
   color: var(--design-primary);
   font-size: 15px;

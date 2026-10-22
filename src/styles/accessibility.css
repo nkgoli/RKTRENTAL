@@ -21,7 +21,7 @@
 .card-header {
   flex-wrap: wrap;
 }
-.card-header > a {
+.card-header > a:not(.btn, .action) {
   font-size: 13px;
   font-weight: 600;
 }

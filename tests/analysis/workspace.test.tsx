@@ -1353,7 +1353,7 @@ describe('compact header and section-preserving assumptions round trip', () => {
 });
 
 describe('What if: one shared, scoped simulation across views', () => {
-  const strip = () => screen.queryAllByRole('region', { name: 'What if comparison' });
+  const strip = () => screen.queryAllByRole('region', { name: 'Active what if' });
   const visibleStrip = () => {
     const shown = strip().filter((s) => !s.closest('[hidden]'));
     expect(shown).toHaveLength(1);
@@ -1361,32 +1361,32 @@ describe('What if: one shared, scoped simulation across views', () => {
   };
   const rentField = () => document.getElementById('whatif.income.monthlyRent') as HTMLInputElement;
 
-  it('shows baseline, simulated value and signed change beside each view, then resets', async () => {
+  it('updates the existing metrics directly under one compact status line, then resets', async () => {
     await open();
     expect(strip()).toHaveLength(0);
+    const snapshot = () => screen.getByRole('region', { name: 'Deal Snapshot' });
+    const baseline = snapshot().textContent;
     const panel = openWhatIf();
     expect(panel.getByText(/Temporary\. Saved assumptions and recorded rent/)).toBeTruthy();
     fireEvent.change(rentField(), { target: { value: '1200' } });
     // Temporary edits are not unsaved analysis changes.
     expect(screen.queryByText('Unsaved changes')).toBeNull();
     expect(whatIfTrigger().textContent).toContain('1 change');
-    let view = visibleStrip();
-    expect(view.getByText(/Simulated/)).toBeTruthy();
-    expect(view.getByRole('list', { name: 'Changed assumptions' }).textContent).toContain(
-      '1000 → 1200',
+    expect(visibleStrip().getByRole('status').textContent).toBe(
+      'SimulatedWhat if · 1 change, not saved',
     );
-    const row = view.getByRole('row', { name: /Cash flow · Year 1/ });
-    // $200/month more rent: Year 1 cash flow moves by the engine's figure, signed.
-    expect(row.textContent).toMatch(/\+\$/);
-    // Beside the metric itself: the Deal Snapshot cash flow carries its change from baseline.
-    const snapshot = screen.getByRole('region', { name: 'Deal Snapshot' });
-    expect(snapshot.textContent).toMatch(/vs baseline/);
+    // No duplicate comparison: no chips, metric table or extra charts.
+    expect(screen.queryByRole('list', { name: 'Changed assumptions' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Baseline and simulated values' })).toBeNull();
+    expect(screen.queryByRole('img', { name: /baseline and what if/ })).toBeNull();
+    // The existing metrics carry the simulated figure and its change from baseline.
+    expect(snapshot().textContent).not.toBe(baseline);
+    expect(snapshot().textContent).toMatch(/vs baseline/);
     for (const name of ['Actual vs projected', 'Charts', 'Benchmarks', 'Compare']) {
       fireEvent.click(screen.getByRole('tab', { name }));
-      view = visibleStrip();
-      expect(view.getByText(/What if · temporary, not saved/)).toBeTruthy();
+      expect(visibleStrip().getByRole('button', { name: 'Edit what if' })).toBeTruthy();
+      expect(screen.queryAllByRole('table', { name: /Baseline and simulated/ })).toHaveLength(0);
     }
-    expect(visibleStrip().getByRole('table')).toBeTruthy();
     // Compare adds the temporary case as an unsaved column beside saved cases.
     expect(
       within(screen.getByRole('region', { name: 'Scenario metrics' })).getByRole('columnheader', {
@@ -1396,6 +1396,8 @@ describe('What if: one shared, scoped simulation across views', () => {
     fireEvent.click(visibleStrip().getByRole('button', { name: 'Reset to baseline' }));
     expect(strip()).toHaveLength(0);
     expect(rentField().value).toBe('');
+    fireEvent.click(screen.getByRole('tab', { name: 'Summary' }));
+    expect(snapshot().textContent).toBe(baseline);
     // Saving after a reset stores the untouched baseline and no case.
     fireEvent.click(toolbarButton('Save draft'));
     await screen.findByText('Saved draft - revision 1');
@@ -1441,7 +1443,9 @@ describe('What if: one shared, scoped simulation across views', () => {
     openWhatIf();
     fireEvent.change(rentField(), { target: { value: 'lots' } });
     expect(rentField().getAttribute('aria-invalid')).toBe('true');
-    expect(visibleStrip().getByRole('status').textContent).toMatch(/Simulation paused/);
+    expect(visibleStrip().getByRole('status').textContent).toMatch(
+      /^PausedWhat if · .+\. Figures show the baseline\.$/,
+    );
     expect(screen.getByRole('region', { name: 'Deal Snapshot' }).textContent).not.toMatch(
       /vs baseline/,
     );

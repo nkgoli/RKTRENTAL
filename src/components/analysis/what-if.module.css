@@ -1,5 +1,5 @@
 /* What if: one header trigger, a side panel beside the analysis on wide screens and a modal
-   sheet on narrower ones, plus the simulated strip and inline deltas in each view. App tokens
+   sheet on narrower ones, plus one slim status line and inline deltas in the views. App tokens
    only; simulated figures take the primary tint so they never pass for recorded data. */
 .trigger[aria-pressed='true'],
 .trigger[data-active] {
@@ -73,8 +73,7 @@ button.close {
   min-height: 0;
 }
 .lead,
-.hint,
-.none {
+.hint {
   margin: 0 !important;
   font-size: 12px;
   line-height: 1.45 !important;
@@ -263,38 +262,34 @@ button.primary:disabled {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Simulated strip at the top of each view. */
-.strip {
-  border: 1px solid var(--design-primary);
-  background: linear-gradient(var(--rr-primary-tint), var(--design-surface) 72px);
-  border-radius: var(--rr-card-radius);
-  padding: 12px 16px;
-  margin-bottom: 16px;
-  display: grid;
-  gap: 10px;
-  min-width: 0;
-}
-.stripHead {
+/* One slim line under the view tabs while a what-if is active; the views show the figures. */
+.status {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 8px 16px;
-}
-.stripHead > div:first-child {
+  gap: 6px 12px;
+  margin: 0 0 12px;
+  padding: 6px 6px 6px 12px;
+  border-left: 3px solid var(--design-primary);
+  border-radius: 8px;
+  background: var(--rr-primary-tint);
   min-width: 0;
-  flex: 1 1 320px;
 }
-.eyebrow {
-  margin: 0 0 6px !important;
+.status[data-paused] {
+  border-left-color: var(--rr-warn);
+}
+.status p {
+  margin: 0 !important;
+  min-width: 0;
   font-size: 13px;
-  font-weight: 600;
-  color: var(--design-text) !important;
   line-height: 1.4 !important;
+  color: var(--design-text) !important;
+  overflow-wrap: anywhere;
 }
 .simBadge {
   display: inline-block;
-  margin-right: 6px;
+  margin-right: 8px;
   padding: 1px 8px;
   border-radius: 6px;
   background: var(--design-primary);
@@ -304,75 +299,28 @@ button.primary:disabled {
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
-.stripActions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+.status[data-paused] .simBadge {
+  background: var(--rr-warn);
 }
-.stripActions button {
-  font-size: 13px !important;
-  padding: 6px 12px !important;
+.status b {
+  font-weight: 600;
 }
-.chips {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.statusActions {
   display: flex;
-  flex-wrap: wrap;
   gap: 6px;
 }
-.chips li {
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--design-surface);
-  border: 1px solid var(--rr-border);
-  color: var(--design-text);
-  overflow-wrap: anywhere;
+.statusActions button {
+  font-size: 13px !important;
+  padding: 4px 10px !important;
+  min-height: 32px;
 }
-.tableWrap {
-  overflow-x: auto;
-}
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-.table th,
-.table td {
-  text-align: right;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--rr-border);
-  white-space: nowrap;
-}
-.table th:first-child {
-  text-align: left;
-  font-weight: 500;
-  white-space: normal;
-}
-.table thead th {
-  font-size: 12px;
-  color: var(--design-muted);
-  font-weight: 500;
-}
-.table tr:not([data-changed]) td {
-  color: var(--design-muted);
-}
-.table td[data-tone='better'],
 .delta[data-tone='better'] b {
   color: var(--rr-ok);
   font-weight: 600;
 }
-.table td[data-tone='worse'],
 .delta[data-tone='worse'] b {
   color: var(--rr-bad);
   font-weight: 600;
-}
-.note {
-  margin: 0 !important;
-  font-size: 12px;
-  line-height: 1.45 !important;
 }
 
 /* Inline change beside a metric (Deal Snapshot, panel effect list). */
@@ -394,17 +342,11 @@ button.primary:disabled {
   }
 }
 @media (max-width: 640px) {
-  .strip {
-    padding: 10px 12px;
-  }
-  .table th,
-  .table td {
-    padding: 6px 4px;
-  }
-  .stripActions {
+  .statusActions {
     width: 100%;
   }
-  .stripActions button {
+  .statusActions button {
     flex: 1 1 0;
+    min-height: 36px;
   }
 }

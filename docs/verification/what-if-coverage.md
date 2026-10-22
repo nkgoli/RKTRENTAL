@@ -22,18 +22,23 @@ One shared, temporary **What if** replaces the standalone Scenarios tab in Retur
 | `/roi-analysis?property=P&whatif=rent&unit=U&rentChange=N` (Rent analysis) | What if opens with the unit label and `+$N/mo`; the entry parameters are dropped from the address after loading. The rent change applies only when `U` is a unit of property `P`: a missing, malformed, deleted or other-property unit opens an empty what-if over the unchanged baseline, with "unit not found in this property, no rent change applied" in the panel and a status message. Invalid amounts are ignored, never guessed |
 | Edit assumptions return path with `view=scenarios` | Returns to `view=compare` |
 
-## Metrics beside each view (baseline → what if → signed change)
+## How the views show a what-if
 
-| View | Metrics in the Simulated strip | Also | Not simulated (labelled) |
-| --- | --- | --- | --- |
-| Summary | Cash flow/month, Cash flow Y1, NOI, Cash-on-cash, Cap rate, DSCR, Leveraged IRR | Deal Snapshot shows the change under each figure; cash-flow years and milestones use the what-if | Recorded source facts |
-| Actual vs projected | Effective income, Operating expenses, NOI, Debt service, Cash flow | Projection side uses the what-if; basis reads `What if · <case> (simulated…)` | Recorded rent payments and expenses |
-| Charts · Equity / Exit | Equity end of hold, IRR, Equity multiple | Baseline (dashed) vs what-if equity line | — |
-| Charts · Cash Flow | Cash flow Y1, Cumulative cash flow end of hold | Baseline (dashed) vs what-if cash-flow line | — |
-| Charts · Expenses / Amortization / Sensitivity | Opex & NOI / Loan & debt service / Cash-on-cash & IRR | Charts draw the what-if | Recorded expenses |
-| Benchmarks / Compare | IRR, Equity multiple, Cash-on-cash (+ Cash flow on Compare) | Compare adds the temporary case as a `(not saved)` column beside saved cases | Market reference returns |
+There is no separate comparison panel. The existing charts and metric cards draw the simulated values directly; one slim status line under the view tabs (`Active what if`) says what is simulated and offers **Edit what if** and **Reset to baseline** (**Show baseline** for a saved case):
 
-Deltas: money `+$1,234`/`−$50`, percentages in percentage points (`+0.81 pp`), ratios `+0.07×`; `No change` when the difference rounds to zero; `Unavailable` (never $0) when either side is missing. Green and red follow the favourable direction (costs and debt: lower is better).
+- Running: `SIMULATED What if · <case> · N changes, not saved` (or `· saved case`).
+- Invalid entry: `PAUSED What if · <case> · Enter a number, such as 1200. Figures show the baseline.`, so baseline figures are never read as simulated.
+
+| View | Shows the what-if in | Not simulated |
+| --- | --- | --- |
+| Summary | Deal Snapshot figures with their change from baseline; cash-flow years, milestones, advanced metrics | Recorded source facts |
+| Actual vs projected | Projected side; basis reads `What if · <case> (simulated…)` | Recorded rent payments and expenses |
+| Charts | Equity, Cash Flow, Expenses, Amortization, Exit and Sensitivity charts and their cards | Recorded expenses |
+| Benchmarks / Compare | Benchmark returns; Compare adds the temporary case as a `(not saved)` column beside saved cases | Market reference returns |
+
+The earlier strip (changed-assumption chips, baseline/what-if/change table and extra baseline-vs-what-if line chart, repeated in every view) was removed: it duplicated the views and took 540–670px at 390px wide.
+
+Deltas (Deal Snapshot, What if panel Effect list): money `+$1,234`/`−$50`, percentages in percentage points (`+0.81 pp`), ratios `+0.07×`; `No change` when the difference rounds to zero; `Unavailable` (never $0) when either side is missing. Green and red follow the favourable direction (costs and debt: lower is better).
 
 ## Calculation and data guarantees
 
@@ -73,3 +78,20 @@ Before captures: `before-desktop-scenarios-tab.png`, `before-desktop-summary.png
 - Save lock (390px sheet): case rent 24,500, Save draft with server actions delayed 3s → rent and name disabled, hint shown, typing has no effect; after the reply the field is enabled, still 24,500, and focus is back in the sheet. A reload shows the case at 24,500. With the request aborted, the 24,600 edit stays editable with Unsaved changes. Escape closes the sheet and focus returns to the trigger. While the request runs, focus leaves the disabled Save button, as before.
 - Equity Outcome/ProjectionMilestones stack gap is still 24px. No horizontal overflow at 390px.
 - Regression tests in `tests/analysis/workspace.test.tsx`: `applies no rent change …` (×4), `keeps Exit and Sensitivity on the current simulation …` and `locks saved-case edits while a save is in flight …`. All six fail on the earlier code and pass now.
+
+## Compact status instead of the comparison strip (production build, isolated database)
+
+`next build` + `next start` on port 3483 against an embedded Postgres on port 5483 (fresh seed plus `--seed-inputs-only`). Before captures come from the live app on 3100 (view only, temporary what-if, nothing saved). Screenshots in `.playwright-mcp/whatif-compact/` (local only, not committed). Cedar Row Townhomes.
+
+| Step | Deal Snapshot cash flow | Exit (IRR · net proceeds) | Sensitivity first cells | Cash Flow (cumulative Y10) |
+| --- | --- | --- | --- | --- |
+| Baseline | $958/mo | 10.07% · $688,112 | −4.2% −0.1% 3.9% 7.9% | $182,236 |
+| Optimistic (1440px) | $1,201/mo, `+$243 vs baseline $958` | 14.20% · $1,086,665 | −5.4% −1.7% in the last row | $392,411 |
+| Optimistic + rent 14,000 (390px) | $1,835/mo, `+$877` | 15.48% · $1,179,797 | −3.0% 1.2% 5.5% 9.8% | — |
+| Rent `lots` (paused) | baseline | baseline | baseline | baseline |
+| Reset to baseline | $958/mo | 10.07% · $688,112 | baseline | $182,236 |
+
+- Status line: 44px tall at 1440px, 91px at 390px (two 36px buttons, no horizontal overflow); was a 540–670px strip at 390px. Exactly one status line, no chips, metric table or extra chart in any view.
+- Edit what if opens the side panel (1440px) or the sheet (390px); Escape returns focus to the What if trigger. Reset removes the status and every value returns to the baseline figure above.
+- Equity Outcome/ProjectionMilestones stack gap is still 24px.
+- `tests/analysis/workspace.test.tsx` now checks the status text, the absence of the chips/table/extra chart, the Deal Snapshot change and its return to the baseline after reset, and the paused wording.

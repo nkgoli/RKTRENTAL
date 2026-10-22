@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { AnalysisPayload, ValidationIssue } from '@/lib/analysis';
 import type { ProjectionResult } from '@/lib/analysis/projections';
 import { levers as leverRows, targetFixes } from '@/lib/analysis/deal-insights';
@@ -12,7 +12,6 @@ import {
   metricDeltas,
   presetValues,
   withLever,
-  type MetricDelta,
   type MetricKind,
   type Simulation,
   type WhatIfMetricKey,
@@ -21,8 +20,7 @@ import {
 import { wholeDollars } from '@/lib/analysis/chart-data';
 import { dollars } from '@/lib/analysis/projections';
 import { readPath } from './fields';
-import { CalculationAssumptions, inputFields, overrideLabel } from './RoiScenarios';
-import { ComboChart } from './RoiChart';
+import { CalculationAssumptions, inputFields } from './RoiScenarios';
 import w from './what-if.module.css';
 
 /** The assumptions most what-ifs change; every other input sits under "More assumptions". */
@@ -74,167 +72,50 @@ export function DeltaNote({
   );
 }
 
-/** The changed assumptions of the active case, as "Label: baseline → value" chips. */
-export function ChangedAssumptions({
-  values,
-  base,
-}: {
-  values: Record<string, string>;
-  base: AnalysisPayload;
-}) {
-  const changed = Object.entries(activeOverrides(values));
-  if (!changed.length)
-    return <p className={w.none}>No assumption changed · every value follows the baseline.</p>;
-  return (
-    <ul className={w.chips} aria-label="Changed assumptions">
-      {changed.map(([path, raw]) => (
-        <li key={path}>
-          {overrideLabel(path).replace(/\s*\(.*\)\s*$/, '')}: {baseText(base, path)} → <b>{raw}</b>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 /**
- * Shown at the top of every analysis view while a what-if is active: the case, its changed
- * assumptions, and baseline, simulated value and signed change for the metrics this view
- * shows. `note` names the data in this view that the simulation does not touch.
+ * One slim line under the view tabs while a what-if is active: which case is simulated, or
+ * that it is paused (so baseline figures are not read as simulated), with Edit and Reset.
+ * The existing charts and metrics show the simulated values themselves.
  */
-export function WhatIfStrip({
+export function WhatIfStatus({
   name,
   saved,
-  values,
-  base,
-  baseline,
+  changes,
   simulation,
-  metrics,
-  note,
-  series,
   onEdit,
   onReset,
 }: {
   name: string;
   saved: boolean;
-  values: Record<string, string>;
-  base: AnalysisPayload;
-  baseline: ProjectionResult;
+  changes: number;
   simulation: Simulation;
-  metrics: WhatIfMetricKey[];
-  note?: ReactNode;
-  /** Baseline and simulated lines for the active chart. */
-  series?: 'equity' | 'cashFlow';
   onEdit: () => void;
   onReset: () => void;
 }) {
-  const rows = simulation.ok ? metricDeltas(baseline, simulation.result, metrics) : [];
   return (
-    <section className={w.strip} aria-label="What if comparison">
-      <div className={w.stripHead}>
-        <div>
-          <p className={w.eyebrow}>
-            <span className={w.simBadge}>Simulated</span> What if
-            {name === 'What if' ? '' : ` · ${name}`}
-            {saved ? ' · saved case' : ' · temporary, not saved'}
-          </p>
-          <ChangedAssumptions values={values} base={base} />
-        </div>
-        <div className={w.stripActions}>
-          <button type="button" onClick={onEdit}>
-            Edit what if
-          </button>
-          <button type="button" onClick={onReset}>
-            {saved ? 'Show baseline' : 'Reset to baseline'}
-          </button>
-        </div>
-      </div>
-      {simulation.ok ? (
-        <>
-          <DeltaTable rows={rows} />
-          {series && (
-            <SeriesChart baseline={baseline} simulated={simulation.result} metric={series} />
-          )}
-        </>
-      ) : (
-        <p className={w.paused} role="status">
-          Simulation paused:{' '}
-          {(simulation.errors[0]?.message ?? 'check the changed assumptions').replace(/\.$/, '')}.
-          Figures below show the baseline.
-        </p>
-      )}
-      {note && <p className={w.note}>{note}</p>}
-    </section>
-  );
-}
-
-function DeltaTable({ rows }: { rows: MetricDelta[] }) {
-  return (
-    <div
-      className={w.tableWrap}
-      role="region"
-      tabIndex={0}
-      aria-label="Baseline and simulated values"
+    <section
+      className={w.status}
+      aria-label="Active what if"
+      data-paused={!simulation.ok || undefined}
     >
-      <table className={w.table}>
-        <thead>
-          <tr>
-            <th scope="col">Metric</th>
-            <th scope="col">Baseline</th>
-            <th scope="col">What if</th>
-            <th scope="col">Change</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.key} data-changed={row.changed || undefined}>
-              <th scope="row">{row.label}</th>
-              <td>{formatMetric(row.kind, row.baseline)}</td>
-              <td>
-                <b>{formatMetric(row.kind, row.simulated)}</b>
-              </td>
-              <td data-tone={row.tone}>{formatDelta(row.kind, row.delta)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function SeriesChart({
-  baseline,
-  simulated,
-  metric,
-}: {
-  baseline: ProjectionResult;
-  simulated: ProjectionResult;
-  metric: 'equity' | 'cashFlow';
-}) {
-  const years = Math.max(baseline.annualCashflows.length, simulated.annualCashflows.length);
-  const values = (r: ProjectionResult) =>
-    Array.from({ length: years }, (_, i) =>
-      metric === 'equity'
-        ? (r.equityTimeline.find((e) => e.month === (i + 1) * 12)?.equity ?? null)
-        : (r.annualCashflows[i]?.cashFlow ?? null),
-    );
-  return (
-    <ComboChart
-      label={`${metric === 'equity' ? 'Year-end equity' : 'Annual cash flow'}: baseline and what if`}
-      years={Array.from({ length: years }, (_, i) => i + 1)}
-      xFormat={(y) => `Y${y}`}
-      height={180}
-      series={[
-        {
-          label: 'Baseline',
-          color: '#58677d',
-          values: values(baseline),
-          dashed: true,
-          width: 2,
-          dot: 0,
-        },
-        { label: 'What if', color: '#3e4fe5', values: values(simulated), width: 2.5, dot: 0 },
-      ]}
-    />
+      <p role="status">
+        <span className={w.simBadge}>{simulation.ok ? 'Simulated' : 'Paused'}</span>
+        <b>What if{name === 'What if' ? '' : ` · ${name}`}</b>
+        {simulation.ok
+          ? saved
+            ? ' · saved case'
+            : ` · ${changes} ${changes === 1 ? 'change' : 'changes'}, not saved`
+          : ` · ${(simulation.errors[0]?.message ?? 'Check the changed assumptions').replace(/\.$/, '')}. Figures show the baseline.`}
+      </p>
+      <div className={w.statusActions}>
+        <button type="button" onClick={onEdit}>
+          Edit what if
+        </button>
+        <button type="button" onClick={onReset}>
+          {saved ? 'Show baseline' : 'Reset to baseline'}
+        </button>
+      </div>
+    </section>
   );
 }
 

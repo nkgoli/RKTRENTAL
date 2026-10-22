@@ -21,12 +21,14 @@ export type SummaryBandProps = {
   /** Row under the figure: a status line and its one action. */
   footer?: ReactNode;
   stats?: SummaryStat[];
+  /** On phones, run each stat's detail full width under its label and figure (long details). */
+  stackDetails?: boolean;
   label?: string;
 };
 
 /**
  * The screen's single most important number in a white bordered surface (Designs/redisgn),
- * with quiet inset stat cards beside it on desktop and scrolling below it on phones.
+ * with quiet inset stat cards beside it on desktop and as one inset list below it on phones.
  */
 export function SummaryBand({
   eyebrow,
@@ -36,6 +38,7 @@ export function SummaryBand({
   progress,
   footer,
   stats = [],
+  stackDetails,
   label,
 }: SummaryBandProps) {
   const percent = progress ? Math.max(0, Math.min(100, Math.round(progress.value))) : 0;
@@ -67,7 +70,7 @@ export function SummaryBand({
         {footer && <div className="summary-band-foot">{footer}</div>}
       </div>
       {stats.length > 0 && (
-        <div className="summary-band-stats">
+        <div className={cx('summary-band-stats', stackDetails && 'stack-details')}>
           {stats.map((stat) => {
             const body = (
               <>

@@ -22,7 +22,16 @@
 .hero {
   background: var(--design-surface);
   display: grid;
-  gap: 12px;
+  gap: 8px;
+  padding: 20px 24px;
+}
+/* The amount-due hero keeps every line item; its notes follow the grid gap, not extra margins. */
+.hero .breakdown {
+  padding-bottom: 10px;
+}
+.hero .note {
+  margin: 0;
+  font-size: 12px;
 }
 .hero :global(.card-header) {
   margin-bottom: 0;
@@ -214,10 +223,10 @@
 }
 @media (max-width: 599px) {
   .total {
-    font-size: 34px;
+    font-size: 32px;
   }
   .hero {
-    padding: 16px;
+    padding: 14px 16px;
   }
   .receipt {
     gap: 8px;

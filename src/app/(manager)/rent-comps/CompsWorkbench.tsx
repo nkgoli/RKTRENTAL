@@ -455,6 +455,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
                 )}
               </>
             }
+            stackDetails
             stats={[
               {
                 label: 'Comp median · estimate',

@@ -155,12 +155,12 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
               </strong>
             </div>
             {amountDue.pendingCents > 0 && (
-              <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+              <p className={`muted ${styles.note}`}>
                 {formatUsd(amountDue.pendingCents)} is on its way from your bank and will clear
                 shortly.
               </p>
             )}
-            <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+            <p className={`muted ${styles.note}`}>
               {grace && view.graceDays > 0 ? `No late fee if paid by ${shortDate(grace)}. ` : ''}
               Your payment status and receipt will appear below.
             </p>

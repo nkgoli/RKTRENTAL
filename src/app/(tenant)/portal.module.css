@@ -154,9 +154,9 @@
   border: 1px solid var(--rr-border);
   border-radius: var(--design-radius);
   background: var(--design-surface);
-  padding: 20px;
+  padding: 16px 20px;
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 .heroTop {
   display: flex;
@@ -230,6 +230,13 @@
   }
   .homeGrid .rentHero :global(.amount) {
     font-size: 38px;
+  }
+}
+/* Wide screens: the hero column fits the amount and Pay now side by side again. */
+@media (min-width: 1200px) {
+  .homeGrid .paymentRow {
+    grid-template-columns: minmax(0, 1fr) 184px;
+    align-items: center;
   }
 }
 .homeLease .quickActions :global(.tile) {
@@ -429,6 +436,22 @@
   .rentHero,
   .currentHeader {
     padding: 16px;
+  }
+  /* Compact rent hero on phones: tighter rhythm, smaller icon chip, same content and 44px
+     Pay now target. */
+  .rentHero {
+    gap: 8px;
+    padding: 14px 16px;
+  }
+  .heroTop > span {
+    width: 32px;
+    height: 32px;
+  }
+  .paymentRow {
+    gap: 10px;
+  }
+  .homeLease .rentHero :global(.amount) {
+    font-size: 36px;
   }
   .homeLease .currentLease :global(.kv) {
     padding: 16px;

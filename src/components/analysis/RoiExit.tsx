@@ -444,6 +444,17 @@ export function Exit({
   const [applied, setApplied] = useState(saved);
   const [version, setVersion] = useState(0);
   const [changed, setChanged] = useState(false);
+  // New assumptions (an edit, a what-if, its reset or exit) replace the results and any probe:
+  // a probe run against earlier assumptions never stays on screen under the current ones.
+  const [source, setSource] = useState(payload);
+  if (source !== payload) {
+    setSource(payload);
+    setControls(saved);
+    setApplied(saved);
+    setCalculation(initial);
+    setChanged(false);
+    setVersion((v) => v + 1);
+  }
   const rows = stale || changed ? null : calculation.rows;
   const data = rows ? exitRows(rows) : null;
   const probing = !sameControls(applied, saved);

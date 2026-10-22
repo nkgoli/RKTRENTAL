@@ -362,6 +362,16 @@ export function Sensitivity({
   const [changed, setChanged] = useState(false);
   // The ranges behind the grid on screen; they differ from the defaults after a custom probe.
   const [applied, setApplied] = useState(() => sensitivityControls(payload));
+  // New assumptions (an edit, a what-if, its reset or exit) recentre the grid on them and drop
+  // any custom-range probe; display choices (metric, year, values, colours) are kept.
+  const [source, setSource] = useState(payload);
+  if (source !== payload) {
+    setSource(payload);
+    setControls(sensitivityControls(payload));
+    setApplied(sensitivityControls(payload));
+    setCalculation(initial);
+    setChanged(false);
+  }
   const [metric, setMetric] = useState<Metric>('cashOnCash');
   const [timeframe, setTimeframe] = useState<Timeframe>('year1');
   const [showValues, setShowValues] = useState(true);

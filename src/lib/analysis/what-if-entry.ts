@@ -14,9 +14,17 @@ export function rentWhatIfHref(propertyId: string, unitId: string, monthlyChange
   return `/roi-analysis?${query}`;
 }
 
-export type WhatIfEntry = { open: true; unitId: string | null; rentChange: number | null };
+export type WhatIfEntry = {
+  open: true;
+  kind: 'rent' | 'open';
+  unitId: string | null;
+  rentChange: number | null;
+};
 
-/** Reads a What if entry from an address; invalid amounts are ignored, never guessed. */
+/**
+ * Reads a What if entry from an address; invalid amounts are ignored, never guessed. This checks
+ * syntax only: the workspace applies a rent change only when the unit belongs to the property.
+ */
 export function whatIfEntryFrom(
   query: { get(name: string): string | null } | null,
 ): WhatIfEntry | null {
@@ -27,6 +35,7 @@ export function whatIfEntryFrom(
   const change = /^-?\d{1,7}$/.test(raw) ? Number(raw) : null;
   return {
     open: true,
+    kind,
     unitId: /^[A-Za-z0-9_-]{1,64}$/.test(unit) ? unit : null,
     rentChange: kind === 'rent' ? change : null,
   };

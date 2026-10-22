@@ -305,19 +305,30 @@ export function RoiWorkspace({
     const waiting = entry.current;
     if (waiting?.property === selected) {
       entry.current = null;
-      const unit = property?.units.find((u) => u.id === waiting.unitId);
+      // Only a unit of this property can supply a rent change. A missing, malformed, deleted or
+      // other-property unit opens an empty what-if over the unchanged baseline, and says so.
+      const unit = waiting.unitId
+        ? property?.units.find((u) => u.id === waiting.unitId)
+        : undefined;
       const unitName = unit ? `Unit ${unit.number}` : null;
       const rent = (calculatedPayload ?? payload).input.income?.monthlyRent;
-      const change = waiting.rentChange;
+      const change = unit ? waiting.rentChange : null;
       const signed =
         change == null ? '' : ` ${change < 0 ? '−' : '+'}${money(Math.abs(change))}/mo`;
+      const rejected = waiting.kind === 'rent' && !unit;
       setWhatIf({
         ...emptyWhatIf(selected),
         values:
           change != null && rent != null ? { 'income.monthlyRent': String(rent + change) } : {},
         name: unitName && change != null ? `${unitName} at suggested rent` : 'What if',
-        context: `From Rent analysis${unitName ? ` · ${unitName}${signed}` : ''}`,
+        context: rejected
+          ? 'From Rent analysis · unit not found in this property, no rent change applied'
+          : `From Rent analysis${unitName ? ` · ${unitName}${signed}` : ''}`,
       });
+      if (rejected)
+        setMessage(
+          `The Rent analysis unit is not part of ${property?.name ?? 'this property'}, so no rent change was applied. The baseline is unchanged.`,
+        );
       setWhatIfOpen(true);
       window.history.replaceState(null, '', propertyUrl(selected));
     }
@@ -1517,6 +1528,8 @@ export function RoiWorkspace({
                       simulation={simulation}
                       drafts={scenarios}
                       onDrafts={(d) => {
+                        // An in-flight save installs its reply; an edit now would be dropped.
+                        if (saving) return;
                         setScenarios(d);
                         setDirty(true);
                         setErrors([]);
@@ -1524,6 +1537,7 @@ export function RoiWorkspace({
                       }}
                       errors={errors}
                       saving={saving || conflict}
+                      busy={saving}
                       dirty={dirty}
                       saveLabel={savedStatus === 'READY' ? 'Save ready' : 'Save draft'}
                       onSave={() => save(savedStatus === 'READY' ? 'READY' : 'DRAFT')}

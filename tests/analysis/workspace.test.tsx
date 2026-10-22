@@ -796,12 +796,12 @@ describe('ROI projection interactions', () => {
     );
     tab('Exit Analysis');
     change('Probe exit year', '2.5');
-    fireEvent.click(screen.getByRole('button', { name: 'Update exit comparison' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Update exit comparison', hidden: true }));
     expect(screen.getByRole('alert').textContent).toMatch(/whole number/);
     change('Probe exit year', '5');
     change('Probe selling costs (%)', '6');
     change('Probe sale price override ($)', '80000');
-    fireEvent.click(screen.getByRole('button', { name: 'Update exit comparison' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Update exit comparison', hidden: true }));
     const exit = screen.getByRole('table', { name: /Exit horizon comparison/ });
     expect(within(exit).getByText('$75,200.00')).toBeTruthy();
     expect(within(exit).getByText('$29,200.00')).toBeTruthy();
@@ -1507,6 +1507,141 @@ describe('What if: one shared, scoped simulation across views', () => {
     );
     expect(window.location.search).toBe('?property=a');
     expect(screen.queryByText('Unsaved changes')).toBeNull();
+  });
+
+  it.each([
+    ['an unknown unit', 'whatif=rent&unit=gone&rentChange=240'],
+    ['another property’s unit', 'whatif=rent&unit=ub1&rentChange=240'],
+    ['a malformed unit', 'whatif=rent&unit=%3Cx%3E&rentChange=240'],
+    ['a missing unit', 'whatif=rent&rentChange=240'],
+  ])('applies no rent change from Rent analysis for %s', async (_, entry) => {
+    const withUnits = properties.map((p) => ({
+      ...p,
+      units: [{ id: p.id === 'a' ? 'u3a' : 'ub1', number: '1', status: 'VACANT' }] as never[],
+    }));
+    routeQuery.value = new URLSearchParams(`property=a&${entry}`);
+    window.history.replaceState(null, '', `/roi-analysis?property=a&${entry}`);
+    render(<RoiWorkspace selection={{ ok: true, data: withUnits }} />);
+    const dialog = await screen.findByRole('dialog', { name: 'What if' });
+    expect(dialog.textContent).toContain('unit not found in this property, no rent change applied');
+    expect(rentField().value).toBe('');
+    expect(strip()).toHaveLength(0);
+    expect(document.body.textContent).toContain(
+      'The Rent analysis unit is not part of Property a, so no rent change was applied.',
+    );
+    expect(window.location.search).toBe('?property=a');
+    fireEvent.click(toolbarButton('Save draft'));
+    await screen.findByText('Saved draft - revision 1');
+    const saved = vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as {
+      payload: ReturnType<typeof make>;
+    };
+    expect(saved.payload.input).toEqual(make().input);
+    expect(saved.payload.scenarios).toEqual([]);
+  });
+
+  it('keeps Exit and Sensitivity on the current simulation through edits, cases, reset and exit', async () => {
+    await open();
+    fireEvent.click(screen.getByRole('tab', { name: 'Charts' }));
+    const exitPanel = () => document.getElementById('roi-chart-panel-exit')!;
+    const sensitivityPanel = () => document.getElementById('roi-chart-panel-sensitivity')!;
+    const holdField = () =>
+      document.getElementById('whatif.appreciationExit.holdingPeriodYears') as HTMLInputElement;
+    // The rent row marked Base in the exact sensitivity grid.
+    const baseRent = () =>
+      within(sensitivityPanel())
+        .getByText('Base', { selector: 'small' })
+        .closest('tr')!
+        .querySelector('th')!.textContent;
+    const baselineExit = exitPanel().textContent;
+    expect(baselineExit).toContain('Exact sale statement, year 1');
+    expect(baseRent()).toBe('$1,000.00');
+    // A local exit probe never outlives the assumptions it ran against.
+    fireEvent.click(screen.getByText('Try another exit', { selector: 'summary' }));
+    fireEvent.change(screen.getByLabelText('Probe exit year'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Update exit comparison', hidden: true }));
+    expect(exitPanel().textContent).toContain('Showing probe');
+    // Both panels stay mounted (Exit is hidden while Equity shows) and follow each edit.
+    openWhatIf();
+    fireEvent.change(holdField(), { target: { value: '3' } });
+    fireEvent.change(rentField(), { target: { value: '1500' } });
+    expect(exitPanel().textContent).toContain('Exact sale statement, year 3');
+    expect(exitPanel().textContent).not.toContain('Showing probe');
+    expect(baseRent()).toBe('$1,500.00');
+    fireEvent.change(rentField(), { target: { value: '1200' } });
+    expect(baseRent()).toBe('$1,200.00');
+    // Saved as a case, back to the temporary what-if, then the saved case again.
+    fireEvent.click(openWhatIf().getByRole('button', { name: 'Save as case' }));
+    expect(exitPanel().textContent).toContain('Exact sale statement, year 3');
+    expect(baseRent()).toBe('$1,200.00');
+    fireEvent.change(openWhatIf().getByLabelText('Case'), { target: { value: 'temporary' } });
+    expect(exitPanel().textContent).toBe(baselineExit);
+    expect(baseRent()).toBe('$1,000.00');
+    showCase('Case 1');
+    expect(baseRent()).toBe('$1,200.00');
+    // Show baseline from the strip, then a fresh edit and Exit.
+    fireEvent.click(screen.getByRole('tab', { name: 'Charts' }));
+    fireEvent.click(visibleStrip().getByRole('button', { name: 'Show baseline' }));
+    expect(exitPanel().textContent).toBe(baselineExit);
+    expect(baseRent()).toBe('$1,000.00');
+    fireEvent.change(rentField(), { target: { value: '1300' } });
+    expect(baseRent()).toBe('$1,300.00');
+    fireEvent.click(openWhatIf().getByRole('button', { name: 'Exit what if' }));
+    expect(exitPanel().textContent).toBe(baselineExit);
+    expect(baseRent()).toBe('$1,000.00');
+  });
+
+  it('locks saved-case edits while a save is in flight and keeps them after a failed save', async () => {
+    await open();
+    addScenario('Higher rent');
+    const caseRent = () =>
+      document.getElementById('scenarios.0.overrides.income.monthlyRent') as HTMLInputElement;
+    fireEvent.change(caseRent(), { target: { value: '1400' } });
+    let finish!: (value: Awaited<ReturnType<typeof saveRoiAnalysisAction>>) => void;
+    vi.mocked(saveRoiAnalysisAction).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }) as never,
+    );
+    fireEvent.click(openWhatIf().getByRole('button', { name: 'Save draft' }));
+    await screen.findByText(/this case can be edited again when the save finishes/);
+    expect(caseRent().disabled).toBe(true);
+    expect(scenarioName().disabled).toBe(true);
+    // An edit attempted during the request is refused, not silently lost later.
+    fireEvent.change(caseRent(), { target: { value: '1900' } });
+    expect(caseRent().value).toBe('1400');
+    const request = vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as {
+      payload: ReturnType<typeof make>;
+      expectedRevision: number;
+    };
+    await act(async () =>
+      finish({
+        ok: true,
+        data: {
+          ...(request as never as object),
+          revision: 1,
+          missing: [],
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      } as never),
+    );
+    await screen.findByText('Saved draft - revision 1');
+    expect(caseRent().disabled).toBe(false);
+    expect(caseRent().value).toBe('1400');
+    // The dialog keeps focus inside and still closes with Escape.
+    fireEvent.change(caseRent(), { target: { value: '1600' } });
+    vi.mocked(saveRoiAnalysisAction).mockRejectedValueOnce(Error('offline'));
+    fireEvent.click(openWhatIf().getByRole('button', { name: 'Save draft' }));
+    await screen.findByText('Could not save analysis. Your entries are kept. Try again.');
+    expect(caseRent().disabled).toBe(false);
+    expect(caseRent().value).toBe('1600');
+    expect(screen.getByText('Unsaved changes')).toBeTruthy();
+    fireEvent.change(caseRent(), { target: { value: '1650' } });
+    expect(caseRent().value).toBe('1650');
+    fireEvent.keyDown(caseRent(), { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'What if' })).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(whatIfTrigger()));
   });
 
   it('lands a retired Scenarios address on Compare’s saved cases', async () => {

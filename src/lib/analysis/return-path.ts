@@ -8,7 +8,15 @@ const PERIOD = /^[A-Za-z0-9_-]{1,40}$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /** ROI sections an address may name; Summary is the default and is left out of the address. */
-export const ROI_VIEWS = ['summary', 'actual', 'charts', 'scenarios', 'benchmarks', 'compare'];
+export const ROI_VIEWS = ['summary', 'actual', 'charts', 'benchmarks', 'compare'];
+/**
+ * Retired sections and where their content lives now. Scenarios became the shared What if
+ * panel; its saved-case comparison sits on Compare, so old links still land on it.
+ */
+const LEGACY_VIEWS: Record<string, string> = { scenarios: 'compare' };
+export function isLegacyScenariosView(query: { get(name: string): string | null } | null) {
+  return query?.get('view') === 'scenarios';
+}
 /** Charts sub-tabs; Equity is the default and is left out of the address. */
 export const CHART_PANELS = [
   'equity',
@@ -21,7 +29,7 @@ export const CHART_PANELS = [
 
 export function roiViewFrom(query: { get(name: string): string | null } | null) {
   const view = query?.get('view') ?? '';
-  return ROI_VIEWS.includes(view) ? view : 'summary';
+  return ROI_VIEWS.includes(view) ? view : (LEGACY_VIEWS[view] ?? 'summary');
 }
 export function chartPanelFrom(query: { get(name: string): string | null } | null) {
   const chart = query?.get('chart') ?? '';

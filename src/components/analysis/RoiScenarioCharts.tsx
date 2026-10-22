@@ -3,12 +3,7 @@
 import { Fragment, useState } from 'react';
 import type { ProjectionResult } from '@/lib/analysis/projections';
 import { scenarioSeries, wholeDollars, type ChartValue } from '@/lib/analysis/chart-data';
-import {
-  scenarioColors,
-  scenarioDifferences,
-  scenarioExamples,
-  type ScenarioDraft,
-} from '@/lib/analysis/scenarios';
+import { scenarioColors, scenarioDifferences, type ScenarioDraft } from '@/lib/analysis/scenarios';
 import type { AnalysisPayload } from '@/lib/analysis/contract';
 import {
   Basis,
@@ -52,15 +47,14 @@ export function ScenarioCharts({
   drafts,
   baseInput,
   label,
-  onAddExample,
-  disabled,
+  onOpenWhatIf,
 }: {
   cases: Case[];
   drafts: ScenarioDraft[];
   baseInput: AnalysisPayload['input'];
   label: (path: string) => string;
-  onAddExample: (name: string, values: Record<string, string>) => void;
-  disabled: boolean;
+  /** Cases are created and edited in the shared What if panel. */
+  onOpenWhatIf?: () => void;
 }) {
   const [hidden, setHidden] = useState<string[]>([]);
   const [focus, setFocus] = useState<string | null>(null);
@@ -74,7 +68,6 @@ export function ScenarioCharts({
   const shown = Math.max(1, years);
   const base = visible[0];
   const focused = focus && visible.some((c) => c.id === focus) ? focus : null;
-  const missingExamples = scenarioExamples.filter((e) => !drafts.some((d) => d.name === e.name));
 
   const metrics: { group: string; rows: Metric[] }[] = [
     {
@@ -195,8 +188,11 @@ export function ScenarioCharts({
       <section className={s.card} aria-label="Scenario selection">
         <div className={s.cardHead}>
           <div>
-            <h3>Scenario Comparison</h3>
-            <p>Choose which cases to show. The Base Case is your saved assumptions.</p>
+            <h3>Saved cases</h3>
+            <p>
+              Choose which cases to show. The Base Case is your saved assumptions; cases change only
+              the assumptions they override.
+            </p>
             <Basis items={['Projected', 'USD', 'Before tax']} />
           </div>
           <div className={s.view}>
@@ -238,27 +234,11 @@ export function ScenarioCharts({
             );
           })}
         </ul>
-        {missingExamples.length > 0 && (
+        {onOpenWhatIf && (
           <div className={s.addRow}>
-            <span className={s.label} id="scenario-add-examples">
-              Add an example:
-            </span>
-            <ul className={s.chips} aria-labelledby="scenario-add-examples" data-kind="add">
-              {missingExamples.map((e) => (
-                <li key={e.name}>
-                  <button
-                    type="button"
-                    aria-pressed={false}
-                    disabled={disabled || drafts.length >= 20}
-                    title={`Add the ${e.name} example as an editable, unsaved scenario`}
-                    onClick={() => onAddExample(e.name, e.values)}
-                  >
-                    {e.name} <span aria-hidden="true">+</span>
-                    <span className={s.srOnly}> (add example)</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <button type="button" onClick={onOpenWhatIf}>
+              Create or edit cases in What if
+            </button>
           </div>
         )}
         {visible.length > 1 && (
@@ -538,7 +518,8 @@ export function ScenarioCharts({
                   (leveraged IRR <Figure>{pct(bestIrr.irr)}</Figure>)
                 </>
               )}
-              . Add an example such as Optimistic or Conservative to compare outcomes.
+              . Save a case from What if, such as the Optimistic or Conservative preset, to compare
+              outcomes.
             </>
           ) : bestIrr && worstIrr ? (
             <>

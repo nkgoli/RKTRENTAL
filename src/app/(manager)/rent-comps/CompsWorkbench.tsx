@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/RouteStates';
 import { RentDistribution } from '@/components/rent-comps/RentDistribution';
 import { MAP, dollars, mapPins, suggestRent, summarize, type CompRow } from '@/lib/comps/core';
+import { rentWhatIfHref } from '@/lib/analysis/what-if-entry';
 import { applyRentAction, type ApplyState } from './actions';
 import { uncertainApply } from './apply-state';
 import styles from './comps.module.css';
@@ -448,8 +449,12 @@ export function CompsWorkbench(props: WorkbenchProps) {
                     Review applicants for {props.unitLabel}
                   </Link>
                 )}
-                {props.returnsHref && (
-                  <Link className={styles.textLink} href={props.returnsHref}>
+                {props.returnsHref && props.propertyId && (
+                  // Opens What if in Returns & ROI with this unit's suggested-rent change.
+                  <Link
+                    className={styles.textLink}
+                    href={rentWhatIfHref(props.propertyId, props.unitId, gap)}
+                  >
                     See the effect in Returns &amp; ROI →
                   </Link>
                 )}

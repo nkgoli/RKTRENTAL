@@ -36,10 +36,14 @@ describe('Returns & ROI return address', () => {
       expect(roiReturnPath(raw, 'p1')).toBeNull();
   });
   it('keeps every supported section and the Charts sub-tab, dropping unknown values', () => {
-    for (const view of ['scenarios', 'benchmarks', 'compare'])
+    for (const view of ['benchmarks', 'compare'])
       expect(roiReturnPath(`/roi-analysis?property=p1&view=${view}&chart=exit`, 'p1')).toBe(
         `/roi-analysis?property=p1&view=${view}`,
       );
+    // The retired Scenarios section returns to Compare, where saved cases are compared.
+    expect(roiReturnPath('/roi-analysis?property=p1&view=scenarios', 'p1')).toBe(
+      '/roi-analysis?property=p1&view=compare',
+    );
     expect(
       roiReturnPath('/roi-analysis?period=YTD&chart=sensitivity&view=charts&property=p1', 'p1'),
     ).toBe('/roi-analysis?property=p1&view=charts&chart=sensitivity&period=YTD');

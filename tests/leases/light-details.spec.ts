@@ -318,7 +318,7 @@ for (const width of [1280, 390]) {
       await expect(page.getByText('Lease created', { exact: true })).toBeVisible();
       // Activity lists each signer's recorded event; the full signer panel lives in Agreement.
       await page.goto(route('pending', 'activity'));
-      await expect(page.getByText('Partially signed', { exact: true })).toBeVisible();
+      await expect(page.getByText('Partially signed', { exact: true }).first()).toBeVisible();
       for (const text of [
         'Signed: Review signed tenant',
         'Sent for signature: Review awaiting tenant',

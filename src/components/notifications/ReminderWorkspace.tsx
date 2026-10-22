@@ -29,9 +29,19 @@ import {
 
 type Editor = { selected: string[]; messages: Record<string, { subject: string; body: string }> };
 
-function initialEditor(snapshot: ReminderSnapshot): Editor {
+/**
+ * Preselects the requested tenant while they are still eligible (never a co-tenant in their
+ * place), otherwise the only eligible recipient.
+ */
+function initialEditor(snapshot: ReminderSnapshot, tenantId?: string): Editor {
   return {
-    selected: snapshot.recipients.length === 1 ? [snapshot.recipients[0].tenantId] : [],
+    selected: tenantId
+      ? snapshot.recipients.some((r) => r.tenantId === tenantId)
+        ? [tenantId]
+        : []
+      : snapshot.recipients.length === 1
+        ? [snapshot.recipients[0].tenantId]
+        : [],
     messages: Object.fromEntries(
       snapshot.recipients.map((r) => [r.tenantId, { subject: r.subject, body: r.body }]),
     ),
@@ -86,12 +96,18 @@ export function ReminderWorkspace({
   choices,
   channels,
   initialLeaseId,
+  initialTenantId,
+  fromRentRoll = false,
   historyFirst = false,
   storageKey,
 }: {
   choices: LeaseChoice[];
   channels: Channels;
   initialLeaseId?: string;
+  /** The rent-roll row's tenant, preselected only when eligible for the chosen channel. */
+  initialTenantId?: string;
+  /** Opened from a rent-roll row menu, whose Late label may predate the current ledger. */
+  fromRentRoll?: boolean;
   historyFirst?: boolean;
   storageKey: string;
 }) {
@@ -123,7 +139,11 @@ export function ReminderWorkspace({
   const snapshot = lease?.[channel];
   const editorKey = `${leaseId}:${channel}`;
   const editor =
-    editors[editorKey] ?? (snapshot ? initialEditor(snapshot) : { selected: [], messages: {} });
+    editors[editorKey] ??
+    (snapshot
+      ? initialEditor(snapshot, leaseId === initialLeaseId ? initialTenantId : undefined)
+      : { selected: [], messages: {} });
+  const initialMissing = Boolean(initialLeaseId) && !choices.some((c) => c.id === initialLeaseId);
   const channelState = channels[channel];
   const blocked = Boolean(busy || pending);
 
@@ -349,6 +369,21 @@ export function ReminderWorkspace({
             ))}
           </select>
         </label>
+        {initialMissing && (
+          <p className={styles.warning} role="alert">
+            The lease you opened is no longer available for reminders in this scope. Nothing was
+            selected or sent; choose a lease to continue.
+          </p>
+        )}
+        {fromRentRoll && lease && leaseId === initialLeaseId && (
+          <p className={styles.muted}>
+            Opened from the rent roll
+            {initialTenantId && lease.tenants.some((t) => t.id === initialTenantId)
+              ? ` for ${lease.tenants.find((t) => t.id === initialTenantId)!.name}`
+              : ''}
+            . Balance and contacts below are current; nothing is sent until you confirm.
+          </p>
+        )}
         {!leaseId && (
           <p className={styles.muted}>
             Select one lease to compose a reminder or inspect its history. No recipient is selected
@@ -620,6 +655,12 @@ export function ReminderWorkspace({
               <section className="card">
                 <h2>All caught up</h2>
                 <p>No overdue balance for this lease. A reminder cannot be sent.</p>
+                {fromRentRoll && leaseId === initialLeaseId && (
+                  <p>
+                    The rent roll showed this lease as late, but the current ledger has no overdue
+                    balance — it may have been paid since the rent roll loaded.
+                  </p>
+                )}
                 <p className={styles.muted}>
                   History remains available, including sandbox tests and previous send outcomes.
                 </p>

@@ -86,6 +86,37 @@ describe('rent-roll row menu targeting', () => {
     });
   });
 
+  it('each late row links to the reminder review for its own lease and tenant', async () => {
+    const { panel } = await renderRoll();
+    tenants.forEach((_, i) => {
+      const link = within(panel(i)).getByRole('link', {
+        name: 'Send late-rent reminder',
+        hidden: true,
+      });
+      expect(link.getAttribute('href')).toBe(
+        `/notifications?leaseId=lease-${i}&tenantId=tenant-${i}&from=rent-roll`,
+      );
+    });
+  });
+
+  it('offers no reminder for rows that are not late', async () => {
+    const rows = (await mocks.overview()).rows;
+    mocks.overview.mockResolvedValueOnce({
+      ...(await mocks.overview()),
+      rows: rows.map((row: object, i: number) => ({
+        ...row,
+        status: ['PAID', 'AUTOPAY', 'PENDING'][i],
+        lastPaymentId: 'payment',
+      })),
+    });
+    const { panel } = await renderRoll();
+    tenants.forEach((_, i) =>
+      expect(
+        within(panel(i)).queryByRole('link', { name: 'Send late-rent reminder', hidden: true }),
+      ).toBeNull(),
+    );
+  });
+
   it('opens one menu at a time and adds the late fee to the selected lease only', async () => {
     const user = userEvent.setup();
     const { trigger, panel } = await renderRoll();

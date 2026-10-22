@@ -369,6 +369,15 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                         )}
                         <RowMenu label={`Actions for ${row.tenantName}`}>
                           <Link href={`/leases/${row.leaseId}?tab=payments`}>Open ledger</Link>
+                          {row.status === 'LATE' && (
+                            // Opens the review only: /notifications rechecks the balance and
+                            // contacts, and nothing is sent until the manager confirms there.
+                            <Link
+                              href={`/notifications?leaseId=${row.leaseId}${row.tenantId ? `&tenantId=${row.tenantId}` : ''}&from=rent-roll${scopeSuffix}`}
+                            >
+                              Send late-rent reminder
+                            </Link>
+                          )}
                           {row.status === 'LATE' && row.lateFeeEligible && (
                             <ConfirmButton
                               label="Add late fee"

@@ -26,6 +26,9 @@ const suites: { dir: string; viewport?: { width: number; height: number } }[] = 
   { dir: 'tenant-pay', viewport: { width: 390, height: 844 } },
   { dir: 'tenant-portal', viewport: { width: 390, height: 844 } },
   { dir: 'tenant-repairs', viewport: { width: 390, height: 844 } },
+  // Rent-roll row menus, reminders and shared RowMenu consumers. Last: it adds a late fee and a
+  // payment to the seed, and its synthetic property is removed after each file.
+  { dir: 'payments', viewport: { width: 1440, height: 1000 } },
 ];
 
 export default defineConfig({

@@ -22,7 +22,7 @@
   border: 1px solid var(--rr-border);
   border-radius: var(--design-radius);
   background: var(--design-surface);
-  box-shadow: 0 8px 24px #17243b1f;
+  box-shadow: 0 8px 24px #17233a1f;
 }
 .identity {
   display: grid;

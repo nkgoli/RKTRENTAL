@@ -1,4 +1,4 @@
-﻿import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
 import {
   COLLECTION_RANGES,
@@ -11,6 +11,7 @@ import {
   type LedgerLease,
 } from '@/lib/dashboard/queries';
 import { propertiesDb } from '@/lib/properties/data';
+import { loadPaymentsOverview, monthKey } from '@/lib/ledger';
 import type { CoverSource } from './MiniCover';
 
 const DAY_MS = 86_400_000;
@@ -38,11 +39,35 @@ export type DashboardProperty = {
   cover: CoverSource;
 };
 
+/** This month's rent roll, with the same open and late definitions as the Payments page. */
+export type RentRollSummary = {
+  openCents: number;
+  openCount: number;
+  lateCents: number;
+  lateCount: number;
+  lateTenants: string[];
+};
+
+export type UrgentRequest = {
+  id: string;
+  title: string;
+  propertyName: string;
+  unitLabel: string;
+  createdAt: Date;
+  assigned: boolean;
+  photoCount: number;
+};
+
 export type DashboardView = DashboardData & {
   expiringSoonCount: number;
+  /** Active leases ending within 60 days: the Leases "Expiring soon" window. */
+  endingWithin60Count: number;
   pastDueTenants: PastDueTenant[];
   attention: AttentionItem[];
   properties: DashboardProperty[];
+  rentRoll: RentRollSummary;
+  applicationStatusCounts: { SUBMITTED: number; SCREENING: number; REVIEW: number };
+  urgentRequest: UrgentRequest | null;
 };
 
 export function initialsOf(name: string) {
@@ -108,15 +133,17 @@ export function assembleLeaseSignals(leases: readonly TenantLease[], now: Date) 
   const asOf = new Date(day + DAY_MS - 1);
   const pastDueTenants: PastDueTenant[] = [];
   let expiringSoonCount = 0;
+  let endingWithin60Count = 0;
   for (const lease of leases) {
     const end = lease.endDate.getTime();
     if (end >= day && end <= day + EXPIRING_STRIP_DAYS * DAY_MS) expiringSoonCount += 1;
+    if (end >= day && end <= day + 60 * DAY_MS) endingWithin60Count += 1;
     if (overdueSummary([lease], asOf).overdueLeaseCount > 0) {
       const name = lease.tenants[0]?.tenant.name ?? 'Tenant';
       pastDueTenants.push({ leaseId: lease.id, name, initials: initialsOf(name) });
     }
   }
-  return { pastDueTenants, expiringSoonCount };
+  return { pastDueTenants, expiringSoonCount, endingWithin60Count };
 }
 
 export async function loadDashboardView(
@@ -126,7 +153,7 @@ export async function loadDashboardView(
   formatMoney: (cents: number) => string = (cents) => `$${(cents / 100).toFixed(2)}`,
   collectionRange: CollectionRange = '6M',
 ): Promise<DashboardView> {
-  const [data, series, leases, list] = await Promise.all([
+  const [data, series, leases, list, overview, applications, urgent] = await Promise.all([
     loadDashboardData(organizationId, now, client),
     loadCollectionSeries(organizationId, now, COLLECTION_RANGES[collectionRange], client),
     client.lease.findMany({
@@ -142,12 +169,64 @@ export async function loadDashboardView(
       },
     }),
     propertiesDb(organizationId, client).listProperties(),
+    loadPaymentsOverview(organizationId, monthKey(now), now, client, {}, { payouts: false }),
+    client.application.findMany({
+      where: {
+        organizationId,
+        status: { in: ['SUBMITTED', 'SCREENING', 'REVIEW'] },
+        unit: { property: { archivedAt: null } },
+      },
+      select: { status: true },
+    }),
+    client.maintenanceRequest.findFirst({
+      where: {
+        organizationId,
+        priority: 'URGENT',
+        status: { not: 'DONE' },
+        property: { archivedAt: null },
+      },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        property: { select: { name: true } },
+        unit: { select: { number: true, isImplicit: true } },
+        _count: { select: { photos: true } },
+      },
+    }),
   ]);
-  const { pastDueTenants, expiringSoonCount } = assembleLeaseSignals(leases, now);
+  const { pastDueTenants, expiringSoonCount, endingWithin60Count } = assembleLeaseSignals(
+    leases,
+    now,
+  );
+  const lateRows = overview.rows.filter((row) => row.status === 'LATE');
+  const countOf = (status: string) => applications.filter((a) => a.status === status).length;
   return {
     ...data,
     collection: series,
     expiringSoonCount,
+    endingWithin60Count,
+    rentRoll: {
+      openCents: overview.outstandingCents,
+      openCount: overview.openCount,
+      lateCents: overview.lateCents,
+      lateCount: overview.lateCount,
+      lateTenants: lateRows.map((row) => row.tenantName),
+    },
+    applicationStatusCounts: {
+      SUBMITTED: countOf('SUBMITTED'),
+      SCREENING: countOf('SCREENING'),
+      REVIEW: countOf('REVIEW'),
+    },
+    urgentRequest: urgent
+      ? {
+          id: urgent.id,
+          title: urgent.title,
+          propertyName: urgent.property.name,
+          unitLabel: urgent.unit.isImplicit ? '' : urgent.unit.number,
+          createdAt: urgent.createdAt,
+          assigned: Boolean(urgent.vendorId || urgent.vendorName),
+          photoCount: urgent._count.photos,
+        }
+      : null,
     pastDueTenants,
     attention: attentionStrip(data, expiringSoonCount, formatMoney),
     properties: list.properties.map((p) => ({

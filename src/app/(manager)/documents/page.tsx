@@ -1,4 +1,4 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 import { EmptyState } from '@/components/RouteStates';
 import { db } from '@/lib/db/client';
 import { requireManagerRole } from '@/lib/auth/access';
@@ -273,7 +273,12 @@ export default async function DocumentsPage({
         filter={scopeFilterFrom(params)}
         activeTab="documents"
       />
-      <PageHeader title="Documents and photos" eyebrow="Files" actions={[{ label: 'Upload files', href: '#upload', primary: true }]} />
+      <PageHeader
+        title="Documents"
+        eyebrow="Operations"
+        meta="Documents and photos · open a lease or property to rename, share or delete its files"
+        actions={[{ label: 'Upload files', href: '#upload', primary: true }]}
+      />
       <div className={`stack ${styles.library}`}>
         <div className={styles.libraryIntro}>
           <p className="muted">
@@ -284,13 +289,13 @@ export default async function DocumentsPage({
           </span>
         </div>
         <UploadDialog>
-            <UploadDocumentForm
-              leases={leaseOptions}
-              properties={propertyOptions}
-              units={unitOptions}
-              propertyId={params.propertyId}
-              unitId={params.unitId}
-            />
+          <UploadDocumentForm
+            leases={leaseOptions}
+            properties={propertyOptions}
+            units={unitOptions}
+            propertyId={params.propertyId}
+            unitId={params.unitId}
+          />
         </UploadDialog>
 
         <section className={styles.documentToolbar}>
@@ -328,7 +333,15 @@ export default async function DocumentsPage({
                 label: `${unit.property.name} · ${unit.isImplicit ? 'Whole property' : `Unit ${unit.number}`}`,
               }))}
             />
-            <div className="row between"><span className="muted">{matchingFiles.length} matching files</span><Link href={documentsHref(filters, { sort: sort === 'newest' ? 'oldest' : 'newest' })} scroll={false}>{sort === 'newest' ? 'Newest first' : 'Oldest first'} ↕</Link></div>
+            <div className="row between">
+              <span className="muted">{matchingFiles.length} matching files</span>
+              <Link
+                href={documentsHref(filters, { sort: sort === 'newest' ? 'oldest' : 'newest' })}
+                scroll={false}
+              >
+                {sort === 'newest' ? 'Newest first' : 'Oldest first'} ↕
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -494,14 +507,21 @@ export default async function DocumentsPage({
                           </div>
                           <div className={styles.documentPhotoActions}>
                             <a
-                              className="icon-btn" aria-label={`Preview ${photo.name} (opens in a new tab)`}
+                              className="icon-btn"
+                              aria-label={`Preview ${photo.name} (opens in a new tab)`}
                               href={`/api/files/${photo.id}/preview`}
                               target="_blank"
                               rel="noreferrer"
                             >
                               <Icon name="eye" />
                             </a>
-                            <a className="icon-btn" aria-label={`Download ${photo.name}`} href={`/api/files/${photo.id}/download`}><Icon name="download" /></a>
+                            <a
+                              className="icon-btn"
+                              aria-label={`Download ${photo.name}`}
+                              href={`/api/files/${photo.id}/download`}
+                            >
+                              <Icon name="download" />
+                            </a>
                           </div>
                         </div>
                       );

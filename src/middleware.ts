@@ -89,6 +89,7 @@ export const config = {
     '/maintenance/:path*',
     '/documents/:path*',
     '/integrations/:path*',
+    '/more/:path*',
     '/home/:path*',
     '/pay/:path*',
     '/lease/:path*',

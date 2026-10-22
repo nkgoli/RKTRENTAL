@@ -11,7 +11,7 @@ test('manager uploads a lease file, finds it, previews and downloads it', async 
   await expect(page).toHaveURL(/\/dashboard$/);
 
   await page.goto('/documents');
-  await expect(page.getByRole('heading', { name: 'Documents and photos', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Documents', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Lease documents' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Property files' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Photos', exact: true })).toBeVisible();

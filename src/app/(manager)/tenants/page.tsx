@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { SummaryBand } from '@/components/ui/SummaryBand';
 import { Icon } from '@/components/shell/Icons';
 import {
   Avatar,
@@ -84,8 +85,9 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
   return (
     <div className={styles.scope}>
       <PageHeader
-        eyebrow="Workspace / People"
-        title="Tenants"
+        eyebrow="People"
+        title="Tenant directory"
+        meta={`${stats.activeTenants} active ${stats.activeTenants === 1 ? 'tenant' : 'tenants'}`}
         actions={[
           {
             label: 'Review applications',
@@ -125,31 +127,27 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
         />
       ) : (
         <>
-          <div className={styles.kpis}>
-            <div className={styles.kpi}>
-              <p>Active tenants</p>
-              <strong>{stats.activeTenants}</strong>
-              <small>Portfolio total</small>
-            </div>
-            <div className={styles.kpi}>
-              <p>Move-ins (30 days)</p>
-              <strong>{stats.moveIns30}</strong>
-              <small>Leases started</small>
-            </div>
-            <div className={styles.kpi}>
-              <p>Leases ending in 60 days</p>
-              <strong>{stats.endingSoon}</strong>
-              <small>Renewals to review</small>
-            </div>
-            <div className={styles.kpi}>
-              <p>Outstanding balance</p>
-              <strong>{formatMoney(stats.outstandingCents / 100)}</strong>
-              <small>
-                {stats.lateTenants} {stats.lateTenants === 1 ? 'tenant' : 'tenants'}
-              </small>
-            </div>
-          </div>
-
+          <SummaryBand
+            label="Tenant balances"
+            eyebrow="Tenant balances · all charges due to date"
+            value={formatMoney(stats.outstandingCents / 100)}
+            detail={`open across ${stats.lateTenants} ${stats.lateTenants === 1 ? 'tenant' : 'tenants'} · review the ledger before any reminder goes out`}
+            footer={
+              <Link className="btn btn-secondary btn-sm" href="/payments?filter=open">
+                Review open balances →
+              </Link>
+            }
+            stats={[
+              { label: 'Active tenants', value: stats.activeTenants, detail: 'Portfolio total' },
+              { label: 'Move-ins (30 days)', value: stats.moveIns30, detail: 'Leases started' },
+              {
+                label: 'Leases ending in 60 days',
+                value: stats.endingSoon,
+                detail: 'Renewals to review',
+                href: '/leases?tab=expiring',
+              },
+            ]}
+          />
           <Card className={styles.pad}>
             <div className={styles.sectionHead}>
               <div>

@@ -88,20 +88,20 @@ export function Statement({ rows }: { rows: [string, ReactNode][] }) {
  * values are repeated here. Bars get a darker outline for 3:1 edges.
  */
 export const chartColors = {
-  primary: '#3159d9', // --design-primary
-  primaryDark: '#203fa8', // --rr-primary-active
+  primary: '#3e4fe5', // --design-primary
+  primaryDark: '#2c39b3', // --rr-primary-active
   primaryMid: '#6383e6',
   primaryLight: '#a7b9f0',
   primaryPale: '#dbe4ff',
-  navy: '#0b2545', // --rr-navy
-  accent: '#087c91', // --design-accent, --rr-ok
+  navy: '#17233a', // --rr-navy
+  accent: '#007f7a', // --design-accent, --rr-ok
   accentDark: '#06606f',
-  ink: '#17243b', // --design-text
-  muted: '#58687e', // --design-muted
+  ink: '#17233a', // --design-text
+  muted: '#58677d', // --design-muted
   mutedMid: '#7e8b9e', // --rr-border-strong
   mutedLight: '#a3aebf',
   border: '#dce3ed', // --rr-border
-  bad: '#b4233e', // --design-danger, --rr-bad
+  bad: '#b4233f', // --design-danger, --rr-bad
   warn: '#8a4b09', // --rr-warn
   warm: '#cf8a68', // --rr-warm
   plum: '#9d174d',
@@ -332,7 +332,7 @@ export function InfoTip({ label, children }: { label: string; children: ReactNod
 /** Semantic tones: `teal` = positive/ok, `red` = negative, `amber` = caution (app tokens). */
 type Tone = 'teal' | 'tealSoft' | 'slate' | 'red' | 'amber' | 'blue' | 'muted' | 'card';
 
-/** Metric tiles in the app KPI style: muted label over a Space Grotesk value. */
+/** Metric tiles in the app KPI style: muted label over a Outfit value. */
 export function Tiles({
   items,
   size = 'lg',

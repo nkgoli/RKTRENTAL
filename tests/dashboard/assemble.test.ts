@@ -22,8 +22,12 @@ const lease = (id: string, tenant: string, endDate: Date, unpaidDue: string | nu
   charges: unpaidDue
     ? [
         {
-          id: `c-${id}`, leaseId: id, kind: 'RENT' as const, amount: '1000.00',
-          dueDate: day(unpaidDue), description: `rent:${id}`,
+          id: `c-${id}`,
+          leaseId: id,
+          kind: 'RENT' as const,
+          amount: '1000.00',
+          dueDate: day(unpaidDue),
+          description: `rent:${id}`,
         },
       ]
     : [],
@@ -52,7 +56,12 @@ describe('attention strip', () => {
 
   it('goes quiet when nothing needs attention', () => {
     const strip = attentionStrip(
-      { overdueLeaseCount: 0, overdueCents: 0, openMaintenanceRequests: 0, urgentMaintenanceRequests: 0 },
+      {
+        overdueLeaseCount: 0,
+        overdueCents: 0,
+        openMaintenanceRequests: 0,
+        urgentMaintenanceRequests: 0,
+      },
       0,
       usd,
     );
@@ -74,14 +83,19 @@ describe('dashboard lease signals', () => {
       ],
       now,
     );
-    expect(signals.pastDueTenants).toEqual([{ leaseId: 'late', name: 'Alex Rivera', initials: 'AR' }]);
+    expect(signals.pastDueTenants).toEqual([
+      { leaseId: 'late', name: 'Alex Rivera', initials: 'AR' },
+    ]);
     // Nov 30, Dec 31 and today are within the shared 90-day window; Oct 1 is already past.
     expect(signals.expiringSoonCount).toBe(3);
   });
 
   it('falls back to a generic name when a lease has no tenant', () => {
     const orphan = { ...lease('late', 'x', day('2027-01-01'), '2026-10-01'), tenants: [] };
-    expect(assembleLeaseSignals([orphan], now).pastDueTenants[0]).toMatchObject({ name: 'Tenant', initials: 'T' });
+    expect(assembleLeaseSignals([orphan], now).pastDueTenants[0]).toMatchObject({
+      name: 'Tenant',
+      initials: 'T',
+    });
   });
 });
 
@@ -109,53 +123,105 @@ describe('dashboard helpers', () => {
 describe('loadDashboardView', () => {
   it('merges dashboard data with past-due tenants and the property list for one organization', async () => {
     const property = {
-      id: 'property-1', name: 'Maple Court', type: 'MULTI_UNIT', street: '1 Main', city: 'Austin',
-      state: 'TX', postalCode: '78701', archivedAt: null,
+      id: 'property-1',
+      name: 'Maple Court',
+      type: 'MULTI_UNIT',
+      street: '1 Main',
+      city: 'Austin',
+      state: 'TX',
+      postalCode: '78701',
+      archivedAt: null,
       units: [
         { id: 'unit-1', status: 'OCCUPIED', leases: [{ monthlyRent: '1000.00' }] },
         { id: 'unit-2', status: 'VACANT', leases: [] },
       ],
     };
     const lease = {
-      id: 'lease-1', organizationId: 'org-1', unitId: 'unit-1', status: 'ACTIVE',
-      startDate: new Date('2025-12-01T00:00:00Z'), endDate: new Date('2026-11-30T00:00:00Z'),
-      monthlyRent: '1000.00', lateFee: '0.00', graceDays: 5,
-      unit: { id: 'unit-1', number: '4B', isImplicit: false, property: { id: 'property-1', name: 'Maple Court' } },
+      id: 'lease-1',
+      organizationId: 'org-1',
+      unitId: 'unit-1',
+      status: 'ACTIVE',
+      startDate: new Date('2025-12-01T00:00:00Z'),
+      endDate: new Date('2026-11-30T00:00:00Z'),
+      monthlyRent: '1000.00',
+      lateFee: '0.00',
+      graceDays: 5,
+      unit: {
+        id: 'unit-1',
+        number: '4B',
+        isImplicit: false,
+        property: { id: 'property-1', name: 'Maple Court' },
+      },
       tenants: [{ isPrimary: true, tenant: { id: 't1', name: 'Alex Rivera' } }],
-      charges: [{
-        id: 'c1', leaseId: 'lease-1', organizationId: 'org-1', kind: 'RENT', amount: '1000.00',
-        dueDate: new Date('2026-10-01T00:00:00Z'), description: 'rent:lease-1:2026-10',
-      }],
+      charges: [
+        {
+          id: 'c1',
+          leaseId: 'lease-1',
+          organizationId: 'org-1',
+          kind: 'RENT',
+          amount: '1000.00',
+          dueDate: new Date('2026-10-01T00:00:00Z'),
+          description: 'rent:lease-1:2026-10',
+        },
+      ],
       payments: [],
       events: [],
+      autopaySettings: [],
     };
     const client = {
-      unit: { findMany: vi.fn().mockResolvedValue([{ id: 'unit-1', propertyId: 'property-1' }, { id: 'unit-2', propertyId: 'property-1' }]) },
+      unit: {
+        findMany: vi.fn().mockResolvedValue([
+          { id: 'unit-1', propertyId: 'property-1' },
+          { id: 'unit-2', propertyId: 'property-1' },
+        ]),
+      },
       lease: { findMany: vi.fn().mockResolvedValue([lease]) },
       application: { count: vi.fn().mockResolvedValue(0), findMany: vi.fn().mockResolvedValue([]) },
       property: { findMany: vi.fn().mockResolvedValue([property]) },
-      document: { findMany: vi.fn().mockResolvedValue([{ id: 'photo-1', propertyId: 'property-1' }]) },
+      maintenanceRequest: { findFirst: vi.fn().mockResolvedValue(null) },
+      document: {
+        findMany: vi.fn().mockResolvedValue([{ id: 'photo-1', propertyId: 'property-1' }]),
+      },
       $queryRaw: vi.fn().mockResolvedValue([{ month: '2026-10', due: 100000n, collected: 85000n }]),
     } as unknown as PrismaClient;
     // loadDashboardData reads the maintenance board through the default loader, which needs a database.
-    vi.doMock('@/lib/maintenance', () => ({ listMaintenanceBoard: async () => [{ status: 'NEW', priority: 'URGENT' }] }));
+    vi.doMock('@/lib/maintenance', () => ({
+      listMaintenanceBoard: async () => [{ status: 'NEW', priority: 'URGENT' }],
+    }));
     vi.resetModules();
     const { loadDashboardView: load } = await import('@/components/dashboard/assemble');
 
     const view = await load('org-1', now, client, usd);
 
-    expect(view.pastDueTenants).toEqual([{ leaseId: 'lease-1', name: 'Alex Rivera', initials: 'AR' }]);
+    expect(view.pastDueTenants).toEqual([
+      { leaseId: 'lease-1', name: 'Alex Rivera', initials: 'AR' },
+    ]);
     expect(view.expiringSoonCount).toBe(1);
+    expect(view.rentRoll).toMatchObject({
+      openCount: 1,
+      openCents: 100_000,
+      lateTenants: ['Alex Rivera'],
+    });
+    expect(view.applicationStatusCounts).toEqual({ SUBMITTED: 0, SCREENING: 0, REVIEW: 0 });
+    expect(view.urgentRequest).toBeNull();
     expect(view.collection).toEqual([
       { key: '2026-10', label: 'Oct', dueCents: 100_000, collectedCents: 85_000 },
     ]);
     expect(view.attention.map((item) => item.count)).toEqual([1, 1, 1]);
     expect(view.properties).toEqual([
       expect.objectContaining({
-        id: 'property-1', occupied: 1, unitCount: 2, occupancyPercent: 50, address: 'Austin, TX',
+        id: 'property-1',
+        occupied: 1,
+        unitCount: 2,
+        occupancyPercent: 50,
+        address: 'Austin, TX',
         cover: { type: 'MULTI_UNIT', unitCount: 2, coverPhotoId: 'photo-1' },
       }),
     ]);
-    expect(vi.mocked(client.lease.findMany).mock.calls.every(([args]) => args?.where?.organizationId === 'org-1')).toBe(true);
+    expect(
+      vi
+        .mocked(client.lease.findMany)
+        .mock.calls.every(([args]) => args?.where?.organizationId === 'org-1'),
+    ).toBe(true);
   });
 });

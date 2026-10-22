@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import Link from 'next/link';
+import { PageHeader } from '@/components/shell/PageHeader';
 import { notFound } from 'next/navigation';
 import { requireManagerWriteRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
@@ -46,12 +46,14 @@ export default async function SendApplicationPage({
   }
   return (
     <section className={styles.page}>
-      <Link
-        href={`/applications${selected ? `?${new URLSearchParams({ propertyId: selected.id, ...(query.unitId ? { unitId: query.unitId } : {}) })}` : ''}`}
-      >
-        ← Back to applications
-      </Link>
-      <h1 className={styles.title}>Send application</h1>
+      <PageHeader
+        eyebrow="Leasing"
+        title="Send application"
+        back={{
+          href: `/applications${selected ? `?${new URLSearchParams({ propertyId: selected.id, ...(query.unitId ? { unitId: query.unitId } : {}) })}` : ''}`,
+          label: 'Applications',
+        }}
+      />
       <p className={styles.intro}>
         Invite someone to apply for a property. Review their invitation, then send an email or share
         a private link.

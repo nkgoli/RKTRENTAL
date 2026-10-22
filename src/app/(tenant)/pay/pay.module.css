@@ -20,13 +20,9 @@
   transform: rotate(-12deg);
 }
 .hero {
-  background: linear-gradient(120deg, var(--rr-primary-tint), #f1fafc);
-  border-top: 3px solid var(--design-primary);
+  background: var(--design-surface);
   display: grid;
   gap: 12px;
-  box-shadow:
-    0 2px 3px #17243b14,
-    0 9px 24px -8px #17243b14;
 }
 .hero :global(.card-header) {
   margin-bottom: 0;

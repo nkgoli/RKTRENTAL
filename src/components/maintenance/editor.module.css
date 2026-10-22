@@ -43,7 +43,7 @@
 }
 .statusNEW,
 .statusASSIGNED {
-  background: #edf2ff;
+  background: #eef0fd;
   color: var(--design-primary);
   border-color: #dce5ff;
 }
@@ -135,7 +135,7 @@
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: #edf2ff;
+  background: #eef0fd;
   color: var(--design-primary);
   flex: none;
 }
@@ -451,7 +451,7 @@
   background: white;
 }
 .commentDot {
-  background: #edf2ff;
+  background: #eef0fd;
   color: var(--design-primary);
   font-size: 11px;
   font-weight: 700;

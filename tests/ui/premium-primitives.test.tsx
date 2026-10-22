@@ -375,6 +375,9 @@ describe('PageHeader meta and back link in the manager shell', () => {
     const signOut = screen.getByRole('button', { name: 'Sign out' });
     expect(signOut.className).toBe('sidebar-signout');
     expect(signOut.getAttribute('type')).toBe('submit');
-    expect(document.querySelector('.sidebar-foot strong')!.textContent).toBe('Jordan Mills');
+    expect(document.querySelector('.sidebar-user')!.textContent).toBe(
+      'Jordan Mills · Property manager',
+    );
+    expect(document.querySelectorAll('.sidebar-foot form')).toHaveLength(1);
   });
 });

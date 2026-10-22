@@ -185,14 +185,17 @@ export default async function ApplicationsPage({
         activeTab="applications"
       />
       <PageHeader
-        title="Applications"
-        eyebrow={scope.propertyId ? 'Leasing / Property applications' : 'Leasing / All properties'}
+        title="Applications & invitations"
+        eyebrow={scope.propertyId ? 'Leasing · Property applications' : 'Leasing'}
+        meta={scope.propertyId ? 'Applications for this property' : 'All properties'}
         actions={[
+          { label: 'Screening provider', href: '/integrations' },
           {
             label: 'Send application',
             href: `/applications/send${scopeParams.size ? `?${scopeParams}` : ''}`,
+            primary: true,
+            icon: 'arrow-right',
           },
-          { label: 'Screening provider', href: '/integrations' },
         ]}
       />
       {scopedReturn && (

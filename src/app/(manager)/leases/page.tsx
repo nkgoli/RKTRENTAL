@@ -1,9 +1,9 @@
 import Link from 'next/link';
+import { SummaryBand } from '@/components/ui/SummaryBand';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
 import { scopeFilterFrom, scopeQuery, type ScopeFilter } from '@/lib/workspace/scope';
 import { Avatar, Badge, Card, Tabs } from '@/components/ui';
-import { Icon } from '@/components/shell/Icons';
 import { Pagination } from '@/components/ui/Pagination';
 import { requireManagerRole } from '@/lib/auth/access';
 import { formatMoney, initials } from '@/lib/properties/format';
@@ -108,45 +108,38 @@ export default async function LeasesPage({
       <ScopedWorkspace organizationId={session.organizationId} filter={scope} activeTab="leases" />
       <PageHeader
         eyebrow="Leasing"
+        meta={`${counts.active} active · ${counts.drafts} ${counts.drafts === 1 ? 'draft' : 'drafts'} · ${counts.ended} ended`}
         actions={[
           { label: 'Review applications', href: '/applications' },
           { label: 'Lease templates', href: '/leases/templates' },
-          { label: '+ New lease', href: setupHref(scope), primary: true },
+          { label: 'New lease', href: setupHref(scope), primary: true, icon: 'plus' },
         ]}
       />
-      <section className={styles.pulse} aria-label="Lease stats">
-        {[
+      <SummaryBand
+        label="Lease stats"
+        eyebrow="Lease portfolio · active leases"
+        value={`${counts.active} active`}
+        detail={`${counts.drafts} ${counts.drafts === 1 ? 'draft' : 'drafts'} · ${counts.ended} ended · ${counts.expiring} ending in the next 60 days`}
+        stats={[
           {
             label: 'Active leases',
             value: counts.active,
-            note: 'Current leases in your portfolio',
-            icon: 'leases' as const,
+            detail: 'Current leases in your portfolio',
+            href: '/leases',
           },
           {
             label: 'Expiring in 60 days',
             value: counts.expiring,
-            note: 'Active leases ending in the next 60 days',
-            icon: 'leases' as const,
+            detail: 'Active leases ending in the next 60 days',
+            href: '/leases?tab=expiring',
           },
           {
             label: 'Awaiting e-signature',
             value: counts.awaiting,
-            note: 'Pending signatures',
-            icon: 'tenants' as const,
+            detail: 'Pending signatures',
           },
-        ].map((stat) => (
-          <div className={styles.stat} key={stat.label}>
-            <span className={styles.icon}>
-              <Icon name={stat.icon} />
-            </span>
-            <div>
-              <p>{stat.label}</p>
-              <strong>{stat.value}</strong>
-              <small>{stat.note}</small>
-            </div>
-          </div>
-        ))}
-      </section>
+        ]}
+      />{' '}
       <Card flush>
         <div className={styles.portfolioHeader}>
           <div className={styles.toolbar}>

@@ -1,4 +1,4 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 import { EmptyState } from '@/components/RouteStates';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { NoticeToast } from '@/components/ui/Toast';
@@ -10,7 +10,7 @@ import { Badge, Avatar } from '@/components/ui/Badge';
 import type { BadgeTone } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader } from '@/components/ui/Card';
-import { KpiCard } from '@/components/dashboard/KpiCard';
+import { SummaryBand } from '@/components/ui/SummaryBand';
 import { Pagination, pageFrom, paginate } from '@/components/ui/Pagination';
 import { Field, FormRow, Input, Select } from '@/components/ui/Forms';
 import { Progress } from '@/components/ui/Feedback';
@@ -131,6 +131,10 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
       {label} ({filterRows(overview.rows, value).length})
     </Link>
   );
+  const rentDueCents = overview.rows.reduce((sum, row) => sum + row.rentCents, 0);
+  const collectedPercent = rentDueCents
+    ? Math.min(100, Math.round((overview.collectedCents / rentDueCents) * 100))
+    : 0;
   const paidOut = overview.payouts.reduce((s, p) => s + p.paidOutCents, 0);
   const payoutShare = Math.round(
     (paidOut / Math.max(1, paidOut + overview.payoutReadyCents)) * 100,
@@ -146,11 +150,13 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
       <PageHeader
         eyebrow="Money"
         title="Payments"
+        meta={`Rent roll · ${overview.rows.length} active ${overview.rows.length === 1 ? 'lease' : 'leases'}`}
         actions={[
           { label: 'Payment reminders', href: `/notifications?${scopeQuery(scope)}` },
           { label: 'Payment settings', href: '/integrations' },
           {
-            label: '+ Record payment',
+            label: 'Record payment',
+            icon: 'plus',
             href: `/payments?month=${month}&record=1${scopeSuffix}`,
             primary: true,
           },
@@ -160,26 +166,39 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         <NoticeToast tone={notice.tone === 'warning' ? 'error' : 'success'} message={notice.text} />
       )}
 
-      <div className="kpis" aria-label={`Payment totals for ${monthLabel(month)}`}>
-        <KpiCard
-          label={
-            month === monthKey(now) ? 'Collected this month' : `Collected · ${monthLabel(month)}`
-          }
-          value={formatUsd(overview.collectedCents)}
-          note={`Payments received in ${monthLabel(month)}`}
-        />
-        <KpiCard
-          label="Outstanding"
-          value={formatUsd(overview.outstandingCents)}
-          note={`${overview.openCount} open balances · all charges due to date`}
-        />
-        <KpiCard
-          label="Late"
-          value={formatUsd(overview.lateCents)}
-          note={`${overview.lateCount} past grace · includes posted late fees`}
-        />
-      </div>
-
+      <SummaryBand
+        label={`Payment totals for ${monthLabel(month)}`}
+        eyebrow={`${monthLabel(month)} · ${month === monthKey(now) ? 'Collected this month' : 'Collected'}`}
+        value={formatUsd(overview.collectedCents).replace(/\.00$/, '')}
+        detail={`of ${formatUsd(rentDueCents).replace(/\.00$/, '')} rent due · payments received in ${monthLabel(month).split(' ')[0]}`}
+        progress={{
+          label: `${collectedPercent}% collected${month === monthKey(now) ? ' · month to date' : ''}`,
+          value: collectedPercent,
+        }}
+        footer={
+          overview.openCount ? (
+            <span className="danger">
+              {formatUsd(overview.outstandingCents).replace(/\.00$/, '')} open across{' '}
+              {overview.openCount} {overview.openCount === 1 ? 'lease' : 'leases'}
+              {overview.lateCount ? ` · ${overview.lateCount} late past grace` : ''}
+            </span>
+          ) : (
+            <span className="muted">No open balances</span>
+          )
+        }
+        stats={[
+          {
+            label: 'Outstanding',
+            value: formatUsd(overview.outstandingCents),
+            detail: `${overview.openCount} open balances · all charges due to date`,
+          },
+          {
+            label: 'Late',
+            value: formatUsd(overview.lateCents),
+            detail: `${overview.lateCount} past grace · includes posted late fees`,
+          },
+        ]}
+      />
       {recording && (
         <Card id="record-payment">
           <CardHeader

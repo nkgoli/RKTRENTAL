@@ -13,6 +13,7 @@ const managerRoutes = [
   '/maintenance',
   '/documents',
   '/integrations',
+  '/more',
 ];
 
 const tenantRoutes = ['/home', '/pay', '/lease', '/repairs'];

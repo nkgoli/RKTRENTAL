@@ -1,11 +1,11 @@
 .page {
-  --design-primary: #3159d9;
-  --design-background: #f7f9fc;
+  --design-primary: #3e4fe5;
+  --design-background: #f4f5f8;
   --design-surface: #fff;
-  --design-text: #17243b;
-  --design-muted: #58687e;
-  --design-accent: #087c91;
-  --design-danger: #b4233e;
+  --design-text: #17233a;
+  --design-muted: #58677d;
+  --design-accent: #007f7a;
+  --design-danger: #b4233f;
   min-height: 100vh;
   background: var(--design-background);
   color: var(--design-text);
@@ -29,8 +29,9 @@
 }
 .header {
   padding: 24px;
-  border-radius: 12px;
-  background: linear-gradient(110deg, #edf2ff, #f1fafc);
+  border: 1px solid var(--rr-border);
+  border-radius: var(--design-radius);
+  background: var(--design-surface);
   display: grid;
   gap: 10px;
 }
@@ -45,7 +46,7 @@
   margin: 0;
 }
 .muted {
-  color: #58687e;
+  color: #58677d;
   font-size: 14px;
 }
 .actions {
@@ -72,13 +73,13 @@
 }
 .party small {
   display: block;
-  color: #58687e;
+  color: #58677d;
 }
 .signed {
-  color: #087c91;
+  color: #007f7a;
 }
 .waiting {
-  color: #58687e;
+  color: #58677d;
 }
 .form {
   display: grid;
@@ -99,21 +100,21 @@
   font: inherit;
   font-weight: 400;
   background: white;
-  color: #17243b;
+  color: #17233a;
 }
 .field input[readonly] {
-  background: #f7f9fc;
+  background: #f4f5f8;
 }
 .field input[aria-invalid='true'] {
-  border-color: #b4233e;
+  border-color: #b4233f;
 }
 .error {
-  color: #b4233e;
+  color: #b4233f;
   font-size: 14px;
 }
 .alert {
   background: #fff0f3;
-  color: #b4233e;
+  color: #b4233f;
   padding: 16px;
   border: 1px solid #d38999;
   border-radius: 8px;
@@ -134,7 +135,7 @@
   width: 20px;
   height: 20px;
   margin-top: 2px;
-  accent-color: #3159d9;
+  accent-color: #3e4fe5;
 }
 .agreement {
   display: grid;
@@ -160,14 +161,14 @@
   gap: 16px;
 }
 .facts dt {
-  color: #58687e;
+  color: #58677d;
 }
 .facts dd {
   margin: 0;
 }
 .panel :is(a, button, input, summary):focus-visible,
 .page a:focus-visible {
-  outline: 3px solid #3159d9;
+  outline: 3px solid #3e4fe5;
   outline-offset: 3px;
 }
 @media (max-width: 700px) {

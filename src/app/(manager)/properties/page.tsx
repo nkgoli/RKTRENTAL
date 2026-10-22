@@ -1,8 +1,9 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { redirect } from 'next/navigation';
 import { Icon } from '@/components/shell/Icons';
-import { Card, NoticeToast, Progress, SearchField, Stat, Table, TableHead } from '@/components/ui';
+import { Card, NoticeToast, Progress, SearchField, Table, TableHead } from '@/components/ui';
+import { SummaryBand } from '@/components/ui/SummaryBand';
 import { MiniCover } from '@/components/dashboard/MiniCover';
 import { requireManagerRole } from '@/lib/auth/access';
 import { propertiesDb, propertyFilterFrom, type PropertyFilter } from '@/lib/properties/data';
@@ -51,7 +52,13 @@ function href(filter: PropertyFilter, q?: string, view?: View) {
 export default async function PropertiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; filter?: string; view?: string; add?: string; notice?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    filter?: string;
+    view?: string;
+    add?: string;
+    notice?: string;
+  }>;
 }) {
   const session = await requireManagerRole();
   const { q, filter: filterParam, view: viewParam, add, notice } = await searchParams;
@@ -71,7 +78,8 @@ export default async function PropertiesPage({
       {notice === 'property-archived' && <NoticeToast message="Property archived" />}
       <PageHeader
         title="Properties"
-        eyebrow="Portfolio / Properties"
+        eyebrow="Portfolio"
+        meta={`${properties.length} ${properties.length === 1 ? 'property' : 'properties'} · ${totals.units} ${totals.units === 1 ? 'unit' : 'units'}`}
         actions={[
           {
             label: 'Add property',
@@ -81,42 +89,30 @@ export default async function PropertiesPage({
           },
         ]}
       />
-      <section className={styles.metrics} aria-label="Properties in this view">
-        <div className={styles.metric}>
-          <span className={styles.metricIcon}>
-            <Icon name="properties" />
-          </span>
-          <Stat
-            label="Total units"
-            value={totals.units}
-            delta={`${properties.length} ${properties.length === 1 ? 'property' : 'properties'}`}
-            tone="up"
-          />
-        </div>
-        <div className={styles.metric}>
-          <span className={`${styles.metricIcon} ${styles.teal}`}>
-            <Icon name="tenants" />
-          </span>
-          <Stat
-            label="Occupied"
-            value={totals.occupied}
-            delta={`${occupancy}% occupancy`}
-            tone="up"
-          />
-        </div>
-        <div className={styles.metric}>
-          <span className={styles.metricIcon}>
-            <Icon name="properties" />
-          </span>
-          <Stat
-            label="Vacant"
-            value={totals.vacant}
-            delta={totals.vacant ? 'Ready to list or turn over' : 'Fully occupied'}
-            tone={totals.vacant ? 'down' : 'up'}
-          />
-        </div>
-      </section>
-
+      <SummaryBand
+        label="Properties in this view"
+        eyebrow="Portfolio occupancy"
+        value={`${occupancy}%`}
+        detail={`${totals.occupied} of ${totals.units} units occupied across ${properties.length} ${properties.length === 1 ? 'property' : 'properties'}`}
+        progress={{
+          label: `${totals.occupied} of ${totals.units} units occupied`,
+          value: occupancy,
+          tone: 'accent',
+        }}
+        stats={[
+          {
+            label: 'Total units',
+            value: totals.units,
+            detail: `${properties.length} ${properties.length === 1 ? 'property' : 'properties'}`,
+          },
+          { label: 'Occupied', value: totals.occupied, detail: `${occupancy}% occupancy` },
+          {
+            label: 'Vacant',
+            value: totals.vacant,
+            detail: totals.vacant ? 'Ready to list or turn over' : 'Fully occupied',
+          },
+        ]}
+      />
       <section className={styles.toolbar}>
         <SearchField defaultValue={q} placeholder="Search by name or address" />
         <nav className={styles.filters} aria-label="Property filters">
@@ -126,7 +122,8 @@ export default async function PropertiesPage({
                 ? counts[key]
                 : undefined;
             return (
-              <Link scroll={false}
+              <Link
+                scroll={false}
                 key={key}
                 href={href(key, q, view)}
                 aria-current={key === filter ? 'page' : undefined}
@@ -143,7 +140,11 @@ export default async function PropertiesPage({
             );
           })}
         </nav>
-        {properties.length > 0 && (q || filter !== 'all') && <Link href="/properties" scroll={false}>Clear filters</Link>}
+        {properties.length > 0 && (q || filter !== 'all') && (
+          <Link href="/properties" scroll={false}>
+            Clear filters
+          </Link>
+        )}
       </section>
 
       <section className={styles.viewBar}>
@@ -153,7 +154,8 @@ export default async function PropertiesPage({
         </span>
         <div className={styles.viewToggle} role="group" aria-label="View">
           {(['grid', 'list'] as const).map((v) => (
-            <Link scroll={false}
+            <Link
+              scroll={false}
               key={v}
               href={href(filter, q, v)}
               aria-current={v === view ? 'true' : undefined}
@@ -184,7 +186,10 @@ export default async function PropertiesPage({
       )}
 
       {properties.length > 0 && (
-        <section className={`${styles.grid} ${view === 'list' ? styles.mobileGrid : ''}`} aria-label="Property directory">
+        <section
+          className={`${styles.grid} ${view === 'list' ? styles.mobileGrid : ''}`}
+          aria-label="Property directory"
+        >
           {properties.map((p) => {
             const single = p.type === 'SINGLE_UNIT';
             const occ = occupancyOf(p);
@@ -251,7 +256,13 @@ export default async function PropertiesPage({
                     <tr key={p.id}>
                       <td>
                         <Link className={styles.rowLink} href={`/properties/${p.id}`}>
-                          <MiniCover cover={{ type: p.type, unitCount: p.unitCount, coverPhotoId: p.coverPhotoId }} />
+                          <MiniCover
+                            cover={{
+                              type: p.type,
+                              unitCount: p.unitCount,
+                              coverPhotoId: p.coverPhotoId,
+                            }}
+                          />
                           {p.name}
                         </Link>
                       </td>

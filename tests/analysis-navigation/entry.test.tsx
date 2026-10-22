@@ -53,16 +53,12 @@ afterEach(cleanup);
 it('follows the real menu to explicit selection, selected dashboard and return selection', async () => {
   const user = userEvent.setup();
   const view = render(<ManagerShell>Dashboard</ManagerShell>);
-  await user.click(screen.getByRole('button', { name: 'Open menu' }));
   const nav = within(document.getElementById('manager-sidebar')!);
-  const entry = nav.getByRole('link', { name: 'Rent Analysis' });
+  const entry = nav.getByRole('link', { name: 'Rent analysis' });
   expect(entry.getAttribute('href')).toBe('/rent-analysis');
   entry.addEventListener('click', (event) => event.preventDefault());
   entry.focus();
   await user.keyboard('{Enter}');
-  expect(screen.getByRole('button', { name: 'Open menu' }).getAttribute('aria-expanded')).toBe(
-    'false',
-  );
 
   async function navigate(href: string) {
     const url = new URL(href, 'http://navigation.test');
@@ -75,7 +71,7 @@ it('follows the real menu to explicit selection, selected dashboard and return s
   await navigate(entry.getAttribute('href')!);
   expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Choose a property');
   expect(screen.queryByRole('heading', { name: 'Your units' })).toBeNull();
-  expect(nav.getByRole('link', { name: 'Rent Analysis' }).getAttribute('aria-current')).toBe(
+  expect(nav.getByRole('link', { name: 'Rent analysis' }).getAttribute('aria-current')).toBe(
     'page',
   );
   expect(nav.getByRole('link', { name: 'Returns & ROI' }).hasAttribute('aria-current')).toBe(false);

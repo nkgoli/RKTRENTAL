@@ -476,6 +476,8 @@ export async function loadPaymentsOverview(
   asOf: Date,
   client: Client = db,
   scope: ScopeFilter = {},
+  /** Home reads only the rent roll; it skips owner payout plans. */
+  options: { payouts?: boolean } = {},
 ): Promise<PaymentsOverview> {
   const start = monthStart(month);
   const end = monthStart(addMonths(month, 1));
@@ -562,14 +564,19 @@ export async function loadPaymentsOverview(
     (a, b) => order[a.status] - order[b.status] || a.tenantName.localeCompare(b.tenantName),
   );
 
-  const payouts = (await payoutPlans(organizationId, month, client)).filter(
-    (plan) => !scope.propertyId || plan.propertyId === scope.propertyId,
-  );
-  const recent = await client.payout.findMany({
-    where: { organizationId },
-    orderBy: { createdAt: 'desc' },
-    take: 5,
-  });
+  const withPayouts = options.payouts !== false;
+  const payouts = withPayouts
+    ? (await payoutPlans(organizationId, month, client)).filter(
+        (plan) => !scope.propertyId || plan.propertyId === scope.propertyId,
+      )
+    : [];
+  const recent = withPayouts
+    ? await client.payout.findMany({
+        where: { organizationId },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      })
+    : [];
   return {
     month,
     rows,

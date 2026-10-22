@@ -51,13 +51,13 @@ export const scenarioExamples: Pick<ScenarioDraft, 'name' | 'values'>[] = [
  * companions); other cases cycle through distinct hues. Each carries white chip text.
  */
 const presetColors: Record<string, string> = {
-  'Base Case': '#3159d9',
-  Optimistic: '#087c91',
+  'Base Case': '#3e4fe5',
+  Optimistic: '#007f7a',
   Conservative: '#b04a1c',
   'Best Case': '#4f7a2b',
-  'Worst Case': '#b4233e',
+  'Worst Case': '#b4233f',
 };
-const extraColors = ['#9d174d', '#0b2545', '#946200', '#58687e', '#203fa8', '#06606f'];
+const extraColors = ['#9d174d', '#17233a', '#946200', '#58677d', '#2c39b3', '#06606f'];
 export function scenarioColors(names: string[]) {
   let next = 0;
   const used = new Set<string>();

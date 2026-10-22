@@ -1,5 +1,7 @@
 # Light rollout coverage
 
+> **Superseded visual status (22 October 2026).** The Designs/redisgn look is now implemented across the application; see [redisgn-implementation.md](redisgn-implementation.md) for the 40-screen route/state matrix, additional surfaces, checks and limitations. The functional route inventory below remains a valid reference.
+
 Inspected the admitted checkout on 19 October 2026: **35 page modules**, **18 layout/recovery modules**, **40 main-app reference screens**, three account/recovery screens, six analysis screens and one approved dashboard reference. This maps existing functionality; it does not certify that the new visual rollout is implemented or verified.
 
 ## Identity and dependencies

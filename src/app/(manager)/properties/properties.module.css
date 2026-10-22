@@ -82,7 +82,7 @@
 }
 .filterLink[aria-current] {
   color: var(--design-primary);
-  background: var(--rr-primary-tint, #edf2ff);
+  background: var(--rr-primary-tint, #eef0fd);
   border-color: var(--design-primary);
   font-weight: 600;
 }
@@ -131,7 +131,7 @@
   min-width: 0;
   color: var(--design-text);
   text-decoration: none;
-  box-shadow: 0 2px 3px #17243b14;
+  box-shadow: 0 2px 3px #17233a14;
   transition: border-color 120ms;
 }
 .propertyCard:hover {
@@ -159,7 +159,10 @@
   right: -72px;
   top: -70px;
 }
-.cover::before, .cover::after { display: none; }
+.cover::before,
+.cover::after {
+  display: none;
+}
 .cover::after {
   width: 220px;
   height: 220px;
@@ -277,7 +280,10 @@
 .rowLink:hover {
   text-decoration: underline;
 }
-.rowLink > span { width: 40px; height: 40px; }
+.rowLink > span {
+  width: 40px;
+  height: 40px;
+}
 .dialog {
   width: min(640px, calc(100vw - 32px));
   max-height: calc(100dvh - 32px);
@@ -286,12 +292,12 @@
   border-radius: var(--design-radius, 12px);
   background: var(--design-surface);
   color: var(--design-text);
-  box-shadow: 0 16px 40px #17243b24;
+  box-shadow: 0 16px 40px #17233a24;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 .dialog::backdrop {
-  background: #17243b66;
+  background: #17233a66;
 }
 .dialogHeader {
   display: flex;
@@ -452,11 +458,20 @@
   font-size: 12px;
   color: var(--rr-warn);
 }
-.mobileGrid { display: none; }
+.mobileGrid {
+  display: none;
+}
 @media (max-width: 640px) {
-  .mobileGrid { display: grid; }
-  .desktopList, .viewToggle { display: none; }
-  .cover { height: 80px; }
+  .mobileGrid {
+    display: grid;
+  }
+  .desktopList,
+  .viewToggle {
+    display: none;
+  }
+  .cover {
+    height: 80px;
+  }
   .grid {
     grid-template-columns: minmax(0, 1fr);
   }

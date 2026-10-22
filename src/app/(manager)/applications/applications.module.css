@@ -119,7 +119,7 @@
   border: 1px solid var(--rr-border);
   border-radius: var(--design-radius);
   background: var(--design-surface);
-  box-shadow: 0 2px 3px #17243b05;
+  box-shadow: 0 2px 3px #17233a05;
 }
 .listCard {
   overflow: hidden;

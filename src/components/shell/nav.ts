@@ -1,4 +1,7 @@
 export type IconName =
+  | 'home'
+  | 'bell'
+  | 'menu'
   | 'dashboard'
   | 'properties'
   | 'tenants'
@@ -45,23 +48,17 @@ export type ManagerNavGroup = {
 
 export const managerNav: ManagerNavGroup[] = [
   {
-    label: 'Overview',
-    hideLabel: true,
+    label: 'Portfolio',
     items: [
       {
-        label: 'Dashboard',
+        label: 'Home',
         href: '/dashboard',
-        icon: 'dashboard',
+        icon: 'home',
         actions: [
-          { label: 'View reports', href: '/returns' },
+          { label: 'View reports', href: '/returns', icon: 'download' },
           { label: 'Add property', href: '/properties?add=1', primary: true, icon: 'plus' },
         ],
       },
-    ],
-  },
-  {
-    label: 'Portfolio',
-    items: [
       {
         label: 'Properties',
         href: '/properties',
@@ -70,10 +67,16 @@ export const managerNav: ManagerNavGroup[] = [
           { label: 'Add property', href: '/properties?add=1', primary: true, icon: 'plus' },
         ],
       },
+    ],
+  },
+  {
+    label: 'Leasing',
+    items: [
       {
-        label: 'Tenants',
+        label: 'People',
         href: '/tenants',
         icon: 'tenants',
+        title: 'Tenant directory',
         // Tenants are created from approved applicants, so the shortcut leads to Applications.
         actions: [
           {
@@ -84,12 +87,12 @@ export const managerNav: ManagerNavGroup[] = [
           },
         ],
       },
-    ],
-  },
-  {
-    label: 'Leasing',
-    items: [
-      { label: 'Applications', href: '/applications', icon: 'applications' },
+      {
+        label: 'Applications',
+        href: '/applications',
+        icon: 'applications',
+        title: 'Applications & invitations',
+      },
       {
         label: 'Leases',
         href: '/leases',
@@ -102,6 +105,26 @@ export const managerNav: ManagerNavGroup[] = [
     label: 'Money',
     items: [
       { label: 'Payments', href: '/payments', icon: 'payments' },
+      {
+        label: 'Portfolio returns',
+        href: '/returns',
+        icon: 'returns',
+        title: 'Portfolio returns',
+        actions: [{ label: 'Export report', href: '/returns', icon: 'download' }],
+        hidden: true,
+      },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { label: 'Maintenance', href: '/maintenance', icon: 'maintenance' },
+      { label: 'Documents', href: '/documents', icon: 'documents' },
+    ],
+  },
+  {
+    label: 'Analysis',
+    items: [
       // Returns and ROI are one workspace: property actuals sit beside projections there,
       // and the portfolio report is reached from it rather than as a competing entry.
       {
@@ -110,32 +133,36 @@ export const managerNav: ManagerNavGroup[] = [
         icon: 'roi-analysis',
         activeFor: ['/returns'],
       },
-      { label: 'Rent Analysis', href: '/rent-analysis', icon: 'rent-analysis' },
-      {
-        label: 'Portfolio returns',
-        href: '/returns',
-        icon: 'returns',
-        title: 'Portfolio returns',
-        actions: [{ label: 'Export report', href: '/returns' }],
-        hidden: true,
-      },
+      { label: 'Rent analysis', href: '/rent-analysis', icon: 'rent-analysis' },
       { label: 'Rent comps', href: '/rent-comps', icon: 'rent-comps', hidden: true },
-    ],
-  },
-  {
-    label: 'Operations',
-    items: [
-      { label: 'Maintenance', href: '/maintenance', icon: 'maintenance' },
-      { label: 'Documents', href: '/documents', icon: 'documents', title: 'Documents and photos' },
     ],
   },
   {
     label: 'Settings',
     hideLabel: true,
     pinned: true,
-    items: [{ label: 'Integrations', href: '/integrations', icon: 'integrations' }],
+    items: [
+      { label: 'Integrations', href: '/integrations', icon: 'integrations' },
+      { label: 'Notifications', href: '/notifications', icon: 'bell', hidden: true },
+      { label: 'More', href: '/more', icon: 'menu', title: 'All sections', hidden: true },
+    ],
   },
 ];
+
+/** Phone tab bar: four destinations plus More, which lists every section. */
+export const mobileTabs: { label: string; href: string; icon: IconName }[] = [
+  { label: 'Home', href: '/dashboard', icon: 'home' },
+  { label: 'Properties', href: '/properties', icon: 'properties' },
+  { label: 'People', href: '/tenants', icon: 'tenants' },
+  { label: 'Payments', href: '/payments', icon: 'payments' },
+  { label: 'More', href: '/more', icon: 'menu' },
+];
+
+/** The phone tab marked current: a direct match, otherwise More for every other section. */
+export function activeMobileTab(pathname: string): string {
+  const direct = mobileTabs.find((tab) => tab.href !== '/more' && isActive(pathname, tab.href));
+  return direct?.href ?? '/more';
+}
 export type TenantTab = { label: string; href: string };
 
 export const tenantTabs: TenantTab[] = [

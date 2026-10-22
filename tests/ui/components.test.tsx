@@ -1,4 +1,4 @@
-﻿import { renderToStaticMarkup } from 'react-dom/server';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 const pathname = vi.hoisted(() => ({ value: '/dashboard' }));
@@ -82,39 +82,48 @@ describe('navigation', () => {
 
   it('has the grouped manager nav and four tenant tabs', () => {
     expect(managerNav.map((g) => g.label)).toEqual([
-      'Overview',
       'Portfolio',
       'Leasing',
       'Money',
       'Operations',
+      'Analysis',
       'Settings',
     ]);
-    expect(managerNav.find((g) => g.pinned)?.items.map((i) => i.label)).toEqual(['Integrations']);
+    expect(
+      managerNav
+        .find((g) => g.pinned)
+        ?.items.filter((i) => !i.hidden)
+        .map((i) => i.label),
+    ).toEqual(['Integrations']);
     expect(tenantTabs.map((t) => t.label)).toEqual(['Home', 'Pay', 'Lease', 'Repairs']);
   });
 
   it('ManagerShell marks only the current route active and sets the topbar', () => {
     pathname.value = '/payments';
     const out = html(<ManagerShell>body</ManagerShell>);
-    expect(out.match(/class="active"/g)).toHaveLength(1);
+    // One current item in the desktop sidebar and one in the phone tab bar.
+    expect(out.match(/class="active"/g)).toHaveLength(2);
     expect(out).toMatch(
       /<a[^>]*class="active"[^>]*aria-current="page"[^>]*>(?:<svg.*?<\/svg>)Payments/,
+    );
+    expect(out).toMatch(
+      /<a href="\/payments" class="active" aria-current="page">.*?<span>Payments<\/span>/,
     );
     expect(out).toContain('<p class="eyebrow">Money</p><h1>Payments</h1>');
     expect(out).toContain('Jordan Mills');
   });
 
-  it('ManagerShell groups the sidebar, hides Rent comps and starts with the drawer closed', () => {
+  it('ManagerShell groups the sidebar, hides Rent comps and uses a phone tab bar', () => {
     pathname.value = '/dashboard';
     const out = html(<ManagerShell>body</ManagerShell>);
     const labels = [...out.matchAll(/class="nav-label">([^<]+)</g)].map((m) => m[1]);
-    expect(labels).toEqual(['Portfolio', 'Leasing', 'Money', 'Operations']);
+    expect(labels).toEqual(['Portfolio', 'Leasing', 'Money', 'Operations', 'Analysis']);
     expect(out).not.toContain('Rent comps');
-    expect(out).toContain('nav-section nav-pinned');
-    expect(out).not.toContain('drawer-open');
+    expect(out).toContain('class="sidebar-integrations"');
+    expect(out).toContain('Owner payout setup · coming soon');
     expect(out).not.toContain('class="scrim"');
-    expect(out).toContain('aria-label="Open menu"');
-    expect(out).toContain('aria-expanded="false"');
+    expect(out).not.toContain('aria-label="Open menu"');
+    expect(out).toContain('aria-label="Sections"');
     pathname.value = '/rent-comps';
     expect(html(<ManagerShell>body</ManagerShell>)).toContain('<h1>Rent comps</h1>');
   });

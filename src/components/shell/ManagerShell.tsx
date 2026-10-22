@@ -1,13 +1,12 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Avatar } from '../ui/Badge';
+import { useState, type ReactNode } from 'react';
 import { cx } from '../ui/cx';
-import { DOCKED_QUERY, FOCUSABLE, nextTrapIndex } from './drawer';
+import { AccountMenu } from './AccountMenu';
 import { Icon } from './Icons';
 import { PageHeaderContext, type PageHeaderConfig } from './PageHeader';
-import { findManagerItem, isItemActive, managerNav } from './nav';
+import { activeMobileTab, findManagerItem, isItemActive, managerNav, mobileTabs } from './nav';
 import { ToastProvider } from '../ui/Toast';
 import { RoleNotice } from './RoleNotice';
 import { signOutAction } from '@/app/(auth)/sign-out/actions';
@@ -39,105 +38,29 @@ export function ManagerShell({
   const actions = override?.actions ?? current?.item.actions;
   const meta = override?.meta;
   const back = override?.back;
-  const [open, setOpen] = useState(false);
-  const menuBtn = useRef<HTMLButtonElement>(null);
-  const sidebar = useRef<HTMLElement>(null);
-  const closeBtn = useRef<HTMLButtonElement>(null);
-  const restoreMenuFocus = useRef(false);
-
-  const close = useCallback((restoreFocus = true) => {
-    restoreMenuFocus.current = restoreFocus;
-    setOpen(false);
-  }, []);
-
-  // Route change closes the drawer without stealing focus from the new page.
-  useEffect(() => setOpen(false), [pathname]);
-
-  // Moving up to the docked breakpoint also dismisses the drawer.
-  useEffect(() => {
-    const mq = window.matchMedia(DOCKED_QUERY);
-    const onChange = () => mq.matches && setOpen(false);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-
-  useEffect(() => {
-    if (!open) {
-      if (restoreMenuFocus.current) menuBtn.current?.focus();
-      restoreMenuFocus.current = false;
-      return;
-    }
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    closeBtn.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        close();
-        return;
-      }
-      if (e.key !== 'Tab' || !sidebar.current) return;
-      const items = Array.from(sidebar.current.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-        (item) =>
-          !item.closest('[hidden], [inert]') &&
-          getComputedStyle(item).display !== 'none' &&
-          getComputedStyle(item).visibility !== 'hidden',
-      );
-      const at = items.indexOf(document.activeElement as HTMLElement);
-      e.preventDefault();
-      items[nextTrapIndex(items.length, at, e.shiftKey)]?.focus();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [open, close]);
+  const mobileTab = activeMobileTab(pathname);
 
   return (
     <ToastProvider>
-      <a className={focus.skip} href="#main-content" inert={open}>
+      <a className={focus.skip} href="#main-content">
         Skip to main content
       </a>
-      <div className={cx('app', focus.scope, open && 'drawer-open')}>
-        {open && (
-          <button
-            type="button"
-            className="scrim"
-            aria-label="Close menu"
-            tabIndex={-1}
-            onClick={() => close()}
-          />
-        )}
-        <aside
-          className="sidebar"
-          id="manager-sidebar"
-          ref={sidebar}
-          {...(open ? { role: 'dialog', 'aria-modal': true, 'aria-label': 'Main menu' } : {})}
-        >
+      <div className={cx('app', focus.scope)}>
+        <aside className="sidebar" id="manager-sidebar">
           <div className="sidebar-head">
             <a className="brand" href="/dashboard">
-              <span className="brand-mark" aria-hidden="true">
-                <Icon name="brand" />
-              </span>
               RocketRental
             </a>
-            <button
-              type="button"
-              className="drawer-close"
-              ref={closeBtn}
-              aria-label="Close menu"
-              onClick={() => close()}
-            >
-              ✕
-            </button>
+            <p className="sidebar-user">
+              {user.name} · {user.role}
+            </p>
           </div>
           <nav className="nav" aria-label="Main">
             {managerNav.map((group) => {
               const items = group.items.filter((item) => !item.hidden);
-              if (items.length === 0) return null;
+              if (items.length === 0 || group.pinned) return null;
               return (
-                <div className={cx('nav-section', group.pinned && 'nav-pinned')} key={group.label}>
+                <div className="nav-section" key={group.label}>
                   {!group.hideLabel && <p className="nav-label">{group.label}</p>}
                   {items.map((item) => {
                     const active = isItemActive(pathname, item);
@@ -147,9 +70,8 @@ export function ManagerShell({
                         href={item.href}
                         className={cx(active && 'active')}
                         aria-current={active ? 'page' : undefined}
-                        onClick={() => close(false)}
                       >
-                        <Icon name={item.icon} />
+                        <Icon name={active ? 'check' : item.icon} />
                         {item.label}
                       </a>
                     );
@@ -159,42 +81,54 @@ export function ManagerShell({
             })}
           </nav>
           <div className="sidebar-foot">
-            <Avatar initials={user.initials} size="sm" />
-            <div>
-              <strong>{user.name}</strong>
-              <small>{user.role}</small>
-            </div>
+            {managerNav
+              .filter((group) => group.pinned)
+              .flatMap((group) => group.items.filter((item) => !item.hidden))
+              .map((item) => {
+                const active = isItemActive(pathname, item);
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    className={cx('sidebar-integrations', active && 'active')}
+                    aria-current={active ? 'page' : undefined}
+                  >
+                    <Icon name={item.icon} />
+                    <span>
+                      {item.label}
+                      <small>Owner payout setup · coming soon</small>
+                    </span>
+                  </a>
+                );
+              })}
             <form action={signOutAction}>
-              <button type="submit" className="sidebar-signout" aria-label="Sign out">
+              <button type="submit" className="sidebar-signout">
                 <Icon name="sign-out" />
+                Sign out
               </button>
             </form>
           </div>
-        </aside>{' '}
-        <main className="main" id="main-content" tabIndex={-1} inert={open}>
+        </aside>
+        <header className="appbar">
+          <a className="brand" href="/dashboard">
+            RocketRental
+          </a>
+          <div className="appbar-actions">
+            <a
+              className={cx('appbar-icon', pathname === '/notifications' && 'active')}
+              href="/notifications"
+              aria-label="Notifications"
+              aria-current={pathname === '/notifications' ? 'page' : undefined}
+            >
+              <Icon name="bell" />
+            </a>
+            <AccountMenu initials={user.initials} name={user.name} description={user.role} />
+          </div>
+        </header>
+        <main className="main" id="main-content" tabIndex={-1}>
           <header
             className={cx('topbar', workspaceRoute && focus.workspaceTopbar, meta && 'topbar-meta')}
           >
-            <button
-              type="button"
-              className="menu-btn"
-              ref={menuBtn}
-              aria-label="Open menu"
-              aria-expanded={open}
-              aria-controls="manager-sidebar"
-              onClick={() => setOpen(true)}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                aria-hidden="true"
-              >
-                <path d="M4 7h16M4 12h16M4 17h16" />
-              </svg>
-            </button>
             {!workspaceRoute && (
               <div>
                 <p className="eyebrow">
@@ -213,9 +147,9 @@ export function ManagerShell({
                 {meta && <p className="topbar-sub">{meta}</p>}
               </div>
             )}
-            {!workspaceRoute && (
+            {!workspaceRoute && actions?.length ? (
               <div className="topbar-actions">
-                {actions?.map((a) => (
+                {actions.map((a) => (
                   <a
                     key={a.label}
                     className={cx('btn', a.primary ? 'btn-primary' : 'btn-secondary')}
@@ -226,13 +160,30 @@ export function ManagerShell({
                   </a>
                 ))}
               </div>
-            )}
+            ) : null}
           </header>
           <div className="page">
             <RoleNotice role="manager" />
             <PageHeaderContext.Provider value={setOverride}>{children}</PageHeaderContext.Provider>
           </div>
         </main>
+        <nav className="tabbar" aria-label="Sections">
+          {mobileTabs.map((tab) => {
+            const active = tab.href === mobileTab;
+            return (
+              <a
+                key={tab.href}
+                href={tab.href}
+                className={cx(active && 'active')}
+                // More stays highlighted for sections reached from it, without claiming to be the page.
+                aria-current={active ? (pathname === tab.href ? 'page' : 'true') : undefined}
+              >
+                <Icon name={tab.icon} />
+                <span>{tab.label}</span>
+              </a>
+            );
+          })}
+        </nav>
       </div>
     </ToastProvider>
   );

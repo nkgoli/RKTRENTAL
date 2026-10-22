@@ -1,24 +1,21 @@
-'use server';
-
-import { redirect } from 'next/navigation';
-import { requireManagerRole } from '@/lib/auth/access';
 import { expensesDb, validateExpenseInput } from '@/lib/expenses';
 import { periodKeyFrom } from '@/lib/returns';
 
 const text = (data: FormData, name: string) => String(data.get(name) ?? '').trim();
 
-function back(notice: string, period: string, property: string, range: string[]): never {
+/** The report URL to show after a submission: the same period and property, plus a notice. */
+function back(notice: string, period: string, property: string, range: string[]): string {
   const params = new URLSearchParams({ notice, period });
   if (period === 'CUSTOM') {
     params.set('from', range[0] ?? '');
     params.set('to', range[1] ?? '');
   }
   if (property && property !== 'all') params.set('property', property);
-  redirect(`/returns?${params}`);
+  return `/returns?${params}`;
 }
 
-export async function addExpenseAction(data: FormData) {
-  const session = await requireManagerRole();
+/** Validates and records one Add expense submission; returns where the report continues. */
+export async function addExpense(data: FormData, organizationId: string): Promise<string> {
   const period = periodKeyFrom(text(data, 'period'));
   const property = text(data, 'returnProperty') || 'all';
   const range = [text(data, 'from'), text(data, 'to')];
@@ -30,13 +27,13 @@ export async function addExpenseAction(data: FormData) {
     description: text(data, 'description'),
     vendor: text(data, 'vendor'),
   });
-  if (!result.ok) back('expense-invalid', period, property, range);
+  if (!result.ok) return back('expense-invalid', period, property, range);
   try {
-    await expensesDb(session.organizationId).createExpense(result.input);
+    await expensesDb(organizationId).createExpense(result.input);
   } catch (error) {
     if (error instanceof Error && error.message === 'Property not found')
-      back('expense-invalid', period, property, range);
+      return back('expense-invalid', period, property, range);
     throw error;
   }
-  back('expense-added', period, property, range);
+  return back('expense-added', period, property, range);
 }

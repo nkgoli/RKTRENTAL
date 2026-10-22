@@ -14,6 +14,7 @@ import { unitScopeWhere, scopeQuery, type ScopeFilter } from '@/lib/workspace/sc
 import { withUnit } from './scope';
 import styles from './leasing.module.css';
 import ux from './applications-ux.module.css';
+import { InvitationList } from '@/components/applications/InvitationList';
 
 const notices: Record<string, { tone: 'success' | 'warning'; text: string }> = {
   'settings-saved': { tone: 'success', text: 'Application settings saved.' },
@@ -136,6 +137,8 @@ export async function ApplicationsPanel({
           </Button>
         </div>
       </div>
+
+      {await InvitationList({ organizationId, scope })}
 
       {visible.length === 0 ? (
         <div className={`card ${styles.emptyCard}`}>

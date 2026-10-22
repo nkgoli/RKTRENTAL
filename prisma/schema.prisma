@@ -217,6 +217,7 @@ model Organization {
   autopaySettings     AutopaySetting[]
   payouts             Payout[]
   applications        Application[]
+  applicationInvitations ApplicationInvitation[]
   applicationGroups   ApplicationGroup[]
   screeningConsents   ScreeningConsent[]
   screeningReports    ScreeningReport[]
@@ -343,6 +344,7 @@ model Unit {
   documents           Document[]
   maintenanceRequests MaintenanceRequest[]
   applications        Application[]
+  applicationInvitations ApplicationInvitation[]
   applicationGroups   ApplicationGroup[]
 
   @@unique([propertyId, number])
@@ -842,10 +844,60 @@ model Application {
   updatedAt          DateTime           @updatedAt
   consents           ScreeningConsent[]
   reports            ScreeningReport[]
+  invitation         ApplicationInvitation?
 
   @@unique([id, organizationId])
   @@index([organizationId, status, appliedAt])
   @@index([applicationGroupId])
+}
+
+// Invitations do not enter screening, household or lease workflows until submitted.
+model ApplicationInvitation {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  unitId         String
+  unit           Unit         @relation(fields: [unitId, organizationId], references: [id, organizationId])
+  applicantName  String
+  applicantEmail String
+  createdBy      String
+  requestKey     String
+  tokenHash      String       @unique
+  tokenCipher    String
+  expiresAt      DateTime
+  generation     Int          @default(1)
+  draftName      String?
+  draftSavedAt   DateTime?
+  submittedAt    DateTime?
+  applicationId  String?      @unique
+  application    Application? @relation(fields: [applicationId, organizationId], references: [id, organizationId])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  attempts       ApplicationInvitationAttempt[]
+
+  @@unique([id, organizationId])
+  @@unique([organizationId, requestKey])
+  @@unique([organizationId, unitId, applicantEmail])
+  @@unique([applicationId, organizationId])
+  @@index([organizationId, createdAt])
+}
+
+model ApplicationInvitationAttempt {
+  id             String                @id @default(cuid())
+  invitationId   String
+  invitation     ApplicationInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  generation     Int
+  requestKey     String
+  status         String
+  provider       String?
+  providerId     String?
+  errorCode      String?
+  createdBy      String
+  createdAt      DateTime              @default(now())
+  finishedAt     DateTime?
+
+  @@unique([invitationId, requestKey])
+  @@index([invitationId, createdAt])
 }
 
 /// A household applying together for one unit; status mirrors its furthest-along application.

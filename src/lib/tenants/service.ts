@@ -1,7 +1,8 @@
-import type { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import { db } from '@/lib/db/client';
 import { ensureLeaseSetupCharges } from '@/lib/ledger/lease-setup';
 import { defaultLeaseEnd, todayUtc } from './format';
+import { lockTenantContacts, matchingTenantContacts } from './identity';
 import type { FieldErrors, NewTenantInput, TenantInput } from './validation';
 
 /** A user-correctable failure; `errors` maps onto form fields. */
@@ -20,20 +21,15 @@ function requireOrg(organizationId: string) {
 }
 
 async function assertEmailFree(
-  client: Pick<PrismaClient, 'tenant'>,
+  client: Prisma.TransactionClient,
   organizationId: string,
   email: string | null,
   exceptId?: string,
 ) {
   if (!email) return;
-  const existing = await client.tenant.findFirst({
-    where: {
-      organizationId,
-      email: { equals: email, mode: 'insensitive' },
-      ...(exceptId ? { id: { not: exceptId } } : {}),
-    },
-    select: { id: true },
-  });
+  const existing = (await matchingTenantContacts(client, organizationId, email)).find(
+    (tenant) => tenant.id !== exceptId,
+  );
   if (existing) {
     throw new TenantServiceError('A tenant with this email already exists.', {
       email: 'A tenant with this email already exists.',
@@ -52,6 +48,7 @@ export async function createTenant(
 ): Promise<{ tenantId: string; leaseId: string | null }> {
   requireOrg(organizationId);
   return client.$transaction(async (tx) => {
+    await lockTenantContacts(tx, organizationId);
     await assertEmailFree(tx, organizationId, input.email);
 
     let lease: { unitId: string; rent: number; start: Date } | null = null;
@@ -118,6 +115,7 @@ export async function updateTenant(
 ): Promise<void> {
   requireOrg(organizationId);
   await client.$transaction(async (tx) => {
+    await lockTenantContacts(tx, organizationId);
     await assertEmailFree(tx, organizationId, input.email, tenantId);
     const { count } = await tx.tenant.updateMany({
       where: { id: tenantId, organizationId },

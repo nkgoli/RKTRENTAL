@@ -14,8 +14,8 @@ import { hasCurrentConsent, type ApplicationStatus } from '@/lib/screening/polic
 import { recordDecision, requestScreening } from './actions';
 import { ReviewDecisionForm, ScreeningSubmit } from './ReviewForms';
 import { ApplicantList, BackToApplicants } from './ApplicantList';
-import { ApplicationArrow } from './ApplicationArrow';
 import styles from './applications.module.css';
+import { PromoteApplicant } from '@/components/applications/PromoteApplicant';
 import { InvitationList } from '@/components/applications/InvitationList';
 
 type SearchParams = {
@@ -249,7 +249,7 @@ export default async function ApplicationsPage({
         <NoticeToast message="Screening request sent. The report status updates when the provider returns a result." />
       )}
       {params.notice === 'approved' && (
-        <NoticeToast message="Applicant approved. You can create a lease from this review." />
+        <NoticeToast message="Applicant approved. Promote them to a tenant to continue with lease setup." />
       )}
       {params.notice === 'declined' && (
         <NoticeToast message="Decision recorded for this application." />
@@ -549,19 +549,12 @@ export default async function ApplicationsPage({
                   unitId={scope.unitId}
                 />
               ) : selected.status === 'APPROVED' ? (
-                <div className={styles.decisionButtons}>
-                  <Button
-                    href={
-                      '/leases/new?unit=' +
-                      encodeURIComponent(selected.unitId) +
-                      '&applicant=' +
-                      encodeURIComponent(selected.id)
-                    }
-                    variant="primary"
-                  >
-                    Create lease <ApplicationArrow />
-                  </Button>
-                </div>
+                <PromoteApplicant
+                  key={selected.id}
+                  applicationId={selected.id}
+                  unitId={selected.unitId}
+                  tenantId={selected.promotedTenantId}
+                />
               ) : (
                 <>
                   <p className={styles.decisionHelp} id="decision-help">

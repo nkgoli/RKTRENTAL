@@ -82,8 +82,8 @@ export async function ApplicationsPanel({
     query.set('applicant', id);
     return `/applications?${query}#selected-applicant`;
   };
-  const leaseHref = (unitId: string, applicantId: string) =>
-    `/leases/new?${new URLSearchParams({ unit: unitId, applicant: applicantId })}`;
+  const leaseHref = (unitId: string, tenantId: string) =>
+    `/leases/new?${new URLSearchParams({ unit: unitId, tenant: tenantId })}`;
   const toggleHref = withUnit(
     `/properties/${scope.propertyId}/applications`,
     scope.unitId,
@@ -156,7 +156,9 @@ export async function ApplicationsPanel({
           <ul className={`${styles.groups} ${ux.groups}`}>
             {paginate(allGroups, current).map((group) => {
               const status = group.status;
-              const approved = group.items.find((a) => a.status === 'APPROVED');
+              const approved = group.items.find(
+                (a) => a.status === 'APPROVED' && a.promotedTenantId,
+              );
               return (
                 <li
                   className={`${styles.groupRow} ${ux.groupRow}`}
@@ -196,15 +198,24 @@ export async function ApplicationsPanel({
                             <small>{labels[application.status as ApplicationStatus]}</small>
                           )}
                         </Link>
+                        {application.promotedTenantId ? (
+                          <Link
+                            href={`/tenants/${encodeURIComponent(application.promotedTenantId)}`}
+                          >
+                            View tenant
+                          </Link>
+                        ) : application.status === 'APPROVED' ? (
+                          <Link href={reviewHref(application.id)}>Promote to tenant</Link>
+                        ) : null}
                       </li>
                     ))}
                   </ul>
                   <div className={`${styles.groupActions} ${ux.groupActions}`}>
                     <Badge tone={applicationStatusTone(status)}>{labels[status]}</Badge>
-                    {approved && (
+                    {approved?.promotedTenantId && (
                       <Link
                         className="btn btn-primary btn-sm"
-                        href={leaseHref(group.unitId, approved.id)}
+                        href={leaseHref(group.unitId, approved.promotedTenantId)}
                       >
                         Create lease <ApplicationArrow />
                       </Link>

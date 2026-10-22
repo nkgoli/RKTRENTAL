@@ -90,6 +90,19 @@
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+.people > li {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.people > li > a + a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
 .panel .groupActions {
   display: grid;
   gap: 10px;

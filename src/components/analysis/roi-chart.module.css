@@ -1,5 +1,5 @@
 /* ROI chart system in the app's own style (globals.css tokens): the flush card with a
-   bordered header, Space Grotesk headings, Inter tabular figures, chip-style range
+   bordered header, Outfit headings, Inter tabular figures, chip-style range
    controls and the dashboard chart's solid grid. Below 640 px controls stack under the
    title and tiles use 2 columns. */
 .card {
@@ -243,7 +243,7 @@
 .info button:focus-visible + [role='tooltip'] {
   display: block;
 }
-/* Metric tiles follow the app KPI card: muted 12 px label over a Space Grotesk value. */
+/* Metric tiles follow the app KPI card: muted 12 px label over a Outfit value. */
 .tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

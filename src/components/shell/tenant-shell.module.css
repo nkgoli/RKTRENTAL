@@ -111,8 +111,9 @@
   border-radius: 0 0 8px 8px;
 }
 .navigation a:global(.active) {
-  background: var(--rr-primary-tint);
-  border-top-color: var(--design-primary);
+  background: var(--design-primary);
+  border-color: var(--design-primary);
+  color: #fff;
 }
 .navigation a::before {
   display: none;

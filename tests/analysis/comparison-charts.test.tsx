@@ -124,8 +124,8 @@ describe('Fix My Deal levers (C4)', () => {
 describe('Scenario and comparison data (C18–C23)', () => {
   it('uses the app preset colours and tones differences', () => {
     expect(scenarioColors(['Base Case', 'Optimistic', 'Conservative', 'Rent case'])).toEqual([
-      '#3159d9',
-      '#087c91',
+      '#3e4fe5',
+      '#007f7a',
       '#b04a1c',
       '#9d174d',
     ]);

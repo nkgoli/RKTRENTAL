@@ -145,7 +145,7 @@
 }
 .facts > div:first-child {
   border: 0;
-  background: linear-gradient(120deg, #edf2ff, #eef8fb);
+  background: var(--design-background);
 }
 .facts dt,
 .compactFacts dt,

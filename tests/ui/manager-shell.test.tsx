@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ManagerShell } from '@/components/shell/ManagerShell';
 import { managerNav } from '@/components/shell/nav';
@@ -22,157 +21,66 @@ beforeEach(() => {
 afterEach(cleanup);
 
 const ui = () => <ManagerShell>content</ManagerShell>;
-const hamburger = () => screen.getByRole('button', { name: 'Open menu' });
-// The sidebar close X and the scrim share the "Close menu" name.
-const closeX = () => document.querySelector<HTMLButtonElement>('.drawer-close')!;
-const scrim = () => document.querySelector<HTMLButtonElement>('.scrim');
 const sidebar = () => document.getElementById('manager-sidebar')!;
+const tabbar = () => screen.getByRole('navigation', { name: 'Sections' });
 
-describe('ManagerShell drawer', () => {
-  it('starts closed with correct aria state', () => {
+describe('ManagerShell phone navigation', () => {
+  it('replaces the drawer with an app bar, notifications and the account menu', () => {
     render(ui());
-    expect(hamburger().getAttribute('aria-expanded')).toBe('false');
-    expect(hamburger().getAttribute('aria-controls')).toBe('manager-sidebar');
-    expect(scrim()).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Open menu' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Notifications' }).getAttribute('href')).toBe(
+      '/notifications',
+    );
+    expect(screen.getByRole('button', { name: 'Account menu' })).toBeTruthy();
     expect(sidebar().getAttribute('role')).toBeNull();
-    expect(sidebar().getAttribute('aria-modal')).toBeNull();
-  });
-
-  it('opens from the hamburger as a modal dialog', async () => {
-    const user = userEvent.setup();
-    render(ui());
-    await user.click(hamburger());
-    expect(hamburger().getAttribute('aria-expanded')).toBe('true');
-    expect(sidebar().getAttribute('role')).toBe('dialog');
-    expect(sidebar().getAttribute('aria-modal')).toBe('true');
-    expect(sidebar().getAttribute('aria-label')).toBe('Main menu');
-    expect(scrim()).not.toBeNull();
-    expect(document.querySelector('.app')!.classList.contains('drawer-open')).toBe(true);
-  });
-
-  async function openThenClose(close: (user: ReturnType<typeof userEvent.setup>) => Promise<void>) {
-    const user = userEvent.setup();
-    render(ui());
-    await user.click(hamburger());
-    await close(user);
-    expect(hamburger().getAttribute('aria-expanded')).toBe('false');
-    expect(scrim()).toBeNull();
-    expect(sidebar().getAttribute('role')).toBeNull();
-    expect(document.querySelector('.app')!.classList.contains('drawer-open')).toBe(false);
-  }
-
-  it('closes on Escape and restores focus to the hamburger', async () => {
-    await openThenClose((user) => user.keyboard('{Escape}'));
-    expect(document.activeElement).toBe(hamburger());
-  });
-
-  it('closes on scrim click and restores focus', async () => {
-    await openThenClose((user) => user.click(scrim()!));
-    expect(document.activeElement).toBe(hamburger());
-  });
-
-  it('closes on the X button and restores focus', async () => {
-    await openThenClose((user) => user.click(closeX()));
-    expect(document.activeElement).toBe(hamburger());
-  });
-
-  it('closes on a nav link click', async () => {
-    await openThenClose(async (user) => {
-      const link = within(sidebar()).getByRole('link', { name: 'Tenants' });
-      link.addEventListener('click', (e) => e.preventDefault());
-      await user.click(link);
-    });
-  });
-
-  it('closes on route change', async () => {
-    const user = userEvent.setup();
-    const { rerender } = render(ui());
-    await user.click(hamburger());
-    expect(hamburger().getAttribute('aria-expanded')).toBe('true');
-    pathname = '/tenants';
-    rerender(ui());
-    expect(hamburger().getAttribute('aria-expanded')).toBe('false');
-    expect(scrim()).toBeNull();
-  });
-
-  it('closes when the viewport reaches the docked breakpoint', async () => {
-    let listener: (() => void) | undefined;
-    const mq = {
-      matches: false,
-      addEventListener: (_: string, fn: () => void) => (listener = fn),
-      removeEventListener: vi.fn(),
-    };
-    window.matchMedia = vi.fn().mockReturnValue(mq) as unknown as typeof window.matchMedia;
-    const user = userEvent.setup();
-    render(ui());
-    await user.click(hamburger());
-    mq.matches = true;
-    act(() => listener?.());
-    expect(hamburger().getAttribute('aria-expanded')).toBe('false');
-  });
-
-  it('moves focus to the close button on open', async () => {
-    const user = userEvent.setup();
-    render(ui());
-    await user.click(hamburger());
-    expect(document.activeElement).toBe(closeX());
-  });
-
-  it('isolates the page and locks scrolling until the menu closes', async () => {
-    const user = userEvent.setup();
-    document.body.style.overflow = 'auto';
-    render(ui());
-    await user.click(hamburger());
-    expect(document.getElementById('main-content')!.hasAttribute('inert')).toBe(true);
-    expect(document.body.style.overflow).toBe('hidden');
-    await user.keyboard('{Escape}');
     expect(document.getElementById('main-content')!.hasAttribute('inert')).toBe(false);
-    expect(document.body.style.overflow).toBe('auto');
-    document.body.style.overflow = '';
   });
 
-  it('skips hidden controls when cycling keyboard focus', async () => {
-    const user = userEvent.setup();
+  it('offers Home, Properties, People, Payments and More in the tab bar', () => {
     render(ui());
-    await user.click(hamburger());
-    const hidden = document.createElement('button');
-    hidden.hidden = true;
-    sidebar().append(hidden);
-    const last = within(sidebar()).getByRole('button', { name: 'Sign out' });
-    last.focus();
-    await user.tab();
-    expect(document.activeElement).toBe(
-      within(sidebar()).getByRole('link', { name: 'RocketRental' }),
+    const links = within(tabbar()).getAllByRole('link');
+    expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
+      ['Home', '/dashboard'],
+      ['Properties', '/properties'],
+      ['People', '/tenants'],
+      ['Payments', '/payments'],
+      ['More', '/more'],
+    ]);
+    expect(within(tabbar()).getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe(
+      'page',
     );
   });
 
-  it('traps Tab and Shift+Tab inside the drawer', async () => {
-    const user = userEvent.setup();
-    render(ui());
-    await user.click(hamburger());
-    const items = Array.from(
-      sidebar().querySelectorAll<HTMLElement>('a[href], button:not([disabled])'),
-    );
-    expect(items[1]).toBe(closeX());
-    const last = items[items.length - 1];
-
-    // Focus starts on the close button; Shift+Tab moves to the brand link (first item).
-    await user.tab({ shift: true });
-    expect(document.activeElement).toBe(items[0]);
-    // Shift+Tab from the first item wraps to the last.
-    await user.tab({ shift: true });
-    expect(document.activeElement).toBe(last);
-    // Tab from the last wraps to the first.
-    await user.tab();
-    expect(document.activeElement).toBe(items[0]);
-    // Tabbing through every item never leaves the sidebar.
-    for (let i = 0; i < items.length * 2; i++) {
-      await user.tab();
-      expect(sidebar().contains(document.activeElement)).toBe(true);
+  it('marks More for sections reached from it without claiming to be the page', () => {
+    for (const [path, current] of [
+      ['/leases/abc', 'true'],
+      ['/maintenance', 'true'],
+      ['/more', 'page'],
+    ] as const) {
+      pathname = path;
+      const { unmount } = render(ui());
+      const more = within(tabbar()).getByRole('link', { name: 'More' });
+      expect(more.classList.contains('active')).toBe(true);
+      expect(more.getAttribute('aria-current')).toBe(current);
+      expect(
+        within(tabbar())
+          .getAllByRole('link')
+          .filter((l) => l.classList.contains('active')),
+      ).toHaveLength(1);
+      unmount();
     }
   });
 
-  it('does not intercept Escape or Tab while closed', () => {
+  it('keeps a nested route on its own tab', () => {
+    pathname = '/properties/maple/units/4b';
+    render(ui());
+    const active = within(tabbar())
+      .getAllByRole('link')
+      .filter((link) => link.classList.contains('active'));
+    expect(active.map((link) => link.textContent)).toEqual(['Properties']);
+  });
+
+  it('does not intercept Escape or Tab', () => {
     render(ui());
     const ev = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
     document.dispatchEvent(ev);
@@ -181,7 +89,6 @@ describe('ManagerShell drawer', () => {
     expect(document.activeElement).toBe(document.body);
   });
 });
-
 describe('ManagerShell navigation', () => {
   const visible = managerNav.flatMap((g) => g.items).filter((i) => !i.hidden);
 
@@ -189,7 +96,7 @@ describe('ManagerShell navigation', () => {
     render(ui());
     for (const [label, href] of [
       ['Returns & ROI', '/roi-analysis'],
-      ['Rent Analysis', '/rent-analysis'],
+      ['Rent analysis', '/rent-analysis'],
     ]) {
       const links = within(sidebar()).getAllByRole('link', { name: label });
       expect(links).toHaveLength(1);
@@ -199,31 +106,15 @@ describe('ManagerShell navigation', () => {
     expect(within(sidebar()).queryByRole('link', { name: /^(Returns|ROI Analysis)$/ })).toBeNull();
   });
 
-  it.each(['Returns & ROI', 'Rent Analysis'])(
-    'closes the mobile menu on keyboard entry to %s',
-    async (label) => {
-      const user = userEvent.setup();
-      render(ui());
-      await user.click(hamburger());
-      const link = within(sidebar()).getByRole('link', { name: label });
-      link.addEventListener('click', (event) => event.preventDefault());
-      link.focus();
-      await user.keyboard('{Enter}');
-      expect(hamburger().getAttribute('aria-expanded')).toBe('false');
-      expect(scrim()).toBeNull();
-      expect(document.getElementById('main-content')!.hasAttribute('inert')).toBe(false);
-    },
-  );
-
   it('updates the title and highlight on selection, return and legacy navigation', () => {
     const { rerender } = render(ui());
     for (const [path, title, activeCount] of [
-      ['/rent-analysis', 'Rent Analysis', 1],
-      ['/rent-analysis/property-123', 'Rent Analysis', 1],
+      ['/rent-analysis', 'Rent analysis', 1],
+      ['/rent-analysis/property-123', 'Rent analysis', 1],
       ['/roi-analysis', 'Returns & ROI', 1],
       ['/returns', 'Portfolio returns', 1],
       ['/rent-comps', 'Rent comps', 0],
-      ['/rent-analysis', 'Rent Analysis', 1],
+      ['/rent-analysis', 'Rent analysis', 1],
     ] as const) {
       pathname = path;
       rerender(ui());
@@ -259,7 +150,7 @@ describe('ManagerShell navigation', () => {
         const { unmount } = render(ui());
         const active = Array.from(sidebar().querySelectorAll('a.active'));
         expect(active).toHaveLength(1);
-        expect(active[0].textContent).toBe(label);
+        expect(active[0].textContent?.startsWith(label)).toBe(true);
         expect(active[0].getAttribute('aria-current')).toBe('page');
         expect(sidebar().querySelectorAll('[aria-current]')).toHaveLength(1);
         unmount();

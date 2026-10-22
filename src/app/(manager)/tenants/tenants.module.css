@@ -439,7 +439,7 @@
   gap: 16px;
   align-items: center;
   padding: 20px 22px;
-  background: linear-gradient(120deg, #edf2ff, #f1fafc);
+  background: var(--design-surface);
   border: 1px solid #d4dfef;
   border-radius: 12px;
 }
@@ -579,7 +579,7 @@
   border: 1px solid var(--lp-line);
   border-radius: 12px;
   background: var(--design-surface);
-  box-shadow: 0 12px 32px #17243b20;
+  box-shadow: 0 12px 32px #17233a20;
   display: grid;
   gap: 16px;
   color: var(--design-text);
@@ -588,7 +588,7 @@
   display: none;
 }
 .dialog::backdrop {
-  background: #17243b24;
+  background: #17233a24;
 }
 .dialog h2 {
   font-size: 22px;

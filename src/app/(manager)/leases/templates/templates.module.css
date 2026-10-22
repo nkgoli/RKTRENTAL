@@ -1,7 +1,7 @@
 .page {
   --lt-line: #dce3ed;
   --lt-control: #7e8b9e;
-  --lt-tint: #edf2ff;
+  --lt-tint: #eef0fd;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -83,7 +83,7 @@
   gap: 16px;
   align-items: center;
   padding: 22px 24px;
-  background: linear-gradient(120deg, #edf2ff, #f1fafc);
+  background: var(--design-surface);
   border: 1px solid #d5dfef;
   border-radius: var(--design-radius);
 }
@@ -247,7 +247,7 @@
   position: sticky;
   top: 0;
   z-index: 3;
-  box-shadow: 0 3px 6px #17243b08;
+  box-shadow: 0 3px 6px #17233a08;
 }
 .page .lt-savebar > div {
   display: grid;

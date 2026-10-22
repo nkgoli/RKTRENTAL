@@ -152,13 +152,11 @@
 }
 .rentHero {
   border: 1px solid var(--rr-border);
-  border-top: 3px solid var(--design-primary);
   border-radius: var(--design-radius);
-  background: linear-gradient(120deg, var(--rr-primary-tint), var(--rr-ok-bg));
+  background: var(--design-surface);
   padding: 20px;
   display: grid;
   gap: 12px;
-  box-shadow: 0 2px 3px #17243b14;
 }
 .heroTop {
   display: flex;
@@ -239,7 +237,7 @@
   gap: 5px;
   background: var(--design-surface);
   border-radius: var(--design-radius);
-  box-shadow: 0 2px 3px #17243b14;
+  box-shadow: 0 2px 3px #17233a14;
 }
 .homeLease .quickActions :global(.tile-icon) {
   width: 30px;
@@ -282,7 +280,7 @@
   font-size: 14px;
 }
 .homeLease :global(.card) {
-  box-shadow: 0 2px 3px #17243b14;
+  box-shadow: 0 2px 3px #17233a14;
 }
 .activity {
   list-style: none;

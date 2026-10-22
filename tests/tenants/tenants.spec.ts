@@ -17,7 +17,7 @@ test('manager lists and searches tenants and is led to Applications to add one',
 }) => {
   await signIn(page);
   await page.goto('/tenants');
-  await expect(page.getByRole('heading', { name: 'Tenants', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tenant directory', level: 1 })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Tenant views' })).toBeVisible();
   await page.getByRole('link', { name: 'Directory', exact: true }).click();
   await expect(page).toHaveURL(/\/tenants(?:\?view=directory)?$/);

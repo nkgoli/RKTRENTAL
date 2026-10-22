@@ -10,11 +10,11 @@
 }
 
 .scope :global(.nav-label) {
-  color: var(--design-muted);
+  color: #fff;
 }
 .scope :global(.sidebar a:focus-visible),
 .scope :global(.sidebar button:focus-visible) {
-  outline-color: var(--design-primary);
+  outline-color: #fff;
 }
 .scope :global(.alert a) {
   text-decoration: underline;
@@ -40,7 +40,9 @@
   padding: 12px 20px 0;
 }
 @media (min-width: 1024px) {
+  /* Workspaces own their heading; the empty topbar only keeps the page's top spacing. */
   :global(.topbar).workspaceTopbar {
-    display: none;
+    display: block;
+    padding: 40px 0 0;
   }
 }

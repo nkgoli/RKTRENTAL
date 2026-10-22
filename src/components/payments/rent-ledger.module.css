@@ -45,7 +45,7 @@
   padding: 20px;
   border: 1px solid #d4dfef;
   border-radius: 9px;
-  background: linear-gradient(120deg, #edf2ff, #f1f8fb);
+  background: var(--design-background);
 }
 .facts > div {
   min-width: 0;

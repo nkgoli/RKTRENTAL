@@ -1,4 +1,4 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 import { maintenanceFormHref } from '@/lib/maintenance/navigation';
 import { withRequestPhotos } from '@/components/maintenance/request-photos';
 import { PageHeader } from '@/components/shell/PageHeader';
@@ -6,7 +6,7 @@ import { ScopedWorkspace } from '@/components/workspace/ScopedWorkspace';
 import { scopeFilterFrom } from '@/lib/workspace/scope';
 import { EmptyState } from '@/components/RouteStates';
 import { Avatar, Badge, KanbanBoard, KanbanColumn, Ticket } from '@/components/ui';
-import { KpiCard } from '@/components/dashboard/KpiCard';
+import { SummaryBand } from '@/components/ui/SummaryBand';
 
 import { requireManagerRole } from '@/lib/auth/access';
 import {
@@ -117,30 +117,32 @@ export default async function MaintenancePage({
         activeTab="maintenance"
       />
       <PageHeader
+        eyebrow="Operations"
         title="Maintenance"
-        actions={[{ label: 'New request', href: createHref, primary: true }]}
+        meta="Repair requests across your properties"
+        actions={[{ label: 'New request', href: createHref, primary: true, icon: 'plus' }]}
       />
-      <div className="kpis">
-        <KpiCard
-          label="Open requests"
-          value={summary.open}
-          note={`Across ${summary.openProperties} ${summary.openProperties === 1 ? 'property' : 'properties'}`}
-        />
-        <KpiCard
-          label="Urgent attention"
-          value={summary.urgent}
-          note={
-            summary.firstUrgent
+      <SummaryBand
+        label="Repair request summary"
+        eyebrow="Open repair requests"
+        value={`${summary.open} open`}
+        detail={`Across ${summary.openProperties} ${summary.openProperties === 1 ? 'property' : 'properties'} · ${summary.urgent} urgent`}
+        stats={[
+          { label: 'Open requests', value: summary.open, detail: 'New, assigned or in progress' },
+          {
+            label: 'Urgent attention',
+            value: summary.urgent,
+            detail: summary.firstUrgent
               ? `${summary.firstUrgent.title} · ${summary.firstUrgent.property.name}`
-              : 'No urgent requests'
-          }
-        />
-        <KpiCard
-          label="Completed this week"
-          value={summary.completedThisWeek}
-          note="Requests resolved"
-        />
-      </div>
+              : 'No urgent requests',
+          },
+          {
+            label: 'Completed this week',
+            value: summary.completedThisWeek,
+            detail: 'Requests resolved',
+          },
+        ]}
+      />{' '}
       <MaintenanceFilters action="/maintenance" hidden={hidden} query={query} />
       {list.isEmpty && (
         <EmptyState

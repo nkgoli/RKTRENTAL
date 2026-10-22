@@ -19,7 +19,7 @@ for (const width of [1280, 390]) {
     await signIn(page);
 
     await page.goto('/tenants?view=directory');
-    await expect(page.getByRole('heading', { name: 'Tenants', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tenant directory', level: 1 })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Tenant views' })).toBeVisible();
     await page.screenshot({
       path: `tests/tenants/evidence/tenants-directory-${width}.png`,

@@ -177,7 +177,7 @@ export function riskScore(factors: RiskFactor[]) {
  * Five-step risk scale, worst to best: app danger, a burnt orange, an ochre, an olive
  * and the app's ok teal. Each passes 4.5:1 on white, so it can colour the score text.
  */
-export const riskScale = ['#b4233e', '#b04a1c', '#946200', '#4f7a2b', '#087c91'] as const;
+export const riskScale = ['#b4233f', '#b04a1c', '#946200', '#4f7a2b', '#007f7a'] as const;
 
 export function riskLevel(score: number) {
   if (score <= 30) return { level: 'Low Risk', color: riskScale[4], tone: 'teal' } as const;

@@ -3,7 +3,7 @@
   display: grid;
   gap: 12px;
   font-family: var(--design-font, Inter, system-ui, sans-serif);
-  color: var(--design-text, #17243b);
+  color: var(--design-text, #17233a);
 }
 .dropzone {
   border: 1.5px dashed #b6c2d9;
@@ -14,11 +14,11 @@
   cursor: pointer;
 }
 .dropzone:focus-visible {
-  outline: 3px solid var(--design-primary, #3159d9);
+  outline: 3px solid var(--design-primary, #3e4fe5);
   outline-offset: 2px;
 }
 .dragging {
-  border-color: var(--design-primary, #3159d9);
+  border-color: var(--design-primary, #3e4fe5);
   background: var(--rr-primary-tint);
 }
 .dropTitle {
@@ -27,11 +27,11 @@
 }
 .dropHint {
   margin: 6px 0 14px;
-  color: var(--design-muted, #58687e);
+  color: var(--design-muted, #58677d);
   font-size: 12px;
 }
 .browseButton {
-  background: var(--design-primary, #3159d9);
+  background: var(--design-primary, #3e4fe5);
   color: #fff;
   border: 0;
   border-radius: 7px;
@@ -53,14 +53,14 @@
 .counter {
   margin: 0;
   font-size: 13px;
-  color: var(--design-muted, #58687e);
+  color: var(--design-muted, #58677d);
 }
 .status {
   min-height: 1em;
   font-size: 13px;
 }
 .error {
-  color: var(--design-danger, #b4233e);
+  color: var(--design-danger, #b4233f);
   font-size: 13px;
   margin: 0;
 }
@@ -94,7 +94,7 @@
   place-items: center;
   border-radius: 8px;
   background: var(--rr-primary-tint);
-  color: var(--design-primary, #3159d9);
+  color: var(--design-primary, #3e4fe5);
   font-size: 11px;
   font-weight: 700;
   flex: none;
@@ -112,7 +112,7 @@
   font-weight: 600;
 }
 .meta {
-  color: var(--design-muted, #58687e);
+  color: var(--design-muted, #58677d);
   font-size: 12px;
 }
 .progress {
@@ -135,7 +135,10 @@
   cursor: pointer;
 }
 @media (pointer: coarse) {
-  .actions button, .browseButton { min-height: 44px; }
+  .actions button,
+  .browseButton {
+    min-height: 44px;
+  }
 }
 .actions button:disabled {
   opacity: 0.45;
@@ -144,7 +147,7 @@
 .coverBadge {
   font-size: 12px;
   font-weight: 700;
-  color: var(--design-primary, #3159d9);
+  color: var(--design-primary, #3e4fe5);
   align-self: center;
 }
 

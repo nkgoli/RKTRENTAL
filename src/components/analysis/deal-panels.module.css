@@ -1,5 +1,5 @@
 /* Deal Snapshot (KPI popovers, compact risk meter) and Fix My Deal, as app cards:
-   white surface, app borders and radius, Space Grotesk figures, semantic tones. */
+   white surface, app borders and radius, Outfit figures, semantic tones. */
 .snapshot {
   border: var(--rr-card-border);
   border-radius: var(--rr-card-radius);

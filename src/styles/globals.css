@@ -1,4 +1,4 @@
-﻿@font-face {
+@font-face {
   font-family: Inter;
   src: url('/fonts/inter-latin-wght-normal.woff2') format('woff2');
   font-style: normal;
@@ -6,58 +6,60 @@
   font-display: swap;
 }
 @font-face {
-  font-family: 'Space Grotesk';
-  src: url('/fonts/space-grotesk-latin-wght-normal.woff2') format('woff2');
+  font-family: Outfit;
+  src: url('/fonts/outfit-latin-wght-normal.woff2') format('woff2');
   font-style: normal;
-  font-weight: 300 700;
+  font-weight: 100 900;
   font-display: swap;
 }
-/* Design tokens and component styles from Designs/rocketrental-app (layout system: one card, one grid). */
+/* Design tokens and component styles from Designs/redisgn: ink sidebar, white bordered summaries,
+   medium Outfit headings, 16px radius and an 8px spacing unit. */
 * {
   box-sizing: border-box;
 }
 :root {
   --design-font: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --design-primary: #3159d9;
-  --design-background: #f7f9fc;
+  --design-primary: #3e4fe5;
+  --design-background: #f4f5f8;
   --design-surface: #ffffff;
-  --design-text: #17243b;
-  --design-muted: #58687e;
-  --design-accent: #087c91;
-  --design-danger: #b4233e;
-  --design-radius: 12px;
-  --design-heading-font: 'Space Grotesk', var(--design-font);
-  --rr-border: #dce3ed;
+  --design-text: #17233a;
+  --design-muted: #58677d;
+  --design-accent: #007f7a;
+  --design-danger: #b4233f;
+  --design-radius: 16px;
+  --design-heading-font: Outfit, var(--design-font);
+  --rr-border: #dde1e9;
   --rr-border-strong: #7e8b9e;
-  --rr-subtle: #f1f5f9;
-  --rr-hover: #f1f5f9;
-  --rr-primary-hover: #264bc4;
-  --rr-primary-tint: #edf2ff;
-  --rr-navy: #0b2545;
-  --rr-navy-top: #0f2d57;
+  --rr-subtle: #f4f5f8;
+  --rr-hover: #f4f5f8;
+  --rr-primary-hover: #3242cc;
+  --rr-primary-tint: #eef0fd;
+  --rr-navy: #17233a;
+  --rr-navy-top: #1f2d47;
   --rr-coral: #e0a283;
   --rr-coral-ink: #8a4526;
   --rr-coral-tint: #fbf3ee;
   --rr-ring-track: #e8e6f5;
   --rr-warm: #cf8a68;
-  --rr-ok: #087c91;
-  --rr-ok-bg: #f1fafc;
+  --rr-ok: #007f7a;
+  --rr-ok-bg: #e6f4f2;
   --rr-warn: #8a4b09;
-  --rr-warn-bg: #fff6e8;
-  --rr-bad: #b4233e;
-  --rr-bad-bg: #fff0f3;
-  /* Layout system: one content width, one card (1px border, 12px radius, 16px padding), one heading scale. */
+  --rr-warn-bg: #fff3e0;
+  --rr-bad: #b4233f;
+  --rr-bad-bg: #fdecef;
+  --rr-ink-muted: #b9c2d3;
+  /* Layout system: one content width, one card (1px border, 16px radius, no shadow), one heading scale. */
   --rr-page-max: 1120px;
-  --rr-gutter: 32px;
-  --rr-gap: 16px;
-  --rr-card-pad: 16px;
+  --rr-gutter: 48px;
+  --rr-gap: 24px;
+  --rr-card-pad: 24px;
   --rr-card-radius: var(--design-radius);
   --rr-card-border: 1px solid var(--rr-border);
-  --rr-card-shadow: 0 2px 3px #17243b14;
-  --rr-control: 36px;
+  --rr-card-shadow: none;
+  --rr-control: 40px;
   --rr-h1: 32px;
-  --rr-h2: 20px;
-  --rr-h3: 16px;
+  --rr-h2: 22px;
+  --rr-h3: 17px;
   --rr-label: 12px;
   --rr-kpi: 24px;
   --rr-shadow: 0 1px 2px rgb(23 20 43 / 0.05);
@@ -82,8 +84,9 @@ h2,
 h3,
 h4 {
   margin: 0;
-  letter-spacing: -0.02em;
-  font-weight: 600;
+  font-family: var(--design-heading-font);
+  letter-spacing: -0.01em;
+  font-weight: 500;
   color: var(--design-text);
 }
 /* Default section heading sizes follow the 26/18/15 scale; page titles set their own. */
@@ -103,10 +106,11 @@ p {
 }
 .eyebrow {
   font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--design-muted);
-  margin-bottom: 2px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--design-primary);
+  margin-bottom: 4px;
 }
 .row {
   display: flex;
@@ -180,7 +184,7 @@ p {
   width: 28px;
   height: 28px;
   border-radius: 6px;
-  background: #edf2ff;
+  background: #eef0fd;
   color: var(--design-primary);
   font-family: var(--design-heading-font);
   font-weight: 600;
@@ -223,13 +227,13 @@ p {
   color: var(--design-text);
 }
 .nav a.active {
-  background: #edf2ff;
+  background: #eef0fd;
   color: var(--design-primary);
   font-weight: 600;
   box-shadow: none;
 }
 .nav a.active svg {
-  color: #3159d9;
+  color: #3e4fe5;
 }
 .nav-label {
   font-size: 11px;
@@ -258,7 +262,7 @@ p {
   background: var(--design-background);
 }
 .sidebar-foot .avatar {
-  background: #edf2ff;
+  background: #eef0fd;
   color: var(--design-primary);
 }
 .sidebar-foot strong {
@@ -340,7 +344,7 @@ p {
   z-index: 40;
   border: 0;
   padding: 0;
-  background: #17243b24;
+  background: #17233a24;
 }
 .app.drawer-open .drawer-close {
   display: inline-grid;
@@ -542,7 +546,7 @@ a.card:hover {
 .btn-primary {
   background: var(--design-primary);
   color: #fff;
-  box-shadow: 0 3px 0 #203fa8;
+  box-shadow: 0 3px 0 #2c39b3;
 }
 .btn-primary:hover {
   background: var(--rr-primary-hover);
@@ -1060,7 +1064,7 @@ button.switch {
   padding: 12px 14px;
   border-radius: 8px;
   background: var(--rr-primary-tint);
-  color: #3159d9;
+  color: #3e4fe5;
   font-size: 14px;
   border: 1px solid #dbeafe;
 }
@@ -1301,7 +1305,7 @@ button.switch {
   width: 72px;
   height: 24px;
   flex: none;
-  color: #3159d9;
+  color: #3e4fe5;
 }
 .spark polygon {
   fill: currentColor;
@@ -1426,7 +1430,7 @@ button.switch {
   align-items: center;
   gap: 8px;
   flex: none;
-  color: #3159d9;
+  color: #3e4fe5;
 }
 .ring svg {
   width: 40px;
@@ -1466,7 +1470,7 @@ button.switch {
 }
 .av.c1 {
   background: #dbe4ff;
-  color: #3159d9;
+  color: #3e4fe5;
 }
 .av.c2 {
   background: #f9ebe3;
@@ -1649,7 +1653,7 @@ button.switch {
 /* Shared interaction states; feature layouts remain with route owners. */
 :root {
   color-scheme: light;
-  --rr-primary-active: #203fa8;
+  --rr-primary-active: #2c39b3;
 }
 h1,
 h2,
@@ -2315,7 +2319,7 @@ h4 {
   border-radius: 12px;
   background: var(--design-surface);
   color: var(--design-text);
-  box-shadow: 0 16px 40px #17243b24;
+  box-shadow: 0 16px 40px #17233a24;
   overflow: hidden;
   display: none;
   flex-direction: column;
@@ -2331,7 +2335,7 @@ h4 {
   width: min(100% - 32px, 720px);
 }
 .dialog::backdrop {
-  background: #17243b24;
+  background: #17233a24;
   backdrop-filter: blur(2px);
 }
 .dialog-head {

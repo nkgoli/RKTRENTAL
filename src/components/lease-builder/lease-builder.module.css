@@ -332,7 +332,7 @@ button.step:hover .stepLabel {
   padding: 20px 24px;
   border-bottom: 1px solid var(--rr-border);
   border-radius: var(--design-radius) var(--design-radius) 0 0;
-  background: linear-gradient(110deg, var(--rr-primary-tint), var(--rr-ok-bg));
+  background: var(--design-surface);
 }
 .panelIcon {
   display: grid;
@@ -419,13 +419,13 @@ button.step:hover .stepLabel {
   border-color: var(--design-primary);
   background: var(--design-primary);
   color: #fff;
-  box-shadow: 0 3px 0 #203fa8;
+  box-shadow: 0 3px 0 #2c39b3;
 }
 .primary:hover:not(:disabled) {
   background: var(--rr-primary-hover);
 }
 .primary:active:not(:disabled) {
-  background: #203fa8;
+  background: #2c39b3;
   box-shadow: none;
 }
 .primary:disabled {

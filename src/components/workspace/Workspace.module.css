@@ -65,7 +65,7 @@
   min-width: 0;
   border: 1px solid var(--rr-border);
   border-radius: var(--rr-card-radius);
-  background: linear-gradient(135deg, var(--rr-primary-tint), var(--rr-ok-bg));
+  background: var(--design-surface);
   box-shadow: var(--rr-card-shadow);
 }
 .cover :global(.cover) {
@@ -84,9 +84,17 @@
   min-width: 0;
   scrollbar-width: none;
 }
-.tabs::-webkit-scrollbar { display: none; }
-.tabsFade { mask-image: linear-gradient(90deg, #000 88%, transparent); }
-.headerActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+.tabsFade {
+  mask-image: linear-gradient(90deg, #000 88%, transparent);
+}
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .tab {
   flex: 0 0 auto;
   display: flex;
@@ -116,14 +124,20 @@
     grid-template-columns: minmax(0, 1fr) 64px;
     gap: 10px;
   }
-  .titleLine h1 { font-size: 28px; }
-  .titleLine { padding-right: 0; }
+  .titleLine h1 {
+    font-size: 28px;
+  }
+  .titleLine {
+    padding-right: 0;
+  }
   .cover :global(.cover) {
     min-height: 68px;
     aspect-ratio: auto;
     width: 100%;
   }
-  .tabs { gap: 8px; }
+  .tabs {
+    gap: 8px;
+  }
   .tab {
     padding: 8px;
     font-size: 13px;
@@ -152,10 +166,23 @@
   font-weight: 400;
 }
 @media (max-width: 640px) {
-  .switcher select { min-width: 0; width: 100%; min-height: 44px; font-size: 16px; }
-  .breadcrumbs a { min-height: 36px; display: inline-flex; align-items: center; }
+  .switcher select {
+    min-width: 0;
+    width: 100%;
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .breadcrumbs a {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+  }
 }
 @media (pointer: coarse) {
-  .switcher select { min-height: 44px; }
-  .tab { min-height: 44px; }
+  .switcher select {
+    min-height: 44px;
+  }
+  .tab {
+    min-height: 44px;
+  }
 }

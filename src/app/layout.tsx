@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import '@/styles/globals.css';
 import '@/styles/accessibility.css';
+import '@/styles/redisgn.css';
 
 export const metadata: Metadata = {
   title: 'RocketRental',

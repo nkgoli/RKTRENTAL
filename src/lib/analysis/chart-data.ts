@@ -414,19 +414,19 @@ export const expenseCategories = [
   {
     key: 'propertyTax',
     name: 'Property Tax',
-    color: '#3159d9',
+    color: '#3e4fe5',
     about: 'Annual property taxes paid to local government',
   },
   {
     key: 'propertyManagement',
     name: 'Management',
-    color: '#0b2545',
+    color: '#17233a',
     about: 'Property management fees (a fixed amount, or a percentage of effective income)',
   },
   {
     key: 'insurance',
     name: 'Insurance',
-    color: '#087c91',
+    color: '#007f7a',
     about: 'Landlord/hazard insurance premium',
   },
   {
@@ -596,7 +596,7 @@ export function exitLandmarks(rows: ExitRow[]) {
 
 export type HeatPalette = { low: string; mid: string; high: string };
 /** App danger → sand → accent teal. */
-export const heatPalette: HeatPalette = { low: '#b4233e', mid: '#f1d9a7', high: '#087c91' };
+export const heatPalette: HeatPalette = { low: '#b4233f', mid: '#f1d9a7', high: '#007f7a' };
 /**
  * Colour-blind-safe diverging palette (RdBu). The reference maps losses to blue
  * and the best returns to red; here losses stay on the red end so the meaning of

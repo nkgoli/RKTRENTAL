@@ -1,6 +1,6 @@
-﻿.hero {
+.hero {
   align-items: center;
-  background: linear-gradient(135deg, #f3f6ff 0%, #ffffff 60%);
+  background: var(--design-surface);
   border: 1px solid #dbe4fb;
   border-radius: var(--design-radius);
   box-shadow: var(--rr-shadow);

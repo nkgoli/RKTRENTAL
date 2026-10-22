@@ -40,8 +40,8 @@ export const overrideLabel = (path: string) =>
 
 /**
  * Saved cases compared on Compare: charts first, exact figures one click away, then the
- * overrides side by side. Cases are created and edited in the shared What if panel; a
- * temporary what-if joins the comparison as an unsaved column while it is active.
+ * overrides side by side. Cases are created and edited in Saved cases below; a temporary
+ * what-if joins the comparison as an unsaved column while it is active.
  */
 export function CaseComparison({
   drafts,
@@ -108,7 +108,7 @@ export function CaseComparison({
           <h3>{scenarioError ? 'Case comparison paused' : 'No case comparison yet'}</h3>
           <p role="status">
             {scenarioError
-              ? 'A saved case has an invalid assumption. Correct the highlighted field in What if; your entries are kept and results return automatically.'
+              ? 'A saved case has an invalid assumption. Correct the highlighted field in Saved cases below; your entries are kept and results return automatically.'
               : snapshot
                 ? 'Case results are out of date. Correct the assumptions flagged above to compare your current edits.'
                 : 'No projection yet. Complete or correct the base assumptions flagged above to compare cases.'}

@@ -237,7 +237,7 @@ export function ScenarioCharts({
         {onOpenWhatIf && (
           <div className={s.addRow}>
             <button type="button" onClick={onOpenWhatIf}>
-              Create or edit cases in What if
+              Try changes in What if
             </button>
           </div>
         )}

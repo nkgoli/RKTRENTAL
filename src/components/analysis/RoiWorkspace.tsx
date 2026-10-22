@@ -44,6 +44,7 @@ import {
   type WhatIfState,
 } from '@/lib/analysis/what-if';
 import { TRIGGER_ID, WhatIfPanel, WhatIfStatus } from './RoiWhatIf';
+import { SavedCases } from './RoiSavedCases';
 import w from './what-if.module.css';
 import { PropertySelector } from './PropertySelector';
 import { AnalysisTabs, RoiProjections } from './RoiProjections';
@@ -237,28 +238,24 @@ export function RoiWorkspace({
   const result = projection.result;
   const calculatedPayload = projection.payload;
   const stale = !result || !!requestErrors.length;
-  // What if: the active case runs over the calculated baseline with the same engine merge as
+  // What if: the temporary case runs over the calculated baseline with the same engine merge as
   // saved cases. Baseline state (payload, values, scenarios) is never written by it.
   const whatIf = scopedWhatIf(whatIfState, selected);
-  const savedCase =
-    whatIf?.source.kind === 'saved'
-      ? (scenarios.find((d) => d.id === (whatIf.source as { id: string }).id) ?? null)
-      : null;
-  const caseValues = savedCase ? savedCase.values : whatIf?.values;
-  const simulating =
-    !!whatIf && (!!savedCase || Object.keys(activeOverrides(whatIf.values)).length > 0);
+  const caseValues = whatIf?.values;
+  const caseOptions = whatIf?.options;
+  const simulating = !!whatIf && Object.keys(activeOverrides(whatIf.values)).length > 0;
   const simulation = useMemo(
     () =>
       simulating && calculatedPayload && caseValues
-        ? simulate(calculatedPayload, caseValues, savedCase?.options)
+        ? simulate(calculatedPayload, caseValues, caseOptions)
         : null,
-    [simulating, calculatedPayload, caseValues, savedCase?.options],
+    [simulating, calculatedPayload, caseValues, caseOptions],
   );
   const simulated = simulation?.ok ? simulation : null;
   // Every view shows the simulated projection while a what-if runs; recorded data never changes.
   const shownResult = simulated?.result ?? result;
   const shownPayload = simulated?.payload ?? calculatedPayload;
-  const caseName = savedCase ? savedCase.name || 'Unnamed case' : (whatIf?.name ?? 'What if');
+  const caseName = whatIf?.name ?? 'What if';
   const changedCount = caseValues ? Object.keys(activeOverrides(caseValues)).length : 0;
   const range = useMemo(() => actualWindow(period, new Date()), [period]);
   const projectionYear: ProjectionYear | null = shownResult
@@ -614,17 +611,14 @@ export function RoiWorkspace({
       editAssumptions(path || undefined);
       return;
     }
-    // Saved-case entries are corrected in What if with that case shown; benchmarks on
-    // Compare; the optional tax estimate on Summary.
+    // Saved-case entries and benchmarks are corrected on Compare; the optional tax estimate on
+    // Summary.
     const caseIndex = path.match(/^scenarios\.(\d+)/)?.[1];
     const target = caseIndex == null ? undefined : scenarios[Number(caseIndex)];
-    if (target) {
-      setWhatIf((current) => ({
-        ...(scopedWhatIf(current, selected) ?? emptyWhatIf(selected)),
-        source: { kind: 'saved', id: target.id },
-      }));
-      setWhatIfOpen(true);
-    } else changeView(path.startsWith('benchmarks') ? 'compare' : 'summary');
+    if (target || path.startsWith('benchmarks')) {
+      if (narrow) setWhatIfOpen(false);
+      changeView('compare');
+    } else changeView('summary');
     setTimeout(() => {
       const scenario = path.match(/^scenarios\.\d+/)?.[0];
       const field =
@@ -827,7 +821,7 @@ export function RoiWorkspace({
   // show it loading rather than the chooser.
   const opening = !started && !selected && !!urlProperty && selection.ok;
   const projectionBasis = simulated
-    ? `What if · ${caseName} (simulated${savedCase ? '' : ', not saved'})`
+    ? `What if · ${caseName} (simulated, not saved)`
     : dirty
       ? 'Current unsaved assumptions'
       : revision > 0
@@ -1146,7 +1140,6 @@ export function RoiWorkspace({
                 {simulating && simulation && result && (
                   <WhatIfStatus
                     name={caseName}
-                    saved={!!savedCase}
                     changes={changedCount}
                     simulation={simulation}
                     onEdit={openWhatIf}
@@ -1216,15 +1209,33 @@ export function RoiWorkspace({
                             errors={errors}
                             base={applyValues(payload, values, tax)}
                             temporary={
-                              simulating && !savedCase && whatIf
+                              simulating && whatIf
                                 ? {
                                     id: 'what-if',
                                     name: `${whatIf.name === 'What if' ? 'What if' : whatIf.name} (not saved)`,
                                     values: whatIf.values,
+                                    ...(whatIf.options ? { options: whatIf.options } : {}),
                                   }
                                 : null
                             }
                             onOpenWhatIf={openWhatIf}
+                          />
+                        )}
+                        {panel === 'compare' && (
+                          <SavedCases
+                            drafts={scenarios}
+                            onDrafts={(d) => {
+                              // An in-flight save installs its reply; an edit now would be dropped.
+                              if (saving) return;
+                              setScenarios(d);
+                              setDirty(true);
+                              setErrors([]);
+                              setCalculationVersion((v) => v + 1);
+                            }}
+                            base={calculatedPayload ?? applyValues(payload, values, tax)}
+                            errors={errors}
+                            saving={saving || conflict}
+                            busy={saving}
                           />
                         )}
                       </div>
@@ -1471,26 +1482,20 @@ export function RoiWorkspace({
                       scopeLabel={`${property?.name ?? 'Property'} · whole property`}
                       state={whatIf}
                       onState={setWhatIf}
-                      base={calculatedPayload ?? applyValues(payload, values, tax)}
                       baselinePayload={calculatedPayload}
                       baselineResult={result}
                       simulation={simulation}
-                      drafts={scenarios}
-                      onDrafts={(d) => {
-                        // An in-flight save installs its reply; an edit now would be dropped.
-                        if (saving) return;
-                        setScenarios(d);
-                        setDirty(true);
-                        setErrors([]);
-                        setCalculationVersion((v) => v + 1);
-                      }}
-                      errors={errors}
-                      saving={saving || conflict}
-                      busy={saving}
-                      dirty={dirty}
-                      saveLabel={savedStatus === 'READY' ? 'Save ready' : 'Save draft'}
-                      onSave={() => save(savedStatus === 'READY' ? 'READY' : 'DRAFT')}
+                      cases={scenarios}
                       onExit={exitWhatIf}
+                      onManageCases={() => {
+                        if (narrow) closeWhatIf();
+                        changeView('compare');
+                        setTimeout(() => {
+                          const editor = document.getElementById('roi-case-editor');
+                          editor?.scrollIntoView?.({ block: 'start' });
+                          document.getElementById('roi-case-add')?.focus();
+                        }, 0);
+                      }}
                     />
                   )}
                 </div>

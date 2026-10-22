@@ -4,14 +4,17 @@ import {
   deltaTone,
   emptyWhatIf,
   formatDelta,
+  formatSlider,
   mergeOverrides,
   metricDeltas,
   presetValues,
   rentWhatIfHref,
   scopedWhatIf,
   simulate,
+  sliders,
   whatIfEntryFrom,
   withLever,
+  withSlider,
 } from '@/lib/analysis/what-if';
 import { roiReturnPath, roiViewFrom } from '@/lib/analysis/return-path';
 import { realRoiSample } from './realroi-sample';
@@ -129,6 +132,69 @@ describe('scope isolation, presets and suggestions', () => {
     expect(twice).toEqual({ 'income.monthlyRent': String(rent + 200), 'income.vacancyRate': '2' });
     expect(presetValues('Optimistic')).toMatchObject({ 'income.vacancyRate': '3' });
     expect(presetValues('Unknown')).toBeNull();
+  });
+});
+
+describe('Suggested changes sliders', () => {
+  const input = () => structuredClone(sample.input);
+  const find = (rows: ReturnType<typeof sliders>, path: string) => {
+    const row = rows.find((r) => r.path === path);
+    if (!row || 'missing' in row) throw Error(`expected a slider for ${path}`);
+    return row;
+  };
+
+  it('lays each range on a grid through the exact baseline, inside the calculation domain', () => {
+    const base = input();
+    base.income = { ...base.income!, monthlyRent: 1690, vacancyRate: 5 };
+    base.financing = { ...base.financing!, interestRate: 6.53 };
+    const rows = sliders(base, {});
+    const rent = find(rows, 'income.monthlyRent');
+    expect(rent).toMatchObject({ baseline: 1690, value: 1690, step: 20, unit: 'usdMonth' });
+    expect((1690 - rent.min) % rent.step).toBe(0);
+    expect(rent.min).toBeGreaterThanOrEqual(0);
+    const rate = find(rows, 'financing.interestRate');
+    // An off-grid baseline stays exactly reachable: min + k × step lands on 6.53.
+    expect(Number.isInteger(Math.round(((6.53 - rate.min) / rate.step) * 1e6) / 1e6)).toBe(true);
+    expect(rate.min).toBeGreaterThanOrEqual(0);
+    expect(rate.max).toBeLessThanOrEqual(100);
+    const hold = find(rows, 'appreciationExit.holdingPeriodYears');
+    expect([hold.min, hold.max, hold.step]).toEqual([1, 50, 1]);
+    expect(formatSlider('usdMonth', 1690)).toBe('$1,690/mo');
+    expect(formatSlider('percentYear', 6.53)).toBe('6.53%/yr');
+    expect(formatSlider('usdYear', 1200.5)).toBe('$1,200.50/yr');
+    expect(formatSlider('years', 1)).toBe('1 year');
+  });
+
+  it('keeps exact precision and inherits the baseline when a slider returns to it', () => {
+    const base = input();
+    base.financing = { ...base.financing!, interestRate: 6.53 };
+    const rate = find(sliders(base, {}), 'financing.interestRate');
+    const moved = withSlider({ 'income.vacancyRate': '4' }, rate, rate.min + 3 * rate.step);
+    expect(moved['financing.interestRate']).toBe(
+      String(Number((rate.min + 3 * rate.step).toFixed(3))),
+    );
+    expect(moved['income.vacancyRate']).toBe('4');
+    expect(withSlider(moved, rate, 6.530000000001)).toEqual({ 'income.vacancyRate': '4' });
+  });
+
+  it('follows fixed-amount precedence and invents nothing for unset fields', () => {
+    const base = input();
+    base.expenses = { ...base.expenses!, maintenance: 0, maintenancePercent: 5 };
+    base.financing = { ...base.financing!, loanAmount: 200000 };
+    delete base.financing.interestRate;
+    const rows = sliders(base, { 'expenses.maintenancePercent': '3' });
+    expect(rows.some((r) => r.path === 'expenses.maintenancePercent')).toBe(false);
+    expect(find(rows, 'expenses.maintenance')).toMatchObject({
+      baseline: 0,
+      unit: 'usdYear',
+      note: expect.stringMatching(/takes precedence over a maintenance percentage/),
+    });
+    expect(find(rows, 'financing.loanAmount').note).toMatch(/takes precedence over a down payment/);
+    expect(rows.find((r) => r.path === 'financing.interestRate')).toEqual({
+      path: 'financing.interestRate',
+      label: 'Interest rate',
+      missing: 'Not set: the baseline has no loan.',
+    });
   });
 });
 

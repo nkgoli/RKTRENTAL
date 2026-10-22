@@ -11,32 +11,33 @@ import {
   type AnalysisPayload,
   type ValidationIssue,
 } from './contract';
-import { applyScenarios, scenarioExamples } from './scenarios';
+import { applyScenarios, scenarioExamples, type ScenarioDraft } from './scenarios';
 import { applyLever, leverSpec, type LeverKey } from './deal-insights';
 import type { ProjectionResult } from './projections';
 
 type Input = AnalysisPayload['input'];
 export type WhatIfValues = Record<string, string>;
 
-/** Which case the simulation shows: the temporary what-if or a saved case by ID. */
-export type WhatIfSource = { kind: 'temporary' } | { kind: 'saved'; id: string };
-
 /**
  * The active what-if, owned by one property (`scope`). A state read for another scope is
- * discarded, so switching property or unit can never reuse another scope's overrides.
+ * discarded, so switching property or unit can never reuse another scope's overrides. It is
+ * always temporary: starting from a saved case copies that case, which itself never changes.
  */
 export type WhatIfState = {
   scope: string;
-  source: WhatIfSource;
   values: WhatIfValues;
   /** Name for the temporary case, e.g. a preset or "Unit 3A at suggested rent". */
   name: string;
   /** Where this what-if came from, shown beside the scope (Rent analysis entry). */
   context?: string;
+  /** The Start from choice: `preset:<name>` or `case:<id>`; absent for the baseline. */
+  start?: string;
+  /** A copied saved case's own calculation options; the baseline's otherwise. */
+  options?: ScenarioDraft['options'];
 };
 
 export function emptyWhatIf(scope: string): WhatIfState {
-  return { scope, source: { kind: 'temporary' }, values: {}, name: 'What if' };
+  return { scope, values: {}, name: 'What if' };
 }
 
 /** The state only when it belongs to `scope`; anything else is another scope's and dropped. */
@@ -340,6 +341,310 @@ export function withLever(baseline: Input, values: WhatIfValues, key: LeverKey):
 export function presetValues(name: string): WhatIfValues | null {
   const preset = scenarioExamples.find((example) => example.name === name);
   return preset ? { ...preset.values } : null;
+}
+
+// ------------------------------------------------------------------ sliders
+
+export type SliderUnit = 'usd' | 'usdMonth' | 'usdYear' | 'percent' | 'percentYear' | 'years';
+
+/** One slider in Suggested changes, over the field the engine actually uses. */
+export type Slider = {
+  /** Override path the slider writes, e.g. `income.monthlyRent`. */
+  path: string;
+  label: string;
+  unit: SliderUnit;
+  /** What a percentage is taken of ("of gross rent"). */
+  basis?: string;
+  /** The baseline value exactly as saved; null when the baseline leaves it unset. */
+  baseline: number | null;
+  /** The value the simulation uses now (override, else baseline). */
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  /** Plain note when another field takes precedence over a related one. */
+  note?: string;
+};
+/** A field the baseline leaves unset: nothing is invented, so there is no slider. */
+export type MissingSlider = { path: string; label: string; missing: string };
+
+type Context = { annualRent: number; price: number };
+type SliderDef = {
+  path: string;
+  label: string;
+  unit: SliderUnit;
+  basis?: string;
+  /** Calculation domain (engine schema bounds). */
+  domain: [number, number];
+  /** A useful window around the anchor value, kept inside the domain. */
+  window: (v: number, c: Context) => [number, number];
+  step: (v: number, c: Context) => number;
+};
+
+/** 1, 2 or 5 × a power of ten near `x`, so steps read as round amounts. */
+function niceStep(x: number) {
+  if (!(x > 0)) return 1;
+  const power = 10 ** Math.floor(Math.log10(x));
+  const m = x / power;
+  return Math.max(1, (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * power);
+}
+const growth = (v: number): [number, number] => [Math.min(-5, v - 5), Math.max(10, v + 5)];
+const money = (path: string, label: string, unit: SliderUnit, size: (c: Context) => number) => ({
+  path,
+  label,
+  unit,
+  domain: [0, 1e12] as [number, number],
+  window: (v: number, c: Context): [number, number] => [0, Math.max(2 * v, size(c), 1000)],
+  step: (v: number, c: Context) => niceStep(Math.max(v, size(c), 1000) / 100),
+});
+const percent = (path: string, label: string, basis: string, top: number): SliderDef => ({
+  path,
+  label,
+  unit: 'percent',
+  basis,
+  domain: [0, 100],
+  window: (v) => [0, Math.max(top, v + 5)],
+  step: () => 0.5,
+});
+
+const DEFS: Record<string, SliderDef> = {
+  'income.monthlyRent': {
+    path: 'income.monthlyRent',
+    label: 'Monthly rent',
+    unit: 'usdMonth',
+    domain: [0, 1e12],
+    window: (v) => (v > 0 ? [v * 0.5, v * 1.5] : [0, 5000]),
+    step: (v) => (v > 0 ? niceStep(v / 100) : 50),
+  },
+  'income.vacancyRate': {
+    path: 'income.vacancyRate',
+    label: 'Vacancy',
+    unit: 'percent',
+    basis: 'of gross rent',
+    domain: [0, 100],
+    window: (v) => [0, Math.max(25, v + 10)],
+    step: () => 0.5,
+  },
+  'income.annualRentGrowth': {
+    path: 'income.annualRentGrowth',
+    label: 'Rent growth',
+    unit: 'percentYear',
+    domain: [-50, 100],
+    window: growth,
+    step: () => 0.25,
+  },
+  'financing.interestRate': {
+    path: 'financing.interestRate',
+    label: 'Interest rate',
+    unit: 'percentYear',
+    domain: [0, 100],
+    window: (v) => [0, Math.max(15, v + 5)],
+    step: () => 0.125,
+  },
+  'financing.downPaymentPercent': {
+    path: 'financing.downPaymentPercent',
+    label: 'Down payment',
+    unit: 'percent',
+    basis: 'of purchase price',
+    domain: [0, 100],
+    window: () => [0, 100],
+    step: () => 1,
+  },
+  'financing.loanAmount': {
+    path: 'financing.loanAmount',
+    label: 'Loan amount',
+    unit: 'usd',
+    domain: [0, 1e12],
+    window: (_, c) => [0, c.price],
+    step: (_, c) => niceStep(c.price / 200),
+  },
+  'purchase.purchasePrice': {
+    path: 'purchase.purchasePrice',
+    label: 'Purchase price',
+    unit: 'usd',
+    domain: [1, 1e12],
+    window: (v) => [v * 0.5, v * 1.5],
+    step: (v) => niceStep(v / 200),
+  },
+  'expenses.maintenancePercent': percent(
+    'expenses.maintenancePercent',
+    'Maintenance',
+    'of gross rent',
+    20,
+  ),
+  'expenses.maintenance': money(
+    'expenses.maintenance',
+    'Maintenance',
+    'usdYear',
+    (c) => c.annualRent * 0.15,
+  ),
+  'expenses.capexPercent': percent('expenses.capexPercent', 'Capital reserve', 'of gross rent', 20),
+  'expenses.capex': money(
+    'expenses.capex',
+    'Capital reserve',
+    'usdYear',
+    (c) => c.annualRent * 0.15,
+  ),
+  'expenses.propertyManagementPercent': percent(
+    'expenses.propertyManagementPercent',
+    'Management',
+    'of effective income',
+    15,
+  ),
+  'expenses.propertyManagement': money(
+    'expenses.propertyManagement',
+    'Management',
+    'usdYear',
+    (c) => c.annualRent * 0.15,
+  ),
+  'expenses.annualExpenseGrowth': {
+    path: 'expenses.annualExpenseGrowth',
+    label: 'Expense growth',
+    unit: 'percentYear',
+    domain: [-50, 100],
+    window: growth,
+    step: () => 0.25,
+  },
+  'appreciationExit.annualAppreciation': {
+    path: 'appreciationExit.annualAppreciation',
+    label: 'Appreciation',
+    unit: 'percentYear',
+    domain: [-50, 100],
+    window: growth,
+    step: () => 0.25,
+  },
+  'appreciationExit.holdingPeriodYears': {
+    path: 'appreciationExit.holdingPeriodYears',
+    label: 'Hold period',
+    unit: 'years',
+    domain: [1, 50],
+    window: () => [1, 50],
+    step: () => 1,
+  },
+};
+
+/** Fixed annual amounts take precedence over their percentage in the engine. */
+const PAIRS = [
+  ['expenses.maintenance', 'expenses.maintenancePercent', 'maintenance'],
+  ['expenses.capex', 'expenses.capexPercent', 'capital reserve'],
+  ['expenses.propertyManagement', 'expenses.propertyManagementPercent', 'management'],
+] as const;
+
+const decimals = (n: number) => {
+  const text = String(n);
+  return text.includes('e') ? 10 : (text.split('.')[1] ?? '').length;
+};
+const read = (input: Input, path: string): number | undefined => {
+  const [group, key] = path.split('.');
+  const v = (input as Record<string, Record<string, unknown> | undefined>)[group]?.[key];
+  return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+};
+
+/**
+ * The sliders for Suggested changes, over the baseline plus the current overrides. Each range
+ * is the field's calculation domain narrowed to a useful window and laid on a grid through the
+ * baseline, so the baseline is always reachable exactly. A fixed amount replaces its
+ * percentage slider when the engine uses it; an unset baseline field gets no slider.
+ */
+export function sliders(baseline: Input, values: WhatIfValues): (Slider | MissingSlider)[] {
+  const current = mergeOverrides(baseline, activeOverrides(values));
+  const c = {
+    annualRent: (read(current, 'income.monthlyRent') ?? 0) * 12,
+    price: read(current, 'purchase.purchasePrice') ?? 0,
+  };
+  const paths: string[] = [
+    'income.monthlyRent',
+    'income.vacancyRate',
+    'income.annualRentGrowth',
+    'financing.interestRate',
+    read(current, 'financing.loanAmount') !== undefined
+      ? 'financing.loanAmount'
+      : 'financing.downPaymentPercent',
+    'purchase.purchasePrice',
+    ...PAIRS.map(([fixed, pct]) => (read(current, fixed) !== undefined ? fixed : pct)),
+    'expenses.annualExpenseGrowth',
+    'appreciationExit.annualAppreciation',
+    'appreciationExit.holdingPeriodYears',
+  ];
+  return paths.map((path) => {
+    const def = DEFS[path];
+    const base = read(baseline, path) ?? null;
+    const value = read(current, path);
+    if (value === undefined)
+      return {
+        path,
+        label: def.label,
+        missing:
+          path === 'financing.interestRate'
+            ? 'Not set: the baseline has no loan.'
+            : 'Not set in the baseline. Add it in Edit assumptions to try changes.',
+      };
+    // The grid runs through the baseline (or the current value when the baseline is unset).
+    const anchor = base ?? value;
+    const step = def.step(anchor, c);
+    const [wLo, wHi] = def.window(anchor, c);
+    const lo = Math.max(def.domain[0], Math.min(wLo, value, anchor));
+    const hi = Math.min(def.domain[1], Math.max(wHi, value, anchor));
+    let min = anchor - Math.ceil((anchor - lo) / step - 1e-9) * step;
+    if (min < def.domain[0] - 1e-9) min += step;
+    let max = anchor + Math.ceil((hi - anchor) / step - 1e-9) * step;
+    if (max > def.domain[1] + 1e-9) max -= step;
+    const places = Math.min(10, Math.max(decimals(step), decimals(anchor)));
+    const fixed = PAIRS.find(([f]) => f === path);
+    const loan = path === 'financing.loanAmount';
+    return {
+      path,
+      label: def.label,
+      unit: def.unit,
+      ...(def.basis ? { basis: def.basis } : {}),
+      baseline: base,
+      value,
+      min: Number(min.toFixed(places)),
+      max: Number(Math.max(min, max).toFixed(places)),
+      step,
+      ...(fixed
+        ? { note: `Fixed annual amount, which takes precedence over a ${fixed[2]} percentage.` }
+        : loan
+          ? { note: 'Fixed loan amount, which takes precedence over a down payment percentage.' }
+          : {}),
+    };
+  });
+}
+
+/**
+ * The overrides after moving one slider. A value equal to the baseline inherits it (the
+ * override is dropped); other values keep the precision of the baseline and the step.
+ */
+export function withSlider(values: WhatIfValues, slider: Slider, next: number): WhatIfValues {
+  const places = Math.min(
+    10,
+    Math.max(decimals(slider.step), slider.baseline == null ? 0 : decimals(slider.baseline)),
+  );
+  const exact = Number(next.toFixed(places));
+  const rest = { ...values };
+  delete rest[slider.path];
+  return slider.baseline != null && Math.abs(exact - slider.baseline) < 1e-9
+    ? rest
+    : { ...rest, [slider.path]: String(exact) };
+}
+
+const sliderMoney = (v: number) =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    // Whole amounts read "$1,690"; cents are shown only when the value has them.
+    minimumFractionDigits: Number.isInteger(v) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(v);
+
+/** A slider value with its unit: "$1,690/mo", "5.5%", "2.25%/yr", "10 years". */
+export function formatSlider(unit: SliderUnit, v: number) {
+  if (unit === 'usd') return sliderMoney(v);
+  if (unit === 'usdMonth') return `${sliderMoney(v)}/mo`;
+  if (unit === 'usdYear') return `${sliderMoney(v)}/yr`;
+  if (unit === 'percent') return `${v}%`;
+  if (unit === 'percentYear') return `${v}%/yr`;
+  return `${v} ${v === 1 ? 'year' : 'years'}`;
 }
 
 export { rentWhatIfHref, whatIfEntryFrom, type WhatIfEntry } from './what-if-entry';

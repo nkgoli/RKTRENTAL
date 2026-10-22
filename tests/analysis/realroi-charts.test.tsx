@@ -799,7 +799,7 @@ describe('Saved-case comparison on Compare: results first, honest empty states',
     // Presets and editing live in the one What if panel, not beside the comparison.
     expect(screen.queryByRole('list', { name: 'Add an example:' })).toBeNull();
     expect(screen.queryByLabelText('Example scenario')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Create or edit cases in What if' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Try changes in What if' }));
     expect(open).toHaveBeenCalledOnce();
     expect(screen.queryByRole('list', { name: 'Table key' })).toBeNull();
     expect(screen.getByText('Initial cash recovered:')).toBeTruthy();
@@ -844,6 +844,6 @@ describe('Saved-case comparison on Compare: results first, honest empty states',
       errors: [{ path: 'scenarios.0.overrides.income.monthlyRent', message: 'Too high.' }],
     });
     expect(screen.getByRole('heading', { name: 'Case comparison paused' })).toBeTruthy();
-    expect(screen.getByRole('status').textContent).toMatch(/What if/);
+    expect(screen.getByRole('status').textContent).toMatch(/Saved cases below/);
   });
 });

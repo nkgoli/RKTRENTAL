@@ -303,15 +303,16 @@ describe('SearchField and FilterBar', () => {
 });
 
 describe('RowMenu, Tabs, EmptyState, LoadingState', () => {
-  it('RowMenu is a details menu with a labelled summary', () => {
+  it('RowMenu is a labelled disclosure button controlling a hidden action panel', () => {
     const out = html(
       <RowMenu label="Lease actions">
         <a href="/x">Open</a>
       </RowMenu>,
     );
-    expect(out).toContain('<details class="row-menu">');
-    expect(out).toContain('aria-label="Lease actions"');
-    expect(out).toContain('role="menu"');
+    expect(out).toContain('<div class="row-menu">');
+    expect(out).toMatch(/<button type="button" class="icon-btn" aria-label="Lease actions"/);
+    expect(out).toContain('aria-expanded="false"');
+    expect(out).toMatch(/aria-controls="([^"]+)".*<div id="\1" class="row-menu-panel" hidden="">/);
   });
 
   it('Tabs render counts as pills and mark the active tab', () => {

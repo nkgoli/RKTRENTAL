@@ -11,7 +11,9 @@ async function signIn(page: Page) {
   await expect(page).toHaveURL(/\/dashboard$/);
 }
 
-test('manager lists, searches, adds and opens a tenant', async ({ page }) => {
+test('manager lists and searches tenants and is led to Applications to add one', async ({
+  page,
+}) => {
   await signIn(page);
   await page.goto('/tenants');
   await expect(page.getByRole('heading', { name: 'Tenants', level: 1 })).toBeVisible();
@@ -26,23 +28,14 @@ test('manager lists, searches, adds and opens a tenant', async ({ page }) => {
   await expect(page.getByRole('link', { name: /Priya Shah/ }).first()).toBeVisible();
   await expect(page.getByRole('link', { name: /Alex Rivera/ })).toHaveCount(0);
 
+  // Tenants come from approved applicants; the directory offers Applications, not a form.
+  await page.goto('/tenants?view=directory&add=1');
+  await expect(page).toHaveURL(/\/applications$/);
   await page.goto('/tenants?view=directory');
-  const unique = `e2e-${Date.now()}`;
-  const form = page.locator('#add-tenant');
-  await form.getByLabel('Full name').fill('Validation Check');
-  await form.getByLabel('Email').fill('not-an-email');
-  await form.getByRole('button', { name: 'Save tenant' }).click();
-  await expect(form.getByText('Enter a valid email.')).toBeVisible();
-
-  await form.getByLabel('Email').fill(`${unique}@example.com`);
-  await form.getByLabel('Full name').fill(`Pat ${unique}`);
-  await form.getByLabel('Phone').fill('(555) 010-2030');
-  await form.getByRole('button', { name: 'Save tenant' }).click();
-
-  await expect(page).toHaveURL(/\/tenants\/[^/?]+(\?|$)/);
-  await expect(page.getByRole('heading', { name: `Pat ${unique}`, level: 1 })).toBeVisible();
-  await expect(page.getByText(`${unique}@example.com`)).toBeVisible();
-  await expect(page.getByText('No lease', { exact: true })).toBeVisible();
+  await expect(page.locator('#add-tenant')).toHaveCount(0);
+  await expect(
+    page.getByRole('link', { name: 'Review applications', exact: true }),
+  ).toHaveAttribute('href', '/applications');
 });
 
 test('tenant detail shows lease summary linking to the lease', async ({ page }) => {
@@ -62,31 +55,6 @@ test('tenant detail shows lease summary linking to the lease', async ({ page }) 
   );
 });
 
-test('manager moves a new tenant in and out of a vacant unit', async ({ page }) => {
-  await signIn(page);
-  await page.goto('/tenants?view=directory');
-  const form = page.locator('#add-tenant');
-  const name = `Mover ${Date.now()}`;
-  await form.getByLabel('Full name').fill(name);
-  await form.locator('select[name=propertyId]').selectOption({ label: 'Maple Court' });
-  await form.locator('select[name=unitId]').selectOption({ label: '3A' });
-  await form.getByLabel('Move-in date').fill('2026-11-01');
-  await form.getByRole('button', { name: 'Save tenant' }).click();
-  await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
-
-  await page.getByRole('button', { name: 'Move in' }).click();
-  await expect(page.getByText(/Moved in Nov 1, 2026/)).toBeVisible();
-  await expect(page.getByText('Current', { exact: true })).toBeVisible();
-
-  await page.getByRole('button', { name: 'Move out', exact: true }).click();
-  const dialog = page.getByRole('dialog');
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
-  await page.keyboard.press('Escape');
-  await expect(dialog).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Move out', exact: true })).toBeFocused();
-  await page.getByRole('button', { name: 'Move out', exact: true }).click();
-  await dialog.getByRole('button', { name: 'Confirm move out' }).click();
-  await expect(page.getByText('This tenant has moved out.')).toBeVisible();
-  await expect(page.getByText('Past tenant')).toBeVisible();
-});
+// Manual creation is gone; move-in/out of a newly promoted applicant is covered by the
+// approved-applicant promotion work, which owns creating the tenant this flow needs.
+test.fixme('manager moves a newly promoted tenant in and out of a vacant unit', async () => {});

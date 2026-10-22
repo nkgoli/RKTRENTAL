@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { tenantReturnHref } from '@/app/(manager)/tenants/navigation';
+import { applicationsHref, tenantReturnHref } from '@/app/(manager)/tenants/navigation';
+
+describe('applicant-led tenant entry', () => {
+  it('leads to Applications and keeps a selected property', () => {
+    expect(applicationsHref()).toBe('/applications');
+    expect(applicationsHref('seed-property-maple')).toBe(
+      '/applications?propertyId=seed-property-maple',
+    );
+    expect(applicationsHref('a&b')).toBe('/applications?propertyId=a%26b');
+  });
+});
 
 describe('tenant directory return destination', () => {
   it('retains search, property, view and page without accepting unrelated parameters', () => {

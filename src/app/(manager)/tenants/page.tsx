@@ -21,8 +21,8 @@ import {
   STATUS_TONE,
   type StatusFilter,
 } from '@/lib/tenants/status';
-import { addTenantAction } from './actions';
-import { AddTenantForm } from './TenantForms';
+import { redirect } from 'next/navigation';
+import { applicationsHref } from './navigation';
 import { StatusView } from './StatusView';
 import { TenantPager } from './Pager';
 import styles from './tenants.module.css';
@@ -59,6 +59,8 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
   const page = Math.max(1, Number.parseInt(first(raw.page) ?? '1', 10) || 1);
   const view = first(raw.view) === 'status' ? 'status' : 'directory';
   const period = first(raw.period) === 'upcoming' ? 'upcoming' : 'current';
+  // Legacy `?add=1` links (old bookmarks, lease builder) land on Applications, never a form.
+  if (first(raw.add) === '1') redirect(applicationsHref(property));
 
   const tenants = organizationTenants(session.organizationId);
   const [listing, stats, properties, setupRows] = await Promise.all([
@@ -84,7 +86,14 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
       <PageHeader
         eyebrow="Workspace / People"
         title="Tenants"
-        actions={[{ label: '+ Add tenant', href: `${returnTo}&add=1`, primary: true }]}
+        actions={[
+          {
+            label: 'Review applications',
+            href: applicationsHref(property),
+            primary: true,
+            icon: 'arrow-right',
+          },
+        ]}
       />
 
       <nav className={styles.tabs} aria-label="Tenant views">
@@ -202,13 +211,13 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
                 <p>
                   {filtered
                     ? 'Clear the filters to see all tenants.'
-                    : 'Add a tenant to keep contact and lease details together.'}
+                    : 'Tenants appear here once an approved applicant moves in.'}
                 </p>
                 <Link
                   className="btn btn-secondary"
-                  href={filtered ? href({}) : `${returnTo}&add=1`}
+                  href={filtered ? href({}) : applicationsHref(property)}
                 >
-                  {filtered ? 'Clear filters' : 'Add a tenant'}
+                  {filtered ? 'Clear filters' : 'Review applications'}
                 </Link>
               </div>
             ) : (
@@ -299,14 +308,6 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
             />
           </Card>
         </>
-      )}
-      {first(raw.add) === '1' && (
-        <AddTenantForm
-          properties={properties}
-          initialPropertyId={property}
-          returnTo={returnTo}
-          action={addTenantAction}
-        />
       )}
     </div>
   );

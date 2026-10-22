@@ -5,19 +5,13 @@ import { redirect } from 'next/navigation';
 import { requireRole } from '@/lib/auth/access';
 import { tenantReturnHref } from './navigation';
 import {
-  createTenant,
   moveInTenant,
   addTenantNote,
   moveOutTenant,
   TenantServiceError,
   updateTenant,
 } from '@/lib/tenants/service';
-import {
-  parseNewTenantInput,
-  parseNoteInput,
-  parseTenantInput,
-  type FieldErrors,
-} from '@/lib/tenants/validation';
+import { parseNoteInput, parseTenantInput, type FieldErrors } from '@/lib/tenants/validation';
 
 export type FormState = { errors: FieldErrors; message?: string; values?: Record<string, string> };
 
@@ -49,21 +43,6 @@ function resultHref(
   if (options.note) query.set('note', '1');
   if (options.notice) query.set('notice', options.notice);
   return `/tenants/result?${query}`;
-}
-
-export async function addTenantAction(_prev: FormState, formData: FormData): Promise<FormState> {
-  const session = await requireRole('MANAGER');
-  const parsed = parseNewTenantInput(formData);
-  if (!parsed.ok) return { errors: parsed.errors, values: values(formData) };
-
-  let tenantId: string;
-  try {
-    ({ tenantId } = await createTenant(session.organizationId, parsed.data));
-  } catch (error) {
-    return failure(error, formData);
-  }
-  revalidatePath('/tenants');
-  redirect(resultHref(tenantId, tenantReturnHref(formData.get('returnTo')), { notice: 'added' }));
 }
 
 export async function updateTenantAction(

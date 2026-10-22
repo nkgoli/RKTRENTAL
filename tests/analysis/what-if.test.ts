@@ -55,7 +55,10 @@ describe('shared What if simulation', () => {
     const bad = simulate(sample, { 'income.monthlyRent': 'abc' });
     expect(bad.ok).toBe(false);
     if (bad.ok) return;
-    expect(bad.errors[0].path).toBe('income.monthlyRent');
+    expect(bad.errors[0]).toEqual({
+      path: 'income.monthlyRent',
+      message: 'Enter a number, such as 1200.',
+    });
     const loan = simulate(sample, { 'financing.loanAmount': '99999999' });
     expect(loan.ok).toBe(false);
     if (!loan.ok) expect(loan.errors.some((e) => e.path === 'financing.loanAmount')).toBe(true);

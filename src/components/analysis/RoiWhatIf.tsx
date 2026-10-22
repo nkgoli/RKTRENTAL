@@ -133,7 +133,8 @@ export function WhatIfStrip({
       <div className={w.stripHead}>
         <div>
           <p className={w.eyebrow}>
-            <span className={w.simBadge}>Simulated</span> What if · {name}
+            <span className={w.simBadge}>Simulated</span> What if
+            {name === 'What if' ? '' : ` · ${name}`}
             {saved ? ' · saved case' : ' · temporary, not saved'}
           </p>
           <ChangedAssumptions values={values} base={base} />
@@ -156,7 +157,8 @@ export function WhatIfStrip({
         </>
       ) : (
         <p className={w.paused} role="status">
-          Simulation paused: {simulation.errors[0]?.message ?? 'check the changed assumptions'}.
+          Simulation paused:{' '}
+          {(simulation.errors[0]?.message ?? 'check the changed assumptions').replace(/\.$/, '')}.
           Figures below show the baseline.
         </p>
       )}
@@ -304,9 +306,28 @@ export function WhatIfPanel({
       if (box.current && !box.current.contains(document.activeElement))
         box.current.querySelector<HTMLElement>('h2')?.focus();
     };
+    // A button that disables itself (Saving...) drops focus to the page; Escape still closes
+    // the sheet and focus returns inside it.
+    const escape = (event: KeyboardEvent) => {
+      if (
+        event.key !== 'Escape' ||
+        box.current?.contains(document.activeElement) ||
+        document.querySelector('[role="alertdialog"]')
+      )
+        return;
+      onClose();
+    };
     document.addEventListener('focusin', contain);
-    return () => document.removeEventListener('focusin', contain);
-  }, [open, modal]);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('focusin', contain);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [open, modal, onClose]);
+  useEffect(() => {
+    if (open && modal && !saving && box.current && !box.current.contains(document.activeElement))
+      box.current.querySelector<HTMLElement>('h2')?.focus();
+  }, [open, modal, saving]);
 
   const suggestions = useMemo(() => {
     if (!baselinePayload || !baselineResult) return { levers: [], targets: [] };

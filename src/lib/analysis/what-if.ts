@@ -80,6 +80,15 @@ export function simulate(
   options?: AnalysisPayload['options'],
 ): Simulation {
   const overrides = activeOverrides(values);
+  // Typed text that is not a number is named plainly on its field, not passed to the engine.
+  const notNumbers = Object.entries(overrides).filter(
+    ([path, raw]) => !/\.(loanType|acquisitionDate)$/.test(path) && !Number.isFinite(Number(raw)),
+  );
+  if (notNumbers.length)
+    return {
+      ok: false,
+      errors: notNumbers.map(([path]) => ({ path, message: 'Enter a number, such as 1200.' })),
+    };
   const candidate = {
     ...baseline,
     input: mergeOverrides(baseline.input, overrides),

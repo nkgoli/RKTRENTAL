@@ -1384,7 +1384,7 @@ describe('What if: one shared, scoped simulation across views', () => {
     for (const name of ['Actual vs projected', 'Charts', 'Benchmarks', 'Compare']) {
       fireEvent.click(screen.getByRole('tab', { name }));
       view = visibleStrip();
-      expect(view.getByText(/What if · What if/)).toBeTruthy();
+      expect(view.getByText(/What if · temporary, not saved/)).toBeTruthy();
     }
     expect(visibleStrip().getByRole('table')).toBeTruthy();
     // Compare adds the temporary case as an unsaved column beside saved cases.

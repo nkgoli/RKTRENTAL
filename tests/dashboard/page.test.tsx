@@ -87,6 +87,21 @@ describe('dashboard presentation', () => {
     expect(html).toContain('href="/payments?filter=late"');
   });
 
+  it('renders all four panels as sibling cards in one shared grid', async () => {
+    guard.mockResolvedValue({ organizationId: 'org-current' });
+    load.mockResolvedValue(empty);
+    const html = renderToStaticMarkup(await DashboardPage({ searchParams: Promise.resolve({}) }));
+    const titles = ['Leases expiring soon', 'Needs attention', 'Properties', 'Recent activity'];
+    const panelTags = titles.map((title) => {
+      const before = html.slice(0, html.indexOf(`<h2>${title}</h2>`));
+      const start = Math.max(before.lastIndexOf('<article'), before.lastIndexOf('<section'));
+      return before.slice(start, before.indexOf('>', start) + 1);
+    });
+    for (const tag of panelTags) expect(tag).toMatch(/^<(article|section) class="card\b/);
+    // The rows are not separate grids: Properties follows Needs attention as a sibling.
+    expect(html).toContain(`</article>${panelTags[2]}`);
+  });
+
   it('provides a recoverable error with a direct property destination', () => {
     const html = renderToStaticMarkup(<DashboardError reset={() => {}} />);
     expect(html).toContain('role="alert"');

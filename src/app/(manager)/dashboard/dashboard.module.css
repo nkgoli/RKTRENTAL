@@ -94,14 +94,34 @@
   padding: 22px 24px 10px;
   min-width: 0;
 }
-.bottom {
+/* One grid for all four panels, so both rows share column boundaries and gutters.
+   Cards in a row stretch to the taller one's content height. */
+.panels {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-  gap: 20px;
-  align-items: start;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--rr-gap);
+  align-items: stretch;
 }
-.bottom > * {
+.panels > :global(.card) {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+}
+/* When a card is stretched to its neighbour's height, its rows share the extra
+   space instead of leaving an empty band at the bottom. */
+.panels .attentionList,
+.panels .propertyList {
+  flex: 1;
+}
+.panels .attentionList > .alert,
+.panels .propertyList > li {
+  flex: 1;
+}
+.panels .propertyList > li {
+  display: flex;
+}
+.panels .propertyRow {
+  flex: 1;
 }
 .attention {
   background: linear-gradient(130deg, #fff, #f4f7fc);
@@ -109,13 +129,6 @@
 }
 .attention .warningAlert strong {
   color: var(--design-danger);
-}
-.activityPanel {
-  padding: 16px 4px 0;
-}
-.activityPanel :global(.card-header) {
-  border-bottom: 1px solid var(--rr-border);
-  padding-bottom: 14px;
 }
 
 .eyebrow {
@@ -125,17 +138,6 @@
   letter-spacing: 0.08em;
   margin-bottom: 2px;
   text-transform: uppercase;
-}
-
-.split {
-  display: grid;
-  align-items: start;
-  gap: 16px;
-  grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr);
-}
-
-.split > :global(.card) {
-  min-width: 0;
 }
 
 .dashboard :global(.card-header) > a {
@@ -357,11 +359,6 @@
   background: #dde6ef;
 }
 
-.activity li:first-child {
-  border-top: 0;
-  padding-top: 0;
-}
-
 .activityBody {
   flex: 1;
   min-width: 0;
@@ -382,9 +379,7 @@
   color: var(--design-muted);
   display: block;
   font-size: 12px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .activityBody small a {
@@ -571,10 +566,7 @@
 }
 
 @media (max-width: 1000px) {
-  .split {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .bottom {
+  .panels {
     grid-template-columns: minmax(0, 1fr);
   }
   .collection {

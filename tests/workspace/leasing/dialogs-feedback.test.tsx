@@ -30,7 +30,14 @@ vi.mock('@/lib/integrations/active', () => ({
 vi.mock('@/lib/db/client', () => ({ db: { unit: { count: async () => 0 } } }));
 vi.mock('@/lib/ledger', () => ({
   ensureRentCharges: vi.fn(),
-  loadPropertyLedger: async () => ({ groups: [], balanceCents: 0, tenants: [] }),
+  loadPropertyLedger: async () => ({
+    groups: [],
+    balanceCents: 0,
+    lastPayment: null,
+    endedBalanceCents: 0,
+    activeLeaseCount: 0,
+    tenants: [],
+  }),
   paymentsProviderLabel: () => 'Not connected',
   summarizeUnits: vi.fn(),
 }));
@@ -40,6 +47,7 @@ const group: BoardGroup = {
   place: 'Unit 4B',
   active: true,
   tenantNames: 'Jamie Doe',
+  balanceCents: 0,
   rows: [],
 };
 const boardProps = {

@@ -335,7 +335,7 @@ describe('summarizeUnits', () => {
   const row = (status: 'PAID' | 'LATE' | 'DUE' | 'SCHEDULED', due: string, balance: number) =>
     ({ status, dueDate: d(due), balanceCents: balance }) as LedgerGroup['rows'][number];
   const group = (over: Partial<LedgerGroup>): LedgerGroup => ({
-    leaseId: 'L', label: '', unitId: 'U', unitLabel: '1', balanceCents: 0, singleUnit: false,
+    leaseId: 'L', label: '', unitId: 'U', unitLabel: '1', balanceCents: 0, lastPayment: null, singleUnit: false,
     active: true, tenants: [{ id: 't', name: 'T', initials: 'T' }], rows: [], ...over,
   });
   it('sorts late units first, picks the next unpaid charge and totals balances', () => {

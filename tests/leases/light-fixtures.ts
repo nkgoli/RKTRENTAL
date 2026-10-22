@@ -47,8 +47,16 @@ export async function prepareLightFixtures() {
     };
     await db.lease.upsert({
       where: { id },
-      create: { id, organizationId, unitId, ...values },
-      update: values,
+      // The signed fixture is created unsigned so its snapshot can be written before signing.
+      create: {
+        id,
+        organizationId,
+        unitId,
+        ...values,
+        ...(key === 'active' ? { eSignStatus: 'NOT_SENT' as const, signedAt: null } : {}),
+      },
+      update:
+        key === 'active' ? { ...values, eSignStatus: undefined, signedAt: undefined } : values,
     });
     await db.leaseEvent.deleteMany({ where: { leaseId: id, organizationId } });
     await db.leaseTenant.deleteMany({ where: { leaseId: id, organizationId } });
@@ -85,7 +93,8 @@ export async function prepareLightFixtures() {
         });
       }
     }
-    if (key === 'active') {
+    // Signed terms are immutable once signed, so the snapshot is written only on first creation.
+    if (key === 'active' && !(await db.lease.findUnique({ where: { id } }))?.termsSnapshot) {
       await db.lease.update({
         where: { id },
         data: {
@@ -107,6 +116,11 @@ export async function prepareLightFixtures() {
         },
       });
     }
+    if (key === 'active')
+      await db.lease.update({
+        where: { id },
+        data: { eSignStatus: 'SIGNED', signedAt: day('2025-11-18') },
+      });
   }
   await db.lease.upsert({
     where: { id: fixtureId('blocked') },

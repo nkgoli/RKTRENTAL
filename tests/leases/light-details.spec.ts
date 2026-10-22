@@ -118,9 +118,13 @@ for (const width of [1280, 390]) {
         `/properties/${propertyId}/leases?unit=light-detail-active-unit`,
       );
       await page.goto(`/leases/${fixtureId('active')}?propertyId=wrong&unitId=wrong&tab=payments`);
-      await expect(page.getByRole('link', { name: 'View payments' })).toHaveAttribute(
+      await expect(page.getByRole('link', { name: /Open unit Payments/ })).toHaveAttribute(
         'href',
         `/properties/${propertyId}/payments?unit=light-detail-active-unit`,
+      );
+      await expect(page.getByRole('link', { name: 'Record payment' })).toHaveAttribute(
+        'href',
+        `/properties/${propertyId}/payments?unit=light-detail-active-unit&record=1`,
       );
     });
 

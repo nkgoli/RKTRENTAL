@@ -1,15 +1,15 @@
 ﻿'use client';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { calculatePayload, type AnalysisPayload, type ValidationIssue } from '@/lib/analysis';
-import { scenarioExamples, type ScenarioDraft } from '@/lib/analysis/scenarios';
+import { applyScenarios, type ScenarioDraft } from '@/lib/analysis/scenarios';
 import { dollars, rate } from '@/lib/analysis/projections';
 import { groups, readPath, taxFields } from './fields';
-import { Basis, MoreDetail } from './RoiChart';
+import { MoreDetail } from './RoiChart';
 import { ScenarioCharts } from './RoiScenarioCharts';
 import styles from './analysis.module.css';
 import scenarioStyles from './scenarios.module.css';
 
-function CalculationAssumptions({ options }: { options: AnalysisPayload['options'] }) {
+export function CalculationAssumptions({ options }: { options: AnalysisPayload['options'] }) {
   return (
     <dl>
       <dt>Projection start date</dt>
@@ -32,37 +32,58 @@ function CalculationAssumptions({ options }: { options: AnalysisPayload['options
   );
 }
 
+export const inputFields = groups
+  .flatMap((g) => g.fields)
+  .filter((f) => f.path.startsWith('input.'));
+export const overrideLabel = (path: string) =>
+  inputFields.find((f) => f.path === `input.${path}`)?.label ?? path;
+
 /**
- * Scenarios: what the comparison means and how to add a case first, then the results
- * (charts, then exact figures one click away), then the editors. The saved base is
- * edited on the property; scenarios only hold overrides and are saved with the draft.
+ * Saved cases compared on Compare: charts first, exact figures one click away, then the
+ * overrides side by side. Cases are created and edited in the shared What if panel; a
+ * temporary what-if joins the comparison as an unsaved column while it is active.
  */
-export function RoiScenarios({
+export function CaseComparison({
   drafts,
-  onChange,
   snapshot,
   stale,
   errors,
   base,
-  saving,
+  temporary,
+  onOpenWhatIf,
 }: {
   drafts: ScenarioDraft[];
-  onChange: (d: ScenarioDraft[]) => void;
   snapshot: AnalysisPayload | null;
   stale: boolean;
   errors: ValidationIssue[];
   base: AnalysisPayload;
-  saving: boolean;
+  /** The active temporary what-if, compared but never saved. */
+  temporary?: ScenarioDraft | null;
+  onOpenWhatIf: () => void;
 }) {
-  const [exampleName, setExampleName] = useState('');
-  const example = scenarioExamples.find((candidate) => candidate.name === exampleName);
+  const shownDrafts = useMemo(
+    () => (temporary ? [...drafts, temporary] : drafts),
+    [drafts, temporary],
+  );
   const calculated = useMemo(() => {
     try {
-      return snapshot ? calculatePayload({ ...snapshot, benchmarks: [] }) : null;
+      if (!snapshot) return null;
+      const withTemporary = temporary
+        ? {
+            ...snapshot,
+            scenarios: [...snapshot.scenarios, ...applyScenarios(snapshot, [temporary]).scenarios],
+          }
+        : snapshot;
+      return calculatePayload({ ...withTemporary, benchmarks: [] });
     } catch {
-      return null;
+      // An invalid temporary case never hides the saved comparison.
+      try {
+        return snapshot ? calculatePayload({ ...snapshot, benchmarks: [] }) : null;
+      } catch {
+        return null;
+      }
     }
-  }, [snapshot]);
+  }, [snapshot, temporary]);
   const cases = calculated
     ? [{ name: 'Base Case', result: calculated.base }, ...calculated.scenarios]
     : [];
@@ -71,151 +92,47 @@ export function RoiScenarios({
     1,
     Math.min(50, Math.max(...cases.map((c) => c.result.annualCashflows.length))),
   );
-  const fields = groups.flatMap((g) => g.fields).filter((f) => f.path.startsWith('input.'));
   const scenarioError = errors.some((e) => e.path.startsWith('scenarios.'));
-  function update(index: number, change: Partial<ScenarioDraft>) {
-    onChange(drafts.map((d, i) => (i === index ? { ...d, ...change } : d)));
-  }
-  function add(name: string, values: Record<string, string>) {
-    const index = drafts.length;
-    onChange([...drafts, { id: crypto.randomUUID(), name, values: { ...values } }]);
-    setTimeout(() => document.getElementById(`scenarios.${index}.name`)?.focus(), 0);
-  }
   return (
-    <section className={scenarioStyles.scenarios}>
-      <header className={`${styles.card} ${scenarioStyles.intro}`}>
-        <div>
-          <h2>Scenario comparison</h2>
-          <p>
-            Compare your saved base case with what-if cases. A case changes only the assumptions you
-            override; everything else follows the base.
-          </p>
-          <Basis items={['Projected', 'USD', 'Before tax']} />
-        </div>
-        <div className={scenarioStyles.actions}>
-          <button
-            type="button"
-            disabled={saving || drafts.length >= 20}
-            onClick={() => add(`Custom case ${drafts.length + 1}`, {})}
-          >
-            Create scenario
-          </button>
-          <p>{drafts.length} of 20 scenarios</p>
-        </div>
-        <MoreDetail summary="How scenarios inherit the base">
-          <ul className={scenarioStyles.rules}>
-            <li>Custom cases inherit unspecified base assumptions.</li>
-            <li>Clearing an override restores inheritance.</li>
-            <li>Fixed dollar amounts take precedence over percentages.</li>
-            <li>The saved base stays separate: change it on the property with Edit assumptions.</li>
-            <li>Save draft or Save ready keeps your scenarios for this property.</li>
-          </ul>
-        </MoreDetail>
-        <MoreDetail summary="Start from an example">
-          <section aria-label="Scenario examples" className={scenarioStyles.example}>
-            <p>
-              Illustrative assumptions, not promised outcomes. Review an example&apos;s exact
-              overrides before adding it as an editable scenario.
-            </p>
-            <label className={styles.field}>
-              Example scenario
-              <select
-                value={exampleName}
-                disabled={saving}
-                onChange={(event) => setExampleName(event.target.value)}
-              >
-                <option value="">Choose an example</option>
-                {scenarioExamples.map((candidate) => (
-                  <option key={candidate.name}>{candidate.name}</option>
-                ))}
-              </select>
-            </label>
-            {example && (
-              <>
-                <h4>{example.name} overrides</h4>
-                <dl>
-                  {Object.entries(example.values).map(([path, value]) => (
-                    <div key={path}>
-                      <dt>{fields.find((f) => f.path === `input.${path}`)?.label}</dt>
-                      <dd>
-                        {value}% (base: {String(readPath(base.input, path) ?? 'Not set')}%)
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-                <p>
-                  Every other assumption inherits the current base, including purchase, financing,
-                  holding period, fixed dollar amounts and calculation options. The base stays
-                  unchanged.
-                </p>
-                {base.input.expenses?.maintenance !== undefined &&
-                  'expenses.maintenancePercent' in example.values && (
-                    <p className={styles.notice}>
-                      Inherited fixed maintenance of {dollars(base.input.expenses.maintenance)} per
-                      year takes precedence. This example&apos;s maintenance percentage will not
-                      change that amount, including when the fixed amount is zero.
-                    </p>
-                  )}
-                <details>
-                  <summary>Review inherited assumptions</summary>
-                  <dl>
-                    {fields
-                      .filter((f) => !(f.path.slice(6) in example.values))
-                      .map((f) => (
-                        <div key={f.path}>
-                          <dt>{f.label}</dt>
-                          <dd>{String(readPath(base, f.path) ?? 'Not set')}</dd>
-                        </div>
-                      ))}
-                  </dl>
-                  <CalculationAssumptions options={base.options} />
-                </details>
-                <button
-                  type="button"
-                  disabled={saving || drafts.length >= 20}
-                  onClick={() => add(example.name, example.values)}
-                >
-                  Add {example.name} scenario
-                </button>
-              </>
-            )}
-          </section>
-        </MoreDetail>
-      </header>
+    <section
+      id="roi-saved-cases"
+      className={scenarioStyles.scenarios}
+      aria-label="Saved cases comparison"
+      tabIndex={-1}
+    >
       {stale || !calculated ? (
         <section
           className={`${styles.card} ${scenarioStyles.paused}`}
           aria-label="Scenario results"
         >
-          <h3>{scenarioError ? 'Scenario results paused' : 'No scenario results yet'}</h3>
+          <h3>{scenarioError ? 'Case comparison paused' : 'No case comparison yet'}</h3>
           <p role="status">
             {scenarioError
-              ? 'A scenario has an invalid assumption. Correct the highlighted field under Your scenarios; your entries are kept and results return automatically.'
+              ? 'A saved case has an invalid assumption. Correct the highlighted field in What if; your entries are kept and results return automatically.'
               : snapshot
-                ? 'Scenario results are out of date. Correct the assumptions flagged above to compare your current edits.'
-                : 'No projection yet. Complete or correct the base assumptions flagged above to compare scenarios.'}
+                ? 'Case results are out of date. Correct the assumptions flagged above to compare your current edits.'
+                : 'No projection yet. Complete or correct the base assumptions flagged above to compare cases.'}
           </p>
         </section>
       ) : (
         <>
           <ScenarioCharts
             cases={cases.map((c, i) => ({
-              id: i === 0 ? 'base' : (drafts[i - 1]?.id ?? String(i)),
+              id: i === 0 ? 'base' : (shownDrafts[i - 1]?.id ?? String(i)),
               name: c.name,
               result: c.result,
             }))}
-            drafts={drafts}
+            drafts={shownDrafts}
             baseInput={base.input}
-            label={(path) => fields.find((f) => f.path === `input.${path}`)?.label ?? path}
-            onAddExample={add}
-            disabled={saving}
+            label={overrideLabel}
+            onOpenWhatIf={onOpenWhatIf}
           />
           <section
             className={`${styles.card} ${scenarioStyles.exact}`}
             aria-label="Exact scenario figures"
           >
             <h3>Exact figures</h3>
-            <MoreDetail summary="Year 1 cash flow and IRR by scenario, to the cent">
+            <MoreDetail summary="Year 1 cash flow and IRR by case, to the cent">
               <div
                 className={styles.table}
                 tabIndex={0}
@@ -268,7 +185,7 @@ export function RoiScenarios({
             {(['equity', 'cashFlow'] as const).map((metric) => (
               <MoreDetail
                 key={metric}
-                summary={`Exact ${metric === 'equity' ? 'equity' : 'cash flow'} by scenario · years 1–${years}`}
+                summary={`Exact ${metric === 'equity' ? 'equity' : 'cash flow'} by case · years 1–${years}`}
               >
                 <div
                   className={styles.table}
@@ -310,194 +227,46 @@ export function RoiScenarios({
                 </div>
               </MoreDetail>
             ))}
-          </section>
-        </>
-      )}
-      {drafts.length > 0 && (
-        <section className={scenarioStyles.editors} aria-label="Your scenarios">
-          <h3>Your scenarios</h3>
-          <p className={scenarioStyles.hint}>
-            Blank fields inherit the base. Changes recalculate the comparison above; Save draft or
-            Save ready keeps them.
-          </p>
-          {drafts.map((d, index) => {
-            const overridden = fields.filter((f) => d.values[f.path.slice(6)]?.trim()).length;
-            return (
-              <details open key={d.id} className={styles.card}>
-                <summary>{d.name || 'Unnamed scenario'}</summary>
+            {shownDrafts.length > 0 && (
+              <MoreDetail summary="Overrides side by side">
                 <div
-                  id={`scenarios.${index}`}
-                  tabIndex={-1}
+                  className={styles.table}
                   role="region"
-                  aria-label={`${d.name || 'Unnamed scenario'}: review scenario assumptions`}
+                  tabIndex={0}
+                  aria-label="Scenario assumption comparison"
                 >
-                  {errors
-                    .filter(
-                      (e) =>
-                        e.path === `scenarios.${index}` || e.path.startsWith(`scenarios.${index}.`),
-                    )
-                    .map((e, errorIndex) => (
-                      <p role="alert" id={`${e.path}-error`} key={errorIndex}>
-                        {e.message}
-                      </p>
-                    ))}
-                  {errors.some((e) => e.path === `scenarios.${index}`) && (
-                    <p>
-                      Review this scenario&apos;s growth rates, holding period and amounts below,
-                      including inherited values. Correct the assumptions and recalculate. Your
-                      entries are kept.
-                    </p>
-                  )}
-                </div>
-                <fieldset disabled={saving}>
-                  <div className={scenarioStyles.nameRow}>
-                    <label className={styles.field}>
-                      Scenario name
-                      <input
-                        id={`scenarios.${index}.name`}
-                        value={d.name}
-                        maxLength={200}
-                        aria-invalid={errors.some((e) => e.path === `scenarios.${index}.name`)}
-                        aria-describedby={
-                          errors.some((e) => e.path === `scenarios.${index}.name`)
-                            ? `scenarios.${index}.name-error`
-                            : undefined
-                        }
-                        onChange={(e) => update(index, { name: e.target.value })}
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onChange(drafts.filter((_, i) => i !== index));
-                        setTimeout(
-                          () => document.getElementById('roi-section-tab-scenarios')?.focus(),
-                          0,
-                        );
-                      }}
-                    >
-                      Remove {d.name || 'scenario'}
-                    </button>
-                  </div>
-                  <details>
-                    <summary>
-                      Assumptions and overrides ·{' '}
-                      {overridden ? `${overridden} overridden` : 'inherits every base assumption'}
-                    </summary>
-                    {groups.map((g) => {
-                      const inGroup = g.fields.filter((f) => f.path.startsWith('input.'));
-                      if (!inGroup.length) return null;
-                      return (
-                        <div key={g.title} className={scenarioStyles.group}>
-                          <h4>{g.title}</h4>
-                          {inGroup.map((f) => {
-                            const path = f.path.slice(6);
-                            const id = `scenarios.${index}.overrides.${path}`;
-                            const invalid = errors.some((e) => e.path === id);
-                            const set = !!d.values[path]?.trim();
-                            return (
-                              <label
-                                className={styles.field}
-                                key={path}
-                                data-overridden={set || undefined}
-                              >
-                                <span>
-                                  {f.label}{' '}
-                                  <small>
-                                    · Base: {String(readPath(base, f.path) ?? 'Not set')}
-                                  </small>
-                                </span>
-                                {f.kind === 'select' ? (
-                                  <select
-                                    id={id}
-                                    aria-invalid={invalid}
-                                    aria-describedby={invalid ? `${id}-error` : undefined}
-                                    value={d.values[path] ?? ''}
-                                    onChange={(e) =>
-                                      update(index, {
-                                        values: { ...d.values, [path]: e.target.value },
-                                      })
-                                    }
-                                  >
-                                    <option value="">Inherit base</option>
-                                    {f.choices?.map((c) => (
-                                      <option key={c}>{c}</option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <input
-                                    id={id}
-                                    aria-invalid={invalid}
-                                    aria-describedby={invalid ? `${id}-error` : undefined}
-                                    value={d.values[path] ?? ''}
-                                    placeholder="Inherit base"
-                                    onChange={(e) =>
-                                      update(index, {
-                                        values: { ...d.values, [path]: e.target.value },
-                                      })
-                                    }
-                                  />
-                                )}
-                              </label>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
-                  </details>
-                  {d.options && (
-                    <details>
-                      <summary>Explicit scenario calculation options</summary>
-                      <CalculationAssumptions options={d.options} />
-                      <p>
-                        These saved assumptions apply only to this scenario. Use base calculation
-                        options to inherit the dates, discount rate and tax assumptions from
-                        Summary.
-                      </p>
-                      <button type="button" onClick={() => update(index, { options: undefined })}>
-                        Use base calculation options
-                      </button>
-                    </details>
-                  )}
-                </fieldset>
-              </details>
-            );
-          })}
-          <MoreDetail summary="Overrides side by side">
-            <div
-              className={styles.table}
-              role="region"
-              tabIndex={0}
-              aria-label="Scenario assumption comparison"
-            >
-              <table>
-                <caption>Overridden assumptions - blank fields inherit base</caption>
-                <thead>
-                  <tr>
-                    <th>Assumption</th>
-                    <th>Base Case</th>
-                    {drafts.map((d) => (
-                      <th key={d.id}>{d.name || 'Unnamed scenario'}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {fields
-                    .filter((f) => drafts.some((d) => d.values[f.path.slice(6)]?.trim()))
-                    .map((f) => (
-                      <tr key={f.path}>
-                        <th scope="row">{f.label}</th>
-                        <td>{String(readPath(base, f.path) ?? 'Not set')}</td>
-                        {drafts.map((d) => (
-                          <td key={d.id}>{d.values[f.path.slice(6)]?.trim() || 'Inherit base'}</td>
+                  <table>
+                    <caption>Overridden assumptions - blank fields inherit base</caption>
+                    <thead>
+                      <tr>
+                        <th>Assumption</th>
+                        <th>Base Case</th>
+                        {shownDrafts.map((d) => (
+                          <th key={d.id}>{d.name || 'Unnamed case'}</th>
                         ))}
                       </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          </MoreDetail>
-        </section>
+                    </thead>
+                    <tbody>
+                      {inputFields
+                        .filter((f) => shownDrafts.some((d) => d.values[f.path.slice(6)]?.trim()))
+                        .map((f) => (
+                          <tr key={f.path}>
+                            <th scope="row">{f.label}</th>
+                            <td>{String(readPath(base, f.path) ?? 'Not set')}</td>
+                            {shownDrafts.map((d) => (
+                              <td key={d.id}>
+                                {d.values[f.path.slice(6)]?.trim() || 'Inherit base'}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </MoreDetail>
+            )}
+          </section>
+        </>
       )}
     </section>
   );

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   amortizationTicks,
   breakevenContour,
@@ -40,7 +40,7 @@ import {
   sensitivityControls,
 } from '@/lib/analysis/projections';
 import { RoiProjections } from '@/components/analysis/RoiProjections';
-import { RoiScenarios } from '@/components/analysis/RoiScenarios';
+import { CaseComparison } from '@/components/analysis/RoiScenarios';
 import {
   NetCashFlowCard,
   NetCashFlowYears,
@@ -771,40 +771,36 @@ describe('Core chart presentation: basis, legends and disclosures', () => {
   });
 });
 
-describe('Scenario decision view: results first, honest empty states', () => {
-  const scenarios = (props: Partial<Parameters<typeof RoiScenarios>[0]> = {}) => {
+describe('Saved-case comparison on Compare: results first, honest empty states', () => {
+  const compare = (props: Partial<Parameters<typeof CaseComparison>[0]> = {}) => {
     const base = realRoiSample();
     return render(
-      <RoiScenarios
+      <CaseComparison
         drafts={[]}
-        onChange={() => {}}
         snapshot={base}
         stale={false}
         errors={[]}
         base={base}
-        saving={false}
+        onOpenWhatIf={() => {}}
         {...props}
       />,
     );
   };
 
-  it('keeps rules and examples one click away and separates example chips from shown cases', () => {
-    scenarios();
-    expect(screen.getByText('0 of 20 scenarios')).toBeTruthy();
-    expect(screen.getByText('How scenarios inherit the base').closest('details')!.open).toBe(false);
-    expect(
-      screen.getByLabelText('Example scenario').closest('details')!.querySelector('summary')!
-        .textContent,
-    ).toBe('Start from an example');
+  it('shows cases without separate example controls and keeps exact figures one click away', () => {
+    const open = vi.fn();
+    compare({ onOpenWhatIf: open });
     const shown = screen.getByRole('list', { name: 'Scenarios shown' });
     expect(
       within(shown)
         .getAllByRole('button')
         .map((b) => b.textContent),
     ).toEqual(['Base Case']);
-    const add = screen.getByRole('list', { name: 'Add an example:' });
-    expect(within(add).getByRole('button', { name: /Best Case.*\(add example\)/ })).toBeTruthy();
-    // One case has no best or worst, so the table key stays hidden.
+    // Presets and editing live in the one What if panel, not beside the comparison.
+    expect(screen.queryByRole('list', { name: 'Add an example:' })).toBeNull();
+    expect(screen.queryByLabelText('Example scenario')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Create or edit cases in What if' }));
+    expect(open).toHaveBeenCalledOnce();
     expect(screen.queryByRole('list', { name: 'Table key' })).toBeNull();
     expect(screen.getByText('Initial cash recovered:')).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Scenario metrics' }).closest('details')!.open).toBe(
@@ -812,22 +808,42 @@ describe('Scenario decision view: results first, honest empty states', () => {
     );
   });
 
-  it('explains missing results without inventing values and counts overrides per scenario', () => {
+  it('adds an active temporary what-if as an unsaved column beside saved cases', () => {
+    const drafts = [{ id: 'a', name: 'Rent case', values: { 'income.monthlyRent': '3000' } }];
+    const base = realRoiSample();
+    base.scenarios = [{ id: 'a', name: 'Rent case', overrides: { income: { monthlyRent: 3000 } } }];
+    compare({
+      drafts,
+      snapshot: base,
+      temporary: {
+        id: 'what-if',
+        name: 'What if (not saved)',
+        values: { 'income.vacancyRate': '2' },
+      },
+    });
+    const metrics = screen.getByRole('region', { name: 'Scenario metrics' });
+    expect(
+      within(metrics)
+        .getAllByRole('columnheader')
+        .map((h) => h.textContent),
+    ).toEqual(['Metric', 'Base Case', 'Rent case', 'What if (not saved)']);
+  });
+
+  it('explains missing results without inventing values', () => {
     const drafts = [{ id: 'a', name: 'Rent case', values: { 'income.monthlyRent': '9999' } }];
-    const { unmount } = scenarios({ snapshot: null, stale: true, drafts });
-    expect(screen.getByRole('heading', { name: 'No scenario results yet' })).toBeTruthy();
+    const { unmount } = compare({ snapshot: null, stale: true, drafts });
+    expect(screen.getByRole('heading', { name: 'No case comparison yet' })).toBeTruthy();
     expect(screen.getByRole('status').textContent).toMatch(/^No projection yet/);
     expect(screen.queryByRole('region', { name: 'Scenario metrics' })).toBeNull();
     expect(document.body.textContent).not.toMatch(/\$0\.00|NaN/);
-    expect(screen.getByText(/Assumptions and overrides · 1 overridden/)).toBeTruthy();
     unmount();
-    scenarios({
+    compare({
       snapshot: null,
       stale: true,
       drafts,
       errors: [{ path: 'scenarios.0.overrides.income.monthlyRent', message: 'Too high.' }],
     });
-    expect(screen.getByRole('heading', { name: 'Scenario results paused' })).toBeTruthy();
-    expect(screen.getByRole('alert').textContent).toBe('Too high.');
+    expect(screen.getByRole('heading', { name: 'Case comparison paused' })).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toMatch(/What if/);
   });
 });

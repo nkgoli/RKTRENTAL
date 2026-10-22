@@ -96,19 +96,31 @@ function toolbarButton(name: string) {
   return within(menu).getByRole('button', { name });
 }
 const href = (link: HTMLElement) => new URL(link.getAttribute('href')!, 'http://local.test');
-// Analysis-level edits that remain on the dashboard: the optional tax estimate and scenarios.
+// Analysis-level edits that remain on the dashboard: the optional tax estimate (Summary) and
+// saved cases (the What if panel).
 const taxBox = () => {
-  fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
+  fireEvent.click(screen.getByRole('tab', { name: 'Summary' }));
   const toggle = screen.getByText(/^Optional tax estimate/, { selector: 'summary' });
   if (!toggle.closest('details')!.open) fireEvent.click(toggle);
   return screen.getByLabelText('Include explicit tax assumptions') as HTMLInputElement;
 };
 const taxField = () => document.getElementById('options.tax.marginalTaxRate') as HTMLInputElement;
 const scenarioName = () => document.getElementById('scenarios.0.name') as HTMLInputElement;
+const whatIfTrigger = () => document.getElementById('roi-whatif-trigger') as HTMLButtonElement;
+function openWhatIf() {
+  if (whatIfTrigger().getAttribute('aria-expanded') !== 'true') fireEvent.click(whatIfTrigger());
+  return within(screen.getByRole('dialog', { name: 'What if' }));
+}
+/** Saves the (empty) temporary what-if as a case, then names it, as a manager would. */
 function addScenario(name: string) {
-  fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Create scenario' }));
+  fireEvent.click(openWhatIf().getByRole('button', { name: 'Save as case' }));
   fireEvent.change(scenarioName(), { target: { value: name } });
+}
+/** Shows a saved case in What if by name. */
+function showCase(name: string) {
+  const select = openWhatIf().getByLabelText('Case') as HTMLSelectElement;
+  const option = Array.from(select.options).find((o) => o.text.startsWith(name))!;
+  fireEvent.change(select, { target: { value: option.value } });
 }
 /** True when the workspace let an ordinary link navigate (jsdom navigation is then suppressed). */
 function navigates(link: HTMLElement) {
@@ -167,7 +179,12 @@ describe('property autofill and calculation sufficiency', () => {
     await open();
     expect(screen.queryByRole('region', { name: 'Deal Snapshot' })).toBeNull();
     // Missing projections read as not calculated, never as zero, and one empty state explains why.
-    expect(within(screen.getByRole('tabpanel', { name: 'Summary' })).queryByText('$0')).toBeNull();
+    // (Recorded source facts under Analysis details are records, not projections.)
+    expect(
+      within(screen.getByRole('tabpanel', { name: 'Summary' }))
+        .queryAllByText('$0')
+        .filter((el) => !el.closest('details')),
+    ).toHaveLength(0);
     expect(screen.getByRole('heading', { name: 'No projection yet' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Net Cash Flow by Year' })).toBeNull();
     expect(summaryCard().getByText(/1 input needed to calculate\./)).toBeTruthy();
@@ -535,7 +552,7 @@ describe('ROI summary workspace', () => {
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="b" />,
     );
     expect(screen.getByRole('alertdialog')).toBeTruthy();
-    expect(window.location.search).toBe('?property=a&view=scenarios');
+    expect(window.location.search).toBe('?property=a');
     fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
     await waitFor(() => expect(document.activeElement).toBe(scenarioName()));
     const change = toolbarButton('Change property');
@@ -735,9 +752,7 @@ describe('ROI projection interactions', () => {
     expect(screen.queryByRole('table', { name: /Year 1 cash-on-cash/ })).toBeNull();
     fireEvent.click(toolbarButton('Recalculate'));
     await waitFor(() => expect(document.activeElement).toBe(taxField()));
-    expect(screen.getByRole('tab', { name: 'Scenarios' }).getAttribute('aria-selected')).toBe(
-      'true',
-    );
+    expect(screen.getByRole('tab', { name: 'Summary' }).getAttribute('aria-selected')).toBe('true');
     expect(taxBox().checked).toBe(true);
     fireEvent.click(taxBox());
     fireEvent.click(toolbarButton('Recalculate'));
@@ -884,9 +899,7 @@ describe('scenario examples and merged failure recovery', () => {
     document.getElementById(`scenarios.0.${path}`) as HTMLInputElement;
   async function create() {
     await open();
-    fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Create scenario' }));
-    fireEvent.change(field('name'), { target: { value: 'Stress case' } });
+    addScenario('Stress case');
     fireEvent.change(field('overrides.expenses.maintenance'), { target: { value: '0' } });
   }
   it('previews examples without edits, warns about inherited fixed zero and saves/reloads an edited example', async () => {
@@ -897,13 +910,17 @@ describe('scenario examples and merged failure recovery', () => {
       data: { payload: p, missing: [], facts },
     });
     await open();
-    fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
-    expect(screen.getByText('0 of 20 scenarios')).toBeTruthy();
-    fireEvent.change(screen.getByLabelText('Example scenario'), { target: { value: 'Best Case' } });
-    expect(screen.getByText(/Inherited fixed maintenance of/).textContent).toContain('$0.00');
-    expect(screen.getByText(/3% \(base: 0%\)/)).toBeTruthy();
-    expect(screen.getByText('0 of 20 scenarios')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Add Best Case scenario' }));
+    const panel = openWhatIf();
+    expect(panel.getByText('0 of 20 saved cases · compare them on Compare.')).toBeTruthy();
+    fireEvent.click(panel.getByRole('button', { name: 'Best Case' }));
+    // A preset is a temporary what-if: nothing is saved or marked unsaved yet.
+    expect(panel.getByText(/Fixed maintenance of/).textContent).toContain('$0.00');
+    expect(
+      (document.getElementById('whatif.expenses.maintenancePercent') as HTMLInputElement).value,
+    ).toBe('3');
+    expect(panel.getByText('0 of 20 saved cases · compare them on Compare.')).toBeTruthy();
+    expect(screen.queryByText('Unsaved changes')).toBeNull();
+    fireEvent.click(panel.getByRole('button', { name: 'Save as case' }));
     expect(field('overrides.expenses.maintenancePercent').value).toBe('3');
     expect(field('overrides.expenses.maintenance').value).toBe('');
     fireEvent.change(field('name'), { target: { value: 'My best case' } });
@@ -957,9 +974,11 @@ describe('scenario examples and merged failure recovery', () => {
           ? field('overrides.financing.loanAmount')
           : document.getElementById('scenarios.0');
       await waitFor(() => expect(document.activeElement).toBe(target));
-      expect(screen.getByRole('tab', { name: 'Scenarios' }).getAttribute('aria-selected')).toBe(
+      // Corrected in the What if panel, beside the view the manager was on.
+      expect(screen.getByRole('tab', { name: 'Charts' }).getAttribute('aria-selected')).toBe(
         'true',
       );
+      expect(screen.getByRole('dialog', { name: 'What if' }).contains(target)).toBe(true);
       expect(target?.closest('[hidden]')).toBeNull();
       if (kind === 'loan') {
         expect(field('overrides.financing.loanAmount').value).toBe('100001');
@@ -976,6 +995,7 @@ describe('scenario examples and merged failure recovery', () => {
       expect(field('overrides.expenses.maintenance').value).toBe('0');
       expect(field('name').value).toBe('Stress case');
       fireEvent.click(toolbarButton('Recalculate'));
+      fireEvent.click(screen.getByRole('tab', { name: 'Compare' }));
       expect(screen.getByRole('region', { name: 'Scenario metrics' })).toBeTruthy();
     },
   );
@@ -1047,11 +1067,11 @@ describe('scenario examples and merged failure recovery', () => {
       data: { payload: p, missing: [], facts },
     });
     await open();
-    fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
+    showCase(p.scenarios[0].name);
     fireEvent.click(screen.getByText('Explicit scenario calculation options'));
     expect(screen.getByText('Federal income tax (%)', { selector: 'dt' })).toBeTruthy();
     expect(screen.getByText('Discount rate', { selector: 'dt' })).toBeTruthy();
-    expect(screen.getByRole('tabpanel', { name: 'Scenarios' }).querySelector('pre')).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'What if' }).querySelector('pre')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Use base calculation options' }));
     fireEvent.click(toolbarButton('Save ready'));
     await screen.findByText('Saved ready - revision 1');
@@ -1065,8 +1085,7 @@ describe('scenario examples and merged failure recovery', () => {
 
 it('creates, validates, saves and removes named scenarios through shared state', async () => {
   await open();
-  fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Create scenario' }));
+  fireEvent.click(openWhatIf().getByRole('button', { name: 'Save as case' }));
   const name = document.getElementById('scenarios.0.name') as HTMLInputElement;
   fireEvent.change(name, { target: { value: 'Rent case' } });
   const override = document.getElementById(
@@ -1075,11 +1094,12 @@ it('creates, validates, saves and removes named scenarios through shared state',
   fireEvent.change(override, { target: { value: 'invalid' } });
   fireEvent.click(toolbarButton('Save draft'));
   await waitFor(() => expect(document.activeElement).toBe(override));
-  expect(override.closest('details')?.open).toBe(true);
+  expect(override.closest('[hidden], details:not([open])')).toBeNull();
   expect(override.value).toBe('invalid');
   expect(saveRoiAnalysisAction).not.toHaveBeenCalled();
   fireEvent.change(override, { target: { value: '1200' } });
   fireEvent.click(toolbarButton('Recalculate'));
+  fireEvent.click(screen.getByRole('tab', { name: 'Compare' }));
   expect(screen.getByRole('region', { name: 'Scenario metrics' }).textContent).toContain(
     'Rent case',
   );
@@ -1098,7 +1118,7 @@ it('creates, validates, saves and removes named scenarios through shared state',
   expect(saved.payload.scenarios[0].overrides.income?.monthlyRent).toBe(1200);
   expect(saved.payload.scenarios[0].name).toBe('Rent case');
   fireEvent.click(screen.getByRole('button', { name: 'Remove Rent case' }));
-  expect(screen.queryByLabelText('Scenario name')).toBeNull();
+  expect(screen.queryByLabelText('Case name')).toBeNull();
   fireEvent.click(toolbarButton('Change property'));
   expect(screen.getByRole('alertdialog')).toBeTruthy();
 });
@@ -1124,7 +1144,7 @@ it('retains scenario edits through conflicts and invalid navigation recovery, th
         : null,
   }));
   await open();
-  fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
+  showCase('Saved case');
   const name = () => document.getElementById('scenarios.0.name') as HTMLInputElement;
   expect(name().value).toBe('Saved case');
   fireEvent.change(name(), { target: { value: '' } });
@@ -1146,12 +1166,21 @@ it('retains scenario edits through conflicts and invalid navigation recovery, th
   });
   fireEvent.click(toolbarButton('Reload saved analysis'));
   fireEvent.click(screen.getByRole('button', { name: /Discard/ }));
-  await waitFor(() => expect(name().value).toBe('Saved case'));
+  // Discarding reloads the saved analysis and leaves What if; the saved case is intact.
+  await screen.findByLabelText('Save analysis');
+  expect(screen.queryByRole('dialog', { name: 'What if' })).toBeNull();
+  showCase('Saved case');
+  expect(name().value).toBe('Saved case');
   fireEvent.click(toolbarButton('Change property'));
   fireEvent.click(screen.getByRole('button', { name: /Property b/ }));
   await screen.findByLabelText('Save analysis');
-  fireEvent.click(screen.getByRole('tab', { name: 'Scenarios' }));
-  expect(screen.queryByLabelText('Scenario name')).toBeNull();
+  // Property b has no cases, and property a's what-if never follows to it.
+  expect(screen.queryByRole('dialog', { name: 'What if' })).toBeNull();
+  expect(
+    Array.from((openWhatIf().getByLabelText('Case') as HTMLSelectElement).options).map(
+      (o) => o.value,
+    ),
+  ).toEqual(['temporary']);
 });
 
 it('saves benchmark selections across panels and restores them by property', async () => {
@@ -1261,8 +1290,8 @@ describe('compact header and section-preserving assumptions round trip', () => {
     expect(returnTo()).toBe('/roi-analysis?property=a&view=charts&chart=sensitivity&period=YTD');
     fireEvent.click(screen.getByRole('tab', { name: 'Amortization' }));
     expect(window.location.search).toBe('?property=a&view=charts&chart=amortization&period=YTD');
+    expect(screen.queryByRole('tab', { name: 'Scenarios' })).toBeNull();
     for (const [tabName, view] of [
-      ['Scenarios', 'scenarios'],
       ['Benchmarks', 'benchmarks'],
       ['Compare', 'compare'],
     ]) {
@@ -1320,5 +1349,173 @@ describe('compact header and section-preserving assumptions round trip', () => {
     fireEvent.click(within(disclosure).getByRole('button', { name: 'Change property' }));
     expect(disclosure.isConnected && disclosure.open).toBe(false);
     expect(screen.getByRole('searchbox')).toBeTruthy();
+  });
+});
+
+describe('What if: one shared, scoped simulation across views', () => {
+  const strip = () => screen.queryAllByRole('region', { name: 'What if comparison' });
+  const visibleStrip = () => {
+    const shown = strip().filter((s) => !s.closest('[hidden]'));
+    expect(shown).toHaveLength(1);
+    return within(shown[0]);
+  };
+  const rentField = () => document.getElementById('whatif.income.monthlyRent') as HTMLInputElement;
+
+  it('shows baseline, simulated value and signed change beside each view, then resets', async () => {
+    await open();
+    expect(strip()).toHaveLength(0);
+    const panel = openWhatIf();
+    expect(panel.getByText(/Temporary\. Saved assumptions and recorded rent/)).toBeTruthy();
+    fireEvent.change(rentField(), { target: { value: '1200' } });
+    // Temporary edits are not unsaved analysis changes.
+    expect(screen.queryByText('Unsaved changes')).toBeNull();
+    expect(whatIfTrigger().textContent).toContain('1 change');
+    let view = visibleStrip();
+    expect(view.getByText(/Simulated/)).toBeTruthy();
+    expect(view.getByRole('list', { name: 'Changed assumptions' }).textContent).toContain(
+      '1000 → 1200',
+    );
+    const row = view.getByRole('row', { name: /Cash flow · Year 1/ });
+    // $200/month more rent: Year 1 cash flow moves by the engine's figure, signed.
+    expect(row.textContent).toMatch(/\+\$/);
+    // Beside the metric itself: the Deal Snapshot cash flow carries its change from baseline.
+    const snapshot = screen.getByRole('region', { name: 'Deal Snapshot' });
+    expect(snapshot.textContent).toMatch(/vs baseline/);
+    for (const name of ['Actual vs projected', 'Charts', 'Benchmarks', 'Compare']) {
+      fireEvent.click(screen.getByRole('tab', { name }));
+      view = visibleStrip();
+      expect(view.getByText(/What if · temporary, not saved/)).toBeTruthy();
+    }
+    expect(visibleStrip().getByRole('table')).toBeTruthy();
+    // Compare adds the temporary case as an unsaved column beside saved cases.
+    expect(
+      within(screen.getByRole('region', { name: 'Scenario metrics' })).getByRole('columnheader', {
+        name: 'What if (not saved)',
+      }),
+    ).toBeTruthy();
+    fireEvent.click(visibleStrip().getByRole('button', { name: 'Reset to baseline' }));
+    expect(strip()).toHaveLength(0);
+    expect(rentField().value).toBe('');
+    // Saving after a reset stores the untouched baseline and no case.
+    fireEvent.click(toolbarButton('Save draft'));
+    await screen.findByText('Saved draft - revision 1');
+    const saved = vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as {
+      payload: ReturnType<typeof make>;
+    };
+    expect(saved.payload.input).toEqual(make().input);
+    expect(saved.payload.scenarios).toEqual([]);
+  });
+
+  it('keeps baseline and records unchanged while simulating, and saves a case only on request', async () => {
+    await open();
+    openWhatIf();
+    fireEvent.change(rentField(), { target: { value: '1500' } });
+    fireEvent.click(toolbarButton('Save draft'));
+    await screen.findByText('Saved draft - revision 1');
+    let saved = vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as {
+      payload: ReturnType<typeof make>;
+    };
+    expect(saved.payload.input.income?.monthlyRent).toBe(1000);
+    expect(saved.payload.scenarios).toEqual([]);
+    // The simulation survives the save untouched.
+    expect(rentField().value).toBe('1500');
+    fireEvent.click(openWhatIf().getByRole('button', { name: 'Save as case' }));
+    fireEvent.change(scenarioName(), { target: { value: 'Higher rent' } });
+    expect(screen.getByText('Unsaved changes')).toBeTruthy();
+    fireEvent.click(openWhatIf().getByRole('button', { name: 'Save draft' }));
+    await screen.findByText('Saved draft - revision 2');
+    saved = vi.mocked(saveRoiAnalysisAction).mock.calls[1][0] as {
+      payload: ReturnType<typeof make>;
+    };
+    expect(saved.payload.input).toEqual(make().input);
+    expect(saved.payload.scenarios).toEqual([
+      expect.objectContaining({
+        name: 'Higher rent',
+        overrides: { income: { monthlyRent: 1500 } },
+      }),
+    ]);
+  });
+
+  it('marks invalid input on its field and keeps every view on the baseline', async () => {
+    await open();
+    openWhatIf();
+    fireEvent.change(rentField(), { target: { value: 'lots' } });
+    expect(rentField().getAttribute('aria-invalid')).toBe('true');
+    expect(visibleStrip().getByRole('status').textContent).toMatch(/Simulation paused/);
+    expect(screen.getByRole('region', { name: 'Deal Snapshot' }).textContent).not.toMatch(
+      /vs baseline/,
+    );
+    expect(document.body.textContent).not.toMatch(/NaN/);
+  });
+
+  it('closes with Escape back to the trigger, keeps simulating, and Exit restores the baseline', async () => {
+    await open();
+    openWhatIf();
+    fireEvent.change(rentField(), { target: { value: '1300' } });
+    fireEvent.keyDown(rentField(), { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'What if' })).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(whatIfTrigger()));
+    expect(whatIfTrigger().getAttribute('aria-expanded')).toBe('false');
+    expect(strip().length).toBeGreaterThan(0);
+    fireEvent.click(openWhatIf().getByRole('button', { name: 'Exit what if' }));
+    expect(strip()).toHaveLength(0);
+    expect(screen.queryByRole('dialog', { name: 'What if' })).toBeNull();
+    expect(rentField()).toBeNull();
+  });
+
+  it('never carries one property’s what-if to another', async () => {
+    await open();
+    openWhatIf();
+    fireEvent.change(rentField(), { target: { value: '1800' } });
+    fireEvent.click(toolbarButton('Change property'));
+    fireEvent.click(screen.getByRole('button', { name: /Property b/ }));
+    await screen.findByRole('heading', { name: 'Property b', level: 1 });
+    await screen.findByLabelText('Save analysis');
+    expect(strip()).toHaveLength(0);
+    expect(whatIfTrigger().textContent).not.toMatch(/change/);
+    openWhatIf();
+    expect(rentField().value).toBe('');
+    act(() => {
+      window.history.replaceState(null, '', '/roi-analysis?property=a');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    await screen.findByRole('heading', { name: 'Property a', level: 1 });
+    await screen.findByLabelText('Save analysis');
+    expect(strip()).toHaveLength(0);
+  });
+
+  it('opens a unit-labelled what-if from Rent analysis and drops the entry from the address', async () => {
+    const withUnits = properties.map((p) =>
+      p.id === 'a'
+        ? { ...p, units: [{ id: 'u3a', number: '3A', status: 'VACANT' }] as never[] }
+        : p,
+    );
+    routeQuery.value = new URLSearchParams('property=a&whatif=rent&unit=u3a&rentChange=240');
+    window.history.replaceState(
+      null,
+      '',
+      '/roi-analysis?property=a&whatif=rent&unit=u3a&rentChange=240',
+    );
+    render(<RoiWorkspace selection={{ ok: true, data: withUnits }} />);
+    const dialog = await screen.findByRole('dialog', { name: 'What if' });
+    expect(dialog.textContent).toContain(
+      'Property a · whole property · From Rent analysis · Unit 3A +$240/mo',
+    );
+    expect(rentField().value).toBe('1240');
+    expect(within(dialog).getByLabelText('Case').textContent).toContain(
+      'Unit 3A at suggested rent',
+    );
+    expect(window.location.search).toBe('?property=a');
+    expect(screen.queryByText('Unsaved changes')).toBeNull();
+  });
+
+  it('lands a retired Scenarios address on Compare’s saved cases', async () => {
+    routeQuery.value = new URLSearchParams('property=a&view=scenarios');
+    window.history.replaceState(null, '', '/roi-analysis?property=a&view=scenarios');
+    render(<RoiWorkspace selection={{ ok: true, data: properties }} />);
+    await screen.findByLabelText('Save analysis');
+    expect(screen.getByRole('tab', { name: 'Compare' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('region', { name: 'Saved cases comparison' })).toBeTruthy();
+    await waitFor(() => expect(window.location.search).toBe('?property=a&view=compare'));
   });
 });

@@ -20,7 +20,7 @@ import { RoiBenchmarks } from '@/components/analysis/RoiBenchmarks';
 import { RentDistribution } from '@/components/rent-comps/RentDistribution';
 import { scenarioColors, scenarioDifferences } from '@/lib/analysis/scenarios';
 import { getAllBenchmarks } from '@/lib/roi';
-import { DealSnapshot, FixMyDeal } from '@/components/analysis/RoiDealPanels';
+import { DealSnapshot } from '@/components/analysis/RoiDealPanels';
 import { ScenarioCharts } from '@/components/analysis/RoiScenarioCharts';
 import { realRoiSample } from './realroi-sample';
 
@@ -97,16 +97,6 @@ describe('Fix My Deal levers (C4)', () => {
       expect(r.summaryMetrics.annualCashFlow).toBeGreaterThanOrEqual(0);
     }
   });
-  it('renders the what-if card and resets without saving', () => {
-    render(<FixMyDeal result={base} payload={sample} />);
-    const initial = screen.getByRole('status').textContent;
-    fireEvent.click(screen.getAllByRole('checkbox')[0]);
-    expect(screen.getByRole('status').textContent).toBe(initial);
-    fireEvent.click(screen.getByRole('button', { name: 'Apply selected' }));
-    expect(screen.getByRole('status').textContent).not.toBe(initial);
-    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
-    expect(screen.getByRole('status').textContent).toBe(initial);
-  });
   it('renders the snapshot with one risk score on ring and gauge', () => {
     render(<DealSnapshot result={base} payload={sample} />);
     const band = screen.getByRole('region', { name: 'Deal Snapshot' });
@@ -179,8 +169,6 @@ describe('Scenario and comparison data (C18–C23)', () => {
         drafts={[{ id: 's1', name: 'Optimistic', values: { 'income.vacancyRate': '3' } }]}
         baseInput={p.input}
         label={(x) => x}
-        onAddExample={() => {}}
-        disabled={false}
       />,
     );
     const chips = within(screen.getByRole('list', { name: 'Scenarios shown' }));

@@ -1,29 +1,10 @@
 'use client';
-import {
-  useDeferredValue,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  type MouseEvent,
-  type ReactNode,
-} from 'react';
+import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import type { AnalysisPayload } from '@/lib/analysis/contract';
 import { projectionRows, type ProjectionResult } from '@/lib/analysis/projections';
 import { firstPositiveAfterNegative, wholeDollars } from '@/lib/analysis/chart-data';
-import {
-  applyLevers,
-  levers as leverRows,
-  riskFactors,
-  riskLevel,
-  riskScore,
-  runInput,
-  sortFactors,
-  targetFixes,
-  type LeverKey,
-} from '@/lib/analysis/deal-insights';
-import { ChartCard } from './RoiChart';
+import { riskFactors, riskLevel, riskScore, sortFactors } from '@/lib/analysis/deal-insights';
+import { DeltaNote } from './RoiWhatIf';
 import d from './deal-panels.module.css';
 const pct = (v: number | null | undefined) =>
   v == null || !Number.isFinite(v) ? 'Unavailable' : `${(v * 100).toFixed(2)}%`;
@@ -116,9 +97,12 @@ export function DealSnapshot({
   onCompare,
   howHref,
   onHow,
+  baseline,
 }: {
   result: ProjectionResult;
   payload: AnalysisPayload;
+  /** While a what-if is active: the baseline, so each figure shows its signed change. */
+  baseline?: ProjectionResult | null;
   /** Opens the actual-versus-projected comparison. */
   onCompare?: () => void;
   /** Where "How returns are calculated" points (an in-page method note). */
@@ -127,6 +111,7 @@ export function DealSnapshot({
 }) {
   const [annual, setAnnual] = useState(false);
   const m = result.summaryMetrics;
+  const b = baseline?.summaryMetrics;
   const factors = sortFactors(riskFactors(result, payload.input.financing?.interestRate));
   const score = riskScore(factors);
   const level = score == null ? null : riskLevel(score);
@@ -181,6 +166,13 @@ export function DealSnapshot({
           <Row label="Debt service" value={wholeDollars(m.annualDebtService)} />
           <Row label="Annual cash flow" value={wholeDollars(m.annualCashFlow)} total />
         </Popover>
+        {b && (
+          <DeltaNote
+            kind="money"
+            baseline={annual ? b.annualCashFlow : b.monthlyCashFlow}
+            simulated={lead}
+          />
+        )}
         <p className="summary-band-detail">
           {debt} · {wholeDollars(m.annualCashFlow)} for Year 1{outlook ? ` · ${outlook}` : ''}
         </p>
@@ -242,6 +234,7 @@ export function DealSnapshot({
                 {pct(m.cashOnCash)}
               </strong>
               <small>Projected cash flow ÷ cash invested</small>
+              {b && <DeltaNote kind="percent" baseline={b.cashOnCash} simulated={m.cashOnCash} />}
             </>
           }
         >
@@ -257,6 +250,7 @@ export function DealSnapshot({
               <span className="summary-stat-label">Cap rate · Year 1</span>
               <strong>{pct(m.capRate)}</strong>
               <small>Projected NOI {wholeDollars(m.noi)} ÷ purchase price</small>
+              {b && <DeltaNote kind="percent" baseline={b.capRate} simulated={m.capRate} />}
             </>
           }
         >
@@ -276,6 +270,9 @@ export function DealSnapshot({
                   ? 'Year 1 NOI ÷ debt service · lenders look for 1.20×+'
                   : 'No loan in these assumptions'}
               </small>
+              {b && m.loanAmount > 0 && b.loanAmount > 0 && (
+                <DeltaNote kind="ratio" baseline={b.dscr} simulated={m.dscr} />
+              )}
             </>
           }
         >
@@ -285,115 +282,5 @@ export function DealSnapshot({
         </Popover>
       </div>
     </section>
-  );
-}
-
-/** Temporary what-if calculations stay separate from saved property assumptions. */
-export function FixMyDeal({
-  result,
-  payload,
-}: {
-  result: ProjectionResult;
-  payload: AnalysisPayload;
-}) {
-  const deferred = useDeferredValue(payload);
-  const [selected, setSelected] = useState<LeverKey[]>([]);
-  const [active, setActive] = useState<LeverKey[]>([]);
-  const rows = useMemo(() => leverRows(deferred, result), [deferred, result]);
-  const targets = useMemo(() => targetFixes(deferred, result), [deferred, result]);
-  const [selectedTargets, setSelectedTargets] = useState<number[]>([]);
-  const [activeTargets, setActiveTargets] = useState<number[]>([]);
-  const whatIf = useMemo(() => {
-    if (!active.length && !activeTargets.length) return null;
-    let input = applyLevers(deferred.input, active);
-    for (const index of activeTargets) input = targets[index]?.apply(input) ?? input;
-    return runInput(deferred, input);
-  }, [deferred, active, activeTargets, targets]);
-  return (
-    <ChartCard
-      title="Suggested changes"
-      subtitle="Explore a temporary what-if. Saved property assumptions stay unchanged."
-    >
-      <p role="status" aria-live="polite" className={d.cashHeadline}>
-        Year 1 cash flow: {wholeDollars(result.summaryMetrics.annualCashFlow)}
-        {whatIf ? ` to ${wholeDollars(whatIf.summaryMetrics.annualCashFlow)}` : ''}
-      </p>
-      <div className={d.suggestions}>
-        {rows.map((row) => (
-          <label key={row.key} className={d.suggestion}>
-            <input
-              type="checkbox"
-              checked={selected.includes(row.key)}
-              disabled={row.value == null}
-              onChange={() =>
-                setSelected((list) =>
-                  list.includes(row.key)
-                    ? list.filter((key) => key !== row.key)
-                    : [...list, row.key],
-                )
-              }
-            />
-            <span>
-              {row.name} <small>{row.change}</small>
-            </span>
-            <span>
-              {row.value == null
-                ? 'Unavailable'
-                : `${row.value >= 0 ? '+' : ''}${wholeDollars(row.value)}/yr`}
-            </span>
-          </label>
-        ))}
-      </div>
-      {!!targets.length && (
-        <details className={d.riskDisclosure}>
-          <summary>Target thresholds</summary>
-          {targets.map((target, index) => (
-            <label className={d.suggestion} key={target.lever}>
-              <input
-                type="checkbox"
-                checked={selectedTargets.includes(index)}
-                onChange={() =>
-                  setSelectedTargets((list) =>
-                    list.includes(index)
-                      ? list.filter((value) => value !== index)
-                      : [...list, index],
-                  )
-                }
-              />
-              <span>
-                {target.lever}:{' '}
-                {target.lever === 'Rent'
-                  ? wholeDollars(target.target)
-                  : `${target.target.toFixed(2)}%`}
-                <small>{target.outcome}</small>
-              </span>
-            </label>
-          ))}
-        </details>
-      )}
-      <div className={d.suggestionActions}>
-        <button
-          type="button"
-          disabled={!selected.length && !selectedTargets.length}
-          onClick={() => {
-            setActive(selected);
-            setActiveTargets(selectedTargets);
-          }}
-        >
-          Apply selected
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setActive([]);
-            setSelected([]);
-            setActiveTargets([]);
-            setSelectedTargets([]);
-          }}
-        >
-          Reset
-        </button>
-      </div>
-    </ChartCard>
   );
 }

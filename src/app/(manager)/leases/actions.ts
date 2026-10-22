@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { requireManagerRole } from '@/lib/auth/access';
+import { requireManagerRole, requireManagerWriteRole } from '@/lib/auth/access';
+import { deleteLeaseDraft } from '@/lib/lease-create/delete-draft';
 import { parseTerms } from '@/lib/leases/core';
 import { recordNotice } from '@/lib/leases/events';
 import { parseIsoDate } from '@/lib/tenants/validation';
@@ -111,6 +112,32 @@ export async function recordNoticeAction(
   revalidatePath(`/leases/${leaseId}`);
   revalidatePath('/tenants');
   return { ok: true, message: 'Notice recorded.' };
+}
+
+export type DeleteDraftState = { message?: string };
+
+/**
+ * Deletes an unsent draft. Eligibility, organization scope and locking live in the service. A
+ * refusal stays in the dialog; success (or an already-deleted draft) leaves through the
+ * draft-deleted route, which rebuilds the destination from the authorized unit.
+ */
+export async function deleteDraftLeaseAction(
+  _prev: DeleteDraftState,
+  form: FormData,
+): Promise<DeleteDraftState> {
+  const session = await requireManagerWriteRole();
+  const leaseId = String(form.get('leaseId') ?? '');
+  const returnTo = String(form.get('returnTo') ?? '');
+  const result = await deleteLeaseDraft(session.organizationId, leaseId);
+  if (!result.ok && result.reason === 'ineligible') return { message: result.message };
+  const query = new URLSearchParams({ notice: result.ok ? 'draft-deleted' : 'draft-gone' });
+  if (result.ok && (returnTo === 'property' || returnTo === 'unit')) {
+    query.set('to', returnTo);
+    query.set('unit', result.unitId);
+  }
+  // No revalidatePath here: it would re-render the deleted lease's page as "not found" before
+  // navigating. The redirect target is a fresh document load.
+  redirect(`/leases/draft-deleted?${query}`);
 }
 
 export async function terminateLeaseAction(

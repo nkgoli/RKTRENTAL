@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Icon, type IconKey } from '../shell/Icons';
 import { cx } from './cx';
+import styles from './Action.module.css';
 
 /** Workspace action glyphs that the shell icon set does not carry. */
 const glyphs = {
@@ -15,7 +16,8 @@ const glyphs = {
 } as const;
 
 export type ActionIcon = IconKey | keyof typeof glyphs;
-export type ActionTone = 'quiet' | 'secondary' | 'primary';
+/** `danger` is a quiet action in the danger colour; it opens a confirmation, never acts directly. */
+export type ActionTone = 'quiet' | 'secondary' | 'primary' | 'danger';
 
 export function ActionGlyph({ name }: { name: ActionIcon }) {
   if (name in glyphs) {
@@ -63,7 +65,13 @@ type ButtonAction = Common & { href?: undefined } & Omit<
 export function Action(props: LinkAction | ButtonAction) {
   const { icon, label, text, tone = 'quiet', trailing, className } = props;
   const iconOnly = text == null;
-  const classes = cx('action', `action-${tone}`, iconOnly && 'action-icon', className);
+  const classes = cx(
+    'action',
+    `action-${tone}`,
+    tone === 'danger' && styles.danger,
+    iconOnly && 'action-icon',
+    className,
+  );
   const named = iconOnly || typeof text !== 'string' || text !== label;
   const a11y = {
     'aria-label': named ? label : undefined,

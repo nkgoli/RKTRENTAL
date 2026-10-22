@@ -2,6 +2,10 @@ import Link from 'next/link';
 import { Avatar, Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { RowMenu } from '@/components/ui/RowMenu';
+import { NoticeToast } from '@/components/ui/Toast';
+import { DeleteDraftButton } from '@/components/lease-create/DeleteDraftButton';
+import { draftNotice } from '@/components/lease-create/draft-notice';
+import { draftRenewalSources } from '@/lib/lease-create/delete-draft';
 import { Pagination, pageFrom, paginate } from '@/components/ui/Pagination';
 import { leaseName, signLabel, statusLabel, term } from '@/lib/leases/format';
 import { leasesDb, type LeaseListItem } from '@/lib/leases/queries';
@@ -22,10 +26,12 @@ function LeaseCard({
   lease,
   showUnit,
   scope,
+  renewal = false,
 }: {
   lease: LeaseListItem;
   showUnit: boolean;
   scope: ScopeFilter;
+  renewal?: boolean;
 }) {
   const name = leaseName(lease);
   const unit = lease.unit.isImplicit ? 'Whole property' : `Unit ${lease.unit.number}`;
@@ -74,6 +80,16 @@ function LeaseCard({
             Continue setup
           </Button>
         ) : null}
+        {lease.status === 'DRAFT' && lease.eSignStatus === 'NOT_SENT' && (
+          <DeleteDraftButton
+            leaseId={lease.id}
+            placeLabel={`${lease.unit.property.name}${lease.unit.isImplicit ? '' : ` · Unit ${lease.unit.number}`}`}
+            tenantName={lease.tenants.length ? name : undefined}
+            renewal={renewal}
+            returnTo={scope.unitId ? 'unit' : 'property'}
+            text="Delete"
+          />
+        )}
         {lease.status === 'ACTIVE' &&
           (lease.endDate >= new Date() && lease.endDate.getTime() - Date.now() <= 90 * 86400000 ? (
             <Button
@@ -100,12 +116,20 @@ export async function LeasesPanel({
   organizationId,
   scope,
   page,
+  notice,
 }: {
   organizationId: string;
   scope: ScopeFilter;
   page?: string;
+  /** `?notice=` from the URL; draft deletion leaves one here. */
+  notice?: string;
 }) {
   const { leases } = await leasesDb(organizationId).list(scope);
+  const renewals = await draftRenewalSources(
+    organizationId,
+    leases.filter((l) => l.status === 'DRAFT').map((l) => l.id),
+  );
+  const toast = draftNotice(notice);
   const setupContext = scopeQuery(scope);
   if (scope.propertyId) setupContext.set('property', scope.propertyId);
   if (scope.unitId) setupContext.set('unit', scope.unitId);
@@ -145,6 +169,7 @@ export async function LeasesPanel({
 
   return (
     <section className={`${styles.panel} ${ux.panel}`} aria-label="Leases">
+      {toast && <NoticeToast message={toast} tone="success" />}
       <div className={styles.pageHeader}>
         <div>
           <h2>Leases</h2>
@@ -189,7 +214,13 @@ export async function LeasesPanel({
                 <ul className={styles.leaseList}>
                   {(section.key === 'past' ? paginate(past, pastPage) : section.leases).map(
                     (lease) => (
-                      <LeaseCard key={lease.id} lease={lease} showUnit={showUnit} scope={scope} />
+                      <LeaseCard
+                        key={lease.id}
+                        lease={lease}
+                        showUnit={showUnit}
+                        scope={scope}
+                        renewal={renewals.has(lease.id)}
+                      />
                     ),
                   )}
                 </ul>

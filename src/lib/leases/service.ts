@@ -179,7 +179,11 @@ export async function updateLeaseTerms(
       await lockUnit(tx, organizationId, lease.unitId);
       if (lease.status === 'ACTIVE')
         await assertAvailable(tx, organizationId, lease.unitId, terms, lease.id);
-      await tx.lease.updateMany({ where: { id: leaseId, organizationId }, data: terms });
+      const { count } = await tx.lease.updateMany({
+        where: { id: leaseId, organizationId, status: { in: ['DRAFT', 'ACTIVE'] } },
+        data: terms,
+      });
+      if (!count) throw new LeaseServiceError('Lease not found.');
     })
     .catch(overlapError);
 }
@@ -200,10 +204,12 @@ export async function activateLease(
         throw new LeaseServiceError('Only a draft lease can be activated.');
       await lockUnit(tx, organizationId, lease.unitId);
       await assertAvailable(tx, organizationId, lease.unitId, lease);
-      await tx.lease.updateMany({
-        where: { id: leaseId, organizationId },
+      // A draft deleted while this waited for the unit lock is not resurrected.
+      const { count } = await tx.lease.updateMany({
+        where: { id: leaseId, organizationId, status: 'DRAFT' },
         data: { status: 'ACTIVE' },
       });
+      if (!count) throw new LeaseServiceError('Only a draft lease can be activated.');
       await tx.unit.updateMany({
         where: { id: lease.unitId, organizationId },
         data: { status: 'OCCUPIED' },

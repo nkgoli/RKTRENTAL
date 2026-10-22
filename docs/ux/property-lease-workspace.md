@@ -54,6 +54,18 @@ Preserved: every href, permission gate, server action, confirmation and form, as
 8. **Draft slice:** "Continue in lease wizard" and a "not sent" agreement are both attention
    states. Use the signing-bar pattern rather than a separate card.
 
+9. **Deleting a draft lease** uses `DeleteDraftButton` (`src/components/lease-create/`). It is an
+   `Action` with the `danger` tone (trash icon), which opens the shared `ConfirmDialog`. Cancel is
+   focused first; the title names the property and unit; the description says what is kept.
+   - **Where:** the Drafts rows in the portfolio list ("Delete"), the draft cards in the
+     property/unit Leases panel ("Delete") and the lease detail summary row ("Delete draft").
+     It is offered only for drafts that are `DRAFT` and `NOT_SENT`.
+   - **Server rule:** `deleteLeaseDraft` locks the unit and then the lease, and re-checks status,
+     signature, agreements, charges, payments, reminders, autopay and pinned files. A refusal
+     stays in the dialog as an error alert.
+   - **After deleting:** the browser loads the list it came from (`/leases/draft-deleted`), which
+     shows a "Draft lease deleted." toast once.
+
 ## Verification
 
 - The before and after screenshots were taken at 1440×900 and 390×844 against a local dev server.

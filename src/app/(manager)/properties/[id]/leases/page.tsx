@@ -7,5 +7,5 @@ export default async function PropertyLeasesPage({ params, searchParams }: {
   searchParams: Promise<WorkspaceSearch>;
 }) {
   const [session, { id }, query] = await Promise.all([requireManagerRole(), params, searchParams]);
-  return <LeasesPanel organizationId={session.organizationId} scope={tabScope(id, query)} page={first(query.page)} />;
+  return <LeasesPanel organizationId={session.organizationId} scope={tabScope(id, query)} page={first(query.page)} notice={first(query.notice)} />;
 }

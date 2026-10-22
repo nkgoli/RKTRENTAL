@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   findFirst: vi.fn(),
   connections: vi.fn(),
   integrations: vi.fn(),
+  invitations: vi.fn(),
 }));
 vi.mock('@/lib/db/client', () => ({
   db: {
@@ -22,6 +23,7 @@ vi.mock('@/lib/db/client', () => ({
       findFirst: mocks.findFirst,
     },
     providerConnection: { findMany: mocks.connections },
+    applicationInvitation: { findMany: mocks.invitations },
   },
 }));
 vi.mock('@/lib/auth/access', () => ({
@@ -86,6 +88,7 @@ beforeEach(() => {
   mocks.count.mockResolvedValue(1);
   mocks.groupBy.mockResolvedValue([]);
   mocks.connections.mockResolvedValue([]);
+  mocks.invitations.mockResolvedValue([]);
   mocks.findFirst.mockResolvedValue(null);
   mocks.integrations.mockResolvedValue({
     settings: {

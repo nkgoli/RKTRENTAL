@@ -3,6 +3,13 @@ import { canAccessRole, requiredRoleForRoute, roleHome } from '@/lib/auth/policy
 import { SESSION_COOKIE, verifySessionToken } from '@/lib/auth/session';
 
 export async function middleware(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith('/apply/')) {
+    const response = NextResponse.next();
+    response.headers.set('Cache-Control', 'private, no-store');
+    response.headers.set('Referrer-Policy', 'no-referrer');
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+    return response;
+  }
   const method = request.method.toUpperCase();
   const hasSessionCookie = request.cookies.has(SESSION_COOKIE);
   if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && hasSessionCookie) {
@@ -70,6 +77,7 @@ export function isAllowedRequestOrigin(
 
 export const config = {
   matcher: [
+    '/apply/:path*',
     '/dashboard/:path*',
     '/properties/:path*',
     '/tenants/:path*',

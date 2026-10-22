@@ -16,6 +16,7 @@ import { ReviewDecisionForm, ScreeningSubmit } from './ReviewForms';
 import { ApplicantList, BackToApplicants } from './ApplicantList';
 import { ApplicationArrow } from './ApplicationArrow';
 import styles from './applications.module.css';
+import { InvitationList } from '@/components/applications/InvitationList';
 
 type SearchParams = {
   applicant?: string;
@@ -186,13 +187,20 @@ export default async function ApplicationsPage({
       <PageHeader
         title="Applications"
         eyebrow={scope.propertyId ? 'Leasing / Property applications' : 'Leasing / All properties'}
-        actions={[{ label: 'Screening provider', href: '/integrations' }]}
+        actions={[
+          {
+            label: 'Send application',
+            href: `/applications/send${scopeParams.size ? `?${scopeParams}` : ''}`,
+          },
+          { label: 'Screening provider', href: '/integrations' },
+        ]}
       />
       {scopedReturn && (
         <Link className={styles.backLink} href={scopedReturn}>
           ← Back to property applications
         </Link>
       )}
+      {await InvitationList({ organizationId: session.organizationId, scope })}
       <div className={styles.intro}>
         <form
           className={styles.filters}

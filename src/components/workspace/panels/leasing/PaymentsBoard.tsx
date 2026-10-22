@@ -392,6 +392,17 @@ export function PaymentsBoard({
             }))}
             groupHeadings
             selection={{ selected, onChange: setSelected }}
+            // Late rows open that lease's reminder review; nothing is sent without a preview.
+            reminderHrefs={
+              remindersHref
+                ? Object.fromEntries(
+                    groups.map((g) => [
+                      g.leaseId,
+                      `${remindersHref}${remindersHref.includes('?') ? '&' : '?'}leaseId=${encodeURIComponent(g.leaseId)}`,
+                    ]),
+                  )
+                : undefined
+            }
           />
         )}
       </RentLedger>

@@ -33,7 +33,11 @@ describe('document destinations and filters', () => {
     expect(screen.queryByTestId('uploader')).toBeNull();
   });
   it('clears the previous unit and applies the URL when changing property', () => {
-    window.history.replaceState(null, '', '/documents?q=inspection&kind=INSPECTION&propertyId=p&unitId=u&filesPage=2');
+    window.history.replaceState(
+      null,
+      '',
+      '/documents?q=inspection&kind=INSPECTION&propertyId=p&unitId=u&filesPage=2',
+    );
     render(
       <DocumentFilters
         query="inspection"
@@ -55,7 +59,9 @@ describe('document destinations and filters', () => {
     expect((screen.getByLabelText('Unit') as HTMLSelectElement).value).toBe('');
     expect(screen.queryByRole('option', { name: 'Maple 4B' })).toBeNull();
     expect(screen.getByRole('option', { name: 'Elm Home' })).toBeTruthy();
-    expect(replace).toHaveBeenCalledWith('/documents?q=inspection&kind=INSPECTION&propertyId=q', { scroll: false });
+    expect(replace).toHaveBeenCalledWith('/documents?q=inspection&kind=INSPECTION&propertyId=q', {
+      scroll: false,
+    });
     expect(screen.queryByRole('button', { name: 'Apply' })).toBeNull();
   });
 });

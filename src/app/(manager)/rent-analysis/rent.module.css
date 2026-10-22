@@ -34,6 +34,12 @@
 .table table {
   white-space: nowrap;
 }
+/* On desktop the gap explanation wraps so the whole table stays in view. */
+@media (min-width: 1024px) {
+  .table td:last-child {
+    white-space: normal;
+  }
+}
 @media (max-width: 800px) {
   .selection {
     grid-template-columns: 1fr;
@@ -55,7 +61,102 @@
   }
 }
 
-.positiveGap { color: var(--design-accent); font-weight: 600; }
-.neutralGap { color: var(--design-muted); }
+.positiveGap {
+  color: var(--design-accent);
+  font-weight: 600;
+}
+.neutralGap {
+  color: var(--design-muted);
+}
 
-.negativeGap { color: var(--design-danger); font-weight: 600; }
+.negativeGap {
+  color: var(--design-danger);
+  font-weight: 600;
+}
+
+/* Rent analysis (Designs/redisgn): unit chooser row, sandbox notice, every-unit card. */
+.workspace {
+  gap: 24px;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.unitForm {
+  flex: 0 1 280px;
+  min-width: 0;
+}
+.unitForm :global(.field) {
+  margin: 0;
+}
+.prompt {
+  margin: 0;
+  padding: 16px 20px;
+  border: 1px dashed var(--rr-border-strong);
+  border-radius: var(--rr-card-radius);
+  color: var(--design-muted);
+}
+.result {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.notice > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.unitsHead {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.unitsHead h2 {
+  margin: 0;
+}
+.caption {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--design-muted);
+}
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.selectedRow {
+  background: var(--rr-primary-tint);
+}
+.selectedTag {
+  color: var(--design-primary);
+  font-weight: 600;
+}
+.textLink {
+  display: inline-block;
+  margin-top: 16px;
+  color: var(--design-primary);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (max-width: 640px) {
+  .toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .notice {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .workspace {
+    gap: 16px;
+  }
+}

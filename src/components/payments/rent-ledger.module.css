@@ -1,20 +1,19 @@
-/* Rent ledger: one look for the lease, unit and property Payments views (from the lease ledger). */
+/* Rent ledger (Designs/redisgn): one bordered white card for the lease, unit and property views. */
 .card {
   display: grid;
   gap: 0;
   min-width: 0;
-  padding: 18px 20px;
+  padding: var(--rr-card-pad, 24px);
   border: 1px solid var(--rr-border, #e5e7eb);
-  border-radius: var(--design-radius, 12px);
+  border-radius: var(--rr-card-radius, 16px);
   background: var(--design-surface, #fff);
-  box-shadow: 0 2px 3px #233c6208;
 }
 .header {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px 16px;
+  gap: 12px 16px;
 }
 .titleBlock {
   min-width: 0;
@@ -22,15 +21,15 @@
 .titleBlock h2,
 .titleBlock h3 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.3;
-  letter-spacing: -0.04em;
+  font-family: var(--design-heading-font, inherit);
+  font-size: var(--rr-h2, 22px);
+  font-weight: 500;
+  line-height: 1.25;
 }
 .scope {
-  margin: 2px 0 0;
+  margin: 4px 0 0;
   color: var(--design-muted, #64748b);
-  font-size: 13px;
+  font-size: 14px;
 }
 .actions {
   display: flex;
@@ -38,36 +37,37 @@
   align-items: center;
   gap: 8px;
 }
+/* Quiet inset: Balance due beside Last payment. */
 .facts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin: 16px 0;
-  padding: 20px;
-  border: 1px solid #d4dfef;
-  border-radius: 9px;
+  padding: 16px 20px;
+  border: 1px solid var(--rr-border, #e5e7eb);
+  border-radius: var(--rr-card-radius, 16px);
   background: var(--design-background);
 }
 .facts > div {
   min-width: 0;
 }
 .facts > div + div {
-  padding-left: 24px;
-  border-left: 1px solid #cfdbed;
+  padding-left: 20px;
+  border-left: 1px solid var(--rr-border, #e5e7eb);
 }
 .facts dt {
   color: var(--design-muted, #64748b);
-  font-size: 11px;
+  font-size: 13px;
 }
 .facts dd {
-  margin: 5px 0 0;
-  font: 600 28px/1.3 var(--design-heading-font, inherit);
+  margin: 6px 0 0;
+  font: 600 24px/1.15 var(--design-heading-font, inherit);
   font-variant-numeric: tabular-nums;
 }
 .facts dd small {
   display: block;
-  margin-top: 2px;
+  margin-top: 4px;
   color: var(--design-muted, #64748b);
-  font-family: var(--design-body-font, inherit);
+  font-family: var(--design-font, inherit);
   font-size: 13px;
   font-weight: 500;
   line-height: 1.4;
@@ -80,6 +80,51 @@
 .empty {
   margin: 12px 0 0;
   color: var(--design-muted, #64748b);
+}
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rr-border, #e5e7eb);
+  font-size: 14px;
+}
+/* Charges / Payments / All activity: a pill segmented switch. */
+.views {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-self: start;
+  margin-bottom: 8px;
+  padding: 4px;
+  border: 1px solid var(--rr-border, #e5e7eb);
+  border-radius: 999px;
+  background: var(--design-background);
+}
+.views button {
+  min-height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--design-text);
+  font: 500 14px/1 var(--design-font, inherit);
+  cursor: pointer;
+}
+.views button[aria-pressed='true'] {
+  background: var(--design-primary);
+  color: #fff;
+}
+.views button:focus-visible,
+.view:focus-visible,
+.review:focus-visible,
+.groupToggle:focus-visible,
+.settled summary:focus-visible,
+.history summary:focus-visible {
+  outline: 3px solid var(--design-primary, #1e3a8a);
+  outline-offset: 2px;
 }
 .selectAll {
   display: inline-flex;
@@ -102,13 +147,16 @@
   min-height: 44px;
   padding: 8px 12px;
   border: 0;
-  border-top: 1px solid #e7edf5;
-  background: var(--rr-hover, #f8fafc);
+  border-radius: 12px;
+  background: var(--design-background);
   color: inherit;
   font: inherit;
   font-size: 14px;
   text-align: left;
   cursor: pointer;
+}
+.groupToggle strong {
+  font-weight: 600;
 }
 .groupMeta {
   margin-left: auto;
@@ -131,8 +179,9 @@
   padding: 0;
   list-style: none;
 }
-/* Same pill size in every host page (the lease workspace shrinks badges elsewhere). */
-.card .rows :global(.badge) {
+/* Same pill size in every host page. */
+.card .rows :global(.badge),
+.rows :global(.badge) {
   font-size: 12px;
   white-space: nowrap;
 }
@@ -143,11 +192,38 @@
   align-items: center;
   gap: 4px 14px;
   padding: 14px 0;
-  border-top: 1px solid #e7edf5;
+  border-top: 1px solid var(--rr-border, #e5e7eb);
 }
 .row:not(:has(.check)) {
   grid-template-columns: auto minmax(0, 1fr) auto minmax(110px, auto) auto;
   grid-template-areas: 'type main status amount view';
+}
+.row:not(:has(.type)) {
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(110px, auto) auto;
+  grid-template-areas: 'check main status amount view';
+}
+.row:not(:has(.check)):not(:has(.type)) {
+  grid-template-columns: minmax(0, 1fr) auto minmax(110px, auto) auto;
+  grid-template-areas: 'main status amount view';
+}
+/* The late charge is the one to act on: a quiet inset row with its caption in danger. */
+.row[data-status='LATE'] {
+  margin-inline: -12px;
+  padding-inline: 12px;
+  border-radius: 12px;
+  border-top-color: transparent;
+  background: var(--design-background);
+}
+.row[data-status='LATE'] .main small {
+  color: var(--design-danger);
+  font-weight: 500;
+}
+.viewCount {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+.row[data-status='LATE'] + .row {
+  border-top-color: transparent;
 }
 .check {
   grid-area: check;
@@ -160,6 +236,7 @@
 .main {
   display: grid;
   grid-area: main;
+  gap: 2px;
   min-width: 0;
 }
 .main strong {
@@ -169,10 +246,21 @@
 .main small,
 .amount small {
   color: var(--design-muted, #64748b);
-  font-size: 12px;
+  font-size: 13px;
 }
 .status {
+  display: grid;
   grid-area: status;
+  justify-items: start;
+  gap: 4px;
+}
+.review {
+  color: var(--design-primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
 }
 .amount {
   display: grid;
@@ -187,13 +275,13 @@
 }
 .view {
   grid-area: view;
-  min-height: 36px;
-  padding: 6px 12px;
+  min-height: 32px;
+  padding: 0 12px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 999px;
   background: transparent;
   color: var(--design-primary, #1e3a8a);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -204,26 +292,48 @@
 .noCharges {
   margin: 0;
   padding: 14px 0;
-  border-top: 1px solid #e7edf5;
+  border-top: 1px solid var(--rr-border, #e5e7eb);
   color: var(--design-muted, #64748b);
   font-size: 13px;
 }
+/* Older fully paid months folded into one quiet summary row. */
+.settled {
+  border-top: 1px solid var(--rr-border, #e5e7eb);
+}
+.settled > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  min-height: 48px;
+  margin: 10px 0;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--design-background);
+  color: var(--design-text);
+  font-size: 14px;
+  cursor: pointer;
+}
+.settled > summary small {
+  color: var(--design-primary);
+  font-weight: 600;
+}
+.settled[open] > summary small {
+  visibility: hidden;
+}
 /* Payment history: every payment on the term, folded under the charges unless there are none. */
 .history {
-  border-top: 1px solid #e7edf5;
+  border-top: 1px solid var(--rr-border, #e5e7eb);
 }
 .history summary {
   display: flex;
   align-items: center;
-  min-height: 40px;
+  min-height: 44px;
   color: var(--design-primary, #1e3a8a);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-}
-.history summary:focus-visible {
-  outline: 2px solid var(--design-primary, #1e3a8a);
-  outline-offset: 2px;
 }
 .historyList {
   margin: 0 0 8px;
@@ -237,9 +347,9 @@
   align-items: center;
   gap: 4px 14px;
   padding: 10px 0;
-  border-top: 1px dashed #e7edf5;
+  border-top: 1px dashed var(--rr-border, #e5e7eb);
 }
-.card .historyList :global(.badge) {
+.historyList :global(.badge) {
   font-size: 12px;
   white-space: nowrap;
 }
@@ -254,7 +364,7 @@
 }
 .detailFacts dt {
   color: var(--design-muted, #64748b);
-  font-size: 0.75rem;
+  font-size: 13px;
 }
 .detailFacts dd {
   margin: 2px 0 0;
@@ -263,6 +373,7 @@
 .appliedTitle {
   margin: 0 0 8px;
   font-size: 15px;
+  font-weight: 600;
 }
 .applied {
   display: grid;
@@ -275,38 +386,49 @@
   display: grid;
   padding: 8px 12px;
   border: 1px solid var(--rr-border, #e5e7eb);
-  border-radius: 8px;
+  border-radius: 12px;
 }
 .applied small {
   color: var(--design-muted, #64748b);
 }
 @media (max-width: 640px) {
-  .card {
-    padding: 16px;
-  }
   .facts {
     gap: 8px;
-    padding: 16px;
+    padding: 14px 16px;
   }
   .facts dd {
-    font-size: 22px;
+    font-size: 20px;
   }
   .facts > div + div {
     padding-left: 14px;
   }
   .row,
-  .row:not(:has(.check)) {
+  .row:not(:has(.check)),
+  .row:not(:has(.type)),
+  .row:not(:has(.check)):not(:has(.type)) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'main amount'
+      'status view';
+    gap: 6px 12px;
+  }
+  .row:has(.type):not(:has(.check)) {
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas:
       'type main amount'
       '. status view';
-    gap: 6px 12px;
   }
   .row:has(.check) {
-    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas:
-      'check type main amount'
-      '. . status view';
+      'check main amount'
+      '. status view';
+  }
+  .status {
+    grid-auto-flow: column;
+    align-items: center;
+    justify-content: start;
+    gap: 8px;
   }
   .view {
     justify-self: end;
@@ -324,7 +446,8 @@
 }
 @media (pointer: coarse) {
   .view,
-  .selectAll {
+  .selectAll,
+  .views button {
     min-height: 44px;
   }
   .check {

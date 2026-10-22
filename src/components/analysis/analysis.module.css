@@ -26,10 +26,7 @@
   line-height: 1.6;
 }
 .eyebrow {
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  margin: 0 0 2px;
+  margin: 0 0 4px;
 }
 .heading {
   display: flex;
@@ -46,8 +43,9 @@
   padding: var(--rr-card-pad);
   min-width: 0;
 }
-/* Buttons default to the app's secondary button; .primary is the primary button. */
-.workspace button {
+/* Buttons default to the app's secondary pill; .primary is the primary pill. Shared
+   `.btn` buttons keep their own variant. */
+.workspace button:where(:not(:global(.btn))) {
   border: 1px solid var(--design-primary);
   background: var(--design-surface);
   border-radius: 999px;
@@ -58,10 +56,10 @@
   cursor: pointer;
   color: var(--design-primary);
 }
-.workspace button:hover:not(:disabled) {
+.workspace button:where(:not(:global(.btn))):hover:not(:disabled) {
   background: var(--rr-primary-tint);
 }
-.workspace button:disabled {
+.workspace button:where(:not(:global(.btn))):disabled {
   background: var(--design-background);
   border-color: var(--rr-border);
   color: var(--design-muted);
@@ -123,14 +121,26 @@
 }
 .menu > summary {
   list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
   border: 1px solid var(--design-primary);
   background: var(--design-surface);
   border-radius: 999px;
-  padding: 8px 16px;
+  padding: 0 20px;
   color: var(--design-primary);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 15px;
   white-space: nowrap;
+}
+/* Save analysis is the header's primary pill. */
+.saveMenu > summary {
+  background: var(--design-primary);
+  color: #fff;
+}
+.saveMenu > summary:hover {
+  background: var(--rr-primary-hover);
 }
 .menu > summary::-webkit-details-marker {
   display: none;
@@ -151,14 +161,14 @@
   min-width: 200px;
   padding: 6px;
   background: var(--design-surface);
-  border: var(--rr-card-border);
-  border-radius: 8px;
-  box-shadow: var(--rr-card-shadow);
+  border: 1px solid var(--rr-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgb(23 36 59 / 0.12);
 }
 .menu > div button {
   text-align: left;
   border-color: transparent;
-  border-radius: 8px;
+  border-radius: 999px;
   color: var(--design-text);
 }
 .properties {
@@ -426,10 +436,10 @@
 }
 .field input,
 .field select {
-  border: 1px solid var(--rr-border-strong);
-  border-radius: 7px;
-  min-height: 36px;
-  padding: 8px 12px;
+  border: 1px solid #c3c9d4;
+  border-radius: 12px;
+  min-height: 40px;
+  padding: 8px 14px;
   width: 100%;
   min-width: 0;
   font: inherit;
@@ -555,7 +565,7 @@
     align-items: flex-start;
     flex-direction: column;
   }
-  .workspace button {
+  .workspace button:where(:not(:global(.btn))) {
     min-height: 44px;
   }
   .fields {
@@ -615,71 +625,251 @@
   }
 }
 
-.assumptionsLink {
+/* ------------------------------------------------ Returns & ROI header (Designs/redisgn) */
+.workspace {
+  padding-top: 16px;
+}
+.crumbs ol {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 16px;
-  font-size: 12px;
+  gap: 4px 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+.crumbs li + li::before {
+  content: '/';
+  margin-right: 8px;
   color: var(--design-muted);
-  margin: 4px 0 12px;
 }
-.assumptionsLink p {
-  flex-basis: 100%;
-  margin: 4px 0;
+.crumbs a {
+  color: var(--design-muted);
 }
-.assumptionsLink a {
-  color: var(--design-primary);
+.crumbs li[aria-current] {
+  color: var(--design-text);
+  font-weight: 500;
+}
+.titleBlock {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.workspace .titleRow h1 {
+  margin: 0;
+  font-family: var(--design-heading-font);
+  font-size: 34px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+.assumptionsLink {
+  display: grid;
+  gap: 8px;
+  color: var(--design-muted);
+}
+.workspace .assumptionsLink p.context {
+  font-size: 15px;
+  line-height: 1.5;
+}
+.workspace p.missingNote {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--rr-warn);
+  border-radius: 12px;
+  background: var(--rr-warn-bg);
+  color: var(--rr-warn);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.missingNote a {
+  color: inherit;
+  font-weight: 600;
+}
+.headingCompact {
+  align-items: flex-end;
+  margin-bottom: 24px;
+}
+.headingCompact .actions {
+  justify-content: flex-end;
+}
+/* Tabs and the scope select share one row, as in the design. */
+.viewRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 24px;
+}
+.viewTabs {
+  flex: 1 1 520px;
+  min-width: 0;
+}
+.viewTabs > div {
+  margin-bottom: 0;
+}
+.viewSelects {
+  display: flex;
+  gap: 12px;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.viewSelect {
+  min-width: 220px;
+}
+.phoneOnly {
+  display: none;
+}
+.twoOne {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--rr-gap);
+  align-items: start;
+}
+.twoOne > :only-child {
+  grid-column: 1 / -1;
+}
+.pairGrid {
+  display: grid;
+  /* Side by side only when each card fits its Year 1/5/10 table without scrolling. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 560px), 1fr));
+  gap: var(--rr-gap);
+  align-items: start;
+}
+.pairGrid > :only-child {
+  grid-column: 1 / -1;
+}
+.workspace a.vacantLink {
+  width: fit-content;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .deeper {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
+/* Eyebrows keep the shared primary colour inside the workspace's muted paragraphs. */
+.workspace p:global(.eyebrow) {
+  color: var(--design-primary);
+}
+/* Every control in the workspace uses the shared field and pill look. */
+.workspace
+  :where(
+    select,
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color'])
+  ) {
+  border-color: #c3c9d4;
+  border-radius: 12px;
+}
+.workspace :where(select, input, button, summary, a):focus-visible {
+  outline: 3px solid var(--design-primary);
+  outline-offset: 2px;
+}
+@media (max-width: 1023px) {
+  .twoOne,
+  .pairGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .workspace .titleRow h1 {
+    font-size: 28px;
+  }
+}
+/* Phone: back link, stacked selects, Save pinned above the tab bar. */
 @media (max-width: 640px) {
-  .headingCompact {
-    position: sticky;
-    top: 48px;
-    z-index: 12;
-    background: var(--design-background);
-    padding: 8px 0;
-    gap: 8px;
+  .workspace {
+    padding-bottom: 72px;
   }
-  .headingCompact h1 {
-    font-size: 19px;
-  }
-  .headingCompact .eyebrow {
+  .crumbs li:first-child,
+  .crumbs li[aria-current] {
     display: none;
   }
+  .crumbs li + li::before {
+    content: none;
+  }
+  .crumbs li:nth-child(2) a::before {
+    content: '← ';
+  }
+  .crumbs a {
+    color: var(--design-primary);
+    font-weight: 500;
+  }
+  .headingCompact {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .workspace .titleRow h1 {
+    font-size: 24px;
+  }
+  .workspace .assumptionsLink p.context {
+    font-size: 13px;
+  }
   .headingCompact .actions {
-    flex-wrap: nowrap;
+    justify-content: stretch;
   }
-  .headingCompact .actions summary {
-    padding: 7px 10px;
+  .headingCompact .actions > :global(.btn) {
+    flex: 1 1 auto;
   }
-  .headingCompact .context {
-    font-size: 11px;
+  .saveMenu {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(66px + env(safe-area-inset-bottom));
+    z-index: 25;
+    padding: 8px 16px;
+    background: var(--design-surface);
+    border-top: 1px solid var(--rr-border);
+  }
+  .saveMenu > summary {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+  }
+  .workspace .saveMenu > div {
+    top: auto;
+    bottom: calc(100% + 4px);
+    left: 16px;
+    right: 16px;
+  }
+  /* More sits at the end of the header row; open its menu leftward so it stays on screen. */
+  .menu:not(.saveMenu) > div {
+    right: 0;
+    left: auto;
+    max-width: calc(100vw - 32px);
+  }
+  .viewTabs {
+    display: none;
+  }
+  .phoneOnly {
+    display: flex;
+  }
+  .viewRow {
+    margin-bottom: 16px;
+  }
+  .viewSelects {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .viewSelect {
+    min-width: 0;
   }
   .deeper {
     flex-direction: column;
   }
 }
-
-.workspace {
-  padding-top: 16px;
-}
-
-@media (max-width: 640px) {
-  .headingCompact {
-    flex-direction: row;
-    align-items: center;
-    top: 60px;
-  }
-  .headingCompact > div:first-child {
-    min-width: 0;
-  }
-  .headingCompact .actions {
-    width: auto;
-    flex: 0 0 auto;
+@media (min-width: 1024px) {
+  .saveMenu > div {
+    right: 0;
   }
 }

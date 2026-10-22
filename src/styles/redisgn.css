@@ -222,6 +222,10 @@ body {
   background: var(--design-surface);
   border-top: 1px solid var(--rr-border);
 }
+/* globals.css fixes four tenant columns; the manager bar's five tabs share the width equally. */
+.tabbar.manager-tabbar {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
 .tabbar a {
   display: flex;
   flex-direction: column;
@@ -665,7 +669,7 @@ a.summary-stat:hover {
 .search {
   min-height: 40px;
   border-radius: 999px;
-  border-color: #c3c9d4;
+  border-color: var(--rr-border-strong);
   padding: 0 16px;
 }
 .field {
@@ -678,13 +682,17 @@ a.summary-stat:hover {
   min-height: var(--rr-control);
   padding: 9px 14px;
   border-radius: 12px;
-  border-color: #c3c9d4;
+  border-color: var(--rr-border-strong);
   font-size: 15px;
 }
 .field textarea {
   min-height: 112px;
 }
 
+/* Four or five steps wrap onto further rows on phones instead of overflowing. */
+.steps {
+  flex-wrap: wrap;
+}
 .steps li {
   border-radius: 999px;
 }

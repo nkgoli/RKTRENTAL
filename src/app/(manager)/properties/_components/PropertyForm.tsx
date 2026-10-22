@@ -312,7 +312,7 @@ export function AddPropertyForm({
   return <PropertyForm owners={owners} cancelHref="/properties" onCancel={onCancel} />;
 }
 
-export function ArchiveButton({ propertyId, archived, propertyName = 'property' }: { propertyId: string; archived: boolean; propertyName?: string }) {
+export function ArchiveButton({ propertyId, archived, propertyName = 'property', compact }: { propertyId: string; archived: boolean; propertyName?: string; /** Small button with no top margin, for the overview's archive row. */ compact?: boolean }) {
   const [state, action, pending] = useActionState(setPropertyArchivedAction, empty);
   const [open, setOpen] = useState(false);
   const toast = useToast();
@@ -323,8 +323,8 @@ export function ArchiveButton({ propertyId, archived, propertyName = 'property' 
     }
   }, [state, toast]);
   return (
-    <div className="row" style={{ marginTop: 12 }}>
-      <Button type="button" onClick={() => setOpen(true)} variant={archived ? 'secondary' : 'danger'} disabled={pending}>
+    <div className="row" style={compact ? undefined : { marginTop: 12 }}>
+      <Button type="button" onClick={() => setOpen(true)} variant={archived ? 'secondary' : 'danger'} size={compact ? 'sm' : 'md'} disabled={pending}>
         {archived ? 'Restore property' : 'Archive property'}
       </Button>
       <ConfirmDialog open={open} onClose={() => setOpen(false)} title={`${archived ? 'Restore' : 'Archive'} ${propertyName}?`} description={archived ? 'Return this property to your active portfolio.' : 'This property will leave your active portfolio. Its records stay saved and you can restore it later.'} confirmLabel={pending ? 'Saving…' : archived ? 'Restore property' : 'Archive property'} tone={archived ? 'primary' : 'danger'} pending={pending} action={action} fields={{ propertyId, archived: String(!archived) }}>

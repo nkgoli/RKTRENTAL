@@ -273,3 +273,56 @@ describe('rent comparison decisions', () => {
     expect(screen.getByText('No comparable rentals match')).toBeTruthy();
   });
 });
+
+describe('rent analysis layout', () => {
+  const analysis = {
+    ...props,
+    variant: 'analysis' as const,
+    unitLabel: 'Unit 3A',
+    scopeLabel: 'Maple Court · Unit 3A',
+    subjectFacts: '2 bd · vacant',
+    filterSummary: '2 bd · listed + leased · last 90 days',
+    filters: <form aria-label="Comp filters" />,
+    marketRent: 1675,
+    currentLeaseRent: null,
+    propertyId: 'maple',
+    listingHref: '/properties/maple/listing?unit=fixture-unit',
+    applicantsHref: '/properties/maple/applications?unit=fixture-unit',
+    returnsHref: '/roi-analysis?property=maple',
+  };
+  it('leads with the suggested rent against the listed rent and keeps the apply flow', async () => {
+    vi.mocked(applyRentAction).mockResolvedValueOnce({
+      ok: true,
+      rent: 1800,
+      message: 'Market rent updated.',
+    });
+    render(
+      <ToastProvider>
+        <CompsWorkbench {...analysis} />
+      </ToastProvider>,
+    );
+    const band = within(screen.getByRole('region', { name: 'Suggested rent' }));
+    expect(band.getByText('Suggested rent · estimate · Unit 3A · 2 bd · vacant')).toBeTruthy();
+    expect(band.getByTestId('suggested-rent').textContent).toBe('$1,800');
+    expect(band.getByText(/Matches the \$1,800 listed rent/)).toBeTruthy();
+    expect(band.getByRole('meter').getAttribute('aria-valuetext')).toBe('Confidence low');
+    expect(band.getByTestId('current-market-rent').textContent).toBe('$1,675');
+    expect(band.getByText('−$125 vs listed rent · last applied value')).toBeTruthy();
+    const compare = within(screen.getByRole('region', { name: 'Unit 3A against nearby comps' }));
+    const rows = compare.getAllByRole('row').map((row) => row.textContent);
+    expect(rows[1]).toContain('Unit 3A · listed');
+    expect(rows.at(-1)).toContain('Suggested rent');
+    expect(screen.getByRole('form', { name: 'Comp filters' })).toBeTruthy();
+    expect(screen.getByText('Applies to Maple Court · Unit 3A only')).toBeTruthy();
+    expect(
+      screen.getByRole('link', { name: 'Create lease for Unit 3A →' }).getAttribute('href'),
+    ).toBe('/leases/new?unit=fixture-unit&property=maple');
+    expect(screen.getByRole('link', { name: 'Open in listing →' })).toBeTruthy();
+    expect(screen.getByRole('table', { name: 'Comparable rentals' })).toBeTruthy();
+    fireEvent.submit(screen.getByRole('form', { name: 'Apply market rent' }));
+    await screen.findByText(/Market rent updated. Now \$1,800/);
+    const submitted = vi.mocked(applyRentAction).mock.calls.at(-1)![1];
+    expect(submitted.get('unitId')).toBe('fixture-unit');
+    expect(submitted.get('rent')).toBe('1800');
+  });
+});

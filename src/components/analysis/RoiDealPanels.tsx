@@ -6,11 +6,12 @@ import {
   useMemo,
   useRef,
   useState,
+  type MouseEvent,
   type ReactNode,
 } from 'react';
 import type { AnalysisPayload } from '@/lib/analysis/contract';
-import type { ProjectionResult } from '@/lib/analysis/projections';
-import { wholeDollars } from '@/lib/analysis/chart-data';
+import { projectionRows, type ProjectionResult } from '@/lib/analysis/projections';
+import { firstPositiveAfterNegative, wholeDollars } from '@/lib/analysis/chart-data';
 import {
   applyLevers,
   levers as leverRows,
@@ -27,16 +28,19 @@ import d from './deal-panels.module.css';
 const pct = (v: number | null | undefined) =>
   v == null || !Number.isFinite(v) ? 'Unavailable' : `${(v * 100).toFixed(2)}%`;
 const ratio = (v: number | null | undefined) =>
-  v == null || !Number.isFinite(v) ? 'Unavailable' : `${v.toFixed(2)}x`;
+  v == null || !Number.isFinite(v) ? 'Unavailable' : `${v.toFixed(2)}×`;
 /** KPI tile that opens its breakdown on click, tap or Enter; Escape or outside click closes. */
 function Popover({
   trigger,
   title,
   children,
+  variant,
 }: {
   trigger: ReactNode;
   title: string;
   children: ReactNode;
+  /** `lead`: the band's headline figure; `stat`: a quiet inset stat card. */
+  variant: 'lead' | 'stat';
 }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -51,7 +55,7 @@ function Popover({
   }, [open]);
   return (
     <div
-      className={d.pop}
+      className={`${d.pop} ${variant === 'lead' ? d.leadPop : d.statPop}`}
       ref={box}
       onKeyDown={(e) => {
         if (e.key === 'Escape' && open) {
@@ -62,7 +66,7 @@ function Popover({
     >
       <button
         type="button"
-        className={d.tile}
+        className={variant === 'lead' ? d.lead : `summary-stat ${d.stat}`}
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen((v) => !v)}
@@ -101,49 +105,74 @@ function Row({
   );
 }
 
-/** The four decision metrics lead; exact breakdowns and risk factors open on demand. */
+/**
+ * Year-1 summary band (Designs/redisgn): the projected monthly or annual cash flow leads, with
+ * cash-on-cash, cap rate and debt coverage as quiet insets. Every figure opens its exact
+ * breakdown; the risk meter appears only when a score exists and its factors open on demand.
+ */
 export function DealSnapshot({
   result,
   payload,
+  onCompare,
+  howHref,
+  onHow,
 }: {
   result: ProjectionResult;
   payload: AnalysisPayload;
+  /** Opens the actual-versus-projected comparison. */
+  onCompare?: () => void;
+  /** Where "How returns are calculated" points (an in-page method note). */
+  howHref?: string;
+  onHow?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const [annual, setAnnual] = useState(false);
   const m = result.summaryMetrics;
   const factors = sortFactors(riskFactors(result, payload.input.financing?.interestRate));
   const score = riskScore(factors);
   const level = score == null ? null : riskLevel(score);
+  const rows = projectionRows(result);
+  const lead = annual ? m.annualCashFlow : m.monthlyCashFlow;
+  const turn = firstPositiveAfterNegative(rows.map((row) => row.cashFlow));
+  const outlook =
+    rows.length === 0
+      ? null
+      : rows[0].cashFlow >= 0
+        ? 'positive from Year 1'
+        : turn != null
+          ? `turns positive in Year ${rows[turn].year}`
+          : `stays below $0 through Year ${rows.length}`;
+  const debt =
+    m.loanAmount > 0
+      ? `Projected cash flow after ${wholeDollars(m.annualDebtService)} debt service`
+      : 'Projected cash flow with no debt service';
   return (
-    <section className={d.snapshot} aria-label="Deal Snapshot">
-      <div className={d.snapHead}>
-        <div className={d.snapTitle}>
-          <h2>Year 1 at a glance</h2>
-          <span className={d.muted}>Projected, before tax</span>
+    <section className={`summary-band ${d.band}`} aria-label="Deal Snapshot">
+      <div className="summary-band-main">
+        <div className={d.bandHead}>
+          <p className="eyebrow">Year 1 · Projected estimate · before tax · USD</p>
+          <div className={d.darkToggle} role="group" aria-label="Snapshot timeframe">
+            {['Monthly', 'Annual'].map((t) => (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={(t === 'Annual') === annual}
+                onClick={() => setAnnual(t === 'Annual')}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className={d.darkToggle} role="group" aria-label="Snapshot timeframe">
-          {['Monthly', 'Annual'].map((t) => (
-            <button
-              key={t}
-              type="button"
-              aria-pressed={(t === 'Annual') === annual}
-              onClick={() => setAnnual(t === 'Annual')}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className={d.kpis}>
         <Popover
+          variant="lead"
           title="Cash flow breakdown"
           trigger={
             <>
-              <small>Cash flow</small>
-              <strong data-tone={m.annualCashFlow < 0 ? 'red' : undefined}>
-                {wholeDollars(annual ? m.annualCashFlow : m.monthlyCashFlow)}
-              </strong>
-              <span>Year 1, {annual ? 'annual' : 'monthly'}</span>
+              <span className={d.srOnly}>Cash flow </span>
+              <span className={`summary-band-value${lead < 0 ? ' danger' : ''}`}>
+                <strong>{wholeDollars(lead)}</strong>
+                <span className={d.per}> / {annual ? 'year' : 'month'}</span>
+              </span>
             </>
           }
         >
@@ -152,13 +181,67 @@ export function DealSnapshot({
           <Row label="Debt service" value={wholeDollars(m.annualDebtService)} />
           <Row label="Annual cash flow" value={wholeDollars(m.annualCashFlow)} total />
         </Popover>
+        <p className="summary-band-detail">
+          {debt} · {wholeDollars(m.annualCashFlow)} for Year 1{outlook ? ` · ${outlook}` : ''}
+        </p>
+        {score != null && level && (
+          <div className={d.meter}>
+            <span>
+              Risk score {Math.round(score)} of 100 · {level.level}
+            </span>
+            <span
+              className={d.meterBar}
+              role="meter"
+              aria-label="Risk score"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(score)}
+              aria-valuetext={`${Math.round(score)} of 100, ${level.level}`}
+            >
+              <span style={{ width: `${Math.round(score)}%`, background: level.color }} />
+            </span>
+          </div>
+        )}
+        <div className="summary-band-foot">
+          {onCompare && (
+            <button type="button" className="btn btn-secondary btn-sm" onClick={onCompare}>
+              Compare with actuals →
+            </button>
+          )}
+          {howHref && (
+            <a className={d.how} href={howHref} onClick={onHow}>
+              How returns are calculated →
+            </a>
+          )}
+        </div>
+        <details className={d.riskDisclosure}>
+          <summary>
+            What drives the risk score
+            {score == null ? ' · unavailable' : ''}
+          </summary>
+          <p className={d.muted}>
+            Weighted heuristic, not advice. Higher means riskier; missing inputs are excluded.
+          </p>
+          {factors.map((f) => (
+            <div key={f.name} className={d.factor}>
+              <span>{f.name}</span>
+              <progress max={100} value={f.score ?? 0} aria-label={`${f.name} risk`} />
+              <b>{f.description}</b>
+            </div>
+          ))}
+        </details>
+      </div>
+      <div className="summary-band-stats">
         <Popover
+          variant="stat"
           title="Cash-on-cash return"
           trigger={
             <>
-              <small>Cash-on-cash</small>
-              <strong>{pct(m.cashOnCash)}</strong>
-              <span>Year 1, cash / invested</span>
+              <span className="summary-stat-label">Cash-on-cash · Year 1</span>
+              <strong data-tone={(m.cashOnCash ?? 0) < 0 ? 'red' : undefined}>
+                {pct(m.cashOnCash)}
+              </strong>
+              <small>Projected cash flow ÷ cash invested</small>
             </>
           }
         >
@@ -167,12 +250,13 @@ export function DealSnapshot({
           <Row label="Cash-on-cash return" value={pct(m.cashOnCash)} total />
         </Popover>
         <Popover
+          variant="stat"
           title="Capitalization rate"
           trigger={
             <>
-              <small>Cap rate</small>
+              <span className="summary-stat-label">Cap rate · Year 1</span>
               <strong>{pct(m.capRate)}</strong>
-              <span>NOI / purchase price</span>
+              <small>Projected NOI {wholeDollars(m.noi)} ÷ purchase price</small>
             </>
           }
         >
@@ -181,12 +265,17 @@ export function DealSnapshot({
           <Row label="Cap rate" value={pct(m.capRate)} total />
         </Popover>
         <Popover
+          variant="stat"
           title="Debt service coverage"
           trigger={
             <>
-              <small>DSCR</small>
+              <span className="summary-stat-label">Debt service coverage</span>
               <strong>{m.loanAmount > 0 ? ratio(m.dscr) : 'No debt'}</strong>
-              <span>Year 1, NOI / debt service</span>
+              <small>
+                {m.loanAmount > 0
+                  ? 'Year 1 NOI ÷ debt service · lenders look for 1.20×+'
+                  : 'No loan in these assumptions'}
+              </small>
             </>
           }
         >
@@ -195,22 +284,6 @@ export function DealSnapshot({
           <Row label="DSCR" value={m.loanAmount > 0 ? ratio(m.dscr) : 'No debt'} total />
         </Popover>
       </div>
-      <details className={d.riskDisclosure}>
-        <summary>
-          Risk {score == null ? 'unavailable' : Math.round(score)}
-          {level ? ` - ${level.level}` : ''}
-        </summary>
-        <p className={d.muted}>
-          Weighted heuristic, not advice. Higher means riskier; missing inputs are excluded.
-        </p>
-        {factors.map((f) => (
-          <div key={f.name} className={d.factor}>
-            <span>{f.name}</span>
-            <progress max={100} value={f.score ?? 0} aria-label={`${f.name} risk`} />
-            <b>{f.description}</b>
-          </div>
-        ))}
-      </details>
     </section>
   );
 }

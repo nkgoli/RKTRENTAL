@@ -8,6 +8,7 @@ import {
   reconcileReminder,
   reminderHistory,
 } from '@/app/(manager)/notifications/actions';
+import { Steps } from '@/components/ui/Feedback';
 import {
   errorMessage,
   money,
@@ -48,6 +49,8 @@ function initialEditor(snapshot: ReminderSnapshot, tenantId?: string): Editor {
   };
 }
 
+const STEPS = ['Balance', 'Message', 'Recipients', 'Confirm'];
+
 function ChargeSummary({ snapshot }: { snapshot: ReminderSnapshot }) {
   const fees = snapshot.charges
     .filter((c) => c.kind === 'LATE_FEE')
@@ -56,7 +59,7 @@ function ChargeSummary({ snapshot }: { snapshot: ReminderSnapshot }) {
     <section className={styles.balance} aria-label="Overdue charges">
       <div className={styles.balanceHead}>
         <div>
-          <p className="eyebrow">Overdue · all dates</p>
+          <p className={styles.balanceLabel}>Overdue · all dates</p>
           <strong>{money(snapshot.amountCents)}</strong>
         </div>
         <span className={styles.muted}>As of {snapshot.asOf} UTC</span>
@@ -100,9 +103,15 @@ export function ReminderWorkspace({
   fromRentRoll = false,
   historyFirst = false,
   storageKey,
+  lockedLeaseId,
 }: {
   choices: LeaseChoice[];
   channels: Channels;
+  /**
+   * Review one lease only (the lease Rent ledger): the lease picker is hidden and the URL is left
+   * alone. The lease must be in `choices`.
+   */
+  lockedLeaseId?: string;
   initialLeaseId?: string;
   /** The rent-roll row's tenant, preselected only when eligible for the chosen channel. */
   initialTenantId?: string;
@@ -113,13 +122,17 @@ export function ReminderWorkspace({
 }) {
   const overdue = choices.filter((c) => c.EMAIL.amountCents > 0);
   const [leaseId, setLeaseId] = useState(() =>
-    choices.some((c) => c.id === initialLeaseId)
-      ? initialLeaseId!
-      : overdue.length === 1
-        ? overdue[0].id
-        : choices.length === 1
-          ? choices[0].id
-          : '',
+    lockedLeaseId
+      ? choices.some((c) => c.id === lockedLeaseId)
+        ? lockedLeaseId
+        : ''
+      : choices.some((c) => c.id === initialLeaseId)
+        ? initialLeaseId!
+        : overdue.length === 1
+          ? overdue[0].id
+          : choices.length === 1
+            ? choices[0].id
+            : '',
   );
   const [channel, setChannel] = useState<Channel>('EMAIL');
   const [editors, setEditors] = useState<Record<string, Editor>>({});
@@ -212,6 +225,18 @@ export function ReminderWorkspace({
     setEditors((all) => ({ ...all, [editorKey]: next }));
     setPreview(null);
     setSent(false);
+    setError('');
+    setNotice('');
+  }
+
+  /** Discards this lease and channel's edits and any unsent preview; nothing is sent. */
+  function cancelDraft() {
+    setEditors((all) => {
+      const next = { ...all };
+      delete next[editorKey];
+      return next;
+    });
+    setPreview(null);
     setError('');
     setNotice('');
   }
@@ -328,74 +353,82 @@ export function ReminderWorkspace({
     }
   }
 
+  const step = preview ? 3 : editor.selected.length ? 2 : 1;
+  const hasBalance = Boolean(snapshot && snapshot.amountCents > 0);
+
   return (
     <div className={styles.workspace}>
-      <section className={`card ${styles.selection}`}>
-        <div>
-          <p className="eyebrow">Payment reminders</p>
-          <h2>Choose a lease</h2>
-          <p className={styles.muted}>
-            Review the balance and choose who receives a reminder. Each message uses the shared
-            lease balance.
-          </p>
-        </div>
-        <label className={styles.field}>
-          Lease
-          <select
-            value={leaseId}
-            disabled={blocked}
-            onChange={(e) => {
-              setLeaseId(e.target.value);
-              const url = new URL(window.location.href);
-              if (e.target.value) url.searchParams.set('leaseId', e.target.value);
-              else url.searchParams.delete('leaseId');
-              window.history.replaceState(null, '', url);
-              setPreview(null);
-              setError('');
-              setNotice('');
-              setSent(false);
-            }}
-          >
-            <option value="">
-              Choose a lease{overdue.length > 1 ? ` · ${overdue.length} overdue` : ''}
-            </option>
-            {choices.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label} ·{' '}
-                {c.EMAIL.amountCents > 0
-                  ? `${money(c.EMAIL.amountCents)} overdue`
-                  : 'No overdue balance'}
+      {lockedLeaseId && !lease && (
+        <p className={styles.muted}>This lease is not available for payment reminders.</p>
+      )}
+      {!lockedLeaseId && (
+        <section className={`card ${styles.selection}`}>
+          <div>
+            <p className="eyebrow">Payment reminders</p>
+            <h2>Choose a lease</h2>
+            <p className={styles.muted}>
+              Review the balance and choose who receives a reminder. Each message uses the shared
+              lease balance.
+            </p>
+          </div>
+          <label className={styles.field}>
+            Lease
+            <select
+              value={leaseId}
+              disabled={blocked}
+              onChange={(e) => {
+                setLeaseId(e.target.value);
+                const url = new URL(window.location.href);
+                if (e.target.value) url.searchParams.set('leaseId', e.target.value);
+                else url.searchParams.delete('leaseId');
+                window.history.replaceState(null, '', url);
+                setPreview(null);
+                setError('');
+                setNotice('');
+                setSent(false);
+              }}
+            >
+              <option value="">
+                Choose a lease{overdue.length > 1 ? ` · ${overdue.length} overdue` : ''}
               </option>
-            ))}
-          </select>
-        </label>
-        {initialMissing && (
-          <p className={styles.warning} role="alert">
-            The lease you opened is no longer available for reminders in this scope. Nothing was
-            selected or sent; choose a lease to continue.
-          </p>
-        )}
-        {fromRentRoll && lease && leaseId === initialLeaseId && (
-          <p className={styles.muted}>
-            Opened from the rent roll
-            {initialTenantId && lease.tenants.some((t) => t.id === initialTenantId)
-              ? ` for ${lease.tenants.find((t) => t.id === initialTenantId)!.name}`
-              : ''}
-            . Balance and contacts below are current; nothing is sent until you confirm.
-          </p>
-        )}
-        {!leaseId && (
-          <p className={styles.muted}>
-            Select one lease to compose a reminder or inspect its history. No recipient is selected
-            across leases.
-          </p>
-        )}
-        {!overdue.length && (
-          <p className={styles.good}>
-            No overdue balances in this scope. You can still inspect previous reminders.
-          </p>
-        )}
-      </section>
+              {choices.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label} ·{' '}
+                  {c.EMAIL.amountCents > 0
+                    ? `${money(c.EMAIL.amountCents)} overdue`
+                    : 'No overdue balance'}
+                </option>
+              ))}
+            </select>
+          </label>
+          {initialMissing && (
+            <p className={styles.warning} role="alert">
+              The lease you opened is no longer available for reminders in this scope. Nothing was
+              selected or sent; choose a lease to continue.
+            </p>
+          )}
+          {fromRentRoll && lease && leaseId === initialLeaseId && (
+            <p className={styles.muted}>
+              Opened from the rent roll
+              {initialTenantId && lease.tenants.some((t) => t.id === initialTenantId)
+                ? ` for ${lease.tenants.find((t) => t.id === initialTenantId)!.name}`
+                : ''}
+              . Balance and contacts below are current; nothing is sent until you confirm.
+            </p>
+          )}
+          {!leaseId && (
+            <p className={styles.muted}>
+              Select one lease to compose a reminder or inspect its history. No recipient is
+              selected across leases.
+            </p>
+          )}
+          {!overdue.length && (
+            <p className={styles.good}>
+              No overdue balances in this scope. You can still inspect previous reminders.
+            </p>
+          )}
+        </section>
+      )}
 
       {error && (
         <div className={styles.alert} role="alert">
@@ -434,13 +467,44 @@ export function ReminderWorkspace({
       )}
 
       {lease && snapshot && (
-        <div className={styles.columns}>
-          <div className={styles.compose}>
-            {snapshot.amountCents > 0 ? (
-              <>
+        <div className={styles.columns} data-compose={hasBalance}>
+          <div className={styles.summaryArea}>
+            {hasBalance ? (
+              <section className="card" aria-labelledby="reminder-balance-heading">
+                <p className={`eyebrow ${styles.dangerEyebrow}`}>
+                  Late-rent reminder · step {step + 1} of 4
+                </p>
+                <h2 id="reminder-balance-heading">
+                  Remind {lease.tenants.map((t) => t.name).join(' & ') || 'tenants'} about{' '}
+                  {money(snapshot.amountCents)}
+                </h2>
+                <p className={styles.muted}>
+                  {lease.label}. Review the balance first; nothing is sent until you confirm.
+                </p>
                 <ChargeSummary snapshot={snapshot} />
+              </section>
+            ) : (
+              <section className="card">
+                <h2>All caught up</h2>
+                <p>No overdue balance for this lease. A reminder cannot be sent.</p>
+                {fromRentRoll && leaseId === initialLeaseId && (
+                  <p>
+                    The rent roll showed this lease as late, but the current ledger has no overdue
+                    balance — it may have been paid since the rent roll loaded.
+                  </p>
+                )}
+                <p className={styles.muted}>
+                  History remains available, including sandbox tests and previous send outcomes.
+                </p>
+              </section>
+            )}
+          </div>
+          {hasBalance && (
+            <div className={styles.compose}>
+              <>
                 <section className="card" aria-labelledby="compose-heading">
                   <h2 id="compose-heading">Compose reminder</h2>
+                  <Steps steps={STEPS} current={step} />
                   <fieldset className={styles.channel} disabled={blocked}>
                     <legend>Delivery channel</legend>
                     {(['EMAIL', 'SMS'] as const).map((c) => (
@@ -462,7 +526,9 @@ export function ReminderWorkspace({
                       </label>
                     ))}
                   </fieldset>
-                  <div className={channelState.mode === 'unavailable' ? styles.alert : styles.info}>
+                  <div
+                    className={`alert ${channelState.mode === 'unavailable' ? 'error' : channelState.mode === 'sandbox' ? 'warning' : ''} ${styles.channelNote}`}
+                  >
                     <strong>
                       {channelState.mode === 'sandbox'
                         ? 'Sandbox · not delivered'
@@ -600,20 +666,47 @@ export function ReminderWorkspace({
                     >
                       {busy === 'preview' ? 'Preparing preview…' : 'Preview reminder'}
                     </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      disabled={blocked}
+                      onClick={cancelDraft}
+                      aria-label="Cancel: discard edits to this draft"
+                    >
+                      Cancel
+                    </button>
                     <small className={styles.muted}>Preview first, then confirm the send.</small>
                   </div>
                 </section>
                 {preview && (
                   <section className={`card ${styles.review}`} aria-labelledby="review-heading">
+                    <p className="eyebrow">Step 4 of 4 · Confirm</p>
                     <h2 ref={reviewHeading} tabIndex={-1} id="review-heading">
-                      Review before{' '}
-                      {channelState.mode === 'sandbox' ? 'recording a sandbox test' : 'sending'}
+                      Confirm {channelState.mode === 'sandbox' ? 'sandbox ' : ''}reminder
                     </h2>
+                    <Steps steps={STEPS} current={3} />
+                    <dl className={styles.recap}>
+                      <div>
+                        <dt>Recipient</dt>
+                        <dd>{preview.snapshot.recipients.map((r) => r.recipient).join(', ')}</dd>
+                      </div>
+                      <div>
+                        <dt>Channel</dt>
+                        <dd>{preview.channel === 'EMAIL' ? 'Email' : 'Text message (SMS)'}</dd>
+                      </div>
+                      <div>
+                        <dt>Lease</dt>
+                        <dd>{lease.label}</dd>
+                      </div>
+                      <div>
+                        <dt>Balance quoted</dt>
+                        <dd>{money(preview.snapshot.amountCents)}</dd>
+                      </div>
+                    </dl>
                     <p className={styles.muted}>
                       Expires {new Date(preview.expiresAt).toLocaleString()} · edits require a new
                       preview.
                     </p>
-                    <ChargeSummary snapshot={preview.snapshot} />
                     {preview.snapshot.recipients.map((r) => (
                       <article className={styles.messagePreview} key={r.tenantId}>
                         <p>
@@ -625,12 +718,18 @@ export function ReminderWorkspace({
                         <p className={styles.messageBody}>{r.body}</p>
                       </article>
                     ))}
-                    <p>
+                    <details className={styles.quoted}>
+                      <summary>Charges in the quoted balance</summary>
+                      <ChargeSummary snapshot={preview.snapshot} />
+                    </details>
+                    <div
+                      className={`alert ${channelState.mode === 'sandbox' ? 'warning' : ''} ${styles.channelNote}`}
+                    >
                       {channelState.mode === 'sandbox'
-                        ? 'This only records a sandbox attempt. No recipient will be contacted.'
+                        ? 'Sandbox · this only records a test attempt. No recipient will be contacted.'
                         : 'Confirm the recipients, channel and content. A submitted message may be impossible to recall.'}
-                    </p>
-                    <div className={styles.actions}>
+                    </div>
+                    <div className={`${styles.actions} ${styles.confirmActions}`}>
                       <button className="btn btn-primary" disabled={blocked} onClick={() => send()}>
                         {busy === 'send'
                           ? 'Submitting…'
@@ -647,26 +746,21 @@ export function ReminderWorkspace({
                       >
                         Back to edit
                       </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        disabled={blocked}
+                        onClick={cancelDraft}
+                        aria-label="Cancel: discard this preview and draft"
+                      >
+                        Cancel
+                      </button>
                     </div>
                   </section>
                 )}
               </>
-            ) : (
-              <section className="card">
-                <h2>All caught up</h2>
-                <p>No overdue balance for this lease. A reminder cannot be sent.</p>
-                {fromRentRoll && leaseId === initialLeaseId && (
-                  <p>
-                    The rent roll showed this lease as late, but the current ledger has no overdue
-                    balance — it may have been paid since the rent roll loaded.
-                  </p>
-                )}
-                <p className={styles.muted}>
-                  History remains available, including sandbox tests and previous send outcomes.
-                </p>
-              </section>
-            )}
-          </div>
+            </div>
+          )}
 
           <section
             className={`card ${styles.history}`}
@@ -698,7 +792,21 @@ export function ReminderWorkspace({
             ) : historyLoading ? (
               <p role="status">Loading history…</p>
             ) : !history.length ? (
-              <p>No reminders submitted for this lease.</p>
+              <p className={styles.emptyHistory}>
+                <svg
+                  aria-hidden="true"
+                  focusable="false"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 2" />
+                </svg>
+                No reminders submitted for this lease.
+              </p>
             ) : (
               <ol className={styles.historyList}>
                 {history.map((p) => (

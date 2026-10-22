@@ -292,3 +292,52 @@
     padding: 8px 3px;
   }
 }
+
+/* Summary cards in the shared Redisgn card and table look. */
+.plainCard {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+}
+.plainHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.plainCard.plainCard h2 {
+  margin: 0;
+  font-size: var(--rr-h3, 20px);
+  font-weight: 500;
+}
+p.caption {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--design-muted);
+}
+.plainTable {
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+.plainTable tbody tr:nth-child(odd) {
+  background: var(--design-background);
+}
+.plainTable th[scope='row'] {
+  font-weight: 500;
+  text-align: left;
+}
+.plainTable td,
+.plainTable th {
+  white-space: nowrap;
+}
+.plainTable td[data-tone='loss'] {
+  color: var(--design-danger);
+  font-weight: 600;
+}
+p.yearsNote {
+  margin: 0;
+  font-size: 13px;
+  color: var(--design-muted);
+}

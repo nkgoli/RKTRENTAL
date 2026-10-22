@@ -19,8 +19,8 @@
 }
 .panel {
   background: #fff;
-  border: 1px solid #dce3ed;
-  border-radius: 12px;
+  border: 1px solid var(--rr-border, #dce3ed);
+  border-radius: var(--rr-card-radius, 16px);
   padding: 24px;
   display: grid;
   gap: 20px;
@@ -30,14 +30,16 @@
 .header {
   padding: 24px;
   border: 1px solid var(--rr-border);
-  border-radius: var(--design-radius);
+  border-radius: var(--rr-card-radius, 16px);
   background: var(--design-surface);
   display: grid;
   gap: 10px;
 }
 .panel h2,
 .agreement h2 {
+  font-family: var(--design-heading-font, inherit);
   font-size: 22px;
+  font-weight: 500;
 }
 .panel h3 {
   font-size: 17px;
@@ -96,7 +98,7 @@
   min-height: 44px;
   padding: 10px 12px;
   border: 1px solid #7e8b9e;
-  border-radius: 7px;
+  border-radius: 12px;
   font: inherit;
   font-weight: 400;
   background: white;
@@ -117,13 +119,13 @@
   color: #b4233f;
   padding: 16px;
   border: 1px solid #d38999;
-  border-radius: 8px;
+  border-radius: 12px;
 }
 .notice {
   background: #f1fafc;
   padding: 16px;
   border: 1px solid #bddfe5;
-  border-radius: 8px;
+  border-radius: 12px;
 }
 .consent {
   display: flex;

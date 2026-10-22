@@ -1,4 +1,4 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { MaintenanceEditorData } from '@/lib/maintenance/editor';
@@ -40,11 +40,11 @@ const draft = {
   vendorId: 'vendor',
 };
 const labels = {
-  title: 'Request title',
+  title: 'Title',
   description: 'Description',
   priority: 'Priority',
   status: 'Status',
-  vendorId: 'Assigned vendor',
+  vendorId: 'Assign vendor',
 };
 const fetchMock = vi.fn();
 const response = (body: unknown) => ({ ok: true, json: async () => body });
@@ -122,14 +122,14 @@ describe('dedicated maintenance editor workflow', () => {
   it('populates saved fields and submits details, assignment and status in one scoped save', async () => {
     fetchMock.mockResolvedValue(response({ message: 'Repair request saved.', request: saved() }));
     renderEditor();
-    expect(getValue('Request title')).toBe(initial.title);
+    expect(getValue('Title')).toBe(initial.title);
     expect(getValue('Description')).toBe(initial.description);
     expect(getValue('Priority')).toBe(initial.priority);
     expect(getValue('Status')).toBe(initial.status);
-    expect(getValue('Assigned vendor')).toBe('');
+    expect(getValue('Assign vendor')).toBe('');
     expect(
       screen
-        .getAllByRole('button', { name: 'Save request' })
+        .getAllByRole('button', { name: 'Save changes' })
         .every((button) => (button as HTMLButtonElement).disabled),
     ).toBe(true);
     stage();
@@ -201,10 +201,10 @@ describe('dedicated maintenance editor workflow', () => {
     fireEvent.change(screen.getByLabelText('Add a comment'), { target: { value: 'An update' } });
     fireEvent.submit(commentForm());
     await screen.findByText('Comment added.');
-    expect(getValue('Request title')).toBe(draft.title);
+    expect(getValue('Title')).toBe(draft.title);
     expect(getValue('Status')).toBe(draft.status);
     expect(screen.getByText('All changes saved')).toBeTruthy();
-    fireEvent.change(screen.getByLabelText('Request title'), { target: { value: 'Next edit' } });
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Next edit' } });
     fetchMock.mockResolvedValueOnce(
       response({ message: 'Request saved.', request: saved({ title: 'Next edit' }) }),
     );
@@ -275,7 +275,7 @@ describe('dedicated maintenance editor workflow', () => {
     expectDraft();
     expect(
       screen
-        .getAllByRole('button', { name: 'Save request' })
+        .getAllByRole('button', { name: 'Save changes' })
         .every((button) => !(button as HTMLButtonElement).disabled),
     ).toBe(true);
     expect(toast.success).not.toHaveBeenCalled();
@@ -284,15 +284,15 @@ describe('dedicated maintenance editor workflow', () => {
   it('focuses inline title validation before sending any request', () => {
     renderEditor();
     stage();
-    fireEvent.change(screen.getByLabelText('Request title'), { target: { value: '   ' } });
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: '   ' } });
     fireEvent.submit(editForm());
-    const title = screen.getByLabelText('Request title');
+    const title = screen.getByLabelText('Title');
     expect(title).toBe(document.activeElement);
     expect(title.getAttribute('aria-invalid')).toBe('true');
     expect(title.getAttribute('aria-describedby')).toBe('title-error');
     expect(screen.getByText('Enter a request title.')).toBeTruthy();
     expect(getValue('Description')).toBe(draft.description);
-    expect(getValue('Assigned vendor')).toBe(draft.vendorId);
+    expect(getValue('Assign vendor')).toBe(draft.vendorId);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -310,7 +310,7 @@ describe('dedicated maintenance editor workflow', () => {
     fireEvent.click(within(firstDialog).getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(getValue('Status')).toBe('CANCELLED');
-    expect(getValue('Request title')).toBe(draft.title);
+    expect(getValue('Title')).toBe(draft.title);
     expect(fetchMock).not.toHaveBeenCalled();
     fireEvent.submit(editForm());
     const confirm = within(

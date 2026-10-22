@@ -633,7 +633,7 @@
   min-height: 30px;
   padding: 4px 12px;
   border: 1px solid var(--design-primary);
-  border-radius: 7px;
+  border-radius: 999px;
   font-size: 13px;
   font-weight: 600;
   color: #fff;
@@ -928,5 +928,156 @@
   }
   .suggestion {
     font-size: 12px;
+  }
+}
+
+/* ---------------------------------------------------- Year-1 summary band (Designs/redisgn) */
+/* Laid out by the shared .summary-band; these rules only add the band's own pieces. */
+.band {
+  color: var(--design-text);
+  font-variant-numeric: tabular-nums;
+}
+.bandHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.bandHead :global(.eyebrow) {
+  margin: 0;
+}
+.leadPop {
+  width: fit-content;
+  max-width: 100%;
+}
+.lead.lead {
+  display: block;
+  max-width: 100%;
+  padding: 0 28px 0 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: none;
+}
+.lead.lead:hover,
+.lead.lead:hover:not(:disabled) {
+  background: transparent;
+}
+.lead.lead:hover :global(.summary-band-value) strong {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+.lead.lead[aria-expanded='true'] {
+  box-shadow: none;
+}
+.lead .tileInfo {
+  top: 4px;
+  right: 4px;
+}
+.lead :global(.summary-band-value) strong {
+  font-weight: inherit;
+}
+.per {
+  font-size: 0.5em;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.band :global(.summary-band-detail) {
+  margin: 0;
+}
+.meter {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--design-muted);
+}
+.meterBar {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: #d9dde5;
+  overflow: hidden;
+}
+.meterBar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+.how {
+  color: var(--design-primary);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.band .riskDisclosure {
+  margin-top: 0;
+}
+.statPop {
+  min-width: 0;
+}
+.stat.stat {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 16px 36px 16px 16px;
+  border: 1px solid var(--rr-border);
+  border-radius: var(--rr-card-radius);
+  background: var(--design-background);
+  color: var(--design-text);
+  font: inherit;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: none;
+}
+.stat.stat:hover,
+.stat.stat:hover:not(:disabled) {
+  border-color: var(--design-primary);
+  background: var(--design-background);
+}
+.stat.stat[aria-expanded='true'] {
+  border-color: var(--design-primary);
+  box-shadow: inset 0 0 0 1px var(--design-primary);
+}
+.stat.stat strong[data-tone='red'] {
+  color: var(--design-danger);
+}
+.stat .tileInfo {
+  top: 14px;
+  right: 14px;
+}
+.band .popPanel {
+  min-width: 240px;
+}
+.statPop .popPanel {
+  left: auto;
+  right: 0;
+}
+/* Below the desktop layout the stats scroll sideways; breakdowns then open in place. */
+@media (max-width: 1023px) {
+  .band .popPanel {
+    position: static;
+    width: auto;
+    min-width: 0;
+    margin-top: 8px;
+    box-shadow: none;
+  }
+}
+@media (max-width: 640px) {
+  .band :global(.summary-band-value) {
+    font-size: 32px;
+  }
+  .band :global(.summary-band-detail) {
+    font-size: 15px;
+  }
+  .band :global(.summary-band-foot) > * {
+    flex: 1 1 auto;
   }
 }

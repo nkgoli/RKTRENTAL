@@ -220,6 +220,9 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
         status: u.status as UnitStatusValue,
         leaseId: lease?.id ?? null,
         rent: lease ? Number(lease.monthlyRent) : null,
+        /** Term of the active lease shown on the overview's units table (read-only). */
+        leaseStart: lease?.startDate ?? null,
+        leaseEnd: lease?.endDate ?? null,
         tenant: tenant ? { id: tenant.id, name: tenant.name } : null,
       };
     });
@@ -570,12 +573,75 @@ export function propertiesDb(organizationId: string, client: PrismaClient = db) 
     }
   }
 
+  /**
+   * Read-only context for the property overview's Next steps: the open repairs to name first and
+   * each unit's open applications. Org-scoped like every other read.
+   */
+  async function getOverviewSignals(propertyId: string, unitId?: string) {
+    const [repairs, applications] = await Promise.all([
+      client.maintenanceRequest.findMany({
+        where: {
+          organizationId,
+          propertyId,
+          ...(unitId ? { unitId } : {}),
+          status: { notIn: ['DONE', 'CANCELLED'] },
+        },
+        select: {
+          title: true,
+          priority: true,
+          unit: { select: { number: true, isImplicit: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      client.application.findMany({
+        where: {
+          organizationId,
+          unit: { propertyId, organizationId },
+          ...(unitId ? { unitId } : {}),
+          status: { in: ['SUBMITTED', 'SCREENING', 'REVIEW'] },
+        },
+        select: { unitId: true, applicantName: true, appliedAt: true, status: true },
+        orderBy: { appliedAt: 'asc' },
+      }),
+    ]);
+    const rank = { URGENT: 0, HIGH: 1, NORMAL: 2, LOW: 3 } as const;
+    const first = [...repairs].sort((a, b) => rank[a.priority] - rank[b.priority])[0] ?? null;
+    const applicants: Record<
+      string,
+      { count: number; first: { name: string; appliedAt: Date; status: string } }
+    > = {};
+    for (const app of applications) {
+      const entry = applicants[app.unitId];
+      if (entry) entry.count += 1;
+      else
+        applicants[app.unitId] = {
+          count: 1,
+          first: { name: app.applicantName, appliedAt: app.appliedAt, status: app.status },
+        };
+    }
+    return {
+      repairs: {
+        open: repairs.length,
+        urgent: repairs.filter((r) => r.priority === 'URGENT').length,
+        first: first
+          ? {
+              title: first.title,
+              unitNumber: first.unit.isImplicit ? null : first.unit.number,
+              priority: first.priority as string,
+            }
+          : null,
+      },
+      applicants,
+    };
+  }
+
   return {
     listOwners,
     listProperties,
     countByFilter,
     getProperty,
     getUnit,
+    getOverviewSignals,
     createProperty,
     updateProperty,
     updateRoiInputs,
@@ -616,6 +682,9 @@ export type PropertyDetail = NonNullable<
 >;
 export type UnitDetail = NonNullable<
   Awaited<ReturnType<ReturnType<typeof propertiesDb>['getUnit']>>
+>;
+export type OverviewSignals = Awaited<
+  ReturnType<ReturnType<typeof propertiesDb>['getOverviewSignals']>
 >;
 export type PropertySummary = Awaited<
   ReturnType<ReturnType<typeof propertiesDb>['listProperties']>

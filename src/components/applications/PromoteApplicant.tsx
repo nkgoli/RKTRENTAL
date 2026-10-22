@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
+import { Dialog } from '@/components/ui/Dialog';
+import { Alert } from '@/components/ui/Feedback';
 import type { PromotionResult } from '@/lib/applications/promotion';
 import styles from './promotion.module.css';
 
@@ -52,9 +54,19 @@ export function PromoteApplicant({
       setPending(false);
     }
   }
+  const cancel = () => {
+    if (pending) return;
+    setMatch(null);
+    setError('');
+  };
+  const errorMessage = error && (
+    <p role="alert" className={styles.error}>
+      {error} <Link href="/tenants">View tenants</Link>
+    </p>
+  );
   return (
     <section className={styles.promotion} aria-label="Tenant promotion">
-      <h4>{promotedId ? 'Tenant linked' : 'Ready to become a tenant'}</h4>
+      <h4>{promotedId ? 'Tenant linked' : 'Promote to tenant'}</h4>
       {promotedId ? (
         <>
           <p role="status">
@@ -78,47 +90,69 @@ export function PromoteApplicant({
       ) : (
         <>
           <p>
-            Carry this applicant’s name and email into Tenants. Promotion does not start a lease or
-            move them in.
+            Promote to tenant links this approved applicant to a tenant record. It carries the
+            applicant’s name and email into Tenants and does not start a lease or move them in.
           </p>
-          {match ? (
-            <div className={styles.match}>
-              <p role="status">
-                A tenant already uses this email. Confirm this is the same person before linking.
-              </p>
-              <strong>{match.name}</strong>
-              <span>{match.email}</span>
-              {match.phone && <span>{match.phone}</span>}
-              <Link href={`/tenants/${encodeURIComponent(match.id)}`}>Review existing tenant</Link>
-              <p>Their saved details, preferences and history will be kept.</p>
-              <div className={styles.actions}>
-                <Button
-                  disabled={pending}
-                  onClick={() => {
-                    setMatch(null);
-                    setError('');
-                  }}
-                  variant="secondary"
-                >
-                  Cancel
-                </Button>
-                <Button disabled={pending} onClick={() => promote(match.id)} variant="primary">
-                  {pending ? 'Linking…' : 'Use existing tenant'}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Button disabled={pending} onClick={() => promote()} variant="primary">
-              {pending ? 'Promoting…' : 'Promote to tenant'}
+          <div className={styles.actions}>
+            <Button disabled={pending} onClick={() => promote()} variant="primary" icon="check">
+              {pending && !match ? 'Promoting…' : 'Promote to tenant'}
             </Button>
-          )}
+          </div>
+          <p className={styles.caption}>
+            With no matching contact, Promote to tenant creates one tenant. Several matches stop
+            with a duplicate-contact message; nothing is merged.
+          </p>
         </>
       )}
-      {error && (
-        <p role="alert">
-          {error} <Link href="/tenants">View tenants</Link>
-        </p>
-      )}
+      {!match && errorMessage}
+      <Dialog
+        open={Boolean(match)}
+        onClose={cancel}
+        title="Promote to tenant · existing contact"
+        description="Carries the saved name and email; creates no lease, charge or notification."
+        size="sm"
+        footer={
+          <>
+            <Button disabled={pending} onClick={cancel} variant="ghost">
+              Cancel
+            </Button>
+            <Button
+              disabled={pending || !match}
+              onClick={() => match && promote(match.id)}
+              variant="primary"
+              icon="check"
+            >
+              {pending ? 'Linking…' : 'Use existing tenant'}
+            </Button>
+          </>
+        }
+      >
+        {match && (
+          <div className={styles.match}>
+            <Alert tone="warning">
+              <div>
+                <strong>This email already belongs to a tenant</strong>
+                <p>
+                  Confirm it is the same person. Their saved name, phone, preferences and history
+                  are kept, never overwritten.
+                </p>
+              </div>
+            </Alert>
+            <div className={styles.contact}>
+              <strong>{match.email}</strong>
+              <span>{match.name}</span>
+              {match.phone && <span>{match.phone}</span>}
+              <small>Matches 1 saved tenant contact · name, email and phone as saved</small>
+              <Link href={`/tenants/${encodeURIComponent(match.id)}`}>Review existing tenant</Link>
+            </div>
+            {errorMessage}
+            <p className={styles.caption}>
+              Several matches stop here with a duplicate-contact message; nothing is merged. With no
+              match, Promote to tenant creates one tenant.
+            </p>
+          </div>
+        )}
+      </Dialog>
     </section>
   );
 }

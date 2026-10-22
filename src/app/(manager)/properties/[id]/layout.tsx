@@ -25,6 +25,8 @@ export default async function PropertyWorkspaceLayout({
     number: unit.number,
     isImplicit: unit.isImplicit,
     status: unit.status,
+    // Read by the unit switcher: Unit 4B · Alex Rivera.
+    tenantName: unit.tenant?.name ?? null,
   }));
   const activeUnitCount = units.filter((unit) => unit.status !== 'ARCHIVED').length;
   const firstPhoto = (

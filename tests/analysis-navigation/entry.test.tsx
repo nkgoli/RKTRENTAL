@@ -70,20 +70,20 @@ it('follows the real menu to explicit selection, selected dashboard and return s
   }
   await navigate(entry.getAttribute('href')!);
   expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Choose a property');
-  expect(screen.queryByRole('heading', { name: 'Your units' })).toBeNull();
+  expect(screen.queryByRole('heading', { name: 'Every unit vs saved market rent' })).toBeNull();
   expect(nav.getByRole('link', { name: 'Rent analysis' }).getAttribute('aria-current')).toBe(
     'page',
   );
   expect(nav.getByRole('link', { name: 'Returns & ROI' }).hasAttribute('aria-current')).toBe(false);
-  const select = screen.getByRole('link', { name: 'Open Rent Analysis' });
+  const select = screen.getByRole('link', { name: 'Open rent analysis' });
   expect(select.getAttribute('href')).toBe('/rent-analysis?property=authorized-maple');
   await navigate(select.getAttribute('href')!);
-  expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Rent Analysis');
-  expect(screen.getByRole('heading', { name: 'Your units' })).toBeTruthy();
+  expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Maple Court');
+  expect(screen.getByRole('heading', { name: 'Every unit vs saved market rent' })).toBeTruthy();
   expect(screen.getByRole('link', { name: 'Unit 1A' }).getAttribute('href')).toContain(
     'unit=unit-1',
   );
   await navigate(screen.getByRole('link', { name: 'Change property' }).getAttribute('href')!);
   expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Choose a property');
-  expect(screen.queryByRole('heading', { name: 'Your units' })).toBeNull();
+  expect(screen.queryByRole('heading', { name: 'Every unit vs saved market rent' })).toBeNull();
 });

@@ -130,10 +130,12 @@ describe('property autofill and calculation sufficiency', () => {
     await open();
     expect(glance().getByText('$10,800')).toBeTruthy();
     const card = within(screen.getByRole('region', { name: 'Deal Snapshot' }));
-    expect(card.getByText('Projected, before tax')).toBeTruthy();
+    expect(card.getByText('Year 1 · Projected estimate · before tax · USD')).toBeTruthy();
     expect(card.getByRole('button', { name: 'Annual' }).getAttribute('aria-pressed')).toBe('true');
-    expect(card.getByText('Year 1, annual')).toBeTruthy();
-    expect(within(card.getByRole('button', { name: /^DSCR/ })).getByText('No debt')).toBeTruthy();
+    expect(card.getByText('/ year')).toBeTruthy();
+    expect(
+      within(card.getByRole('button', { name: /^Debt service coverage/ })).getByText('No debt'),
+    ).toBeTruthy();
     fireEvent.click(card.getByRole('button', { name: /^Cash flow/ }));
     expect(
       within(card.getByRole('dialog', { name: 'Cash flow breakdown' })).getByText(
@@ -148,7 +150,7 @@ describe('property autofill and calculation sufficiency', () => {
     // No inline baseline editor remains on the dashboard.
     expect(document.getElementById('input.income.monthlyRent')).toBeNull();
     expect(screen.queryByRole('button', { name: /Switch to cash purchase/ })).toBeNull();
-    const edit = summaryCard().getByRole('link', { name: 'Edit property assumptions' });
+    const edit = screen.getByRole('link', { name: 'Edit assumptions' });
     expect(href(edit).pathname).toBe('/properties/a/edit');
     expect(href(edit).searchParams.get('returnTo')).toBe('/roi-analysis?property=a');
     expect(href(edit).hash).toBe('#roi-details');
@@ -222,7 +224,7 @@ describe('property autofill and calculation sufficiency', () => {
       }).format(expected);
       expect(glance().getByText(formatted)).toBeTruthy();
       expect(summaryCard().queryByText('$1,000/mo')).toBeNull();
-      expect(summaryCard().getByRole('link', { name: 'Edit property assumptions' })).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'Edit assumptions' })).toBeTruthy();
       expect(document.body.textContent).not.toContain('Required');
     },
   );
@@ -443,7 +445,7 @@ describe('ROI summary workspace', () => {
     // The load is announced, but not shown again beside the Assumptions source.
     const note = screen.getByText('New analysis - filled in from saved property details.');
     expect(note.className).toMatch(/srOnly/);
-    expect(summaryCard().getByRole('link', { name: 'Edit property assumptions' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Edit assumptions' })).toBeTruthy();
     expect(summaryCard().queryByRole('definition')).toBeNull();
   });
   it('explains a failed load in place with Retry and Change property', async () => {
@@ -1248,9 +1250,7 @@ it('keeps invalid custom text across sections, focuses correction and saves expl
 
 describe('compact header and section-preserving assumptions round trip', () => {
   const returnTo = () =>
-    href(summaryCard().getByRole('link', { name: 'Edit property assumptions' })).searchParams.get(
-      'returnTo',
-    );
+    href(screen.getByRole('link', { name: 'Edit assumptions' })).searchParams.get('returnTo');
   const selected = (name: string) =>
     screen.getByRole('tab', { name }).getAttribute('aria-selected') === 'true';
   it('reopens the section, chart sub-tab and period named by the address', async () => {
@@ -1284,7 +1284,7 @@ describe('compact header and section-preserving assumptions round trip', () => {
     addScenario('Kept case');
     fireEvent.click(screen.getByRole('tab', { name: 'Charts' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Sensitivity' }));
-    fireEvent.click(summaryCard().getByRole('link', { name: 'Edit property assumptions' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Edit assumptions' }));
     expect(screen.getByRole('alertdialog')).toBeTruthy();
     expect(browser.assign).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Save draft and continue' }));
@@ -1300,7 +1300,7 @@ describe('compact header and section-preserving assumptions round trip', () => {
   it('keeps assumptions as one keyboard-reachable edit link and secondary actions', async () => {
     const user = userEvent.setup();
     await open();
-    const edit = summaryCard().getByRole('link', { name: 'Edit property assumptions' });
+    const edit = screen.getByRole('link', { name: 'Edit assumptions' });
     expect(summaryCard().queryByRole('button', { name: /details/ })).toBeNull();
     edit.focus();
     expect(document.activeElement).toBe(edit);

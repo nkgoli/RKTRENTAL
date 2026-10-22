@@ -23,7 +23,7 @@ export type ActualsState =
   | { status: 'ready'; data: ActualReturns }
   | { status: 'error'; message: string };
 
-const usd = (cents: number | null) =>
+export const usd = (cents: number | null) =>
   cents == null
     ? '—'
     : new Intl.NumberFormat('en-US', {
@@ -31,9 +31,9 @@ const usd = (cents: number | null) =>
         currency: 'USD',
         maximumFractionDigits: 0,
       }).format(Math.round(cents) / 100);
-const signed = (cents: number) =>
+export const signed = (cents: number) =>
   `${cents > 0 ? '+' : cents < 0 ? '−' : ''}${usd(Math.abs(cents))}`;
-const pct = (value: number | null) => (value == null ? '—' : `${(value * 100).toFixed(1)}%`);
+export const pct = (value: number | null) => (value == null ? '—' : `${(value * 100).toFixed(1)}%`);
 
 const excludedLabels: Record<string, string> = {
   appreciation: 'appreciation',
@@ -103,7 +103,7 @@ function CoverageLine({ label, coverage }: { label: string; coverage: Coverage }
   );
 }
 
-const estimateValue = (estimate: Estimate | ActualAmount) =>
+export const estimateValue = (estimate: Estimate | ActualAmount) =>
   'value' in estimate
     ? estimate.status === 'unavailable'
       ? 'Unavailable'

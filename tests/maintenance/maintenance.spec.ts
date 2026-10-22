@@ -1,4 +1,4 @@
-﻿import { expect, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 const fixture = 'maintenance-pages-property';
 const unit = 'maintenance-pages-unit';
@@ -25,9 +25,7 @@ for (const width of [1440, 390])
     await page.getByRole('link', { name: 'New request', exact: true }).click();
     const form = page.getByRole('form', { name: 'Create repair request', exact: true });
     await expect(form).toBeVisible();
-    await page
-      .getByRole('textbox', { name: 'Request title', exact: true })
-      .fill('Cancelled global draft');
+    await page.getByRole('textbox', { name: 'Title', exact: true }).fill('Cancelled global draft');
     await page.getByRole('link', { name: 'Cancel', exact: true }).click();
     await page.waitForURL('**/maintenance');
     await expect(page.getByText('Cancelled global draft', { exact: true })).toHaveCount(0);
@@ -38,33 +36,31 @@ for (const width of [1440, 390])
       .getByRole('link', { name: /^(\+ New request|Create your first request)$/, exact: true })
       .click();
     await expect(form).toBeVisible();
-    await expect(
-      page.getByRole('combobox', { name: 'Property and unit', exact: true }),
-    ).toHaveValue(unit);
-    await page.getByRole('textbox', { name: 'Request title', exact: true }).fill('   ');
+    await expect(page.getByRole('combobox', { name: 'Unit', exact: true })).toHaveValue(unit);
+    await page.getByRole('textbox', { name: 'Title', exact: true }).fill('   ');
     await page
       .getByRole('textbox', { name: 'Description', exact: true })
       .fill('Keep draft after validation');
-    await page.getByRole('button', { name: 'Create request', exact: true }).click();
+    await page.getByRole('button', { name: 'Save request', exact: true }).click();
     const error = form.getByRole('alert').filter({ hasText: 'Title is required' });
     await expect(error).toBeFocused();
     await expect(page.getByRole('textbox', { name: 'Description', exact: true })).toHaveValue(
       'Keep draft after validation',
     );
     const title = `Synthetic repair ${width} ${Date.now()} ${'long issue title '.repeat(6)}`.trim();
-    await page.getByRole('textbox', { name: 'Request title', exact: true }).fill(title);
+    await page.getByRole('textbox', { name: 'Title', exact: true }).fill(title);
     await page
       .getByRole('textbox', { name: 'Description', exact: true })
       .fill('Long create issue details and access instructions. '.repeat(50));
     await page.getByRole('combobox', { name: 'Priority', exact: true }).selectOption('HIGH');
-    await page.getByLabel('Choose a file', { exact: true }).setInputFiles(photo);
-    const createButton = page.getByRole('button', { name: 'Create request', exact: true });
+    await page.getByLabel('Request photo', { exact: true }).setInputFiles(photo);
+    const createButton = page.getByRole('button', { name: 'Save request', exact: true });
     await createButton.scrollIntoViewIfNeeded();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
     const createBox = await form.boundingBox();
-    expect(createBox!.width).toBeGreaterThan(width === 1440 ? 800 : 330);
+    expect(createBox!.width).toBeGreaterThan(width === 1440 ? 600 : 330);
     await createButton.focus();
     await expect(createButton).toBeFocused();
     await page.screenshot({
@@ -77,12 +73,12 @@ for (const width of [1440, 390])
     await page.waitForURL(`**${scope}#request-*`);
     await page.getByRole('link', { name: title, exact: true }).click();
 
-    const requestTitle = page.getByRole('textbox', { name: 'Request title', exact: true });
+    const requestTitle = page.getByRole('textbox', { name: 'Title', exact: true });
     const description = page.getByRole('textbox', { name: 'Description', exact: true });
     const priority = page.getByRole('combobox', { name: 'Priority', exact: true });
-    const vendor = page.getByRole('combobox', { name: 'Assigned vendor', exact: true });
+    const vendor = page.getByRole('combobox', { name: 'Assign vendor', exact: true });
     const status = page.getByRole('combobox', { name: 'Status', exact: true });
-    const save = page.getByRole('button', { name: 'Save request', exact: true }).first();
+    const save = page.getByRole('button', { name: 'Save changes', exact: true }).first();
     await expect(requestTitle).toHaveValue(title);
     const edit = page.url();
     const editedTitle = `${title} edited`;
@@ -144,14 +140,16 @@ for (const width of [1440, 390])
     const activityBox = await page
       .getByRole('region', { name: /^Activity \d+$/, exact: true })
       .boundingBox();
-    const operationsBox = await page
-      .getByRole('complementary', { name: 'Manage request', exact: true })
-      .boundingBox();
-    expect(editBox!.width).toBeGreaterThan(width === 1440 ? 800 : 330);
-    expect(Math.abs(detailsBox!.width - activityBox!.width)).toBeLessThan(2);
-    expect(Math.abs(detailsBox!.x - activityBox!.x)).toBeLessThan(2);
-    if (width === 1440) expect(operationsBox!.x).toBeGreaterThan(detailsBox!.x + detailsBox!.width);
-    else expect(operationsBox!.y).toBeGreaterThan(detailsBox!.y + detailsBox!.height);
+    // Designs/redisgn: request details on the left (2fr), activity in the right column (1fr);
+    // phones stack activity below the details card.
+    expect(editBox!.width).toBeGreaterThan(width === 1440 ? 560 : 300);
+    if (width === 1440) {
+      expect(activityBox!.x).toBeGreaterThan(detailsBox!.x + detailsBox!.width);
+      expect(detailsBox!.width).toBeGreaterThan(activityBox!.width * 1.5);
+    } else {
+      expect(activityBox!.y).toBeGreaterThan(detailsBox!.y + detailsBox!.height);
+      expect(Math.abs(detailsBox!.width - activityBox!.width)).toBeLessThan(2);
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );

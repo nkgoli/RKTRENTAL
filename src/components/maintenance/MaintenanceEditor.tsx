@@ -3,16 +3,26 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { Icon } from '@/components/shell/Icons';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Alert, Steps } from '@/components/ui/Feedback';
+import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
 import {
   editorValues,
-  eventLabel,
   priorityLabels,
   statusLabels,
   type EditorValues,
   type MaintenanceEditorData,
 } from '@/lib/maintenance/editor';
 import { EditorPhoto, editorDate } from './EditorPhoto';
+import {
+  STATUS_STEPS,
+  activityEntries,
+  photoLine,
+  priorityTones,
+  requestMeta,
+  statusStep,
+  statusTones,
+} from './editor-view';
 import styles from './editor.module.css';
 
 type Vendor = {
@@ -283,31 +293,6 @@ export function MaintenanceEditor({
     if (values.status === 'CANCELLED' && baseline.status !== 'CANCELLED') setCancelRequest(true);
     else void perform('save');
   }
-  const actionButtons = (
-    <>
-      <button
-        type="button"
-        className="btn btn-secondary"
-        disabled={Boolean(pending)}
-        onClick={() => {
-          if (hasUnsaved) {
-            discardMode.current = 'assign';
-            setDiscardTo(returnTo);
-          } else window.location.assign(returnTo);
-        }}
-      >
-        Cancel
-      </button>
-      <button
-        type="submit"
-        form="repair-editor"
-        className="btn btn-primary"
-        disabled={Boolean(pending) || !dirty}
-      >
-        {pending === 'save' ? 'Saving request…' : 'Save request'}
-      </button>
-    </>
-  );
   const feedbackFor = (operation: Operation) =>
     feedback?.operation === operation && (
       <p
@@ -319,219 +304,184 @@ export function MaintenanceEditor({
         {feedback.error ?? feedback.message}
       </p>
     );
+  const step = statusStep(record.status);
+  const activity = activityEntries(record);
+  const missingDescription = !record.description?.trim();
 
   return (
     <div className={styles.editor}>
       <PageHeader
-        title={record.title}
-        eyebrow="Maintenance / Edit request"
-        meta={`${record.property.name} · Unit ${record.unit.number}`}
-        back={{ href: returnTo, label: 'Repair requests' }}
+        title="Edit request"
+        eyebrow="Operations"
+        meta={requestMeta(record)}
+        back={{ href: returnTo, label: 'Maintenance' }}
         actions={[]}
       />
       <div className={styles.toolbar}>
         <div className={styles.badges}>
-          <span className={`${styles.badge} ${styles[`status${record.status}`]}`}>
-            {statusLabels[record.status]}
-          </span>
-          <span className={`${styles.badge} ${styles[`priority${record.priority}`]}`}>
+          <Badge tone={statusTones[record.status]}>{statusLabels[record.status]}</Badge>
+          <Badge tone={priorityTones[record.priority]}>
             {priorityLabels[record.priority]} priority
-          </span>
-          <span className={styles.savedHint}>Saved request</span>
+          </Badge>
         </div>
-        <div className={styles.toolbarActions}>
-          <span role="status" className={dirty ? styles.pendingLabel : styles.savedLabel}>
-            {dirty ? 'Unsaved changes' : 'All changes saved'}
-          </span>
-          {actionButtons}
-        </div>
+        <span role="status" className={dirty ? styles.pendingLabel : styles.savedLabel}>
+          {dirty ? 'Unsaved changes' : 'All changes saved'}
+        </span>
       </div>
       {feedbackFor('save')}
-      <form
-        id="repair-editor"
-        aria-label="Edit repair request"
-        onSubmit={submit}
-        className={styles.editForm}
-        aria-busy={pending === 'save'}
-      >
-        <fieldset disabled={Boolean(pending)} className={styles.editGrid}>
-          <section className={styles.card} aria-labelledby="details-heading">
-            <div className={styles.sectionHead}>
-              <span className={styles.sectionIcon}>
-                <Icon name="maintenance" />
-              </span>
+      <div className={`${styles.layout} ${missingDescription ? styles.withAlert : ''}`}>
+        {missingDescription && (
+          <div className={styles.alertArea}>
+            <Alert tone="warning">
               <div>
-                <h2 id="details-heading">Request details</h2>
-                <p>Describe the issue and what needs attention.</p>
+                <strong>No description yet</strong>
+                <p>Add the symptoms and access instructions so the vendor can prepare.</p>
               </div>
+            </Alert>
+          </div>
+        )}
+        <section className={`card ${styles.details}`} aria-labelledby="details-heading">
+          <h2 id="details-heading">Request details</h2>
+          {step >= 0 ? (
+            <div aria-label={`Status: ${statusLabels[record.status]}`} role="group">
+              <Steps steps={STATUS_STEPS} current={step} />
             </div>
-            <label className="field">
-              Request title
-              <input
-                ref={titleInput}
-                name="title"
-                aria-required="true"
-                value={values.title}
-                maxLength={160}
-                onChange={(event) => change('title', event.target.value)}
-                aria-invalid={Boolean(titleError)}
-                aria-describedby={titleError ? 'title-error' : undefined}
-              />
-            </label>
-            {titleError && (
-              <p id="title-error" className={styles.fieldError}>
-                {titleError}
-              </p>
-            )}
-            <label className="field">
-              Description
-              <textarea
-                name="description"
-                value={values.description}
-                maxLength={3000}
-                rows={6}
-                onChange={(event) => change('description', event.target.value)}
-                placeholder="What needs attention? Include location, symptoms and access instructions."
-              />
-            </label>
+          ) : (
             <p className={styles.fieldHint}>
-              Include access instructions to help the vendor prepare.
+              This request is cancelled. Its photos, comments and history remain available.
             </p>
-          </section>
-          <aside
-            className={`${styles.card} ${styles.operations}`}
-            aria-labelledby="operations-heading"
+          )}
+          <div className={styles.location}>
+            <strong>
+              {record.property.name} · Unit {record.unit.number}
+            </strong>
+            <small>Location stays with this request.</small>
+          </div>
+          <form
+            id="repair-editor"
+            aria-label="Edit repair request"
+            onSubmit={submit}
+            className={styles.editForm}
+            aria-busy={pending === 'save'}
           >
-            <div className={styles.sectionHead}>
-              <div>
-                <h2 id="operations-heading">Manage request</h2>
-                <p>Saved together with request details.</p>
-              </div>
-            </div>
-            <label className="field">
-              Priority
-              <select
-                name="priority"
-                value={values.priority}
-                onChange={(event) =>
-                  change('priority', event.target.value as EditorValues['priority'])
-                }
-              >
-                {Object.entries(priorityLabels).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              Status
-              <select
-                name="status"
-                value={values.status}
-                onChange={(event) => change('status', event.target.value as EditorValues['status'])}
-              >
-                {Object.entries(statusLabels).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              Assigned vendor
-              <select
-                name="vendorId"
-                value={values.vendorId}
-                disabled={!vendors.length}
-                onChange={(event) => change('vendorId', event.target.value)}
-              >
-                <option value="" disabled={Boolean(baseline.vendorId)}>
-                  Unassigned
-                </option>
-                {vendors.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {!vendors.length && (
-              <p className={styles.fieldHint}>No vendors are available for this portfolio.</p>
-            )}
-            {values.vendorId !== baseline.vendorId &&
-              values.vendorId &&
-              values.status === 'NEW' && (
-                <p className={styles.operationHint}>
-                  Assigning a vendor moves a new request to Assigned when saved.
+            <fieldset disabled={Boolean(pending)} className={styles.fields}>
+              <label className="field">
+                Title
+                <input
+                  ref={titleInput}
+                  name="title"
+                  aria-required="true"
+                  value={values.title}
+                  maxLength={160}
+                  onChange={(event) => change('title', event.target.value)}
+                  aria-invalid={Boolean(titleError)}
+                  aria-describedby={titleError ? 'title-error' : undefined}
+                />
+              </label>
+              {titleError && (
+                <p id="title-error" className={styles.fieldError}>
+                  {titleError}
                 </p>
               )}
-            {vendor && (vendor.trade || vendor.phone || vendor.email) && (
-              <div className={styles.vendorContact}>
-                {vendor.trade && <strong>{vendor.trade}</strong>}
-                {vendor.phone && <a href={`tel:${vendor.phone}`}>{vendor.phone}</a>}
-                {vendor.email && <a href={`mailto:${vendor.email}`}>{vendor.email}</a>}
+              <label className="field">
+                Description
+                <textarea
+                  name="description"
+                  value={values.description}
+                  maxLength={3000}
+                  rows={5}
+                  onChange={(event) => change('description', event.target.value)}
+                  placeholder="Symptoms, when it started and access instructions for the vendor"
+                />
+              </label>
+              <div className={styles.selects}>
+                <label className="field">
+                  Status
+                  <select
+                    name="status"
+                    value={values.status}
+                    onChange={(event) =>
+                      change('status', event.target.value as EditorValues['status'])
+                    }
+                  >
+                    {Object.entries(statusLabels).map(([key, label]) => (
+                      <option key={key} value={key}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  Priority
+                  <select
+                    name="priority"
+                    value={values.priority}
+                    onChange={(event) =>
+                      change('priority', event.target.value as EditorValues['priority'])
+                    }
+                  >
+                    {Object.entries(priorityLabels).map(([key, label]) => (
+                      <option key={key} value={key}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  Assign vendor
+                  <select
+                    name="vendorId"
+                    value={values.vendorId}
+                    disabled={!vendors.length}
+                    onChange={(event) => change('vendorId', event.target.value)}
+                  >
+                    <option value="" disabled={Boolean(baseline.vendorId)}>
+                      Unassigned
+                    </option>
+                    {vendors.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
-            )}
-            <div className={styles.context}>
-              <Icon name="properties" />
-              <div>
-                <strong>{record.property.name}</strong>
-                <p>Unit {record.unit.number}</p>
-                <small>Location stays with this request.</small>
-              </div>
-            </div>
-          </aside>
-        </fieldset>
-        <div className={styles.saveStrip}>
-          <p>
-            {dirty
-              ? 'Details, priority, vendor and status are pending until you save.'
-              : 'Details, priority, vendor and status are up to date.'}
-          </p>
-          <div>{actionButtons}</div>
-        </div>
-      </form>
-      <div className={styles.supportGrid}>
-        <div className={styles.mainColumn}>
-          <section className={styles.card} aria-labelledby="photos-heading">
-            <div className={styles.sectionHead}>
-              <span className={styles.sectionIcon}>
-                <Icon name="documents" />
-              </span>
-              <div>
-                <h2 id="photos-heading">
-                  Photos <span className={styles.count}>{record.photos.length}</span>
-                </h2>
-                <p>Upload immediately. Unsaved request edits stay here.</p>
-              </div>
-            </div>
-            {record.photos.length ? (
-              <div className={styles.gallery}>
-                {record.photos.map((photo, index) => (
-                  <EditorPhoto key={photo.documentId} photo={photo} index={index} />
-                ))}
-              </div>
-            ) : (
-              <div className={styles.empty}>
-                <Icon name="documents" />
-                <div>
-                  <strong>No photos yet</strong>
-                  <p>Add a clear photo of the issue to help the vendor prepare.</p>
+              {!vendors.length && (
+                <p className={styles.fieldHint}>No vendors are available for this portfolio.</p>
+              )}
+              {values.vendorId !== baseline.vendorId &&
+                values.vendorId &&
+                values.status === 'NEW' && (
+                  <p className={styles.operationHint}>
+                    Assigning a vendor moves a new request to Assigned when saved.
+                  </p>
+                )}
+              {vendor && (vendor.trade || vendor.phone || vendor.email) && (
+                <div className={styles.vendorContact}>
+                  {vendor.trade && <strong>{vendor.trade}</strong>}
+                  {vendor.phone && <a href={`tel:${vendor.phone}`}>{vendor.phone}</a>}
+                  {vendor.email && <a href={`mailto:${vendor.email}`}>{vendor.email}</a>}
                 </div>
-              </div>
-            )}
-            <form
-              aria-label="Upload request photo"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (file) void perform('photo');
-              }}
-              aria-busy={pending === 'photo'}
-            >
-              <fieldset disabled={Boolean(pending)} className={styles.upload}>
-                <label className={styles.filePicker}>
-                  <span>Choose photo</span>
+              )}
+            </fieldset>
+          </form>
+          <form
+            aria-label="Upload request photo"
+            className={styles.photos}
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (file) void perform('photo');
+            }}
+            aria-busy={pending === 'photo'}
+          >
+            <fieldset disabled={Boolean(pending)} className={styles.upload}>
+              <div className={styles.photoRow}>
+                <span className={styles.photoSummary}>
+                  <PhotoGlyph />
+                  <span>{photoLine(record.photos)}</span>
+                </span>
+                <label className={`btn btn-secondary btn-sm ${styles.filePicker}`}>
+                  <span>Add photos</span>
                   <input
                     ref={fileInput}
                     type="file"
@@ -557,55 +507,119 @@ export function MaintenanceEditor({
                     }}
                   />
                 </label>
-                <span className={styles.fieldHint}>JPG, PNG or HEIC · up to 25 MB</span>
-                {file && (
-                  <div className={styles.selectedFile}>
-                    {localPreview && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={localPreview} alt="Selected photo preview" />
-                    )}
-                    <div>
-                      <strong>{file.name}</strong>
-                      <small>{(file.size / 1024).toFixed(0)} KB · Not uploaded yet</small>
-                    </div>
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      type="button"
-                      onClick={() => {
-                        setFile(null);
-                        if (fileInput.current) fileInput.current.value = '';
-                      }}
-                    >
-                      Remove
-                    </button>
-                    <button className="btn btn-primary btn-sm" type="submit">
-                      Upload photo
-                    </button>
+              </div>
+              <span className={styles.fieldHint}>
+                JPG, PNG or HEIC · up to 25 MB · photos upload immediately and stay when you cancel
+              </span>
+              {file && (
+                <div className={styles.selectedFile}>
+                  {localPreview && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={localPreview} alt="Selected photo preview" />
+                  )}
+                  <div>
+                    <strong>{file.name}</strong>
+                    <small>{(file.size / 1024).toFixed(0)} KB · Not uploaded yet</small>
                   </div>
-                )}
-              </fieldset>
-              {pending === 'photo' && (
-                <div role="status" className={styles.uploadProgress}>
-                  <progress max={100} value={progress} aria-label="Photo upload progress" />
-                  <span>
-                    {progress < 100
-                      ? `Uploading photo… ${progress}%`
-                      : 'Upload received. Saving photo…'}
-                  </span>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    type="button"
+                    onClick={() => {
+                      setFile(null);
+                      if (fileInput.current) fileInput.current.value = '';
+                    }}
+                  >
+                    Remove
+                  </button>
+                  <button className="btn btn-primary btn-sm" type="submit">
+                    Upload photo
+                  </button>
                 </div>
               )}
-              {feedbackFor('photo')}
-            </form>
-          </section>
-          <section className={styles.card} aria-labelledby="activity-heading">
-            <div className={styles.sectionHead}>
-              <div>
-                <h2 id="activity-heading">
-                  Activity <span className={styles.count}>{record.events.length}</span>
-                </h2>
-                <p>Updates and conversations for this request.</p>
+            </fieldset>
+            {pending === 'photo' && (
+              <div role="status" className={styles.uploadProgress}>
+                <progress max={100} value={progress} aria-label="Photo upload progress" />
+                <span>
+                  {progress < 100
+                    ? `Uploading photo… ${progress}%`
+                    : 'Upload received. Saving photo…'}
+                </span>
               </div>
+            )}
+            {feedbackFor('photo')}
+            {record.photos.length > 0 && (
+              <div className={styles.gallery}>
+                {record.photos.map((photo, index) => (
+                  <EditorPhoto key={photo.documentId} photo={photo} index={index} />
+                ))}
+              </div>
+            )}
+          </form>
+          <div className={styles.actions}>
+            <p className={styles.fieldHint}>
+              {dirty
+                ? 'Details, status, priority and vendor are pending until you save.'
+                : 'Details, status, priority and vendor are up to date.'}
+            </p>
+            <div className={styles.actionButtons}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={Boolean(pending)}
+                onClick={() => {
+                  if (hasUnsaved) {
+                    discardMode.current = 'assign';
+                    setDiscardTo(returnTo);
+                  } else window.location.assign(returnTo);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="repair-editor"
+                className="btn btn-primary"
+                disabled={Boolean(pending) || !dirty}
+              >
+                <Icon name="check" />
+                {pending === 'save' ? 'Saving…' : 'Save changes'}
+              </button>
             </div>
+          </div>
+        </section>
+        <div className={styles.side}>
+          <section className={`card ${styles.activity}`} aria-labelledby="activity-heading">
+            <h2 id="activity-heading">
+              Activity <span className={styles.count}>{activity.length}</span>
+            </h2>
+            {activity.length ? (
+              <ol className={styles.timeline}>
+                {(allActivity ? activity : activity.slice(0, 8)).map((entry) => (
+                  <li key={entry.id}>
+                    <div className={styles.eventHeading}>
+                      <strong>{entry.title}</strong>
+                      <time dateTime={entry.createdAt}>{editorDate(entry.createdAt)}</time>
+                    </div>
+                    {entry.author && <p className={styles.eventAuthor}>{entry.author}</p>}
+                    {entry.comment && entry.body && (
+                      <p className={styles.commentBody}>{entry.body}</p>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className={styles.fieldHint}>No activity recorded yet. Add the first update.</p>
+            )}
+            {activity.length > 8 && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setAllActivity(!allActivity)}
+              >
+                {allActivity ? 'Show recent activity' : `Show all ${activity.length} updates`}
+              </button>
+            )}
             <form
               aria-label="Add request comment"
               className={styles.composer}
@@ -628,9 +642,9 @@ export function MaintenanceEditor({
                 />
               </label>
               <div className={styles.composerFooter}>
-                <p>Comments post immediately.</p>
+                <p className={styles.fieldHint}>Comments post immediately.</p>
                 <button
-                  className="btn btn-secondary"
+                  className="btn btn-secondary btn-sm"
                   type="submit"
                   disabled={Boolean(pending) || !comment.trim()}
                 >
@@ -639,79 +653,35 @@ export function MaintenanceEditor({
               </div>
               {feedbackFor('comment')}
             </form>
-            {record.events.length ? (
-              <ol className={styles.timeline}>
-                {(allActivity ? record.events : record.events.slice(0, 8)).map((event) => (
-                  <li key={event.id}>
-                    <span
-                      className={`${styles.eventDot} ${event.kind === 'COMMENT' ? styles.commentDot : ''}`}
-                      aria-hidden="true"
-                    >
-                      {event.kind === 'COMMENT' ? event.actor?.name?.trim().charAt(0) || '•' : '•'}
-                    </span>
-                    <div>
-                      <div className={styles.eventHeading}>
-                        <strong>
-                          {event.kind === 'COMMENT' && event.actor?.name
-                            ? event.actor.name
-                            : eventLabel(event)}
-                        </strong>
-                        <time dateTime={event.createdAt}>{editorDate(event.createdAt)}</time>
-                      </div>
-                      {event.kind !== 'COMMENT' && event.actor?.name && (
-                        <p className={styles.eventAuthor}>{event.actor.name}</p>
-                      )}
-                      {event.kind === 'COMMENT' && (
-                        <p className={styles.commentBody}>{event.body}</p>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <div className={styles.empty}>
-                <p>No activity recorded yet. Add the first update above.</p>
-              </div>
-            )}
-            {record.events.length > 8 && (
-              <button
-                type="button"
-                className={styles.moreActivity}
-                onClick={() => setAllActivity(!allActivity)}
-              >
-                {allActivity ? 'Show recent activity' : `Show all ${record.events.length} updates`}
-              </button>
-            )}
           </section>
-        </div>
-        <aside className={styles.requestContext} aria-label="Request record">
-          <h2>Request record</h2>
-          <dl>
-            <div>
-              <dt>Opened</dt>
-              <dd>
-                <time dateTime={record.createdAt}>{editorDate(record.createdAt)}</time>
-              </dd>
-            </div>
-            {record.completedAt && (
+          <section className={styles.requestContext} aria-labelledby="record-heading">
+            <h2 id="record-heading">Request record</h2>
+            <dl>
               <div>
-                <dt>Completed</dt>
+                <dt>Opened</dt>
                 <dd>
-                  <time dateTime={record.completedAt}>{editorDate(record.completedAt)}</time>
+                  <time dateTime={record.createdAt}>{editorDate(record.createdAt)}</time>
                 </dd>
               </div>
-            )}
-            <div>
-              <dt>Saved status</dt>
-              <dd>{statusLabels[record.status]}</dd>
-            </div>
-            <div>
-              <dt>Saved vendor</dt>
-              <dd>{record.vendor?.name ?? record.vendorName ?? 'Unassigned'}</dd>
-            </div>
-          </dl>
-          <p>Photos and comments are saved immediately and remain when you cancel editing.</p>
-        </aside>
+              {record.completedAt && (
+                <div>
+                  <dt>Completed</dt>
+                  <dd>
+                    <time dateTime={record.completedAt}>{editorDate(record.completedAt)}</time>
+                  </dd>
+                </div>
+              )}
+              <div>
+                <dt>Saved status</dt>
+                <dd>{statusLabels[record.status]}</dd>
+              </div>
+              <div>
+                <dt>Saved vendor</dt>
+                <dd>{record.vendor?.name ?? record.vendorName ?? 'Unassigned'}</dd>
+              </div>
+            </dl>
+          </section>
+        </div>
       </div>
       <ConfirmDialog
         open={Boolean(discardTo)}
@@ -721,7 +691,11 @@ export function MaintenanceEditor({
         confirmLabel="Discard changes"
         onConfirm={() => {
           leaving.current = true;
-          if (discardMode.current === 'traverse' && pendingTraverse.current && navigationApi.current) {
+          if (
+            discardMode.current === 'traverse' &&
+            pendingTraverse.current &&
+            navigationApi.current
+          ) {
             try {
               navigationApi.current
                 .traverseTo(pendingTraverse.current)
@@ -750,5 +724,15 @@ export function MaintenanceEditor({
         }}
       />
     </div>
+  );
+}
+
+function PhotoGlyph() {
+  return (
+    <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
+      <rect x="2.5" y="4" width="15" height="12" rx="2" fill="none" stroke="currentColor" />
+      <circle cx="7.5" cy="8.5" r="1.5" fill="none" stroke="currentColor" />
+      <path d="m3 14 4.5-4 3.5 3 2.5-2 4 3.5" fill="none" stroke="currentColor" />
+    </svg>
   );
 }

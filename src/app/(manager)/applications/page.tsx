@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { EmptyState } from '@/components/RouteStates';
 import { Avatar, Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { SearchField, AutoSubmitSelect, NoticeToast } from '@/components/ui';
+import { SearchField, AutoSubmitSelect, NoticeToast, Alert, Steps, Tabs } from '@/components/ui';
+import { SummaryBand } from '@/components/ui/SummaryBand';
 import { applicationStatusLabels as labels, applicationStatusTone } from './status';
 import { Pagination, PAGE_SIZE, pageFrom } from '@/components/ui/Pagination';
 import { PageHeader } from '@/components/shell/PageHeader';
@@ -11,12 +12,22 @@ import { scopeFilterFrom, unitScopeWhere } from '@/lib/workspace/scope';
 import { db } from '@/lib/db/client';
 import { requireManagerRole } from '@/lib/auth/access';
 import { hasCurrentConsent, type ApplicationStatus } from '@/lib/screening/policy';
+import { isSandboxEnabled } from '@/lib/providers/sandbox';
+import {
+  applicationStage,
+  currentScreeningConsent,
+  pipelineCounts,
+  pipelineDetail,
+  reviewSteps,
+  screeningProviderStatus,
+} from '@/lib/applications/pipeline';
+import { invitationLinkConfigurationError } from '@/lib/applications/link-config';
 import { recordDecision, requestScreening } from './actions';
 import { ReviewDecisionForm, ScreeningSubmit } from './ReviewForms';
 import { ApplicantList, BackToApplicants } from './ApplicantList';
 import styles from './applications.module.css';
 import { PromoteApplicant } from '@/components/applications/PromoteApplicant';
-import { InvitationList } from '@/components/applications/InvitationList';
+import { InvitationGuide, InvitationList } from '@/components/applications/InvitationList';
 
 type SearchParams = {
   applicant?: string;
@@ -28,6 +39,7 @@ type SearchParams = {
   page?: string;
 };
 const statuses: ApplicationStatus[] = ['SUBMITTED', 'SCREENING', 'REVIEW', 'APPROVED', 'DECLINED'];
+const openStatuses: ApplicationStatus[] = ['SUBMITTED', 'SCREENING', 'REVIEW'];
 function initials(name: string) {
   return name
     .trim()
@@ -45,22 +57,17 @@ function formatDate(value: Date | null | undefined) {
     timeZone: 'UTC',
   }).format(value);
 }
+function shortDate(value: Date) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(value);
+}
 function objectSummary(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
-}
-
-function ApplicationMetric({ label, value, note }: { label: string; value: number; note: string }) {
-  return (
-    <div className={styles.metric}>
-      <strong>{value}</strong>
-      <div>
-        <p>{label}</p>
-        <small>{note}</small>
-      </div>
-    </div>
-  );
 }
 
 export default async function ApplicationsPage({
@@ -97,7 +104,7 @@ export default async function ApplicationsPage({
   };
   const filteredCount = await db.application.count({ where });
   const page = pageFrom(params.page, filteredCount);
-  const [applications, groups, totalCount, connections] = await Promise.all([
+  const [applications, groups, totalCount, connections, pipelineRows] = await Promise.all([
     db.application.findMany({
       where,
       include,
@@ -114,6 +121,22 @@ export default async function ApplicationsPage({
     db.providerConnection.findMany({
       where: { organizationId: session.organizationId, kind: 'SCREENING' },
       orderBy: { updatedAt: 'desc' },
+    }),
+    // Every undecided submitted application in scope, independent of search, filter and page.
+    db.application.findMany({
+      where: {
+        organizationId: session.organizationId,
+        ...scopeWhere,
+        status: { in: openStatuses },
+      },
+      select: {
+        id: true,
+        status: true,
+        consents: {
+          select: { provider: true, consentedAt: true, consentVersion: true, revokedAt: true },
+        },
+        reports: { orderBy: { createdAt: 'desc' }, take: 1, select: { status: true } },
+      },
     }),
   ]);
   const selected = params.applicant
@@ -132,24 +155,33 @@ export default async function ApplicationsPage({
   const countByStatus = new Map(
     groups.map(({ status: itemStatus, _count }) => [itemStatus, _count._all]),
   );
-  const selectedConsent =
-    selected?.consents.find(
-      (item) =>
-        connections.some((connection) => connection.provider === item.provider) &&
-        hasCurrentConsent(item),
-    ) ?? selected?.consents.find((item) => item.provider === 'mock' && hasCurrentConsent(item));
+  const providers = connections.map((item) => item.provider);
+  const providerStatus = screeningProviderStatus(connections, isSandboxEnabled());
+  const linksUnavailable = invitationLinkConfigurationError();
+  const stageOf = (application: {
+    status: ApplicationStatus;
+    consents: Parameters<typeof currentScreeningConsent>[0];
+    reports: { status: string }[];
+  }) =>
+    applicationStage({
+      status: application.status,
+      consent: Boolean(currentScreeningConsent(application.consents, providers)),
+      reportStatus: application.reports[0]?.status,
+    });
+  const counts = pipelineCounts(
+    pipelineRows.filter((row) => openStatuses.includes(row.status)).map(stageOf),
+  );
+  const notScreened = counts.awaitingConsent + counts.readyToScreen;
+
+  const selectedConsent = selected
+    ? currentScreeningConsent(selected.consents, providers)
+    : undefined;
   const connection =
     connections.find((item) => item.provider === selectedConsent?.provider) ??
     connections.find((item) => item.provider === 'transunion') ??
     connections.find((item) => item.status === 'CONNECTED') ??
     connections[0] ??
     null;
-  const consentFor = (application: (typeof applications)[number]) => {
-    const consent = application.consents.find(
-      (item) => item.provider === (connection?.provider ?? 'mock'),
-    );
-    return hasCurrentConsent(consent);
-  };
   const consent = hasCurrentConsent(selectedConsent);
   const report = selected?.reports[0];
   const summary = objectSummary(report?.summary);
@@ -158,14 +190,6 @@ export default async function ApplicationsPage({
     summary.background === 'clear' || summary.background === 'review' ? summary.background : null;
   const eviction =
     summary.eviction === 'clear' || summary.eviction === 'review' ? summary.eviction : null;
-  const reportTone =
-    report?.status === 'complete'
-      ? 'success'
-      : report?.status === 'failed'
-        ? 'danger'
-        : report?.status === 'pending'
-          ? 'warning'
-          : 'neutral';
   const canDecide = Boolean(
     selected && consent && selected.status === 'REVIEW' && report?.status === 'complete',
   );
@@ -177,6 +201,39 @@ export default async function ApplicationsPage({
     selected.status !== 'APPROVED' &&
     selected.status !== 'DECLINED',
   );
+  const selectedStage = selected ? stageOf(selected) : null;
+  const selectedSteps = selectedStage
+    ? reviewSteps(selectedStage, Boolean(selected?.promotedTenantId))
+    : null;
+  const listHref = (next: { status?: ApplicationStatus }) => {
+    const query = new URLSearchParams();
+    if (q) query.set('q', q);
+    if (next.status) query.set('status', next.status);
+    if (scope.propertyId) query.set('propertyId', scope.propertyId);
+    if (scope.unitId) query.set('unitId', scope.unitId);
+    return `/applications${query.size ? `?${query}` : ''}`;
+  };
+  const statusTabs = [
+    { label: 'All', href: listHref({}), active: !status, count: totalCount },
+    {
+      label: 'Ready',
+      href: listHref({ status: 'REVIEW' }),
+      active: status === 'REVIEW',
+      count: countByStatus.get('REVIEW') ?? 0,
+    },
+    {
+      label: 'Screening',
+      href: listHref({ status: 'SCREENING' }),
+      active: status === 'SCREENING',
+      count: countByStatus.get('SCREENING') ?? 0,
+    },
+    {
+      label: 'Consent',
+      href: listHref({ status: 'SUBMITTED' }),
+      active: status === 'SUBMITTED',
+      count: countByStatus.get('SUBMITTED') ?? 0,
+    },
+  ];
   return (
     <section className={styles.applications} aria-label="Applications and screening">
       <ScopedWorkspace
@@ -187,9 +244,9 @@ export default async function ApplicationsPage({
       <PageHeader
         title="Applications & invitations"
         eyebrow={scope.propertyId ? 'Leasing · Property applications' : 'Leasing'}
-        meta={scope.propertyId ? 'Applications for this property' : 'All properties'}
+        meta={`${scope.propertyId ? 'Applications for this property' : 'All properties'} · ${providerStatus.label}`}
         actions={[
-          { label: 'Screening provider', href: '/integrations' },
+          { label: 'Screening provider', href: '/integrations#screening-providers' },
           {
             label: 'Send application',
             href: `/applications/send${scopeParams.size ? `?${scopeParams}` : ''}`,
@@ -203,51 +260,6 @@ export default async function ApplicationsPage({
           ← Back to property applications
         </Link>
       )}
-      {await InvitationList({ organizationId: session.organizationId, scope })}
-      <div className={styles.intro}>
-        <form
-          className={styles.filters}
-          action="/applications"
-          method="get"
-          role="search"
-          aria-label="Filter applications"
-        >
-          <label className={styles.filterField}>
-            <span>Search applicants</span>
-            <span className={styles.search}>
-              <SearchField
-                maxLength={100}
-                aria-label="Search applicants or units"
-                name="q"
-                placeholder="Search applicants or units"
-                defaultValue={q}
-              />
-            </span>
-          </label>
-          <label className={styles.filterField}>
-            <span>Application status</span>
-            <AutoSubmitSelect
-              aria-label="Filter by status"
-              name="status"
-              defaultValue={status ?? ''}
-            >
-              <option value="">All statuses</option>
-              {statuses.map((item) => (
-                <option key={item} value={item}>
-                  {labels[item]}
-                </option>
-              ))}
-            </AutoSubmitSelect>
-          </label>
-          {scope.propertyId && <input type="hidden" name="propertyId" value={scope.propertyId} />}
-          {scope.unitId && <input type="hidden" name="unitId" value={scope.unitId} />}
-          {(q || status) && (
-            <Link href={clearHref} className="btn btn-ghost btn-sm">
-              Clear filters
-            </Link>
-          )}
-        </form>
-      </div>
       {params.notice === 'screening' && (
         <NoticeToast message="Screening request sent. The report status updates when the provider returns a result." />
       )}
@@ -258,36 +270,99 @@ export default async function ApplicationsPage({
         <NoticeToast message="Decision recorded for this application." />
       )}
 
-      <section className={styles.summaryStrip} aria-label="Applications at a glance">
-        <ApplicationMetric
-          label="New applications"
-          value={countByStatus.get('SUBMITTED') ?? 0}
-          note="Not screened yet"
-        />
-        <ApplicationMetric
-          label="Screening in progress"
-          value={countByStatus.get('SCREENING') ?? 0}
-          note={
-            (countByStatus.get('SCREENING') ?? 0) > 0
-              ? 'Waiting on provider'
-              : providerReady
-                ? 'Provider ready'
-                : 'Provider not connected'
-          }
-        />
-        <ApplicationMetric
-          label="Ready for decision"
-          value={countByStatus.get('REVIEW') ?? 0}
-          note={(countByStatus.get('REVIEW') ?? 0) > 0 ? 'Consent recorded' : 'No reports ready'}
-        />
-      </section>
+      <SummaryBand
+        eyebrow="Leasing pipeline · submitted applications"
+        label="Applications at a glance"
+        value={`${counts.toReview} to review`}
+        detail={pipelineDetail(counts)}
+        progress={{
+          label: `${counts.ready} of ${counts.toReview} have a complete report and recorded consent`,
+          value: counts.toReview ? (counts.ready / counts.toReview) * 100 : 0,
+          valueText: `${counts.ready} of ${counts.toReview}`,
+          tone: 'accent',
+        }}
+        footer={
+          <p className={styles.bandNote}>
+            Invitations and saved drafts are tracked separately and never count here.
+          </p>
+        }
+        stats={[
+          {
+            label: 'New applications',
+            value: notScreened,
+            detail: `Not screened yet · ${counts.awaitingConsent} awaiting consent`,
+          },
+          {
+            label: 'Screening in progress',
+            value: counts.screening,
+            detail: counts.screening > 0 ? 'Waiting on provider' : providerStatus.label,
+          },
+          {
+            label: 'Ready for decision',
+            value: counts.ready,
+            detail: 'Consent recorded · report complete',
+          },
+        ]}
+      />
+
+      <div className={styles.invitationGrid}>
+        {await InvitationList({
+          organizationId: session.organizationId,
+          scope,
+          linksUnavailable,
+        })}
+        <InvitationGuide />
+      </div>
 
       <div className={styles.reviewGrid}>
         <ApplicantList count={filteredCount} total={totalCount}>
+          <form
+            className={styles.filters}
+            action="/applications"
+            method="get"
+            role="search"
+            aria-label="Filter applications"
+          >
+            <div className={`${styles.filterField} ${styles.search}`}>
+              <SearchField
+                maxLength={100}
+                aria-label="Search applicants or units"
+                name="q"
+                placeholder="Search applicants or units"
+                defaultValue={q}
+              />
+            </div>
+            <label className={`field ${styles.filterField}`}>
+              <span className="field-label">Application status</span>
+              <AutoSubmitSelect
+                aria-label="Filter by status"
+                name="status"
+                defaultValue={status ?? ''}
+              >
+                <option value="">All statuses</option>
+                {statuses.map((item) => (
+                  <option key={item} value={item}>
+                    {item === 'REVIEW' ? 'Ready for decision' : labels[item]}
+                  </option>
+                ))}
+              </AutoSubmitSelect>
+            </label>
+            {scope.propertyId && <input type="hidden" name="propertyId" value={scope.propertyId} />}
+            {scope.unitId && <input type="hidden" name="unitId" value={scope.unitId} />}
+            {(q || status) && (
+              <Link href={clearHref} className="btn btn-ghost btn-sm">
+                Clear filters
+              </Link>
+            )}
+          </form>
+          <div className={styles.phoneTabs}>
+            <Tabs items={statusTabs} label="Application status" />
+          </div>
           {ordered.length ? (
-            <ul>
+            <ul className={styles.applicantRows}>
               {ordered.map((application) => {
-                const hasConsent = consentFor(application);
+                const stage = stageOf(application);
+                const hasConsent = stage !== 'awaiting-consent';
                 const appReport = objectSummary(application.reports[0]?.summary);
                 const needsReview =
                   appReport.background === 'review' || appReport.eviction === 'review';
@@ -301,49 +376,46 @@ export default async function ApplicationsPage({
                 // A decision stands on its own; consent only matters while screening is still open.
                 const decided =
                   application.status === 'APPROVED' || application.status === 'DECLINED';
+                const active = application.id === selected?.id;
                 return (
                   <li key={application.id}>
                     <Link
-                      className={
-                        application.id === selected?.id ? styles.applicantActive : styles.applicant
-                      }
+                      className={active ? styles.applicantActive : styles.applicant}
                       href={
                         '/applications?' + paramsForApplicant.toString() + '#selected-applicant'
                       }
-                      aria-current={application.id === selected?.id ? 'true' : undefined}
+                      aria-current={active ? 'true' : undefined}
                     >
-                      <Avatar initials={initials(application.applicantName)} />
-                      <span className={styles.applicantBody}>
+                      <span className={styles.applicantTop}>
                         <strong>{application.applicantName}</strong>
-                        <small>
-                          {application.unit.property.name} ·{' '}
-                          {application.unit.isImplicit
-                            ? 'Whole property'
-                            : `Unit ${application.unit.number}`}
-                        </small>
-                        <span className={styles.metaLine}>
-                          <Badge
-                            tone={
-                              !hasConsent && !decided
-                                ? 'neutral'
-                                : applicationStatusTone(application.status)
-                            }
-                          >
-                            {decided
-                              ? labels[application.status]
-                              : !hasConsent
-                                ? 'Awaiting consent'
-                                : application.status === 'SUBMITTED'
-                                  ? 'Ready to screen'
-                                  : application.status === 'REVIEW'
-                                    ? needsReview
-                                      ? 'Needs review'
-                                      : 'Ready'
-                                    : labels[application.status]}
-                          </Badge>
-                          <span>{formatDate(application.appliedAt)}</span>
-                        </span>
+                        <Badge
+                          tone={
+                            !hasConsent && !decided
+                              ? 'neutral'
+                              : applicationStatusTone(application.status)
+                          }
+                        >
+                          {decided
+                            ? labels[application.status]
+                            : !hasConsent
+                              ? 'Awaiting consent'
+                              : application.status === 'SUBMITTED'
+                                ? 'Ready to screen'
+                                : application.status === 'REVIEW'
+                                  ? needsReview
+                                    ? 'Needs review'
+                                    : 'Ready'
+                                  : labels[application.status]}
+                        </Badge>
                       </span>
+                      <small>
+                        {application.unit.property.name} ·{' '}
+                        {application.unit.isImplicit
+                          ? 'Whole property'
+                          : `Unit ${application.unit.number}`}{' '}
+                        · {shortDate(application.appliedAt)}
+                        {active ? ' · selected' : ''}
+                      </small>
                     </Link>
                   </li>
                 );
@@ -379,7 +451,7 @@ export default async function ApplicationsPage({
 
         {selected ? (
           <section
-            className={styles.detail}
+            className={`card ${styles.detail}`}
             id="selected-applicant"
             tabIndex={-1}
             aria-labelledby="selected-title"
@@ -389,7 +461,7 @@ export default async function ApplicationsPage({
               <div className={styles.identity}>
                 <Avatar initials={initials(selected.applicantName)} size="lg" />
                 <div>
-                  <p className={styles.eyebrow}>Selected applicant</p>
+                  <p className="eyebrow">Selected applicant</p>
                   <h2 id="selected-title">{selected.applicantName}</h2>
                   <p className={styles.unitLine}>
                     <Link href={'/properties/' + selected.unit.propertyId}>
@@ -408,6 +480,8 @@ export default async function ApplicationsPage({
                     </Link>
                     {' · Applied '}
                     {formatDate(selected.appliedAt)}
+                    {' / '}
+                    <a href={`mailto:${selected.applicantEmail}`}>{selected.applicantEmail}</a>
                   </p>
                 </div>
               </div>
@@ -417,49 +491,48 @@ export default async function ApplicationsPage({
                   : labels[selected.status]}
               </Badge>
             </div>
-            <p className={styles.applicantContact}>
-              <a href={`mailto:${selected.applicantEmail}`}>{selected.applicantEmail}</a>
-            </p>
+            {selectedSteps && (
+              <div className={styles.stepsWrap}>
+                <Steps steps={selectedSteps.steps} current={selectedSteps.current} />
+              </div>
+            )}
             <div className={styles.provider}>
-              <span className={styles.providerLogo} aria-hidden="true">
-                {connection?.provider === 'transunion' ? 'TU' : 'S'}
-              </span>
               <div className={styles.providerText}>
-                <strong>
-                  {connection?.provider === 'transunion'
-                    ? 'TransUnion SmartMove'
-                    : (connection?.provider ?? 'Screening provider')}
-                </strong>
+                <strong>{providerStatus.label}</strong>
                 <small>
                   {report
-                    ? report.provider.toUpperCase() +
-                      ' screening report · ' +
-                      formatDate(report.completedAt ?? report.createdAt)
+                    ? `Report ${report.status} · ${report.provider.toUpperCase()} screening report · ${formatDate(report.completedAt ?? report.createdAt)}`
                     : 'No screening report yet'}
                 </small>
+                <small id="screening-help">
+                  {selected.status === 'APPROVED' || selected.status === 'DECLINED'
+                    ? 'This application has a recorded decision.'
+                    : !providerReady
+                      ? 'Connect the screening provider in Integrations before requesting a report.'
+                      : !consent
+                        ? 'A current FCRA consent is required before the provider can be contacted.'
+                        : providerStatus.state === 'sandbox'
+                          ? 'Requests run in sandbox mode; no consumer report is ordered.'
+                          : 'Use the screening provider to request or refresh this report.'}
+                </small>
               </div>
-              <span className={styles.providerState}>
-                {process.env.NODE_ENV === 'production'
-                  ? connection?.status === 'CONNECTED'
-                    ? 'Connected'
-                    : 'Not connected'
-                  : 'Connected · development mock'}
-              </span>
+              <form action={requestScreening}>
+                <input type="hidden" name="applicationId" value={selected.id} />
+                {scope.propertyId && (
+                  <input type="hidden" name="propertyId" value={scope.propertyId} />
+                )}
+                {scope.unitId && <input type="hidden" name="unitId" value={scope.unitId} />}
+                <ScreeningSubmit disabled={!canScreen} again={Boolean(report)} />
+              </form>
             </div>
-            <div className={styles.reportHeading}>
-              <h3>Applicant review</h3>
-              <Badge tone={reportTone}>
-                {report ? 'Report ' + report.status : 'Report not run'}
-              </Badge>
-            </div>
-            <div className={styles.reportGrid}>
-              <article className={styles.reportCard}>
-                <span>Credit score</span>
+            <div className={styles.reportGrid} aria-label="Screening report">
+              <div className="summary-stat">
+                <span className="summary-stat-label">Credit score</span>
                 <strong>{score ?? '—'}</strong>
                 <small>{score === null ? 'Not available' : score >= 700 ? 'Good' : 'Review'}</small>
-              </article>
-              <article className={styles.reportCard}>
-                <span>Background check</span>
+              </div>
+              <div className="summary-stat">
+                <span className="summary-stat-label">Background check</span>
                 <strong>{background ? (background === 'clear' ? 'Clear' : 'Review') : '—'}</strong>
                 <small>
                   {background
@@ -468,9 +541,9 @@ export default async function ApplicationsPage({
                       : 'Follow up required'
                     : 'Not available'}
                 </small>
-              </article>
-              <article className={styles.reportCard}>
-                <span>Eviction check</span>
+              </div>
+              <div className="summary-stat">
+                <span className="summary-stat-label">Eviction check</span>
                 <strong>{eviction ? (eviction === 'clear' ? 'Clear' : 'Review') : '—'}</strong>
                 <small>
                   {eviction
@@ -479,11 +552,10 @@ export default async function ApplicationsPage({
                       : 'Follow up required'
                     : 'Not available'}
                 </small>
-              </article>
+              </div>
             </div>
             <div className={styles.noticeGrid}>
-              <div className={consent ? styles.consent : styles.consentPending}>
-                <span aria-hidden="true">{consent ? '✓' : '!'}</span>
+              <Alert tone={consent ? 'success' : 'warning'}>
                 <div>
                   <strong>{consent ? 'FCRA consent recorded' : 'FCRA consent required'}</strong>
                   <p>
@@ -495,9 +567,8 @@ export default async function ApplicationsPage({
                       : 'Screening is blocked until the applicant provides current, unrevoked authorization.'}
                   </p>
                 </div>
-              </div>
-              <div className={styles.fairHousing}>
-                <span aria-hidden="true">i</span>
+              </Alert>
+              <Alert>
                 <div>
                   <strong>Fair housing review</strong>
                   <p>
@@ -505,43 +576,15 @@ export default async function ApplicationsPage({
                     protected characteristics.
                   </p>
                 </div>
-              </div>
+              </Alert>
             </div>
-            <div className={styles.screeningAction}>
-              <div>
-                <strong>
-                  {report?.status === 'failed'
-                    ? 'Screening report failed'
-                    : report?.status === 'complete'
-                      ? 'Screening report received'
-                      : 'Run applicant screening'}
-                </strong>
-                <p id="screening-help">
-                  {selected.status === 'APPROVED' || selected.status === 'DECLINED'
-                    ? 'This application has a recorded decision.'
-                    : !providerReady
-                      ? 'Connect the screening provider in Integrations before requesting a report.'
-                      : !consent
-                        ? 'A current FCRA consent is required before the provider can be contacted.'
-                        : process.env.NODE_ENV !== 'production'
-                          ? 'Use the development mock to request or refresh this report.'
-                          : 'Use the connected screening provider to request or refresh this report.'}
-                </p>
-              </div>
-              <form action={requestScreening}>
-                <input type="hidden" name="applicationId" value={selected.id} />
-                {scope.propertyId && (
-                  <input type="hidden" name="propertyId" value={scope.propertyId} />
-                )}
-                {scope.unitId && <input type="hidden" name="unitId" value={scope.unitId} />}
-                <ScreeningSubmit disabled={!canScreen} again={Boolean(report)} />
-              </form>
-            </div>
+            <hr className={styles.divider} />
             <div className={styles.decisionSection}>
               <h3>Decision</h3>
               <p>
-                Review the complete provider report and apply the same written criteria before
-                deciding.
+                {selected.status === 'APPROVED'
+                  ? 'Approved. Promote to tenant links this approved applicant to a tenant record.'
+                  : 'Review the complete provider report and apply the same written criteria before deciding.'}
               </p>
               {canDecide ? (
                 <ReviewDecisionForm
@@ -578,7 +621,7 @@ export default async function ApplicationsPage({
             </div>
           </section>
         ) : (
-          <section className={styles.detail}>
+          <section className={`card ${styles.detail}`}>
             <h2>
               {params.applicant
                 ? 'Applicant unavailable in this view'

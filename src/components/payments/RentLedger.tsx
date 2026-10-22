@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { formatMoney } from '@/lib/ledger/statement';
 import {
+  foldSettledRows,
+  paidDateLabel,
   PAYMENT_PILL,
   STATUS_PILL,
   type LastPaymentView,
@@ -34,7 +36,7 @@ export type LedgerSelection = {
 
 /**
  * The Rent ledger card used by every Payments scope (lease, unit, property): title, explicit scope,
- * actions, the Balance due / Last payment summary and then the body (rows or a unit table).
+ * actions, the quiet Balance due / Last payment inset and then the body (rows or a unit table).
  */
 export function RentLedger({
   scope,
@@ -42,6 +44,7 @@ export function RentLedger({
   lastPayment,
   actions,
   notes,
+  footer,
   children,
   headingLevel = 2,
 }: {
@@ -50,6 +53,8 @@ export function RentLedger({
   lastPayment: LastPaymentView;
   actions?: ReactNode;
   notes?: ReactNode;
+  /** Row under the charges, e.g. a link to the full ledger. */
+  footer?: ReactNode;
   children: ReactNode;
   headingLevel?: 2 | 3;
 }) {
@@ -87,6 +92,7 @@ export function RentLedger({
       </dl>
       {notes}
       {children}
+      {footer && <div className={styles.footer}>{footer}</div>}
     </section>
   );
 }
@@ -141,22 +147,42 @@ function PaymentHistory({
   );
 }
 
-/** Charge rows in the quiet lease-ledger style, grouped by lease term, with details and optional selection. */
+type LedgerView = 'charges' | 'payments' | 'all';
+const VIEWS: { key: LedgerView; label: string }[] = [
+  { key: 'charges', label: 'Charges' },
+  { key: 'payments', label: 'Payments' },
+  { key: 'all', label: 'All activity' },
+];
+
+/**
+ * Charge rows grouped by lease term, with details, optional selection, a Charges / Payments / All
+ * activity view when payments exist, and the oldest fully paid months folded into one summary.
+ */
 export function RentLedgerRows({
   groups,
   groupHeadings,
   selection,
   emptyText = 'No charges due yet.',
+  compact = false,
+  reminderHrefs,
 }: {
   groups: RentLedgerGroup[];
   groupHeadings: boolean;
   selection?: LedgerSelection;
   emptyText?: string;
+  /** Short excerpt rows: a type badge, the due date, no folding and no view switch. */
+  compact?: boolean;
+  /**
+   * Where each group's late charges are reviewed for a reminder (never sent from here), keyed by
+   * group id. A plain object so server pages can pass it to this client component.
+   */
+  reminderHrefs?: Record<string, string>;
 }) {
   const [detail, setDetail] = useState<{ row: LedgerRowView; group: RentLedgerGroup } | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(
     () => new Set(groupHeadings ? groups.filter((g) => !g.active).map((g) => g.id) : []),
   );
+  const [view, setView] = useState<LedgerView>('charges');
   const rows = groups.flatMap((g) => g.rows.map((r) => cell(g.id, r.key)));
   const hasPayments = groups.some((g) => g.payments?.length);
   if (!rows.length && !hasPayments) return <p className={styles.empty}>{emptyText}</p>;
@@ -167,10 +193,81 @@ export function RentLedgerRows({
     else next.delete(key);
     selection.onChange(next);
   };
+  const showViews = !compact && hasPayments && rows.length > 0;
+  const current: LedgerView = showViews ? view : 'charges';
+
+  const chargeRow = (group: RentLedgerGroup, row: LedgerRowView) => {
+    const pill = STATUS_PILL[row.status];
+    const key = cell(group.id, row.key);
+    const paid = paidDateLabel(row);
+    const review = row.status === 'LATE' ? reminderHrefs?.[group.id] : undefined;
+    return (
+      <li key={row.key} className={styles.row} data-status={row.status}>
+        {selection && (
+          <input
+            type="checkbox"
+            className={styles.check}
+            aria-label={`Select ${row.description}, ${row.dateLabel}`}
+            checked={selection.selected.has(key)}
+            onChange={(e) => toggle(key, e.target.checked)}
+          />
+        )}
+        {compact && (
+          <span className={styles.type}>
+            <Badge>{row.type}</Badge>
+          </span>
+        )}
+        <span className={styles.main}>
+          <strong>{row.description}</strong>
+          <small>
+            {compact ? '' : `${row.type} · `}Due {row.dateLabel}
+            {paid ? ` · Paid ${paid}` : ''}
+          </small>
+        </span>
+        <span className={styles.status}>
+          <Badge tone={pill.tone}>{pill.label}</Badge>
+          {review && (
+            <a className={styles.review} href={review}>
+              Review reminder <span aria-hidden="true">→</span>
+            </a>
+          )}
+        </span>
+        <span className={styles.amount}>
+          <strong>{formatMoney(row.amountCents)}</strong>
+          {row.balanceCents !== 0 && row.status !== 'SCHEDULED' && (
+            <small>Balance {formatMoney(row.balanceCents)}</small>
+          )}
+        </span>
+        <button
+          type="button"
+          className={styles.view}
+          aria-label={`Details for ${row.description}, ${row.dateLabel}`}
+          onClick={() => setDetail({ row, group })}
+        >
+          Details
+        </button>
+      </li>
+    );
+  };
 
   return (
     <>
-      {selection && rows.length > 0 && (
+      {showViews && (
+        <div className={styles.views} role="group" aria-label="Ledger view">
+          {VIEWS.map((v) => (
+            <button
+              key={v.key}
+              type="button"
+              aria-pressed={current === v.key}
+              onClick={() => setView(v.key)}
+            >
+              {v.label}
+              {v.key === 'charges' && <span className={styles.viewCount}> {rows.length}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      {selection && rows.length > 0 && current !== 'payments' && (
         <label className={styles.selectAll}>
           <input
             type="checkbox"
@@ -183,6 +280,9 @@ export function RentLedgerRows({
       {groups.map((group) => {
         const closed = collapsed.has(group.id);
         const listId = `ledger-${group.id}`;
+        const { visible, settled } = compact
+          ? { visible: group.rows, settled: null }
+          : foldSettledRows(group.rows);
         return (
           <div key={group.id} className={styles.group} data-active={group.active}>
             {groupHeadings && (
@@ -209,57 +309,39 @@ export function RentLedgerRows({
             )}
             {!closed && (
               <div id={listId}>
-                {group.rows.length === 0 ? (
-                  <p className={styles.noCharges}>
-                    No charges on this lease
-                    {group.balanceCents < 0 ? ` · ${formatMoney(-group.balanceCents)} credit` : ''}.
-                  </p>
-                ) : (
-                  <ul className={styles.rows} aria-label={group.heading}>
-                    {group.rows.map((row) => {
-                      const pill = STATUS_PILL[row.status];
-                      const key = cell(group.id, row.key);
-                      return (
-                        <li key={row.key} className={styles.row} data-status={row.status}>
-                          {selection && (
-                            <input
-                              type="checkbox"
-                              className={styles.check}
-                              aria-label={`Select ${row.description}, ${row.dateLabel}`}
-                              checked={selection.selected.has(key)}
-                              onChange={(e) => toggle(key, e.target.checked)}
-                            />
-                          )}
-                          <span className={styles.type}>
-                            <Badge>{row.type}</Badge>
-                          </span>
-                          <span className={styles.main}>
-                            <strong>{row.description}</strong>
-                            <small>Due {row.dateLabel}</small>
-                          </span>
-                          <span className={styles.status}>
-                            <Badge tone={pill.tone}>{pill.label}</Badge>
-                          </span>
-                          <span className={styles.amount}>
-                            <strong>{formatMoney(row.amountCents)}</strong>
-                            {row.balanceCents !== 0 && row.balanceCents !== row.amountCents && (
-                              <small>{formatMoney(row.balanceCents)} left</small>
-                            )}
-                          </span>
-                          <button
-                            type="button"
-                            className={styles.view}
-                            aria-label={`Details for ${row.description}, ${row.dateLabel}`}
-                            onClick={() => setDetail({ row, group })}
-                          >
-                            Details
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                {current !== 'payments' &&
+                  (group.rows.length === 0 ? (
+                    <p className={styles.noCharges}>
+                      No charges on this lease
+                      {group.balanceCents < 0
+                        ? ` · ${formatMoney(-group.balanceCents)} credit`
+                        : ''}
+                      .
+                    </p>
+                  ) : (
+                    <>
+                      <ul className={styles.rows} aria-label={group.heading}>
+                        {visible.map((row) => chargeRow(group, row))}
+                      </ul>
+                      {settled && (
+                        <details className={styles.settled}>
+                          <summary>
+                            <span>{settled.label}</span>
+                            <small>Show each month</small>
+                          </summary>
+                          <ul className={styles.rows} aria-label={`${group.heading} · paid`}>
+                            {settled.rows.map((row) => chargeRow(group, row))}
+                          </ul>
+                        </details>
+                      )}
+                    </>
+                  ))}
+                {!compact && (
+                  <PaymentHistory
+                    group={group}
+                    open={current !== 'charges' || group.rows.length === 0}
+                  />
                 )}
-                <PaymentHistory group={group} open={group.rows.length === 0} />
               </div>
             )}
           </div>

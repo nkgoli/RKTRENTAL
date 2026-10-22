@@ -68,10 +68,10 @@
   color: var(--design-muted);
 }
 .custom input {
-  border: 1px solid var(--rr-border-strong);
-  border-radius: 7px;
-  padding: 6px 10px;
-  min-height: 32px;
+  border: 1px solid #c3c9d4;
+  border-radius: 12px;
+  padding: 6px 12px;
+  min-height: 36px;
   font: inherit;
   font-size: 13px;
   color: var(--design-text);

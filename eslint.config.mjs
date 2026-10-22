@@ -20,6 +20,8 @@ const config = [
     ],
   },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
+  // CommonJS runtime helpers (Node --require hooks and test runtimes) can only load with require().
+  { files: ['**/*.cjs'], rules: { '@typescript-eslint/no-require-imports': 'off' } },
   prettier,
 ];
 

@@ -111,7 +111,7 @@ export default async function DashboardPage({
           <CollectionChart months={dashboard.collection} range={range} />
         </div>
       </section>
-      <div className={styles.split}>
+      <div className={styles.panels}>
         <article className="card">
           <div className="card-header">
             <h2>Leases expiring soon</h2>
@@ -199,8 +199,6 @@ export default async function DashboardPage({
             </div>
           </div>
         </article>
-      </div>
-      <div className={styles.bottom}>
         <section className="card" aria-label="Properties">
           <div className="card-header">
             <h2>Properties</h2>
@@ -239,7 +237,7 @@ export default async function DashboardPage({
             </p>
           )}
         </section>
-        <article className={styles.activityPanel}>
+        <article className="card">
           <div className="card-header">
             <h2>Recent activity</h2>
             <Link href="/payments">View payments</Link>

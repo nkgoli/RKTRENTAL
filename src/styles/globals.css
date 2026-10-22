@@ -2212,27 +2212,24 @@ h4 {
   font-weight: 600;
 }
 
-/* Overflow (⋯) row menu built on details. */
+/* Overflow (⋯) row menu. The panel is fixed and placed by RowMenu so it escapes the row's
+   stacking context (row controls sit at z-index 1) and the table's scroll clipping. */
 .row-menu {
   position: relative;
   display: inline-block;
 }
-.row-menu > summary {
-  list-style: none;
-}
-.row-menu > summary::-webkit-details-marker {
-  display: none;
-}
-.row-menu[open] > summary {
+.row-menu-open > .icon-btn {
   background: var(--rr-hover);
   color: var(--design-text);
 }
 .row-menu-panel {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 4px);
+  position: fixed;
+  top: 0;
+  left: 0;
   z-index: 30;
   min-width: 180px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 6px;
   border: 1px solid var(--rr-border);
   border-radius: 10px;
@@ -2240,18 +2237,23 @@ h4 {
   box-shadow: 0 8px 24px rgb(23 36 59 / 0.14);
   display: grid;
   gap: 2px;
-  animation: rr-fade-rise var(--rr-duration) ease-out;
+  animation: rr-row-menu-in var(--rr-duration) ease-out;
   text-align: left;
   white-space: nowrap;
 }
-.row-menu-start .row-menu-panel {
-  right: auto;
-  left: 0;
+/* Opacity only: a transform would shift the measured position RowMenu corrects against. */
+@keyframes rr-row-menu-in {
+  from {
+    opacity: 0;
+  }
+}
+.row-menu-panel[hidden] {
+  display: none;
 }
 .row-menu-panel > a,
 .row-menu-panel > button,
 .row-menu-panel > form > button,
-.row-menu-panel .btn {
+.row-menu-panel > .btn {
   display: flex;
   width: 100%;
   min-height: 36px;
@@ -2273,12 +2275,23 @@ h4 {
 .row-menu-panel > a:hover,
 .row-menu-panel > button:hover,
 .row-menu-panel > form > button:hover,
-.row-menu-panel .btn:hover {
+.row-menu-panel > .btn:hover,
+.row-menu-panel > a:focus-visible,
+.row-menu-panel > button:focus-visible,
+.row-menu-panel > form > button:focus-visible {
   background: var(--rr-hover);
 }
-.row-menu-panel .danger,
-.row-menu-panel .btn-danger {
+.row-menu-panel > small {
+  padding: 6px 10px;
+}
+.row-menu-panel > .danger,
+.row-menu-panel > .btn-danger {
   color: var(--design-danger);
+}
+/* A ConfirmButton's dialog lives inside the panel: keep the menu's item styling out of it. */
+.row-menu-panel dialog {
+  text-align: start;
+  white-space: normal;
 }
 .row-menu-panel hr {
   margin: 4px 0;

@@ -110,6 +110,9 @@ describe('property and unit workspace render', () => {
     const html = renderToStaticMarkup(<PropertyOverview property={property} />);
 
     expect(html).toContain('Property details');
+    // The workspace header owns the address and type; the details card does not repeat them.
+    expect(html).not.toContain('<dt>Address</dt>');
+    expect(html).not.toContain('<dt>Type</dt>');
     expect(html).toContain('Next steps');
     expect(html).not.toContain('Photos &amp; documents');
     expect(html).not.toContain('Property documents');
@@ -125,7 +128,7 @@ describe('property and unit workspace render', () => {
 
     expect(html).toContain('Lease timeline');
     expect(html).not.toContain('Current lease');
-    expect(html).toContain('>Edit unit</button>');
+    expect(html).toMatch(/<button class="action action-secondary" type="button" aria-label="Edit unit"[^>]*>.*?<span>Edit<\/span><\/button>/);
     expect(html).not.toContain('Maintenance at a glance');
     expect(html).not.toContain('<dt>Status</dt>');
     expect(html).toContain('Unit facts');

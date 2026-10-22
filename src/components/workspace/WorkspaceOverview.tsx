@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Badge, Card, CardHeader, Pagination, pageFrom, paginate } from '@/components/ui';
-import { bedBath, formatAddress, formatDate, formatMoney } from '@/lib/properties/format';
+import { Action, ActionGlyph, Badge, Card, CardHeader, Pagination, pageFrom, paginate } from '@/components/ui';
+import { bedBath, formatDate, formatMoney } from '@/lib/properties/format';
 import type { PropertyDetail, UnitDetail } from '@/lib/properties/data';
 import { ArchiveButton } from '@/app/(manager)/properties/_components/PropertyForm';
 import { DeleteUnitControl } from '@/components/units/DeleteUnitControl';
@@ -29,7 +29,7 @@ export function PaymentsStrip({ payments, href, reminderHref }: { payments?: Pay
     <section className={styles.strip} aria-label="Payments this month">
       <div className={styles.stripHead}>
         <h3>Payments this month</h3>
-        <Link href={href}>View payments</Link>
+        <Action icon="arrow-right" trailing text="Payments" label="View payments" href={href} />
       </div>
       {payments.hasCharges ? <>
         <div className={styles.stripNumbers}>
@@ -41,11 +41,13 @@ export function PaymentsStrip({ payments, href, reminderHref }: { payments?: Pay
         <div className={styles.bar} role="progressbar" aria-label="Collected this month" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${pct}%` }} /></div>
       </> : <p className="muted">No rent charges due this month.</p>}
       <div className={styles.reminderRow}>
-        {payments.overdue && payments.overdue.amountCents > 0 ? <>
-          <div><strong className={styles.owed}>{dollars(payments.overdue.amountCents)} overdue</strong><small>All dates · includes older arrears and assessed fees</small></div>
-          <Link className="btn btn-secondary btn-sm" href={reminderHref}>Send payment reminder</Link>
-        </> : <span className="muted">No overdue balance.</span>}
-        <Link href={`${reminderHref}&view=history`}>Reminder history</Link>
+        {payments.overdue && payments.overdue.amountCents > 0
+          ? <div><strong className={styles.owed}>{dollars(payments.overdue.amountCents)} overdue</strong><small>Total to date; includes older arrears and assessed fees</small></div>
+          : <span className={`muted ${styles.clear}`}>No overdue balance.</span>}
+        <div className="action-group">
+          {payments.overdue && payments.overdue.amountCents > 0 && <Action icon="bell" text="Send reminder" label="Send payment reminder" tone="secondary" href={reminderHref} />}
+          <Action icon="history" label="Reminder history" href={`${reminderHref}&view=history`} />
+        </div>
       </div>
     </section>
   );
@@ -55,7 +57,7 @@ function NextSteps({ steps }: { steps: { label: string; href: string }[] }) {
   return (
     <Card className={styles.nextSteps}>
       <CardHeader title="Next steps" />
-      {steps.length ? <ul className={styles.steps}>{steps.map((step) => <li key={step.label}><span aria-hidden="true">↗</span><Link href={step.href}>{step.label}</Link></li>)}</ul> : <div className={styles.clearState}><p>All caught up</p><small>No urgent items need attention.</small></div>}
+      {steps.length ? <ul className={styles.steps}>{steps.map((step) => <li key={step.label}><Link href={step.href}>{step.label}<ActionGlyph name="chevron-right" /></Link></li>)}</ul> : <div className={styles.clearState}><p>All caught up</p><small>No urgent items need attention.</small></div>}
     </Card>
   );
 }
@@ -99,7 +101,7 @@ function PropertyUnits({ property, page: pageParam }: { property: PropertyDetail
                 <td>{unit.tenant ? <span className={styles.person}><span className={styles.personMark} aria-hidden="true">{initials(unit.tenant.name)}</span><Link href={`/tenants/${unit.tenant.id}`}>{unit.tenant.name}</Link></span> : <span className="muted">No tenant</span>}</td>
                 <td className="num">{formatMoney(unit.rent ?? unit.listedRent)}</td>
                 <td><Badge tone={statusTone(unit.status)}>{unit.status === 'OCCUPIED' ? 'Occupied' : unit.status === 'VACANT' ? 'Vacant' : 'Turnover'}</Badge></td>
-                <td><Link className="btn btn-ghost btn-sm" aria-label={`Open unit ${unit.number}`} href={`/properties/${property.id}?unit=${unit.id}`}>Open</Link></td>
+                <td className="num"><Action icon="chevron-right" label={`Open unit ${unit.number}`} href={`/properties/${property.id}?unit=${unit.id}`} /></td>
               </tr>
             ))}
           </tbody>
@@ -152,8 +154,6 @@ export function PropertyOverview({ property, owners = [], timeline, payments, un
         <PropertyFactsCard
           propertyId={property.id}
           owners={owners}
-          address={formatAddress(property)}
-          typeLabel={property.type === 'SINGLE_UNIT' ? 'Single-family' : 'Multi-unit'}
           unitSummary={`${activeUnits.length} · ${property.stats.occupied} occupied`}
           ownerName={property.owner?.name ?? 'Not assigned'}
           initial={{
@@ -182,7 +182,7 @@ function UnitLeaseSummary({ unit }: { unit: UnitDetail }) {
   return <p className={styles.leaseLine}>
     <strong>{current.tenant ? <Link href={`/tenants/${current.tenant.id}`}>{current.tenant.name}</Link> : 'Tenant not assigned'}</strong>
     <span className="muted">{formatDate(current.startDate)} – {formatDate(current.endDate)} · {formatMoney(current.monthlyRent)} / month · Deposit {formatMoney(current.deposit)}</span>
-    <Link href={`/leases/${current.id}?propertyId=${unit.property.id}&unitId=${unit.id}`}>View lease</Link>
+    <Action icon="arrow-right" trailing text="View lease" label="View lease" href={`/leases/${current.id}?propertyId=${unit.property.id}&unitId=${unit.id}`} />
   </p>;
 }
 

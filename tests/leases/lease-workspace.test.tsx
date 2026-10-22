@@ -93,6 +93,26 @@ describe('lease workspace', () => {
     expect(html).not.toContain('Terminate');
   });
 
+  it('shows a compact, state-aware signing bar with accessible actions', async () => {
+    let html = await render();
+    expect(html).toContain('aria-label="Agreement signing"');
+    expect(html).toContain('data-state="done"');
+    expect(html).toContain('Signed Nov 18, 2025');
+    expect(html).toContain('aria-label="Review agreement &amp; signatures"');
+    expect(html).toContain('aria-label="Open owner / lessor signing page"');
+    expect(html).toContain('href="/sign/leases/lease-1"');
+    expect(html).not.toContain('Review signatures');
+    fixture.lease.eSignStatus = 'NOT_SENT';
+    html = await render();
+    expect(html).toContain('data-state="attention"');
+    expect(html).toContain('Agreement not sent for signature');
+    expect(html).toContain('class="action action-primary"');
+    // The agreement tab already holds the signer panel, so the bar keeps only the signing link.
+    html = await render({ tab: 'agreement' });
+    expect(html).not.toContain('aria-label="Review agreement &amp; signatures"');
+    expect(html).toContain('href="/sign/leases/lease-1"');
+  });
+
   it('keeps editing, notice, templates and termination in the agreement', async () => {
     const html = await render({ tab: 'agreement' });
     for (const value of [

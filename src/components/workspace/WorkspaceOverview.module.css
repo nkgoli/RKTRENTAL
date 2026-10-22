@@ -12,14 +12,14 @@
 .reminderRow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 12px; margin-top: 3px; border-top: 1px solid var(--rr-border); font-size: 13px; }
 .reminderRow > div { flex: 1; min-width: 150px; }
 .reminderRow small { display: block; margin-top: 4px; color: var(--design-muted); font-size: 12px; }
-.reminderRow a { min-height: 44px; display: inline-flex; align-items: center; }
+.reminderRow .clear { flex: 1; }
 .stripHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; }
 .stripNumbers { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; font-size: 13px; }
 .stripNumbers strong { font-size: 17px; }
 .owed { color: var(--design-danger); font-weight: 650; }
 .bar { height: 5px; overflow: hidden; border-radius: 99px; background: var(--rr-border); }
 .bar span { display: block; height: 100%; border-radius: 99px; background: var(--design-primary); }
-.nextSteps { background: linear-gradient(130deg, var(--design-surface), var(--rr-ok-bg)); }
+.nextSteps { background: var(--design-surface); }
 .person { display: flex; align-items: center; gap: 10px; }
 .personMark { width: 30px; height: 30px; border-radius: 50%; background: var(--rr-ok-bg); border: 1px solid var(--rr-border); display: grid; place-items: center; color: var(--design-accent); font-size: 10px; font-weight: 700; flex-shrink: 0; }
 .unitCards { display: none; }
@@ -55,10 +55,11 @@
 .editActions { display: flex; gap: 8px; margin-top: 16px; }
 .facts dd :global(.badge) { margin: 0 4px 4px 0; }
 .steps { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
-.steps li { display: flex; gap: 10px; align-items: center; padding: 13px 0; border-top: 1px solid var(--rr-border); color: var(--design-accent); }
-.steps li:first-child { padding-top: 0; border-top: 0; }
-.steps li:last-child { border-bottom: 0; }
-.steps li a { color: var(--design-text); font-size: 13px; font-weight: 600; text-decoration: none; }
+.steps { gap: 0; }
+.steps li { border-top: 1px solid var(--rr-border); }
+.steps li:first-child { border-top: 0; }
+.steps li a { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; color: var(--design-text); font-size: 13px; font-weight: 600; text-decoration: none; }
+.steps li a svg { width: 16px; height: 16px; flex: none; color: var(--design-muted); }
 .steps li a:hover { color: var(--design-primary); }
 .clearState { display: grid; justify-items: start; gap: 2px; padding: 4px 0; }
 .clearState p { margin: 3px 0 0; font-weight: 700; }

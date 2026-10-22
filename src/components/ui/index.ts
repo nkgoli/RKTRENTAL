@@ -1,4 +1,6 @@
-﻿export { Alert, Progress, Steps } from './Feedback';
+﻿export { Action, ActionGlyph } from './Action';
+export type { ActionIcon, ActionTone } from './Action';
+export { Alert, Progress, Steps } from './Feedback';
 export { Avatar, Badge, Chip, Chips } from './Badge';
 export type { BadgeTone } from './Badge';
 export { Button } from './Button';

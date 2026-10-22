@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useState, type ReactNode } from 'react';
-import { Alert, Badge, Button, Card, CardHeader, Input, Select } from '@/components/ui';
+import { Action, Alert, Badge, Button, Card, CardHeader, Input, Select } from '@/components/ui';
 import { updateUnitAction, type FormState } from '@/app/(manager)/properties/actions';
 import { FieldError } from '@/app/(manager)/properties/_components/FieldError';
 import { formatMoney } from '@/lib/properties/format';
@@ -94,7 +94,7 @@ export function UnitFactsCard({ propertyId, unitId, implicit, hasActiveLease, in
 }) {
   const [editing, setEditing] = useState(false);
   return <Card id="unit-facts">
-    <CardHeader title="Unit facts" action={editing ? undefined : <Button type="button" variant="secondary" size="sm" onClick={() => setEditing(true)}>Edit unit</Button>} />
+    <CardHeader title="Unit facts" action={editing ? undefined : <Action icon="edit" text="Edit" label="Edit unit" tone="secondary" onClick={() => setEditing(true)} />} />
     {editing
       ? <UnitFactsForm propertyId={propertyId} unitId={unitId} implicit={implicit} hasActiveLease={hasActiveLease} initial={initial} onDone={() => setEditing(false)} />
       : <dl className={styles.facts}>
@@ -121,16 +121,19 @@ export type PropertyFactsValues = {
   ownerId: string | null;
 };
 
-/** Property details are read-only; the workspace header owns the property-edit entry. */
-export function PropertyFactsCard({ initial, address, typeLabel, unitSummary, ownerName, footer }: {
+/**
+ * Property details are read-only; the workspace header owns the address, type and property-edit
+ * entry, so they are not repeated here.
+ */
+export function PropertyFactsCard({ initial, unitSummary, ownerName, footer }: {
   propertyId: string; initial: PropertyFactsValues; owners: { id: string; name: string }[];
-  address: string; typeLabel: string; unitSummary: string; ownerName: string; footer?: ReactNode;
+  /** @deprecated Shown in the workspace header. */ address?: string;
+  /** @deprecated Shown in the workspace header. */ typeLabel?: string;
+  unitSummary: string; ownerName: string; footer?: ReactNode;
 }) {
   return <Card id="property-facts">
     <CardHeader title="Property details" />
     <dl className={styles.facts}>
-      <dt>Address</dt><dd>{address}</dd>
-      <dt>Type</dt><dd>{typeLabel}</dd>
       <dt>Year built</dt><dd>{initial.yearBuilt ?? '—'}</dd>
       <dt>Units</dt><dd>{unitSummary}</dd>
       <dt>Owner</dt><dd>{ownerName}</dd>

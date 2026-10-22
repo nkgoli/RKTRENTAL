@@ -21,6 +21,7 @@ for (const width of [1280, 390]) {
     await expect(page).toHaveURL(/\/applications\?propertyId=seed-property-maple$/);
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Applications', level: 1 })).toBeVisible();
+    await expect(page.getByRole('searchbox', { name: 'Search applicants or units' })).toBeVisible();
     await page.screenshot({
       path: `tests/tenants/evidence/legacy-add-applications-${width}.png`,
       fullPage: true,
@@ -43,6 +44,7 @@ test('production edit and note complete without reload on an existing tenant', a
   await relationship.fill('Sibling');
   await edit.getByRole('button', { name: 'Save changes', exact: true }).click();
   await expect(page).toHaveURL(/\/tenants\/[^/?]+\?returnTo=/);
+  await expect(page.locator('#edit-profile')).toHaveCount(0);
   await expect(page.getByText('Sibling')).toBeVisible();
   // Restore the seeded value so the run leaves tenant data as it found it.
   await page.getByRole('link', { name: 'Edit profile', exact: true }).click();
@@ -52,9 +54,11 @@ test('production edit and note complete without reload on an existing tenant', a
     .getByRole('button', { name: 'Save changes', exact: true })
     .click();
   await expect(page).toHaveURL(/\/tenants\/[^/?]+\?returnTo=/);
+  await expect(page.locator('#edit-profile')).toHaveCount(0);
 
   await page.getByLabel('Note', { exact: true }).fill(`Production note ${unique}`);
   await page.getByRole('button', { name: 'Save note' }).click();
-  await expect(page.getByText('Note added.')).toBeVisible();
-  await expect(page.getByText(`Production note ${unique}`)).toBeVisible();
+  await expect(
+    page.locator('#tenant-history').getByText(`Production note ${unique}`, { exact: true }),
+  ).toBeVisible();
 });

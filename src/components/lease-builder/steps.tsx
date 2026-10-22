@@ -556,6 +556,7 @@ export function TenantsStep({
   tenants,
   sourceLabel,
   notice,
+  noticeApplicantId,
   applicants = [],
   applicationsHref = (applicantId) =>
     `/applications?${new URLSearchParams({
@@ -567,6 +568,7 @@ export function TenantsStep({
   tenants: TenantOption[];
   sourceLabel?: string;
   notice?: string;
+  noticeApplicantId?: string;
   applicants?: ApplicantOption[];
   /** Builds the Applications link scoped to this lease's property and unit. */
   applicationsHref?: (applicantId?: string) => string;
@@ -616,7 +618,13 @@ export function TenantsStep({
           Renewal for {sourceLabel}. Tenants carry over from the current lease.
         </p>
       )}
-      {notice && <p className={styles.sub}>{notice}</p>}
+      {notice && (
+        <p className={styles.sub}>
+          {notice}{' '}
+          {noticeApplicantId &&
+            reviewLink(applicationsHref(noticeApplicantId), 'Review application')}
+        </p>
+      )}
       {selected.length > 0 && (
         <div className={styles.selectedTenants} aria-label="Selected tenants">
           {selected.map((tenant) => (
@@ -722,8 +730,8 @@ export function TenantsStep({
         </p>
       )}
       <p className={styles.sub}>
-        Someone new? {reviewLink(applicationsHref(), 'Review applicants for this unit')}. Your
-        draft is saved first, so you can resume it from Leases › Drafts.
+        Someone new? {reviewLink(applicationsHref(), 'Review applicants for this unit')}. Your draft
+        is saved first, so you can resume it from Leases › Drafts.
       </p>
       <Field label="Primary tenant" error={errors.primaryTenantId}>
         <select

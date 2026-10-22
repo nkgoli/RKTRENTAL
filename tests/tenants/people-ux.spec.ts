@@ -21,8 +21,10 @@ for (const width of [1280, 390]) {
     });
     await page.setViewportSize({ width, height: 844 });
     await page.goto('/tenants?view=directory&property=seed-property-maple');
-    await page.getByRole('searchbox').fill('alex.rivera');
-    await page.getByRole('searchbox').press('Enter');
+    await page.waitForLoadState('networkidle');
+    const tenantSearch = page.getByRole('searchbox', { name: 'Name, email, phone or unit' });
+    await tenantSearch.pressSequentially('alex.rivera', { delay: 30 });
+    await tenantSearch.press('Enter');
     await expect(page).toHaveURL(/view=directory/);
     await expect(page).toHaveURL(/property=seed-property-maple/);
     await expect(page).toHaveURL(/q=alex.rivera/);
@@ -82,9 +84,16 @@ for (const width of [1280, 390]) {
   test(`applicant review retains scope and consent at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await page.goto('/properties/seed-property-maple/applications?unit=seed-unit-maple-7');
-    await page.getByText('Application settings', { exact: true }).first().click();
-    await expect(page.getByRole('combobox', { name: 'Screening reports' })).toBeVisible();
-    await page.getByRole('link', { name: /Rohan Das/ }).click();
+    const settings = page.getByRole('link', { name: /^Application settings/ });
+    await expect(settings).toHaveAttribute('href', '/integrations#screening-providers');
+    await settings.click();
+    await expect(page).toHaveURL(/\/integrations#screening-providers$/);
+    await expect(page.getByRole('combobox', { name: 'Default screening package' })).toBeVisible();
+    await page.goBack();
+    await expect(page).toHaveURL(
+      /\/properties\/seed-property-maple\/applications\?unit=seed-unit-maple-7$/,
+    );
+    await page.getByRole('link', { name: /Rohan Das rohan\.das@example\.com/ }).click();
     await expect(page).toHaveURL(/propertyId=seed-property-maple/);
     await expect(page).toHaveURL(/unitId=seed-unit-maple-7/);
     await expect(page.getByRole('heading', { name: 'Rohan Das', exact: true })).toBeVisible();
@@ -96,10 +105,16 @@ for (const width of [1280, 390]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-    await page.getByRole('textbox', { name: 'Search applicants or units' }).fill('zz-no-match-ux');
-    await page.getByRole('button', { name: 'Apply filters' }).click();
-    await expect(page.getByRole('heading', { name: 'No applications in this view' })).toBeVisible();
+    const reviewAccessibility = (await new AxeBuilder({ page }).analyze()).violations;
+    const applicantSearch = page.getByRole('searchbox', { name: 'Search applicants or units' });
+    await applicantSearch.pressSequentially('zz-no-match-ux', { delay: 30 });
+    await applicantSearch.press('Enter');
+    await expect(page).toHaveURL(/q=zz-no-match-ux/);
+    // The applicant list is collapsed on mobile; the selected-review state remains visible.
+    await expect(
+      page.getByRole('heading', { name: 'Applicant unavailable in this view' }),
+    ).toBeVisible();
+    await expect(page.locator('a[href*="applicant=seed-application-rohan"]')).toHaveCount(0);
     await page.getByRole('link', { name: 'Clear filters', exact: true }).first().click();
     await expect(page).toHaveURL(/unitId=seed-unit-maple-7/);
     await page.goto('/applications?applicant=unavailable-applicant');
@@ -115,5 +130,7 @@ for (const width of [1280, 390]) {
       .selectOption('credit-below-criteria');
     await expect(page.getByRole('button', { name: 'Approve', exact: true })).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Decline', exact: true })).toBeEnabled();
+    // Report accessibility after the functional checks so a styling defect cannot hide them.
+    expect(reviewAccessibility).toEqual([]);
   });
 }

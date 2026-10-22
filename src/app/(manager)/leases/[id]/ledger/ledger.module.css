@@ -1,0 +1,171 @@
+/* Lease Rent ledger (Designs/redisgn r172 "ledger"): scope bar, balance band, charges, reminders. */
+.page {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.page :focus-visible {
+  outline: 3px solid var(--design-primary);
+  outline-offset: 3px;
+}
+.muted {
+  margin: 4px 0 0;
+  color: var(--design-muted);
+  font-size: 14px;
+}
+.danger {
+  color: var(--design-danger);
+  font-weight: 600;
+}
+/* Scope bar: Property | Unit | Lease, the term picker and status pills on one wrapping row. */
+.scopeBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 12px 16px;
+  border: 1px solid var(--rr-border);
+  border-radius: var(--rr-card-radius);
+  background: var(--design-surface);
+}
+.scopeNav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.scopeLabel,
+.termForm label > span {
+  color: var(--design-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.segmented {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--rr-border);
+  border-radius: 999px;
+  background: var(--design-background);
+}
+.segmented a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: var(--design-text);
+  font-weight: 500;
+  text-decoration: none;
+}
+.segmented a:hover {
+  background: var(--rr-primary-tint);
+}
+.segmented a[aria-current='page'] {
+  background: var(--design-primary);
+  color: #fff;
+}
+.termForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.termForm label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.termForm select {
+  max-width: 100%;
+  min-height: 36px;
+  padding: 0 32px 0 14px;
+  border: 1px solid var(--rr-border-strong, #7e8b9e);
+  border-radius: 999px;
+  background-color: var(--design-surface);
+  color: var(--design-text);
+  font: 500 14px/1.2 var(--design-font);
+}
+.scopeBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+.card {
+  display: grid;
+  min-width: 0;
+  padding: var(--rr-card-pad);
+  border: 1px solid var(--rr-border);
+  border-radius: var(--rr-card-radius);
+  background: var(--design-surface);
+}
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+.cardHead h2 {
+  margin: 0;
+  font-family: var(--design-heading-font);
+  font-size: var(--rr-h2);
+  font-weight: 500;
+}
+.headLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+.goLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  color: var(--design-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.caption {
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--rr-border);
+  color: var(--design-muted);
+  font-size: 13px;
+}
+.reminders {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  scroll-margin-top: 24px;
+}
+@media (min-width: 1024px) {
+  .card {
+    padding: 32px;
+  }
+}
+@media (max-width: 640px) {
+  .scopeBar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .scopeBadges {
+    margin-left: 0;
+  }
+  .termForm,
+  .termForm label,
+  .termForm select {
+    width: 100%;
+  }
+  .segmented a {
+    min-height: 40px;
+  }
+}

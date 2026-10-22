@@ -1,64 +1,372 @@
+/* Documents library (Designs/redisgn): summary band, filter panel, 2:1 lease files + preview,
+   then 1:2 property files + photos. Controls, cards and badges use the shared redisgn look. */
+.library {
+  min-width: 0;
+}
+
+.caption {
+  color: var(--design-muted);
+  font-size: 13px;
+}
+
+/* ---------- Filter panel ---------- */
 .documentToolbar {
-  display: block;
-  padding: 16px 20px;
+  min-width: 0;
+  padding: 16px;
   border: 1px solid var(--rr-border);
   border-radius: var(--design-radius);
   background: var(--design-surface);
 }
 
+.filterPanel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.filterHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.kindTabs {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sortField {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.sortField select {
+  min-width: 160px;
+}
+
 .documentFilters {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+  align-items: end;
+  gap: 12px;
+  min-width: 0;
+}
+
+.documentFilters > label {
+  min-width: 0;
+}
+
+.documentFilters select {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Wide screens filter by type with the tabs; phones use the File type select. */
+.documentFilters .kindField {
+  display: none;
+}
+
+.fileSearch {
+  min-width: 0;
+}
+
+.filterFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---------- Panels ---------- */
+.leaseGrid,
+.secondaryGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  min-width: 0;
+}
+
+.panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  align-content: start;
+}
+
+.panelHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.panelHeadIcon {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  color: var(--design-primary);
 }
 
-.documentFilters :global(.search) {
-  flex: 1 1 280px;
-  min-width: 220px;
+.panelHeadIcon svg {
+  width: 18px;
+  height: 18px;
 }
 
-.documentSelect {
-  display: flex;
-}
-
-.documentSelect select {
-  min-height: 34px;
-  max-width: 220px;
-  padding: 0 30px 0 10px;
-  border: 1px solid var(--rr-border-strong);
-  border-radius: 6px;
+.panelTitle {
+  margin: 0;
   color: var(--design-text);
-  background: var(--design-surface);
-  font: inherit;
+  font-family: var(--design-heading-font);
+  font-size: var(--rr-h2, 20px);
+  font-weight: 500;
 }
 
+/* ---------- Lease groups ---------- */
 .leaseDocumentGroup {
-  padding: 8px 0 12px;
-  border-bottom: 1px solid var(--rr-border);
+  display: grid;
+  gap: 12px;
+  min-width: 0;
 }
 
-.leaseDocumentGroup:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
+.leaseDocumentGroup + .leaseDocumentGroup {
+  padding-top: 16px;
+  border-top: 1px solid var(--rr-border);
 }
 
 .leaseDocumentHeading {
-  padding: 4px 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 12px 16px;
+  border-radius: var(--design-radius);
+  background: var(--design-background);
+}
+
+.leaseDocumentHeading > div {
+  min-width: 0;
+  flex: 1 1 240px;
+  overflow-wrap: anywhere;
+}
+
+.leaseLink {
+  color: var(--design-primary);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .documentRelatedLinks {
-  margin-top: 3px;
+  margin-top: 2px;
+  color: var(--design-muted);
   font-size: 13px;
 }
 
-.documentActions {
-  flex: 0 0 auto;
+.documentRelatedLinks a {
+  color: inherit;
 }
 
-.uploadDropZone {
-  display: block;
+.fileSection {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.fileSection :global(.eyebrow) {
+  margin: 4px 0 0;
+}
+
+.missing {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--rr-border);
+  border-radius: var(--design-radius);
+  color: var(--design-muted);
+  font-size: 14px;
+}
+
+.missing a {
+  color: var(--design-primary);
+  font-weight: 500;
+}
+
+/* ---------- File rows ---------- */
+.fileRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-width: 0;
+  padding: 10px 0;
+}
+
+.fileRow + .fileRow {
+  border-top: 1px solid var(--rr-border);
+}
+
+.fileMain {
+  display: grid;
+  gap: 4px;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.fileName {
+  color: var(--design-text);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.fileName:hover {
+  color: var(--design-primary);
+}
+
+.fileMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.fileMeta small {
+  color: var(--design-muted);
+  font-size: 13px;
+}
+
+.fileMeta :global(.badge) {
+  padding: 1px 8px;
+  font-size: 12px;
+}
+
+.lock {
+  flex: none;
+  color: var(--design-muted);
+}
+
+.documentActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 0 1 auto;
+}
+
+/* ---------- Preview ---------- */
+.previewTitle {
+  margin: 0;
+  font-family: var(--design-heading-font);
+  font-size: 18px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.inset {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--rr-border);
+  border-radius: var(--design-radius);
+  background: var(--design-background);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.inset svg {
+  width: 22px;
+  height: 22px;
+  color: var(--design-muted);
+}
+
+.inset strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.inset small {
+  color: var(--design-muted);
+  font-size: 13px;
+}
+
+.inset a {
+  color: var(--design-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.metaList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.metaList li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.metaList li > span:first-child {
+  color: var(--design-muted);
+}
+
+.metaList li > :last-child {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.metaList a {
+  color: var(--design-primary);
+}
+
+.previewActions {
+  display: grid;
+  gap: 8px;
+}
+
+.previewActions :global(.btn) {
+  justify-content: center;
+  width: 100%;
+}
+
+/* ---------- Property files and photos ---------- */
+.emptyPanel {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+}
+
+.emptyPanel h3 {
+  margin: 4px 0 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.emptyPanel p {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+
+/* Photo library: small thumbnails, about six to a row. */
+.photoGrid :global(.gallery) {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
 }
 
 .documentPhotoCard {
@@ -66,177 +374,110 @@
 }
 
 .documentPhotoMeta {
-  margin-top: 7px;
-  overflow-wrap: anywhere;
+  margin-top: 6px;
+  color: var(--design-muted);
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .documentPhotoActions {
   display: flex;
-  gap: 14px;
-  margin-top: 5px;
-  font-size: 13px;
+  gap: 4px;
+  margin-top: 4px;
 }
 
-@media (max-width: 900px) {
-  .documentToolbar {
-    padding: 14px;
-  }
-
-  .documentFilters :global(.search) {
-    flex-basis: 100%;
-    min-width: 0;
-  }
-
-  .documentSelect {
-    flex: 1 1 170px;
-  }
-
-  .documentSelect select {
-    width: 100%;
-    max-width: none;
-  }
-
-  .documentActions {
-    flex-basis: 100%;
-    justify-content: flex-start !important;
-  }
-}
-
-@media (max-width: 680px) {
-  .leaseDocumentHeading > div:first-child {
-    min-width: 100%;
-  }
-
-  .documentToolbar :global(.chip) {
-    font-size: 12px;
-    padding: 4px 8px;
-  }
-}
-
-.libraryIntro {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-.libraryIntro h2 {
-  font-size: var(--rr-h2);
-}
-.storageHeading {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-/* Photo library: small thumbnails, about six to a row. */
-.photoGrid :global(.gallery) {
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 12px;
-}
-.library {
-  min-width: 0;
-}
-.libraryIntro {
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 13px;
-}
-.libraryIntro span {
-  white-space: nowrap;
-}
-.uploadPanel {
-  border: 1px solid var(--rr-border);
-  border-radius: var(--design-radius);
-  min-width: 0;
-}
-.uploadPanel > summary {
-  cursor: pointer;
-  padding: 16px;
-  color: var(--design-primary);
-  font-weight: 600;
-}
-.uploadPanel > summary span {
-  font-size: 12px;
-  font-weight: 400;
-  margin-left: 12px;
-}
-.uploadBody {
-  padding: 0 16px 16px;
-}
+/* ---------- Upload dialog ---------- */
 .uploadFields {
   display: grid;
   grid-template-columns: minmax(120px, 1fr) minmax(0, 3fr) minmax(120px, 1fr);
   gap: 12px;
 }
+
 .uploadFields > label,
 .uploadFields select {
-  min-width: 0;
   width: 100%;
+  min-width: 0;
 }
+
 .uploadHint {
-  font-size: 13px;
   color: var(--design-muted);
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
-.documentFilters {
-  align-items: flex-end;
-  gap: 12px;
+
+@media (min-width: 1024px) {
+  .leaseGrid {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .secondaryGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 24px;
+  }
+
+  .previewCard {
+    position: sticky;
+    top: 24px;
+  }
 }
-.documentFilters > label {
-  flex: 1 1 150px;
-  min-width: 0;
-}
-.documentFilters .fileSearch {
-  flex: 2 1 260px;
-}
-.documentFilters select,
-.documentFilters input {
-  width: 100%;
-  min-width: 0;
-}
-.documentToolbar {
-  padding: 16px;
-}
-.library :global(.file) {
-  flex-wrap: wrap;
-  min-width: 0;
-}
-.library :global(.file-meta) {
-  min-width: 0;
-  flex: 1 1 200px;
-}
-.library :global(.file-meta strong) {
-  overflow-wrap: anywhere;
-  white-space: normal;
-}
-.leaseDocumentHeading > div {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-@media (max-width: 700px) {
+
+@media (max-width: 767px) {
+  .documentToolbar {
+    padding: 12px;
+  }
+
+  .kindTabs {
+    display: none;
+  }
+
+  .documentFilters .kindField {
+    display: flex;
+  }
+
+  .documentFilters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .documentFilters .fileSearch {
+    grid-column: 1 / -1;
+  }
+
+  .documentFilters select {
+    padding-inline: 10px 24px;
+    font-size: 14px;
+  }
+
+  .sortField {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .sortField select {
+    width: 100%;
+  }
+
+  /* Phones show the preview only once a file is chosen. */
+  .previewOptional {
+    display: none;
+  }
+
+  .leaseDocumentHeading {
+    padding: 10px 12px;
+  }
+
+  .documentActions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
   .uploadFields {
     grid-template-columns: 1fr 1fr;
   }
+
   .uploadFields .destination {
-    grid-column: 1/-1;
+    grid-column: 1 / -1;
     grid-row: 2;
-  }
-  .uploadPanel > summary span {
-    display: block;
-    margin: 4px 0 0;
-  }
-  .documentFilters > label {
-    flex-basis: calc(50% - 12px);
-  }
-  .documentFilters .fileSearch {
-    flex-basis: 100%;
-  }
-  .documentActions {
-    width: 100%;
-    gap: 8px;
-  }
-  .documentPhotoActions a {
-    padding: 8px 0;
   }
 }

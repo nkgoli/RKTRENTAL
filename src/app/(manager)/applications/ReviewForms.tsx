@@ -20,6 +20,7 @@ export function ScreeningSubmit({ disabled, again }: { disabled: boolean; again:
     <Button
       type="submit"
       variant="secondary"
+      size="sm"
       disabled={disabled || pending}
       aria-describedby="screening-help"
     >
@@ -44,7 +45,7 @@ function DecisionButtons({
         type="button"
         name="decision"
         value="DECLINED"
-        variant="danger"
+        variant="secondary"
         onClick={onDecline}
         aria-describedby={helpId}
         disabled={
@@ -87,8 +88,8 @@ export function ReviewDecisionForm({
         <input type="hidden" name="applicationId" value={applicationId} />
         {propertyId && <input type="hidden" name="propertyId" value={propertyId} />}
         {unitId && <input type="hidden" name="unitId" value={unitId} />}
-        <label>
-          <span>Decision reason</span>
+        <label className="field">
+          <span className="field-label">Decision reason</span>
           <select
             name="reason"
             aria-label="Decision reason"
@@ -111,7 +112,8 @@ export function ReviewDecisionForm({
               'Select a written screening reason'}
           </small>
           <small id={`${id}-help`}>
-            Select “Meets written screening criteria” to approve, or a specific reason to decline.
+            Choose “Meets written screening criteria” to approve, or a specific reason to decline.
+            After approval, Promote to tenant appears here.
           </small>
         </label>
         <DecisionButtons

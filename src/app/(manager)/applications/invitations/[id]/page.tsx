@@ -10,9 +10,17 @@ import {
   invitationStatus,
   InvitationError,
 } from '@/lib/applications/invitation-policy';
+import { invitationDeliveryState } from '@/lib/applications/pipeline';
 import { reminderTransport } from '@/lib/notifications/reminder-transport';
+import { PageHeader } from '@/components/shell/PageHeader';
+import { Alert, Badge, Steps } from '@/components/ui';
 import { InvitationDelivery } from '@/components/applications/InvitationForms';
+import { INVITATION_STEPS } from '@/components/applications/InvitationList';
 import styles from '@/components/applications/invitations.module.css';
+
+function utc(value: Date) {
+  return `${value.toLocaleString('en-US', { timeZone: 'UTC' })} UTC`;
+}
 
 export default async function InvitationPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireManagerRole();
@@ -20,9 +28,11 @@ export default async function InvitationPage({ params }: { params: Promise<{ id:
     if (error instanceof InvitationError && error.status === 404) notFound();
     throw error;
   });
-  const expired = row.expiresAt <= new Date();
+  const now = new Date();
+  const expired = row.expiresAt <= now;
   const latest = row.attempts.find((a) => a.generation === row.generation);
   const blocked = Boolean(latest && ['SENDING', 'UNCERTAIN'].includes(latest.status));
+  const delivery = invitationDeliveryState(row, latest, now);
   let link: string | undefined;
   let preview: { subject: string; body: string } | undefined;
   let configurationError = '';
@@ -45,26 +55,35 @@ export default async function InvitationPage({ params }: { params: Promise<{ id:
     /* Unconfigured transport is an expected product state. */
   }
   const scope = new URLSearchParams({ propertyId: row.unit.propertyId, unitId: row.unitId });
+  const home = `${row.unit.property.name} · ${row.unit.isImplicit ? 'Whole property' : `Unit ${row.unit.number}`}`;
+  const step = row.submittedAt ? 3 : expired ? 0 : 1;
+  const emailStatus = latest
+    ? (deliveryLabels[latest.status] ?? 'Email status unavailable')
+    : 'No email attempt for this link';
   return (
-    <section className={styles.page}>
-      <Link href={`/applications?${scope}`}>← Back to applications</Link>
-      <p className={styles.eyebrow} style={{ marginTop: 24 }}>
-        Application invitation
-      </p>
-      <h1 className={styles.title}>{row.applicantName}</h1>
-      <p className={styles.intro}>
-        {row.applicantEmail}
-        <br />
-        {row.unit.property.name} ·{' '}
-        {row.unit.isImplicit ? 'Whole property' : `Unit ${row.unit.number}`}
-      </p>
+    <section className={styles.page} aria-label="Application invitation">
+      <PageHeader
+        eyebrow="Leasing · Application invitation"
+        title={row.applicantName}
+        meta={`${row.applicantEmail} · ${home}`}
+        back={{ href: `/applications?${scope}`, label: 'Applications' }}
+      />
+      <div className={styles.stepsWrap}>
+        <Steps steps={INVITATION_STEPS} current={step} />
+      </div>
       <div className={styles.grid}>
-        <section className={styles.card} aria-label="Invitation status">
-          <h2>{invitationStatus(row)}</h2>
-          <p className={styles.muted}>
-            {row.submittedAt
-              ? `Submitted ${row.submittedAt.toLocaleString('en-US', { timeZone: 'UTC' })} UTC`
-              : `Link expires ${row.expiresAt.toLocaleString('en-US', { timeZone: 'UTC' })} UTC`}
+        <section className={`card ${styles.formCard}`} aria-labelledby="invitation-status-title">
+          <div className={styles.cardHead}>
+            <p className={styles.eyebrow}>Invitation</p>
+            <h2 id="invitation-status-title">{invitationStatus(row, now)}</h2>
+            <p className={styles.caption}>
+              {row.submittedAt
+                ? `Submitted ${utc(row.submittedAt)}`
+                : `${expired ? 'Link expired' : 'Link expires'} ${utc(row.expiresAt)}`}
+            </p>
+          </div>
+          <p className={styles.statusLine}>
+            <Badge tone={delivery.tone}>{delivery.label}</Badge>
           </p>
           {row.applicationId && (
             <>
@@ -72,26 +91,27 @@ export default async function InvitationPage({ params }: { params: Promise<{ id:
                 The completed application is available for review. Screening has not been authorized
                 by submitting this form.
               </p>
-              <Link
-                className="btn btn-primary"
-                href={`/applications?${scope}&applicant=${row.applicationId}#selected-applicant`}
-              >
-                Review submitted application
-              </Link>
+              <div className={styles.actions}>
+                <Link
+                  className="btn btn-primary"
+                  href={`/applications?${scope}&applicant=${row.applicationId}#selected-applicant`}
+                >
+                  Review submitted application
+                </Link>
+              </div>
             </>
           )}
           {!row.submittedAt && <p className={styles.notice}>{readiness}</p>}
           <p role="status">
-            <strong>
-              {latest
-                ? (deliveryLabels[latest.status] ?? 'Email status unavailable')
-                : 'No email attempt for this link'}
-            </strong>
+            <strong>{emailStatus}</strong>
           </p>
           {configurationError && (
-            <p role="alert" className={styles.error}>
-              {configurationError}
-            </p>
+            <Alert tone="error">
+              <div>
+                <strong>Secure application links are unavailable</strong>
+                <p>{configurationError}</p>
+              </div>
+            </Alert>
           )}
           <InvitationDelivery
             id={row.id}
@@ -104,23 +124,53 @@ export default async function InvitationPage({ params }: { params: Promise<{ id:
             latestStatus={latest?.status}
           />
           {row.attempts.length > 0 && (
-            <details style={{ marginTop: 24 }}>
+            <details>
               <summary>Recent email attempts</summary>
               <ul className={styles.history}>
                 {row.attempts.map((a) => (
                   <li key={a.id}>
                     {deliveryLabels[a.status] ?? a.status}
                     <br />
-                    {a.createdAt.toLocaleString('en-US', { timeZone: 'UTC' })} UTC · link version{' '}
-                    {a.generation}
+                    {utc(a.createdAt)} · link version {a.generation}
                   </li>
                 ))}
               </ul>
             </details>
           )}
         </section>
-        <aside className={styles.card} aria-label="Email preview">
-          <h2>Email preview</h2>
+        <aside className={`card ${styles.formCard}`} aria-labelledby="invitation-preview-title">
+          <div className={styles.cardHead}>
+            <p className={styles.eyebrow}>Review before sending</p>
+            <h2 id="invitation-preview-title">Invitation preview</h2>
+          </div>
+          <dl className={styles.summaryList}>
+            <div>
+              <dt>Applicant</dt>
+              <dd>
+                {row.draftName ?? row.applicantName} · {row.applicantEmail}
+              </dd>
+            </div>
+            <div>
+              <dt>Home</dt>
+              <dd>{home}</dd>
+            </div>
+            <div>
+              <dt>Private link</dt>
+              <dd>
+                {row.submittedAt
+                  ? 'Used · application submitted'
+                  : expired
+                    ? 'Expired · renew to issue a new seven-day link'
+                    : link
+                      ? `Active until ${utc(row.expiresAt)}`
+                      : 'Unavailable · check invitation configuration'}
+              </dd>
+            </div>
+            <div>
+              <dt>Email status</dt>
+              <dd>{emailStatus}</dd>
+            </div>
+          </dl>
           {preview ? (
             <>
               <p className={styles.muted}>To: {row.applicantEmail}</p>
@@ -131,9 +181,14 @@ export default async function InvitationPage({ params }: { params: Promise<{ id:
             <p className={styles.muted}>
               {row.submittedAt
                 ? 'This application is already submitted. No further invitation email is needed.'
-                : 'Renew an expired link to preview its email.'}
+                : configurationError
+                  ? 'The email preview appears once secure application links are available.'
+                  : 'Renew an expired link to preview its email.'}
             </p>
           )}
+          <p className={styles.caption}>
+            A private link lasts seven days. Provider acceptance does not confirm delivery.
+          </p>
         </aside>
       </div>
     </section>

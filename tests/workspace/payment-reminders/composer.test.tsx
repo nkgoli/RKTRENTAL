@@ -114,7 +114,7 @@ describe('payment reminder composer (synthetic recipients only)', () => {
     ).toBe(true);
     await user.click(screen.getByRole('checkbox', { name: /Synthetic Cotenant/ }));
     await user.click(screen.getByRole('button', { name: 'Preview reminder' }));
-    await screen.findByRole('heading', { name: /Review before/ });
+    await screen.findByRole('heading', { name: /^Confirm (sandbox )?reminder$/ });
     expect(actions.previewReminder).toHaveBeenCalledWith('lease', 'EMAIL', {
       recipients: [expect.objectContaining({ tenantId: 'cotenant' })],
     });
@@ -129,7 +129,7 @@ describe('payment reminder composer (synthetic recipients only)', () => {
       'Edited synthetic message',
     );
     await user.click(screen.getByRole('button', { name: 'Preview reminder' }));
-    const heading = await screen.findByRole('heading', { name: /Review before/ });
+    const heading = await screen.findByRole('heading', { name: /^Confirm (sandbox )?reminder$/ });
     expect(document.activeElement).toBe(heading);
     const review = heading.closest('section')!;
     expect(within(review).getByText('Edited synthetic message')).toBeTruthy();
@@ -161,7 +161,7 @@ describe('payment reminder composer (synthetic recipients only)', () => {
     await user.click(screen.getByRole('radio', { name: 'Text message (SMS)' }));
     expect(screen.getByRole('checkbox', { name: /\+15005550006/ })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Preview reminder' }));
-    await screen.findByRole('heading', { name: /Review before/ });
+    await screen.findByRole('heading', { name: /^Confirm (sandbox )?reminder$/ });
     expect(actions.previewReminder).toHaveBeenCalledWith('lease', 'SMS', expect.anything());
     expect(screen.getByText(/SMS to/)).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Record sandbox test/ }));
@@ -193,11 +193,11 @@ describe('payment reminder composer (synthetic recipients only)', () => {
       'Synthetic edited subject',
     );
     await user.click(screen.getByRole('button', { name: 'Preview reminder' }));
-    await screen.findByRole('heading', { name: /Review before/ });
+    await screen.findByRole('heading', { name: /^Confirm (sandbox )?reminder$/ });
     actions.dispatchReminder.mockResolvedValueOnce({ ok: false, error: 'STALE_PREVIEW' });
     await user.click(screen.getByRole('button', { name: /Record sandbox test/ }));
     await waitFor(() =>
-      expect(screen.queryByRole('heading', { name: /Review before/ })).toBeNull(),
+      expect(screen.queryByRole('heading', { name: /^Confirm (sandbox )?reminder$/ })).toBeNull(),
     );
     expect(screen.queryByRole('button', { name: 'Check original send' })).toBeNull();
     expect((screen.getByLabelText('Subject') as HTMLInputElement).value).toBe(
@@ -212,7 +212,7 @@ describe('payment reminder composer (synthetic recipients only)', () => {
     const user = userEvent.setup();
     const view = mount();
     await user.click(screen.getByRole('button', { name: 'Preview reminder' }));
-    await screen.findByRole('heading', { name: /Review before/ });
+    await screen.findByRole('heading', { name: /^Confirm (sandbox )?reminder$/ });
     actions.dispatchReminder.mockRejectedValueOnce(new Error('synthetic interruption'));
     await user.click(screen.getByRole('button', { name: /Record sandbox test/ }));
     await screen.findByText(/Send response was interrupted/);
@@ -264,14 +264,14 @@ describe('payment reminder composer (synthetic recipients only)', () => {
     actions.dispatchReminder.mockRejectedValue(new Error('synthetic network interruption'));
     const first = mount();
     await user.click(screen.getByRole('button', { name: 'Preview reminder' }));
-    await screen.findByRole('heading', { name: /Review before/ });
+    await screen.findByRole('heading', { name: /^Confirm (sandbox )?reminder$/ });
     await user.click(screen.getByRole('button', { name: /Record sandbox test/ }));
     await screen.findByText(/Send response was interrupted/);
     const originalArgs = actions.dispatchReminder.mock.calls[0];
     first.unmount();
     const second = mount([{ ...choice, id: 'second-scoped-lease' }]);
     await user.click(screen.getByRole('button', { name: 'Preview reminder' }));
-    await screen.findByRole('heading', { name: /Review before/ });
+    await screen.findByRole('heading', { name: /^Confirm (sandbox )?reminder$/ });
     await user.click(screen.getByRole('button', { name: /Record sandbox test/ }));
     await screen.findByText(/Send response was interrupted/);
     second.unmount();
@@ -280,6 +280,37 @@ describe('payment reminder composer (synthetic recipients only)', () => {
     await user.click(await screen.findByRole('button', { name: 'Check original send' }));
     await screen.findByText(/Sandbox test recorded/);
     expect(actions.dispatchReminder.mock.calls[2]).toEqual(originalArgs);
+  });
+
+  it('reviews one locked lease with steps, a cancellable draft and the confirm step', async () => {
+    const user = userEvent.setup();
+    render(
+      <ReminderWorkspace
+        choices={[choice]}
+        channels={channels}
+        lockedLeaseId="lease"
+        storageKey="synthetic-reminder"
+      />,
+    );
+    // The lease is fixed: no picker, and the URL is never rewritten.
+    expect(screen.queryByLabelText('Lease')).toBeNull();
+    expect(screen.getByRole('heading', { name: /^Remind Synthetic Tenant about/ })).toBeTruthy();
+    expect(screen.getByText('Sandbox · not delivered', { selector: 'strong' })).toBeTruthy();
+    const steps = document.querySelector<HTMLElement>('ol.steps')!;
+    expect(within(steps).getByText('Recipients').getAttribute('aria-current')).toBe('step');
+    const message = screen.getByLabelText('Message', { exact: false, selector: 'textarea' });
+    await user.clear(message);
+    await user.type(message, 'Draft to discard');
+    await user.click(screen.getByRole('button', { name: /^Cancel/ }));
+    expect((message as HTMLTextAreaElement).value).toBe('Synthetic original message');
+    expect(actions.previewReminder).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Preview reminder' }));
+    await screen.findByRole('heading', { name: /^Confirm (sandbox )?reminder$/ });
+    expect(screen.getByText('Step 4 of 4 · Confirm')).toBeTruthy();
+    expect(within(steps).getByText('Confirm').getAttribute('aria-current')).toBe('step');
+    // Nothing is sent until the confirm button.
+    expect(actions.dispatchReminder).not.toHaveBeenCalled();
+    expect(new URL(window.location.href).searchParams.get('leaseId')).toBeNull();
   });
 
   it('keeps paid-lease history and distinguishes supported outcomes without offering a reminder', async () => {

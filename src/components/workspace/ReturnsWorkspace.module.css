@@ -100,3 +100,8 @@
     gap: 15px;
   }
 }
+.footNote {
+  color: var(--design-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}

@@ -1,20 +1,11 @@
-/* Lease detail composition from light-leasing r46; controls inherit light-system r7. */
+/* Lease workspace (Designs/redisgn r172): status row, signature panel, tabs, 2:1 card grid. */
 .workspace {
+  display: grid;
+  gap: 16px;
   min-width: 0;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   overflow-wrap: anywhere;
-}
-:global(.main):has(.workspace) :global(.topbar h1) {
-  font-size: 32px;
-  font-weight: 600;
-  letter-spacing: -0.04em;
-}
-:global(.main):has(.workspace) :global(.topbar .eyebrow) {
-  font-size: 10px;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  margin-bottom: 6px;
 }
 .workspace :is(a, button, input, summary) {
   scroll-margin: 18px;
@@ -23,20 +14,7 @@
   outline: 3px solid var(--design-primary);
   outline-offset: 3px;
 }
-.backLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 32px;
-  margin-bottom: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  text-decoration: none;
-}
-.backLink svg,
 .metaItem svg,
-.signingStatus svg,
-.secondaryLink svg,
 .section :global(.list-item) > svg {
   width: 16px;
   height: 16px;
@@ -47,8 +25,6 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 16px;
-  padding-bottom: 12px;
-  font-size: 12px;
   color: var(--design-muted);
 }
 /* Draft-only destructive action, kept at the end of the summary row. */
@@ -58,61 +34,104 @@
 .metaItem {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
 }
-/* Compact signing context: one row, tone follows the signature state. */
-.signing {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 6px 16px;
-  margin-bottom: 14px;
-  padding: 6px 6px 6px 14px;
-  border: 1px solid var(--rr-border);
-  border-radius: var(--design-radius);
-  background: var(--design-surface);
-}
-.signing[data-state='done'] {
-  border-color: transparent;
-  background: var(--rr-ok-bg);
-}
-.signing[data-state='attention'] {
-  border-color: #f0d9a8;
-  background: var(--rr-warn-bg);
-}
-.signingStatus {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 32px;
-  color: var(--design-text);
-}
-.signing[data-state='done'] .signingStatus svg {
-  color: var(--design-accent);
-}
-.signingStatus strong {
+.metaItem a {
+  color: var(--design-primary);
   font-weight: 600;
 }
-.workspace :global(.badge) {
-  font-size: 10px;
-  white-space: normal;
+/* Signature status: a bordered white panel; the icon tile carries the state colour. */
+.signing {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px 16px;
+  padding: 20px;
+  border: 1px solid var(--rr-border);
+  border-radius: var(--rr-card-radius);
+  background: var(--design-surface);
 }
+.signingIcon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--rr-primary-tint);
+  color: var(--design-primary);
+}
+.signing[data-state='done'] .signingIcon {
+  background: #e3f3ea;
+  color: #1f6b43;
+}
+.signing[data-state='attention'] .signingIcon {
+  background: #fff1d9;
+  color: #7a4206;
+}
+.signingIcon svg {
+  width: 20px;
+  height: 20px;
+}
+.signingText {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.signingText strong {
+  font-family: var(--design-heading-font);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.signingText p {
+  margin: 0;
+  color: var(--design-muted);
+}
+/* One row per signer: "Tenant · Name" with its Signed badge. */
+.signers {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.signers li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+.signers :global(.badge) {
+  font-size: 12px;
+}
+.signingActions,
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.signingActions {
+  justify-content: flex-end;
+}
+/* Section tabs: underline style, one row; phones swap "Documents" for "Docs". */
 .tabs {
   display: flex;
   gap: 24px;
   overflow-x: auto;
   scrollbar-width: thin;
   border-bottom: 1px solid var(--rr-border);
-  margin-bottom: 18px;
 }
 .tabs a {
+  position: relative;
   display: flex;
   align-items: center;
   flex: none;
   min-height: 44px;
   border-bottom: 3px solid transparent;
   color: var(--design-muted);
+  font-size: 15px;
   font-weight: 500;
   text-decoration: none;
 }
@@ -124,76 +143,78 @@
 .tabs a:focus-visible {
   outline-offset: -3px;
 }
+.tabShort {
+  display: none;
+}
 .panel {
   display: grid;
   gap: 16px;
   min-width: 0;
 }
-.facts {
+/* Reference "template 2:1": main content beside a column of cards. */
+.grid {
   display: grid;
-  grid-template-columns: 1.1fr 1fr 1fr 1fr;
-  border: 1px solid #d4dfef;
-  border-radius: var(--design-radius);
-  overflow: hidden;
-  background: var(--design-surface);
-  margin: 0 0 2px;
-}
-.facts > div {
-  min-width: 0;
-  padding: 18px 20px;
-  border-left: 1px solid #e1e7f0;
-}
-.facts > div:first-child {
-  border: 0;
-  background: var(--design-background);
-}
-.facts dt,
-.compactFacts dt,
-.section :global(.kv dt) {
-  color: var(--design-muted);
-  font-size: 11px;
-}
-.facts dd {
-  margin: 6px 0 0;
-  font: 600 19px/1.3 var(--design-heading-font);
-  letter-spacing: -0.5px;
-}
-.facts > div:first-child dd {
-  font-size: 30px;
-}
-.facts small {
-  display: block;
-  margin-top: 6px;
-  color: var(--design-muted);
-  font: 11px/1.5 var(--design-font);
-  letter-spacing: normal;
-}
-.overviewGrid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 24px;
   align-items: start;
+}
+.mainCol,
+.sideCol {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+/* Overview: ledger and premises/tenants in the wide column, cards spanning both rows. */
+.grid:has(.pairArea) {
+  grid-template-rows: auto 1fr;
+}
+.grid:has(.pairArea) > .sideCol {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.pairArea {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+}
+.lateLine {
+  margin: -4px 0 12px;
+  color: var(--design-danger);
+  font-weight: 600;
+}
+.phoneCaption {
+  display: none;
+  margin: 12px 0 0;
+  color: var(--design-muted);
+  font-size: 13px;
+}
+.pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
 }
 .section {
   min-width: 0;
-  padding: 18px 20px;
+  padding: var(--rr-card-pad);
   border: 1px solid var(--rr-border);
-  border-radius: var(--design-radius);
+  border-radius: var(--rr-card-radius);
   background: var(--design-surface);
-  box-shadow: 0 2px 3px #233c6208;
-}
-.overviewGrid > .section {
-  align-self: stretch;
 }
 .section h2 {
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.3;
-  letter-spacing: -0.04em;
+  margin: 0;
+  font-family: var(--design-heading-font);
+  font-size: var(--rr-h2);
+  font-weight: 500;
+  line-height: 1.25;
 }
 .section h3 {
   font-size: 15px;
+  font-weight: 600;
   line-height: 1.4;
+}
+.section :global(h3.eyebrow) {
+  margin: 16px 0 8px;
 }
 .sectionHeading {
   display: flex;
@@ -201,47 +222,138 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px 12px;
-  margin-bottom: 17px;
+  margin-bottom: 16px;
 }
-.sectionHeading > a,
-.secondaryLink {
+.sectionHeading + :global(h3.eyebrow) {
+  margin-top: 0;
+}
+.lede {
+  margin: -8px 0 12px;
+}
+.goLink {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   min-height: 36px;
-  gap: 6px;
-  font-size: 12px;
+  color: var(--design-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.cardFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rr-border);
+}
+/* Terms: two quiet inset stats, then the plain facts. */
+.termStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 16px;
+}
+.termStats > div {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--rr-border);
+  border-radius: var(--rr-card-radius);
+  background: var(--design-background);
+}
+.termStats dt {
+  color: var(--design-muted);
+  font-size: 13px;
+}
+.termStats dd {
+  margin: 4px 0 2px;
+  font: 600 22px/1.15 var(--design-heading-font);
+  font-variant-numeric: tabular-nums;
+}
+.termStats small {
+  color: var(--design-muted);
+  font-size: 13px;
+}
+.compactFacts,
+.section :global(.kv) {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.8fr) minmax(0, 1.4fr);
+  gap: 10px 16px;
+  margin: 0;
+}
+.compactFacts dt,
+.section :global(.kv dt) {
+  color: var(--design-muted);
+  font-size: 13px;
+}
+.compactFacts dd,
+.section :global(.kv dd) {
+  margin: 0;
+  font-size: 14px;
+}
+.section :global(.kv) {
+  max-width: 720px;
+}
+/* Documents card lines: name + state on the left, one action on the right. */
+.plainList {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.docLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 8px 0;
+}
+.plainList .docLine + .docLine {
+  border-top: 1px solid var(--rr-border);
+}
+.docName {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+}
+.docName strong {
   font-weight: 600;
 }
-.secondaryLink {
-  margin-top: 6px;
+.docName small {
+  flex-basis: 100%;
+  color: var(--design-muted);
+  font-size: 13px;
 }
 .premises {
   display: flex;
-  gap: 13px;
+  gap: 12px;
   align-items: flex-start;
-  margin-bottom: 12px;
 }
 .premises > div {
   min-width: 0;
 }
 .premises p {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .building {
   display: grid;
   place-items: center;
   flex: none;
-  width: 44px;
-  height: 44px;
-  border: 1px solid #d4dfef;
-  border-radius: 7px;
-  background: #f1eefb;
-  color: #6c62a5;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--rr-primary-tint);
+  color: var(--design-primary);
 }
 .building svg {
-  width: 34px;
-  height: 34px;
+  width: 22px;
+  height: 22px;
 }
 .section :global(.list-item) {
   padding: 12px 0;
@@ -251,52 +363,25 @@
   min-width: 0;
 }
 .section :global(.file-meta strong) {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
 }
 .section :global(.file-meta small) {
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.5;
 }
 .section :global(.avatar) {
   flex: none;
   width: 32px;
   height: 32px;
-  font-size: 11px;
-}
-.compactFacts,
-.section :global(.kv) {
-  display: grid;
-  grid-template-columns: minmax(95px, 0.8fr) minmax(0, 1.2fr);
-  gap: 10px 18px;
-  margin: 0;
-}
-.compactFacts dd,
-.section :global(.kv dd) {
-  margin: 0;
   font-size: 12px;
-  font-weight: 400;
-}
-.section :global(.kv) {
-  max-width: 700px;
 }
 .section :global(.form) {
-  max-width: 700px;
+  max-width: 720px;
   gap: 14px;
 }
 .section :global(.form) > button {
   align-self: flex-start;
-}
-.section :global([aria-label='Upload lease document'] button) {
-  min-height: 36px;
-  border-radius: 7px;
-  font-size: 13px;
-  font-weight: 600;
-}
-.section :global([aria-label='Upload lease document: drop files here']) {
-  background: var(--design-background);
-  border-color: #91a6c3;
-  border-radius: 9px;
 }
 .section > :global(.stack) {
   align-items: flex-start;
@@ -313,28 +398,28 @@
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
-  background: linear-gradient(120deg, #f1f5ff, #f4f9fc);
 }
 .amendment p {
   margin-top: 8px;
 }
-.editTerms,
-.signedDetails,
-.documentMenu {
-  margin-top: 14px;
-  padding-top: 9px;
-  border-top: 1px solid #e4eaf3;
-}
+.prepare > summary,
 .editTerms > summary,
 .signedDetails > summary,
 .documentMenu > summary,
 .rename > summary {
+  display: flex;
+  align-items: center;
   min-height: 36px;
-  padding: 9px 0;
   color: var(--design-primary);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+}
+.editTerms,
+.signedDetails {
+  margin-top: 14px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rr-border);
 }
 .editTerms[open] > summary,
 .signedDetails[open] > summary {
@@ -350,8 +435,8 @@
   max-width: 800px;
 }
 .signedGrid article {
-  padding: 14px;
-  border-left: 3px solid #bdccec;
+  padding: 14px 16px;
+  border-radius: 12px;
   background: var(--design-background);
 }
 .signedGrid h3 {
@@ -359,76 +444,119 @@
 }
 .signedGrid p {
   color: var(--design-muted);
-  font-size: 12px;
+  font-size: 13px;
   white-space: pre-wrap;
 }
 .signedGrid mark {
-  background: #fff1d6;
-  color: #73501f;
+  background: #fff1d9;
+  color: #7a4206;
 }
-.documentGrid {
+/* Lease documents: groups of file rows. */
+.documentGroups {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 18px;
-  align-items: start;
+  gap: 8px;
 }
-.documentCard {
-  min-width: 0;
-  border: 1px solid var(--rr-border);
-  border-radius: 9px;
-  padding: 15px;
-  background: var(--design-surface);
+.documentGroup :global(h3.eyebrow) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-.documentIcon {
+.count {
+  color: var(--design-muted);
+  letter-spacing: 0;
+}
+.emptyGroup {
+  margin: 0;
+  padding: 10px 0;
+  color: var(--design-muted);
+  font-size: 13px;
+}
+.fileRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: 'type meta badges actions';
+  align-items: center;
+  gap: 8px 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--rr-border);
+}
+.fileType {
+  grid-area: type;
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 48px;
-  border: 1px solid #d4ddf0;
-  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   background: var(--rr-primary-tint);
   color: var(--design-primary);
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.fileMeta {
+  grid-area: meta;
+  display: grid;
+  min-width: 0;
+}
+.fileMeta strong {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.fileMeta small {
+  color: var(--design-muted);
+  font-size: 13px;
+}
+.fileBadges {
+  grid-area: badges;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.restricted {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--design-muted);
+  font-size: 13px;
   font-weight: 600;
 }
-.documentTitle {
-  min-width: 0;
-  margin: 12px 0;
+.restricted svg {
+  width: 16px;
+  height: 16px;
 }
-.documentTitle strong {
-  display: block;
-  overflow-wrap: anywhere;
-  font-size: 12px;
-}
-.documentTitle small {
-  display: block;
-  color: var(--design-muted);
-  margin-top: 4px;
-  font-size: 11px;
-}
-.documentControls {
-  display: grid;
-  justify-items: start;
+.fileActions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 8px;
 }
 .documentMenu {
-  width: 100%;
+  position: relative;
+}
+.documentMenu > summary {
+  padding: 0 8px;
 }
 .menuPanel {
   display: grid;
   gap: 10px;
-  padding-top: 12px;
-  border-top: 1px solid var(--rr-border);
-  margin-top: 10px;
+  width: min(280px, 80vw);
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--rr-border);
+  border-radius: var(--rr-card-radius);
+  background: var(--design-surface);
 }
 .menuPanel > a {
   display: flex;
   align-items: center;
   min-height: 36px;
+  color: var(--design-primary);
+  font-weight: 600;
 }
 .menuPanel > button {
   justify-self: start;
-  text-align: left;
 }
 .rename form {
   display: grid;
@@ -438,14 +566,8 @@
   width: 100%;
   min-width: 0;
 }
-.confirmation {
-  display: grid;
-  gap: 10px;
-}
-.confirmation > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.uploader {
+  margin-top: 16px;
 }
 .timeline {
   margin: 0;
@@ -456,117 +578,110 @@
   position: relative;
   display: flex;
   gap: 12px;
-  padding: 13px 0;
+  padding: 10px 0;
 }
 .event:not(:last-child)::before {
   position: absolute;
   content: '';
-  width: 1px;
+  width: 2px;
   background: var(--rr-border);
-  left: 14px;
-  top: 42px;
-  bottom: -13px;
+  left: 5px;
+  top: 28px;
+  bottom: -10px;
 }
 .eventDot {
-  display: grid;
-  place-items: center;
   flex: none;
-  width: 29px;
-  height: 29px;
-  background: var(--rr-primary-tint);
-  border: 1px solid #d6e0fa;
-  color: var(--design-primary);
+  width: 12px;
+  height: 12px;
+  margin-top: 5px;
   border-radius: 50%;
+  background: var(--design-primary);
+}
+@media (max-width: 1023px) {
+  .grid,
+  .grid:has(.pairArea) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+  .grid:has(.pairArea) > .sideCol,
+  .pairArea {
+    grid-column: 1;
+    grid-row: auto;
+  }
 }
 @media (max-width: 760px) {
-  :global(.main):has(.workspace) :global(.topbar h1) {
-    font-size: 28px;
+  .signing {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 16px;
   }
-  .summaryLine {
-    gap: 8px;
-    font-size: 11px;
-    padding-bottom: 13px;
+  .signingActions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
   }
-  /* All five sections fit a 390px row, so nothing depends on scrolling the row after a resize. */
+  /* "Docs" on phones; the full word stays the accessible name. */
   .tabs {
-    gap: 14px;
+    gap: 16px;
   }
   .tabs a {
     min-height: 48px;
-    font-size: 12px;
+    font-size: 14px;
   }
-  .facts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .tabLong {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
-  .facts > div {
-    padding: 15px 14px;
-    border-top: 1px solid #e1e7f0;
+  .tabShort {
+    display: inline;
   }
-  .facts > div:nth-child(-n + 2) {
-    border-top: 0;
-  }
-  .facts > div:nth-child(3) {
-    border-left: 0;
-  }
-  .facts dd {
-    font-size: 17px;
-  }
-  .facts > div:first-child dd {
-    font-size: 27px;
-  }
-  .overviewGrid {
+  .pair {
     grid-template-columns: minmax(0, 1fr);
-    gap: 14px;
+  }
+  /* Phone reference: Terms fold into the Activity caption (full terms stay on Agreement). */
+  .foldTerms > .termsCard {
+    display: none;
+  }
+  .phoneCaption {
+    display: block;
   }
   .section {
     padding: 16px;
   }
   .sectionHeading {
     align-items: flex-start;
-    margin-bottom: 13px;
-  }
-  .sectionHeading h2 {
-    font-size: 17px;
+    margin-bottom: 12px;
   }
   .compactFacts,
   .section :global(.kv) {
-    grid-template-columns: 100px minmax(0, 1fr);
-    gap: 11px 12px;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 10px 12px;
   }
-  .documentGrid {
-    grid-template-columns: minmax(0, 1fr);
+  .fileRow {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'type meta'
+      '. badges'
+      '. actions';
   }
-  .documentCard {
-    padding: 16px;
+  .fileActions {
+    justify-content: flex-start;
   }
-  .documentTitle strong {
-    font-size: 14px;
+  .fileBadges:empty {
+    display: none;
   }
+  .prepare > summary,
   .editTerms > summary,
   .signedDetails > summary,
   .documentMenu > summary,
   .rename > summary,
   .menuPanel > a,
-  .secondaryLink,
-  .backLink {
+  .goLink {
     min-height: 44px;
   }
   .section :global(.list-item) {
-    flex-wrap: wrap;
-  }
-  .section :global(.list-item .file-meta) {
-    flex-basis: calc(100% - 54px);
-  }
-  .section :global(.list-item > .badge) {
-    margin-left: 42px;
-  }
-  .section a:global(.list-item) {
     flex-wrap: nowrap;
-  }
-  .section a:global(.list-item) :global(.file-meta) {
-    flex-basis: auto;
-  }
-  .section :global([aria-label='Upload lease document'] button) {
-    min-height: 44px;
   }
 }

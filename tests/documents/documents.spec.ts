@@ -18,28 +18,30 @@ test('manager uploads a lease file, finds it, previews and downloads it', async 
   await page.screenshot({ path: 'test-results/documents-library.png', fullPage: true });
 
   const name = `Documents flow ${Date.now()}.pdf`;
-  await page.locator('#upload > summary').click();
-  await page.getByLabel('Upload destination').selectOption('seed-lease-maple-11');
-  await page.getByLabel('File type').selectOption('LEASE');
-  await page.getByLabel('Choose files').setInputFiles({
+  await page.getByRole('link', { name: 'Upload files' }).first().click();
+  const upload = page.getByRole('dialog', { name: 'Upload files' });
+  await upload.getByLabel('Upload destination').selectOption('seed-lease-maple-11');
+  await upload.getByLabel('File type').selectOption('LEASE');
+  await upload.getByLabel('Choose files').setInputFiles({
     name,
     mimeType: 'application/pdf',
     buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n'),
   });
   // The uploader sends the file as soon as it is chosen.
   await expect(page.getByRole('status').filter({ hasText: `${name} uploaded.` })).toBeVisible();
+  await upload.getByRole('button', { name: 'Close' }).click();
 
   const leaseGroup = page.getByRole('link', {
     name: /Lease: Maple Court · Unit 4B — Alex Rivera/,
   });
   await expect(leaseGroup).toBeVisible();
-  const fileRow = page.locator('.file', { hasText: name });
+  const fileRow = page.locator('[data-document-row]', { hasText: name });
   await expect(fileRow).toBeVisible();
 
   await page.getByLabel('Search files, leases or properties').fill(name);
-  await page.getByRole('button', { name: 'Apply' }).click();
+  await page.getByLabel('Search files, leases or properties').press('Enter');
   await expect(fileRow).toBeVisible();
-  await expect(page.getByText('1 matching files')).toBeVisible();
+  await expect(page.getByText('1 matching file', { exact: true })).toBeVisible();
 
   const previewUrl = await fileRow.getByRole('link', { name: /^Preview / }).getAttribute('href');
   expect(previewUrl).toMatch(/^\/api\/files\/[^/]+\/preview$/);

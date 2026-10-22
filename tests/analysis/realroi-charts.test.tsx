@@ -43,6 +43,7 @@ import { RoiProjections } from '@/components/analysis/RoiProjections';
 import { RoiScenarios } from '@/components/analysis/RoiScenarios';
 import {
   NetCashFlowCard,
+  NetCashFlowYears,
   OutcomeCard,
   ProjectionMilestones,
 } from '@/components/analysis/RoiSummaryCharts';
@@ -577,6 +578,21 @@ describe('RealROI Summary charts', () => {
     );
     fireEvent.click(within(horizon).getByRole('button', { name: 'Y30' }));
     expect(screen.getByRole('group', { name: /years 1 to 30/ })).toBeTruthy();
+  });
+
+  it('lists exact net cash flow for the first five years with the break-even year', () => {
+    const r = sample();
+    const rows = projectionRows(r);
+    render(<NetCashFlowYears result={r} />);
+    const table = within(screen.getByRole('region', { name: 'Net cash flow, years 1 to 5' }));
+    expect(table.getAllByRole('row')).toHaveLength(6);
+    const first = within(table.getByRole('row', { name: /^Year 1 / }));
+    // Exact engine values, whole dollars; negative years are marked, never rounded to $0.
+    expect(first.getByText(wholeDollars(rows[0].cashFlow))).toBeTruthy();
+    expect(first.getByText('Below $0 · you add cash')).toBeTruthy();
+    expect(screen.getByText('Break-even Y3')).toBeTruthy();
+    fireEvent.click(screen.getByText(`Exact annual cash flow, all ${rows.length} years`));
+    expect(screen.getByRole('region', { name: 'Annual cash flow' })).toBeTruthy();
   });
 
   it('shows the Outcome total, deal quality and a negative part as text', () => {

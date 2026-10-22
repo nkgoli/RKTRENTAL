@@ -5,12 +5,24 @@
 }
 .workspace h2 {
   margin: 0 0 12px;
-  font: 600 20px/1.2 var(--design-heading-font);
-  letter-spacing: -0.035em;
+  font: 500 var(--rr-h2, 22px) / 1.25 var(--design-heading-font);
+}
+.workspace h2:global(.eyebrow) {
+  margin-bottom: 8px;
 }
 .workspace h3 {
   margin: 0 0 8px;
-  font: 600 16px/1.3 var(--design-heading-font);
+  font: 600 16px/1.3 var(--design-font);
+}
+.workspace :global(.steps) {
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+}
+.workspace :global(.steps li) {
+  min-width: max-content;
+}
+.workspace :global(.eyebrow) {
+  margin: 0 0 6px;
 }
 .workspace p {
   margin: 0 0 12px;
@@ -34,22 +46,99 @@
   color: var(--design-muted);
   font-size: 13px;
 }
+/* Ledger reminder grid: review + history on the left, compose + confirm on the right. */
 .columns {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
   gap: 24px;
   align-items: start;
 }
+.summaryArea {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
 .compose {
   display: grid;
+  grid-column: 2;
+  grid-row: 1 / span 2;
   gap: 24px;
   min-width: 0;
 }
+.columns > .history {
+  grid-column: 1;
+  grid-row: 2;
+}
+.columns[data-compose='false'] > .history {
+  grid-column: 2;
+  grid-row: 1;
+}
 .balance {
-  padding: 20px;
+  padding: 16px 20px;
   border: 1px solid var(--rr-border);
-  border-radius: var(--design-radius);
-  background: var(--rr-primary-tint);
+  border-radius: var(--rr-card-radius);
+  background: var(--design-background);
+}
+.balanceLabel {
+  color: var(--design-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+.confirmActions {
+  justify-content: flex-start;
+}
+.dangerEyebrow {
+  color: var(--design-danger) !important;
+}
+.quoted > summary {
+  min-height: 36px;
+  color: var(--design-primary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.quoted[open] > summary {
+  margin-bottom: 8px;
+}
+.emptyHistory {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--rr-card-radius);
+  background: var(--design-background);
+  color: var(--design-muted);
+  text-align: center;
+}
+.emptyHistory svg {
+  width: 28px;
+  height: 28px;
+}
+.channelNote {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 4px;
+}
+.channelNote p {
+  margin: 4px 0 0;
+}
+.recap {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: var(--rr-card-radius);
+  background: var(--design-background);
+}
+.recap dt {
+  color: var(--design-muted);
+  font-size: 13px;
+}
+.recap dd {
+  margin: 2px 0 0;
+  font-weight: 600;
 }
 .balanceHead {
   display: flex;
@@ -62,8 +151,9 @@
   margin-bottom: 6px;
 }
 .balanceHead strong {
-  font: 600 30px/1.1 var(--design-heading-font);
-  letter-spacing: -0.035em;
+  font: 600 28px/1.1 var(--design-heading-font);
+  color: var(--design-danger);
+  font-variant-numeric: tabular-nums;
 }
 .charges {
   margin: 12px 0 0;
@@ -100,13 +190,13 @@
 .field :is(input, select, textarea) {
   width: 100%;
   min-width: 0;
-  min-height: 44px;
-  padding: 10px 12px;
+  min-height: var(--rr-control, 44px);
+  padding: 9px 14px;
   border: 1px solid var(--rr-border-strong);
-  border-radius: 8px;
+  border-radius: 12px;
   color: var(--design-text);
   background: var(--design-surface);
-  font: 400 14px/1.5 var(--design-font);
+  font: 400 15px/1.5 var(--design-font);
 }
 .field textarea {
   resize: vertical;
@@ -154,10 +244,10 @@
   accent-color: var(--design-primary);
 }
 .recipients label {
-  padding: 12px;
+  padding: 12px 14px;
   margin-bottom: 8px;
   border: 1px solid var(--rr-border);
-  border-radius: 8px;
+  border-radius: var(--rr-card-radius);
 }
 .recipients label:has(input:checked) {
   border-color: var(--design-primary);
@@ -175,7 +265,8 @@
 .alert,
 .info {
   padding: 16px;
-  border-left: 3px solid var(--design-danger);
+  border: 1px solid var(--design-danger);
+  border-radius: var(--rr-card-radius);
   background: var(--rr-bad-bg);
   color: var(--design-text);
   font-size: 13px;
@@ -229,7 +320,7 @@
 }
 .messagePreview {
   border: 1px solid var(--rr-border);
-  border-radius: 8px;
+  border-radius: var(--rr-card-radius);
   padding: 16px;
   background: var(--design-background);
   overflow-wrap: anywhere;
@@ -291,7 +382,7 @@
 }
 .attempt details {
   background: var(--design-background);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 12px;
 }
 .attempt summary {
@@ -310,7 +401,19 @@
   max-width: 70ch;
 }
 @media (max-width: 1000px) {
+  /* Phones stack review, compose and confirm, then history. */
   .columns {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+  .summaryArea,
+  .compose,
+  .columns > .history,
+  .columns[data-compose='false'] > .history {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .recap {
     grid-template-columns: minmax(0, 1fr);
   }
   .selection {

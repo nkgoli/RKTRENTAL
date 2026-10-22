@@ -299,6 +299,35 @@ describe('actual versus projected in the ROI workspace', () => {
     click.mockRestore();
   });
 
+  it('summarizes coverage, the comparison and estimates on Summary without filling gaps', async () => {
+    await open();
+    const summary = within(screen.getByRole('tabpanel', { name: 'Summary' }));
+    expect(await summary.findByRole('heading', { name: 'To complete actuals' })).toBeTruthy();
+    expect(summary.getByText('Expenses · not recorded')).toBeTruthy();
+    expect(summary.getByText('Loan payments · not recorded')).toBeTruthy();
+    expect(summary.getByRole('link', { name: 'Add expense →' }).getAttribute('href')).toBe(
+      '/returns?property=a&add=1#add-expense',
+    );
+    const table = within(
+      summary.getByRole('region', { name: 'Actual and projected amounts, summary' }),
+    );
+    const expenses = within(table.getByRole('row', { name: /Operating expenses/ }));
+    expect(expenses.getByText('Not recorded')).toBeTruthy();
+    expect(expenses.queryByText('$0')).toBeNull();
+    expect(
+      within(table.getByRole('row', { name: /Debt service/ })).getByText('No actual to compare'),
+    ).toBeTruthy();
+    expect(summary.getByRole('heading', { name: 'Scheduled and estimated' })).toBeTruthy();
+    // The Period select shares the URL period with the full comparison.
+    fireEvent.change(summary.getByLabelText('Period'), { target: { value: 'YTD' } });
+    expect(window.location.search).toBe('?property=a&period=YTD');
+    await waitFor(() => expect(lastRequest().from).toMatch(/^\d{4}-01-01$/));
+    fireEvent.click(summary.getByRole('button', { name: 'Compare with actuals →' }));
+    expect(
+      screen.getByRole('tab', { name: 'Actual vs projected' }).getAttribute('aria-selected'),
+    ).toBe('true');
+  });
+
   it('keeps the projection usable when actuals cannot load', async () => {
     vi.mocked(loadActualReturnsAction).mockRejectedValue(new Error('offline'));
     await open();

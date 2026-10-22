@@ -1,0 +1,206 @@
+/* Summary-tab panels of Returns & ROI in the shared Redisgn look: bordered white cards,
+   uppercase primary eyebrows, the shared table and quiet insets. */
+.card {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+}
+.card.card h2,
+.inset.inset h2 {
+  margin: 0;
+  font-size: var(--rr-h3, 20px);
+  font-weight: 500;
+}
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.warn {
+  flex: none;
+  color: var(--design-danger);
+}
+.headRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 16px;
+}
+.headRow > div {
+  min-width: 0;
+}
+.caption,
+p.caption {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--design-muted);
+}
+.small,
+p.small {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--design-muted);
+}
+.period {
+  min-width: 200px;
+  margin: 0;
+}
+.gap {
+  display: grid;
+  gap: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rr-border);
+}
+.titleRow + .gap,
+.titleRow + p + .gap {
+  padding-top: 0;
+  border-top: 0;
+}
+.gap :global(.eyebrow) {
+  margin: 0;
+}
+.gap h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+.gap a {
+  width: fit-content;
+  font-weight: 500;
+  color: var(--design-primary);
+}
+.dangerText,
+.gap :global(.eyebrow).dangerText {
+  color: var(--design-danger);
+}
+.table {
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+.table tbody tr:nth-child(odd) {
+  background: var(--design-background);
+}
+.table th[scope='row'] {
+  font-weight: 500;
+  text-align: left;
+}
+.table th,
+.table td {
+  white-space: nowrap;
+}
+/* On desktop the explanatory last column wraps so every column stays in view. */
+@media (min-width: 1024px) {
+  .table td:last-child {
+    white-space: normal;
+  }
+}
+.table td[data-status='partial'],
+.table td[data-status='unavailable'],
+.table td[data-tone='muted'] {
+  color: var(--design-muted);
+}
+.table td[data-tone='loss'] {
+  color: var(--design-danger);
+  font-weight: 600;
+}
+.table td[data-tone='gain'] {
+  color: var(--design-accent);
+  font-weight: 600;
+}
+.footRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+/* "Estimates" sits on a white bordered surface, not a card, as in the design. */
+.inset {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+  padding: 24px;
+  background: var(--design-surface);
+  border: 1px solid var(--rr-border);
+  border-radius: var(--rr-card-radius);
+}
+.inset :global(.eyebrow) {
+  margin: 0;
+}
+.sources {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--design-muted);
+}
+.sources strong {
+  color: var(--design-text);
+  font-weight: 600;
+}
+.inputs > summary {
+  font-weight: 600;
+}
+.summaryNote {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--design-muted);
+}
+.inputGroup h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.inputGroup dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 8px 24px;
+  margin: 0;
+}
+.inputGroup dl > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rr-border);
+}
+.inputGroup dt {
+  font-size: 13px;
+  color: var(--design-muted);
+}
+.inputGroup dd {
+  margin: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.demo {
+  font-weight: 400;
+  color: var(--rr-warn);
+}
+.inputActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (max-width: 640px) {
+  .inset {
+    padding: 16px;
+  }
+  .period {
+    min-width: 0;
+    width: 100%;
+  }
+  .footRow > :global(.btn) {
+    width: 100%;
+  }
+}

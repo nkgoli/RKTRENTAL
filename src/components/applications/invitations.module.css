@@ -1,7 +1,10 @@
+/* Invitation screens (manager send/detail/list) and the public application form.
+   Cards, fields, buttons, badges, alerts and steps come from the shared redesign layer;
+   this module only lays them out. */
 .page {
-  max-width: 1040px;
-  margin: 0 auto;
-  padding: 16px 0 40px;
+  display: grid;
+  gap: 24px;
+  min-width: 0;
 }
 .public {
   max-width: 680px;
@@ -10,23 +13,25 @@
 }
 .brand {
   font-family: var(--design-heading-font);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 22px;
-  color: var(--rr-navy);
+  color: var(--design-text);
   margin-bottom: 32px;
 }
 .eyebrow {
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--design-muted);
-  margin: 0 0 8px;
+  letter-spacing: 0.14em;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--design-primary);
+  margin: 0 0 4px;
 }
 .title {
   margin: 8px 0;
+  font-family: var(--design-heading-font);
   font-size: 30px;
-  letter-spacing: -0.03em;
+  font-weight: 500;
+  letter-spacing: -0.015em;
 }
 .intro {
   color: var(--design-muted);
@@ -35,30 +40,59 @@
 }
 .grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
   align-items: start;
 }
 .card {
   padding: 24px;
-  background: white;
+  background: var(--design-surface);
   border: 1px solid var(--rr-border);
-  border-radius: 14px;
+  border-radius: var(--design-radius);
   min-width: 0;
 }
 .card h2,
-.list h2 {
-  margin: 0 0 16px;
-  font-size: 18px;
+.cardHead h2,
+.guide h2 {
+  margin: 0;
+  font-family: var(--design-heading-font);
+  font-size: 20px;
+  font-weight: 500;
+}
+.formCard,
+.invitationsCard {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  min-width: 0;
+}
+.cardHead {
+  display: grid;
+  gap: 4px;
+}
+.caption,
+.muted,
+.field small {
+  color: var(--design-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+.caption {
+  margin: 0;
 }
 .fields {
   display: grid;
-  gap: 20px;
+  gap: 16px;
+}
+.fieldRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 .field {
   display: grid;
-  gap: 7px;
-  font-weight: 600;
+  gap: 6px;
+  font-weight: 500;
   min-width: 0;
 }
 .field input,
@@ -66,22 +100,16 @@
 .field textarea {
   width: 100%;
   min-height: 44px;
-  border: 1px solid var(--rr-border-strong);
-  border-radius: 8px;
-  padding: 10px 12px;
-  background: white;
+  border: 1px solid #c3c9d4;
+  border-radius: 12px;
+  padding: 9px 14px;
+  background: var(--design-surface);
   color: var(--design-text);
   font: inherit;
   font-weight: 400;
 }
 .field input:read-only {
-  background: var(--rr-subtle);
-}
-.field small,
-.muted {
-  color: var(--design-muted);
-  font-size: 13px;
-  font-weight: 400;
+  background: var(--design-background);
 }
 .actions {
   display: flex;
@@ -90,30 +118,37 @@
   align-items: center;
   margin-top: 24px;
 }
-.actions button,
-.actions a {
-  min-height: 44px;
+/* Inside the redesigned cards the grid gap spaces the row and actions sit at the end. */
+.formCard .actions,
+.invitationsCard .actions {
+  justify-content: flex-end;
+  margin-top: 0;
 }
 .notice {
-  padding: 14px 16px;
+  margin: 0;
+  padding: 12px 14px;
   border: 1px solid var(--rr-border);
-  border-radius: 8px;
-  background: var(--rr-primary-tint);
-  margin: 16px 0;
+  border-radius: 12px;
+  background: var(--design-background);
   overflow-wrap: anywhere;
 }
 .error {
+  margin: 0;
   color: var(--design-danger);
-  padding: 12px;
+  padding: 12px 14px;
   background: var(--rr-bad-bg);
-  border-radius: 8px;
+  border-radius: 12px;
 }
 .preview {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font: inherit;
   font-size: 14px;
-  margin: 16px 0 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--rr-border);
+  border-radius: 12px;
+  background: var(--design-background);
 }
 .check {
   display: flex;
@@ -127,25 +162,53 @@
   flex: 0 0 20px;
   margin-top: 2px;
 }
-.steps {
-  margin: 0;
-  padding-left: 20px;
-  color: var(--design-muted);
+.stepsWrap {
+  min-width: 0;
+}
+/* Four or five steps wrap into rows instead of overflowing a narrow card or phone. */
+.stepsWrap :global(.steps) {
+  flex-wrap: wrap;
+}
+.stepsWrap :global(.steps li) {
+  flex: 1 1 150px;
+  min-width: 0;
+}
+.summaryList {
   display: grid;
-  gap: 18px;
-}
-.list {
-  margin: 24px 0;
-  padding: 20px 24px;
+  margin: 0;
+  padding: 0;
   border: 1px solid var(--rr-border);
-  background: white;
   border-radius: 12px;
+  background: var(--design-background);
 }
-.listHead {
+.summaryList > div {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.6fr) minmax(0, 1.4fr);
+  gap: 12px;
+  padding: 12px 16px;
+}
+.summaryList > div + div {
+  border-top: 1px solid var(--rr-border);
+}
+.summaryList dt {
+  color: var(--design-muted);
+  font-size: 14px;
+}
+.summaryList dd {
+  margin: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.unavailable {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--design-muted);
+  font-size: 13px;
 }
 .rows {
   list-style: none;
@@ -154,11 +217,14 @@
 }
 .row {
   border-top: 1px solid var(--rr-border);
-  padding: 16px 0;
+  padding: 14px 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+.row:last-child {
+  padding-bottom: 0;
 }
 .row div {
   min-width: 0;
@@ -168,18 +234,78 @@
   display: block;
   overflow-wrap: anywhere;
 }
+.row strong {
+  font-weight: 500;
+}
 .row small {
   color: var(--design-muted);
-  margin-top: 4px;
+  font-size: 13px;
+  margin-top: 2px;
 }
-.state {
-  display: inline-block;
-  background: var(--rr-primary-tint);
-  color: var(--rr-navy);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 12px;
-  font-weight: 600;
+.row :global(.badge) {
+  flex: none;
+}
+.emptyLine,
+.cardFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.emptyLine p {
+  margin: 0;
+}
+.cardFoot > a:first-child {
+  color: var(--design-primary);
+  font-weight: 500;
+}
+.guide {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid var(--rr-border);
+  border-radius: var(--design-radius);
+  background: var(--design-surface);
+}
+.accordion {
+  display: grid;
+}
+.accordion details {
+  border-top: 1px solid var(--rr-border);
+}
+.accordion details:last-child {
+  border-bottom: 1px solid var(--rr-border);
+}
+.accordion summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 0;
+  font-weight: 500;
+  cursor: pointer;
+  list-style: none;
+}
+.accordion summary::-webkit-details-marker {
+  display: none;
+}
+.accordion summary::after {
+  content: '+';
+  color: var(--design-primary);
+  font-size: 20px;
+  line-height: 1;
+}
+.accordion details[open] summary::after {
+  content: '\2212';
+}
+.accordion p {
+  margin: 0 0 12px;
+  color: var(--design-muted);
+  font-size: 14px;
 }
 .history {
   padding-left: 20px;
@@ -189,34 +315,58 @@
 .history li {
   margin: 10px 0;
 }
-@media (max-width: 700px) {
+.statusLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0;
+}
+@media (min-width: 1024px) {
+  .card,
+  .guide {
+    padding: 32px;
+  }
+}
+@media (max-width: 900px) {
   .grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
-  .page {
-    padding-top: 0;
-  }
+}
+@media (max-width: 640px) {
   .public {
     padding: 24px 16px;
   }
   .card,
-  .list {
+  .guide {
     padding: 20px 16px;
   }
   .title {
     font-size: 26px;
   }
+  .fieldRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .row {
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
+    gap: 8px;
+  }
+  .summaryList > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
   }
   .actions {
     align-items: stretch;
   }
   .actions > * {
     flex: 1 1 auto;
+    justify-content: center;
+  }
+  .emptyLine > :global(.btn),
+  .cardFoot > :global(.btn) {
+    width: 100%;
     justify-content: center;
   }
 }

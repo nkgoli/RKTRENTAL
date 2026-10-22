@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Card, CardHeader } from '@/components/ui';
-import { KpiCard } from '@/components/dashboard/KpiCard';
+import { SummaryBand } from '@/components/ui/SummaryBand';
 import { RangePicker, YearOverYear } from '@/components/returns/RangePicker';
 import { formatMoney } from '@/lib/properties/format';
 import type { ScopedReturns } from '@/lib/metrics/scoped';
@@ -31,36 +31,44 @@ export function ReturnsWorkspace({
         extra={returns.unitId ? { unit: returns.unitId } : {}}
         now={now}
       />
-      <p className={styles.context}>
-        {returns.unitId
-          ? 'Unit income follows settled payments. Property expenses, debt and value are allocated by scheduled or listed rent; equally when no rent is set.'
-          : 'Income follows settled payments. Expenses and debt service cover the selected period.'}{' '}
-        <a href={`/roi-analysis?${new URLSearchParams({ property: propertyId, view: 'actual', ...periodParams(returns.period) })}`}>
-          Compare {propertyName} with projections
-        </a>
-        {returns.unitId && ' Projections cover the whole property.'}
-      </p>
-      <div className="kpis">
-        <KpiCard
-          label="Net operating income"
-          value={moneyCents(returns.metrics.noiCents)}
-          note="Income less operating expenses"
-        />
-        <KpiCard
-          label="Cash flow"
-          value={moneyCents(returns.metrics.cashFlowCents)}
-          note="After debt service"
-        />
-        <KpiCard
-          label="Cap rate"
-          value={percent(returns.metrics.capRate)}
-          note={
-            returns.metrics.capRate === null
-              ? 'Add property value to calculate'
-              : 'Period NOI on property value'
-          }
-        />
-      </div>
+      <SummaryBand
+        label={`${title} returns`}
+        eyebrow={`${returns.period.label} · Recorded · ${returns.unitId ? 'Unit allocation' : 'Whole property'} · USD`}
+        value={moneyCents(returns.metrics.noiCents)}
+        danger={returns.metrics.noiCents < 0}
+        detail={`Net operating income: ${moneyCents(returns.metrics.incomeCents)} rent collected less ${moneyCents(returns.metrics.expensesCents)} operating expenses`}
+        footer={
+          <>
+            <a
+              className="btn btn-secondary btn-sm"
+              href={`/roi-analysis?${new URLSearchParams({ property: propertyId, view: 'actual', ...periodParams(returns.period) })}`}
+            >
+              Compare {propertyName} with projections
+            </a>
+            <span className={styles.footNote}>
+              {returns.unitId
+                ? 'Unit income follows settled payments. Property expenses, debt and value are allocated by scheduled or listed rent; equally when no rent is set.'
+                : 'Income follows settled payments. Expenses and debt service cover the selected period.'}
+              {returns.unitId && ' Projections cover the whole property.'}
+            </span>
+          </>
+        }
+        stats={[
+          {
+            label: 'Cash flow',
+            value: moneyCents(returns.metrics.cashFlowCents),
+            detail: 'After debt service',
+          },
+          {
+            label: 'Cap rate',
+            value: percent(returns.metrics.capRate),
+            detail:
+              returns.metrics.capRate === null
+                ? 'Add property value to calculate'
+                : 'Period NOI on property value',
+          },
+        ]}
+      />
       <div className={styles.contentGrid}>
         <Card>
           <CardHeader

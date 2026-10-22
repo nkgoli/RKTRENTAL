@@ -18,7 +18,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: () => undefined, push: () => undefined }),
 }));
 
-import { PropertyOverview, UnitOverview } from '@/components/workspace/WorkspaceOverview';
+import { PropertyOverview, UnitOverview, propertyNextSteps } from '@/components/workspace/WorkspaceOverview';
 
 const period = resolvePeriod('12M', new Date('2026-10-15T00:00:00.000Z'));
 const metrics = computeScopedReturns({
@@ -121,13 +121,46 @@ describe('property and unit workspace render', () => {
     expect(html).not.toContain('Payments by the numbers');
     expect(html).toContain('Property units');
     expect(html).toContain('Alex Rivera');
+    expect(html).toContain('Units &amp; lease terms');
+    expect(html).toContain('Payments this month');
+    expect(html).toContain('Occupancy');
+    expect(html).toContain('1 of 1 unit · fully occupied');
+    expect(html).toContain('Rent roll');
+    expect(html).toContain('All caught up');
+    expect(html).toContain('Moves Maple Court to the Archived filter on Properties. Asks for confirmation first.');
+  });
+
+  it('derives next steps from live repairs, expiring leases and vacancies', () => {
+    const live = {
+      ...property,
+      units: [
+        { ...property.units[0], leaseEnd: new Date('2026-11-30T00:00:00.000Z') },
+        { id: 'unit-2', number: '3A', isImplicit: false, bedrooms: 1, bathrooms: 1, squareFeet: 600, listedRent: 1600, status: 'VACANT', leaseId: null, rent: null, tenant: null },
+      ],
+      stats: { ...property.stats, openRepairs: 2, expiringLeases: 1 },
+    } as unknown as PropertyDetail;
+    const steps = propertyNextSteps(live, new Date('2026-10-22T00:00:00.000Z'), {
+      repairs: { open: 2, urgent: 1, first: { title: 'Kitchen sink leak', unitNumber: '4B', priority: 'URGENT' } },
+      applicants: { 'unit-2': { count: 1, first: { name: 'Rohan Das', appliedAt: new Date('2026-10-11T00:00:00.000Z'), status: 'SCREENING' } } },
+    });
+    expect(steps.map((step) => [step.eyebrow, step.heading, step.detail])).toEqual([
+      ['Maintenance', '2 repairs need attention', '1 urgent · Kitchen sink leak, Unit 4B'],
+      ['Renewals', '1 lease expiring soon', 'Alex Rivera, Unit 4B, ends on Nov 30'],
+      ['Vacancy', 'Unit 3A · $1,600 asking', 'Rohan Das applied Oct 11 · in screening'],
+    ]);
+    expect(steps[2].href).toBe('/properties/property-1/applications?unit=unit-2');
+    const soon = new Date(Date.now() + 20 * 86_400_000);
+    const html = renderToStaticMarkup(<PropertyOverview property={{ ...live, units: [{ ...live.units[0], leaseEnd: soon }, live.units[1]] }} />);
+    expect(html).toContain('Renewal due');
+    expect(html).toContain('$1,600 asking');
   });
 
   it('renders one lease card, read-only unit facts and empty-state next steps', () => {
     const html = renderToStaticMarkup(<UnitOverview unit={unit} canDelete />);
 
-    expect(html).toContain('Lease timeline');
+    expect(html).toContain('Lease terms');
     expect(html).not.toContain('Current lease');
+    expect(html).toContain('Asking rent');
     expect(html).toMatch(/<button class="action action-secondary" type="button" aria-label="Edit unit"[^>]*>.*?<span>Edit<\/span><\/button>/);
     expect(html).not.toContain('Maintenance at a glance');
     expect(html).not.toContain('<dt>Status</dt>');

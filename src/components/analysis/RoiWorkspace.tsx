@@ -48,11 +48,19 @@ import {
   type Values,
 } from './fields';
 import {
-  NetCashFlowCard,
+  NetCashFlowYears,
   OutcomeCard,
   ProjectionMilestones,
   SummaryMilestones,
 } from './RoiSummaryCharts';
+import {
+  ActualVsProjectedSummary,
+  ActualsToComplete,
+  EstimatesPanel,
+  HowCalculated,
+  OptionalInputs,
+} from './RoiReturnsSummary';
+import { buildCompsHref, rentAnalysisContext } from '@/lib/comps/navigation';
 import { DealSnapshot, FixMyDeal } from './RoiDealPanels';
 import { MoreDetail } from './RoiChart';
 import { AssumptionsSummary, isBaselinePath } from './AssumptionsSummary';
@@ -87,6 +95,33 @@ const failure = (code: string) =>
     FORBIDDEN: 'You do not have access to this analysis.',
     UNSUPPORTED_VERSION: 'This saved analysis uses an unsupported version.',
   })[code] ?? 'Could not complete this request. Your entries are kept. Try again.';
+
+const glyph = (d: string) => (
+  <svg
+    viewBox="0 0 24 24"
+    width="16"
+    height="16"
+    aria-hidden="true"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d={d} />
+  </svg>
+);
+const SECTIONS = [
+  { id: 'summary', label: 'Summary' },
+  { id: 'actual', label: 'Actual vs projected' },
+  { id: 'charts', label: 'Charts' },
+  { id: 'scenarios', label: 'Scenarios' },
+  { id: 'benchmarks', label: 'Benchmarks' },
+  { id: 'compare', label: 'Compare' },
+] as const;
+const SlidersIcon = () =>
+  glyph('M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6');
+const BookmarkIcon = () => glyph('m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z');
 
 export function RoiWorkspace({
   selection,
@@ -438,7 +473,10 @@ export function RoiWorkspace({
     return assumptionsEditPath(selected, propertyUrl(selected), path);
   }
   function editAssumptions(path?: string) {
-    const href = editHref(path);
+    leave(editHref(path));
+  }
+  /** Leaves the workspace for another page, after the unsaved-changes decision when needed. */
+  function leave(href: string) {
     if (dirty) {
       returnFocus.current = document.activeElement as HTMLElement;
       setPending(href);
@@ -667,6 +705,12 @@ export function RoiWorkspace({
   // A property address is open before its first load starts (server render, hydration):
   // show it loading rather than the chooser.
   const opening = !started && !selected && !!urlProperty && selection.ok;
+  const projectionBasis = dirty
+    ? 'Current unsaved assumptions'
+    : revision > 0
+      ? `Saved analysis, revision ${revision}`
+      : 'Saved property details (analysis not yet saved)';
+  const vacantUnit = property?.units.find((unit) => unit.status === 'VACANT');
   const shown = opening ? urlProperty : selected;
   const shownProperty = properties.find((p) => p.id === shown);
   return (
@@ -683,31 +727,83 @@ export function RoiWorkspace({
             <button onClick={() => setRecovery(null)}>Cancel property change</button>
           </p>
         )}
+        {shown && (
+          <nav className={`breadcrumbs ${styles.crumbs}`} aria-label="Breadcrumb">
+            <ol>
+              <li>
+                {/* A full page load keeps the unsaved-changes (beforeunload) guard in place. */}
+                {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+                <a href="/properties">Properties</a>
+              </li>
+              <li>
+                <a href={`/properties/${shown}`}>{shownProperty?.name ?? 'Property'}</a>
+              </li>
+              <li aria-current="page">Returns &amp; ROI</li>
+            </ol>
+          </nav>
+        )}
         <div className={`${styles.heading} ${shown ? styles.headingCompact : ''}`}>
-          <div>
-            {/* The app shell already titles the page; an open property needs no second label. */}
-            <p className={styles.eyebrow}>
-              {shown && (
-                <>
-                  <a href={`/properties/${shown}`}>Property overview</a> /{' '}
-                </>
+          <div className={styles.titleBlock}>
+            <p className={`eyebrow ${styles.eyebrow}`}>Returns &amp; ROI</p>
+            <div className={styles.titleRow}>
+              <h1>
+                {shown ? (shownProperty?.name ?? 'Unavailable property') : 'Choose a property'}
+              </h1>
+              {shown && payload && !loading && (
+                <span className={`badge ${dirty ? 'warning' : revision > 0 ? 'success' : ''}`}>
+                  {dirty
+                    ? 'Unsaved changes'
+                    : revision > 0
+                      ? `Saved · ${savedStatus === 'READY' ? 'ready' : savedStatus === 'DRAFT' ? 'draft' : 'analysis'}`
+                      : 'Draft · not saved'}
+                </span>
               )}
-              Returns &amp; ROI
-            </p>
-            <h1>{shown ? (shownProperty?.name ?? 'Unavailable property') : 'Choose a property'}</h1>
+            </div>
             {shown ? (
-              <p className={styles.context}>
-                <span>Whole property</span>
-                {payload && !loading && (
-                  <span>
-                    {dirty
-                      ? 'Unsaved changes'
-                      : revision > 0
-                        ? `Saved ${savedStatus?.toLowerCase() ?? 'analysis'} · revision ${revision}`
-                        : `Revision ${revision}`}
-                  </span>
-                )}
-              </p>
+              payload && !loading ? (
+                <AssumptionsSummary
+                  payload={calculatedPayload ?? applyValues(payload, values, tax)}
+                  result={result}
+                  stale={stale}
+                  missing={baselineErrors}
+                  incomplete={missingData(applyValues(payload, values, tax)).some((e) =>
+                    isBaselinePath(e.path),
+                  )}
+                  demoCount={demoFields.length}
+                  demoLabel={demoFields[0]?.demo}
+                  source={
+                    revision > 0
+                      ? `Saved ${savedStatus === 'READY' ? 'ready' : savedStatus === 'DRAFT' ? 'draft' : 'analysis'} · revision ${revision}`
+                      : 'From property details · not saved yet'
+                  }
+                  editHref={editHref()}
+                  completeHref={editHref(baselineErrors[0]?.path)}
+                  onEdit={(event, path) => {
+                    if (!dirty) return;
+                    event.preventDefault();
+                    editAssumptions(path);
+                  }}
+                  meta={
+                    <>
+                      {shownProperty && (
+                        <span>
+                          {shownProperty.units.length}{' '}
+                          {shownProperty.units.length === 1 ? 'unit' : 'units'}
+                        </span>
+                      )}
+                      <span>
+                        {revision > 0
+                          ? `Saved ${savedStatus?.toLowerCase() ?? 'analysis'} · revision ${revision}`
+                          : `Revision ${revision}`}
+                      </span>
+                    </>
+                  }
+                />
+              ) : (
+                <p className={styles.context}>
+                  <span>Whole property</span>
+                </p>
+              )
             ) : (
               <p>
                 Compare recorded rent and expenses with projected returns from assumptions you
@@ -719,8 +815,23 @@ export function RoiWorkspace({
             <div className={styles.actions}>
               {payload && !loading && (
                 <>
-                  <details className={styles.menu}>
-                    <summary aria-label="Save analysis">{saving ? 'Saving...' : 'Save'}</summary>
+                  <a
+                    className="btn btn-secondary"
+                    href={editHref()}
+                    onClick={(event) => {
+                      if (!dirty) return;
+                      event.preventDefault();
+                      editAssumptions();
+                    }}
+                  >
+                    <SlidersIcon />
+                    Edit assumptions
+                  </a>
+                  <details className={`${styles.menu} ${styles.saveMenu}`}>
+                    <summary aria-label="Save analysis">
+                      <BookmarkIcon />
+                      {saving ? 'Saving...' : 'Save analysis'}
+                    </summary>
                     <div role="group" aria-label="Save analysis options">
                       <button disabled={saving || conflict} onClick={() => save('DRAFT')}>
                         Save draft
@@ -821,29 +932,6 @@ export function RoiWorkspace({
                 <p className={styles.status} role="status" aria-live="polite">
                   {message}
                 </p>
-                <AssumptionsSummary
-                  payload={calculatedPayload ?? applyValues(payload, values, tax)}
-                  result={result}
-                  stale={stale}
-                  missing={baselineErrors}
-                  incomplete={missingData(applyValues(payload, values, tax)).some((e) =>
-                    isBaselinePath(e.path),
-                  )}
-                  demoCount={demoFields.length}
-                  demoLabel={demoFields[0]?.demo}
-                  source={
-                    revision > 0
-                      ? `Saved ${savedStatus === 'READY' ? 'ready' : savedStatus === 'DRAFT' ? 'draft' : 'analysis'} · revision ${revision}`
-                      : 'From property details · not saved yet'
-                  }
-                  editHref={editHref()}
-                  completeHref={editHref(baselineErrors[0]?.path)}
-                  onEdit={(event, path) => {
-                    if (!dirty) return;
-                    event.preventDefault();
-                    editAssumptions(path);
-                  }}
-                />
                 {!!localErrors.length && (
                   <details className={styles.notice} open>
                     <summary>
@@ -867,20 +955,54 @@ export function RoiWorkspace({
                     </ul>
                   </details>
                 )}
-                <AnalysisTabs
-                  id="roi-section"
-                  label="ROI sections"
-                  choices={[
-                    { id: 'summary', label: 'Summary' },
-                    { id: 'actual', label: 'Actual vs projected' },
-                    { id: 'charts', label: 'Charts' },
-                    { id: 'scenarios', label: 'Scenarios' },
-                    { id: 'benchmarks', label: 'Benchmarks' },
-                    { id: 'compare', label: 'Compare' },
-                  ]}
-                  value={view}
-                  onChange={changeView}
-                />
+                <div className={styles.viewRow}>
+                  <div className={styles.viewTabs}>
+                    <AnalysisTabs
+                      id="roi-section"
+                      label="ROI sections"
+                      choices={SECTIONS}
+                      value={view}
+                      onChange={changeView}
+                    />
+                  </div>
+                  <div className={styles.viewSelects}>
+                    <label className={`field ${styles.viewSelect}`}>
+                      Scope
+                      <select
+                        value=""
+                        onChange={(event) => {
+                          const unit = event.target.value;
+                          if (unit)
+                            leave(
+                              `/properties/${encodeURIComponent(selected)}/returns?${new URLSearchParams({ unit })}`,
+                            );
+                        }}
+                        aria-describedby="roi-scope-note"
+                      >
+                        <option value="">Whole property</option>
+                        {(property?.units ?? []).map((unit) => (
+                          <option key={unit.id} value={unit.id}>
+                            Unit {unit.number} · {unit.status.toLowerCase()}
+                          </option>
+                        ))}
+                      </select>
+                      <span id="roi-scope-note" className={styles.srOnly}>
+                        Projections cover the whole property. Choosing a unit opens its recorded
+                        returns.
+                      </span>
+                    </label>
+                    <label className={`field ${styles.viewSelect} ${styles.phoneOnly}`}>
+                      View
+                      <select value={view} onChange={(event) => changeView(event.target.value)}>
+                        {SECTIONS.map((section) => (
+                          <option key={section.id} value={section.id}>
+                            {section.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </div>
                 <div
                   id="roi-section-panel-actual"
                   role="tabpanel"
@@ -896,13 +1018,7 @@ export function RoiWorkspace({
                     projection={projectionYear}
                     stale={stale}
                     missingAssumptions={projection.errors.length}
-                    projectionBasis={
-                      dirty
-                        ? 'Current unsaved assumptions'
-                        : revision > 0
-                          ? `Saved analysis, revision ${revision}`
-                          : 'Saved property details (analysis not yet saved)'
-                    }
+                    projectionBasis={projectionBasis}
                     onPeriod={changePeriod}
                     onRetry={() => setActualsAttempt((n) => n + 1)}
                     onReviewAssumptions={() => focusField(errors[0]?.path ?? '')}
@@ -1102,14 +1218,71 @@ export function RoiWorkspace({
                         key={`snapshot-${selected}`}
                         result={result}
                         payload={calculatedPayload}
+                        onCompare={() => changeView('actual')}
+                        howHref="#roi-how"
+                        onHow={(event) => {
+                          event.preventDefault();
+                          const how = document.getElementById('roi-how');
+                          if (how instanceof HTMLDetailsElement) {
+                            how.open = true;
+                            how.scrollIntoView?.({ block: 'start' });
+                            how.querySelector('summary')?.focus();
+                          }
+                        }}
                       />
                     )}
-                    {result ? (
-                      <>
-                        <NetCashFlowCard key={`cash-${selected}`} result={result} />
-                        <SummaryMilestones result={result} />
-                      </>
-                    ) : null}
+                    <div className={styles.twoOne}>
+                      {result ? (
+                        <NetCashFlowYears key={`cash-${selected}`} result={result} />
+                      ) : null}
+                      <ActualsToComplete propertyId={selected} state={actuals} />
+                    </div>
+                    <ActualVsProjectedSummary
+                      state={actuals}
+                      projection={projectionYear}
+                      stale={stale}
+                      window={range}
+                      choice={period}
+                      projectionBasis={projectionBasis}
+                      onPeriod={changePeriod}
+                      onOpen={() => changeView('actual')}
+                    />
+                    <div className={styles.pairGrid}>
+                      <EstimatesPanel state={actuals} />
+                      {result ? <SummaryMilestones result={result} /> : null}
+                    </div>
+                    <OptionalInputs
+                      values={values}
+                      demoPaths={demoFields.map((f) => f.path)}
+                      editHref={editHref()}
+                      onEdit={(event) => {
+                        if (!dirty) return;
+                        event.preventDefault();
+                        editAssumptions();
+                      }}
+                      onTax={() => {
+                        changeView('scenarios');
+                        setTimeout(() => {
+                          const tax = Array.from(
+                            document.querySelectorAll<HTMLElement>(
+                              '#roi-section-panel-scenarios summary',
+                            ),
+                          ).find((s) => /^Optional tax estimate/.test(s.textContent ?? ''));
+                          if (tax?.parentElement instanceof HTMLDetailsElement)
+                            tax.parentElement.open = true;
+                          tax?.focus();
+                        }, 0);
+                      }}
+                    />
+                    <HowCalculated id="roi-how" />
+                    {vacantUnit && (
+                      <a
+                        className={styles.vacantLink}
+                        href={buildCompsHref(rentAnalysisContext(selected, vacantUnit.id))}
+                      >
+                        Unit {vacantUnit.number} is vacant · check its rent in Rent analysis →
+                      </a>
+                    )}
                     <nav className={styles.deeper} aria-label="Explore analysis">
                       <button onClick={() => changeView('actual')}>Actual vs projected →</button>
                       <button onClick={() => changeView('scenarios')}>Scenarios →</button>

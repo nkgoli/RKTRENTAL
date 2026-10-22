@@ -110,9 +110,9 @@ describe('Fix My Deal levers (C4)', () => {
   it('renders the snapshot with one risk score on ring and gauge', () => {
     render(<DealSnapshot result={base} payload={sample} />);
     const band = screen.getByRole('region', { name: 'Deal Snapshot' });
-    const risk = within(band)
-      .getByText(/^Risk [0-9]+/)
-      .closest('details')!;
+    expect(within(band).getByRole('meter', { name: 'Risk score' })).toBeTruthy();
+    expect(within(band).getByText(/^Risk score [0-9]+ of 100 · /)).toBeTruthy();
+    const risk = within(band).getByText('What drives the risk score').closest('details')!;
     expect(risk.open).toBe(false);
     fireEvent.click(risk.querySelector('summary')!);
     expect(risk.open).toBe(true);

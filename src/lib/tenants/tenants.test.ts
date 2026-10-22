@@ -111,8 +111,21 @@ describe('organization scoping', () => {
   });
 });
 
+/** Raw SQL text for each tagged-template `$queryRaw` call, with its bound values. */
+const rawCalls = (mock: ReturnType<typeof vi.fn>) =>
+  mock.mock.calls.map(([strings, ...values]) => ({
+    sql: (strings as TemplateStringsArray).join('?'),
+    values,
+  }));
+
 function fakeTx(overrides: Record<string, unknown>) {
+  // Contact writes take an advisory lock, then look up email matches with raw SQL.
+  const contactMatches: Array<{ id: string }> = [];
   const tx = {
+    contactMatches,
+    $queryRaw: vi.fn(async (strings: TemplateStringsArray) =>
+      strings.join('').includes('FROM "Tenant"') ? contactMatches : [],
+    ),
     $executeRaw: vi.fn().mockResolvedValue(0),
     charge: { findMany: vi.fn().mockResolvedValue([]), createMany: vi.fn().mockResolvedValue({ count: 1 }) },
     tenant: {
@@ -146,12 +159,16 @@ describe('createTenant', () => {
       leaseId: null,
     });
     expect(tx.tenant.create.mock.calls[0][0].data.organizationId).toBe('org-1');
-    expect(tx.tenant.findFirst.mock.calls[0][0].where.organizationId).toBe('org-1');
+    const [lock, match] = rawCalls(tx.$queryRaw);
+    expect(lock.sql).toContain('pg_advisory_xact_lock');
+    expect(lock.values).toEqual(['tenant-contacts:org-1']);
+    expect(match.sql).toContain('FROM "Tenant"');
+    expect(match.values).toEqual(['org-1', 'a@x.com']);
   });
 
   it('rejects duplicate emails', async () => {
     const { tx, client } = fakeTx({});
-    tx.tenant.findFirst.mockResolvedValue({ id: 'other' });
+    tx.contactMatches.push({ id: 'other' });
     await expect(createTenant('org-1', input, client)).rejects.toBeInstanceOf(TenantServiceError);
     expect(tx.tenant.create).not.toHaveBeenCalled();
   });

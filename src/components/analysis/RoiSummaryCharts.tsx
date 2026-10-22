@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import {
   calendarYear,
   equityYears,
@@ -448,15 +448,23 @@ export function SummaryMilestones({ result }: { result: ProjectionResult }) {
     ['Debt service', (y: number) => rows[y - 1].debtService],
     ['Cash flow', (y: number) => rows[y - 1].cashFlow],
   ] as const;
+  const id = useId();
   return (
-    <ChartCard title="Milestones" subtitle="Projected annual amounts, USD before tax.">
-      <div className={s.scroll} role="region" tabIndex={0} aria-label="Milestones">
-        <table className={`${s.table} ${s.compact}`}>
+    <section className={`card ${s.plainCard}`} aria-labelledby={`${id}-title`}>
+      <div className={s.plainHead}>
+        <div>
+          <h2 id={`${id}-title`}>Milestones</h2>
+          <p className={s.caption}>Projected annual amounts · USD · before tax</p>
+        </div>
+        <span className="badge info">Projected</span>
+      </div>
+      <div className="table-region" role="region" tabIndex={0} aria-label="Milestones">
+        <table className={`table ${s.plainTable}`}>
           <thead>
             <tr>
               <th scope="col">Metric</th>
               {years.map((y) => (
-                <th scope="col" key={y}>
+                <th scope="col" key={y} className="num">
                   Year {y}
                 </th>
               ))}
@@ -467,7 +475,7 @@ export function SummaryMilestones({ result }: { result: ProjectionResult }) {
               <tr key={label}>
                 <th scope="row">{label}</th>
                 {years.map((y) => (
-                  <td key={y} data-tone={value(y) < 0 ? 'loss' : undefined}>
+                  <td key={y} className="num" data-tone={value(y) < 0 ? 'loss' : undefined}>
                     {wholeDollars(value(y))}
                   </td>
                 ))}
@@ -476,6 +484,96 @@ export function SummaryMilestones({ result }: { result: ProjectionResult }) {
           </tbody>
         </table>
       </div>
-    </ChartCard>
+    </section>
+  );
+}
+
+/**
+ * Net cash flow for the first five projected years as an exact table (Designs/redisgn), with
+ * every year of the hold one click away. The bar chart of the same series stays in Charts.
+ */
+export function NetCashFlowYears({ result }: { result: ProjectionResult }) {
+  const rows = projectionRows(result);
+  const shown = rows.slice(0, 5);
+  const turn = firstPositiveAfterNegative(rows.map((r) => r.cashFlow));
+  const id = useId();
+  const badge = !rows.length
+    ? null
+    : rows[0].cashFlow >= 0
+      ? { text: 'Positive from Y1', tone: 'success' }
+      : turn != null
+        ? { text: `Break-even Y${rows[turn].year}`, tone: 'info' }
+        : { text: `Below $0 through Y${rows.length}`, tone: 'danger' };
+  const against = (value: number) =>
+    Math.round(value) < 0
+      ? 'Below $0 · you add cash'
+      : Math.round(value) > 0
+        ? 'Above $0 · cash kept'
+        : 'At $0 · break-even';
+  return (
+    <section className={`card ${s.plainCard}`} aria-labelledby={`${id}-title`}>
+      <div className={s.plainHead}>
+        <h2 id={`${id}-title`}>Net cash flow by year</h2>
+        {badge && <span className={`badge ${badge.tone}`}>{badge.text}</span>}
+      </div>
+      <p className={s.caption}>
+        Projected · USD per year · before tax and sale proceeds · exact amounts
+      </p>
+      <div
+        className="table-region"
+        role="region"
+        tabIndex={0}
+        aria-label={`Net cash flow, years 1 to ${shown.length}`}
+      >
+        <table className={`table ${s.plainTable}`}>
+          <thead>
+            <tr>
+              <th scope="col">Year</th>
+              <th scope="col" className="num">
+                Net cash flow
+              </th>
+              <th scope="col">Against $0</th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((r) => (
+              <tr key={r.year}>
+                <th scope="row">Year {r.year}</th>
+                <td className="num" data-tone={Math.round(r.cashFlow) < 0 ? 'loss' : undefined}>
+                  {signed(r.cashFlow)}
+                </td>
+                <td>{against(r.cashFlow)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {rows.length >= 5 && <p className={s.yearsNote}>Years 1 and 5 match Milestones.</p>}
+      <MoreDetail summary={`Exact annual cash flow, all ${rows.length} years`}>
+        <ExactTable
+          caption="Annual cash flow"
+          headers={[
+            'Year',
+            'Effective income',
+            'Operating expenses',
+            'NOI',
+            'Debt service',
+            'Capital reserves',
+            'Cash flow',
+            'Cumulative',
+          ]}
+          rows={rows.map((r) => [
+            r.year,
+            dollars(r.effectiveGrossIncome),
+            dollars(r.operatingExpenses),
+            dollars(r.noi),
+            dollars(r.debtService),
+            dollars(r.reserves),
+            dollars(r.cashFlow),
+            dollars(r.cumulativeCashFlow),
+          ])}
+        />
+      </MoreDetail>
+    </section>
   );
 }

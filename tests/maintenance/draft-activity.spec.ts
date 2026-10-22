@@ -27,26 +27,24 @@ for (const width of [1440, 390])
       `/maintenance/new?propertyId=${fixture}&unitId=${unit}&returnTo=%2Fmaintenance`,
     );
     const create = page.getByRole('form', { name: 'Create repair request', exact: true });
-    await expect(
-      create.getByRole('combobox', { name: 'Property and unit', exact: true }),
-    ).toHaveValue(unit);
-    await create.getByRole('textbox', { name: 'Request title', exact: true }).fill(original.title);
+    await expect(create.getByRole('combobox', { name: 'Unit', exact: true })).toHaveValue(unit);
+    await create.getByRole('textbox', { name: 'Title', exact: true }).fill(original.title);
     await create
       .getByRole('textbox', { name: 'Description', exact: true })
       .fill(original.description);
-    await create.getByRole('button', { name: 'Create request', exact: true }).click();
+    await create.getByRole('button', { name: 'Save request', exact: true }).click();
     await expect(create.getByRole('status')).toContainText('Repair request created.');
     await create.getByRole('link', { name: 'Back to repair requests', exact: true }).click();
     await page.getByRole('link', { name: original.title, exact: true }).click();
     await page.waitForURL(/\/maintenance\/[^/]+\/edit(?:\?|$)/);
     const edit = page.url();
-    const title = page.getByRole('textbox', { name: 'Request title', exact: true });
+    const title = page.getByRole('textbox', { name: 'Title', exact: true });
     const description = page.getByRole('textbox', { name: 'Description', exact: true });
     const priority = page.getByRole('combobox', { name: 'Priority', exact: true });
-    const vendor = page.getByRole('combobox', { name: 'Assigned vendor', exact: true });
+    const vendor = page.getByRole('combobox', { name: 'Assign vendor', exact: true });
     const status = page.getByRole('combobox', { name: 'Status', exact: true });
     await expect(title).toHaveValue(original.title);
-    await expect(page.getByText('No photos yet', { exact: true })).toBeVisible();
+    await expect(page.getByText('Photos · none added', { exact: true })).toBeVisible();
 
     const draft = {
       title: `Unsaved issue draft ${width}`,
@@ -101,7 +99,7 @@ for (const width of [1440, 390])
     await preview.getByRole('button', { name: 'Close', exact: true }).click();
     await retained();
     await page
-      .getByRole('button', { name: 'Save request', exact: true })
+      .getByRole('button', { name: 'Save changes', exact: true })
       .first()
       .scrollIntoViewIfNeeded();
     await page.screenshot({
@@ -111,9 +109,9 @@ for (const width of [1440, 390])
 
     const persisted = await context.newPage();
     await persisted.goto(edit);
-    await expect(
-      persisted.getByRole('textbox', { name: 'Request title', exact: true }),
-    ).toHaveValue(original.title);
+    await expect(persisted.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue(
+      original.title,
+    );
     await expect(persisted.getByRole('textbox', { name: 'Description', exact: true })).toHaveValue(
       original.description,
     );
@@ -124,7 +122,7 @@ for (const width of [1440, 390])
       'NEW',
     );
     await expect(
-      persisted.getByRole('combobox', { name: 'Assigned vendor', exact: true }),
+      persisted.getByRole('combobox', { name: 'Assign vendor', exact: true }),
     ).toHaveValue('');
     await expect(persisted.getByText(comment, { exact: true })).toBeVisible();
     await persisted.close();

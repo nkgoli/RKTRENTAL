@@ -6,7 +6,7 @@
 .warning {
   margin: 0 0 12px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--rr-warn-bg, #fffaeb);
   color: var(--rr-warn, #b54708);
   font-size: 13px;
@@ -60,7 +60,6 @@
 .group {
   border: var(--rr-card-border);
   border-radius: var(--rr-card-radius);
-  box-shadow: var(--rr-card-shadow);
   background: var(--design-surface, #fff);
   max-width: 100%;
   overflow-x: auto;

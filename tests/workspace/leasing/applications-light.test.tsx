@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   connections: vi.fn(),
   integrations: vi.fn(),
   invitations: vi.fn(),
+  invitationCount: vi.fn(),
 }));
 vi.mock('@/lib/db/client', () => ({
   db: {
@@ -23,7 +24,7 @@ vi.mock('@/lib/db/client', () => ({
       findFirst: mocks.findFirst,
     },
     providerConnection: { findMany: mocks.connections },
-    applicationInvitation: { findMany: mocks.invitations },
+    applicationInvitation: { findMany: mocks.invitations, count: mocks.invitationCount },
   },
 }));
 vi.mock('@/lib/auth/access', () => ({
@@ -89,6 +90,7 @@ beforeEach(() => {
   mocks.groupBy.mockResolvedValue([]);
   mocks.connections.mockResolvedValue([]);
   mocks.invitations.mockResolvedValue([]);
+  mocks.invitationCount.mockResolvedValue(0);
   mocks.findFirst.mockResolvedValue(null);
   mocks.integrations.mockResolvedValue({
     settings: {
@@ -161,6 +163,22 @@ describe('light application review preserves eligibility and context', () => {
     },
   );
 
+  it('summarizes undecided applications only, from consent and report state', async () => {
+    mocks.findMany.mockResolvedValue([
+      application(),
+      { ...application(), id: 'new', status: 'SUBMITTED', consents: [], reports: [] },
+      { ...application(), id: 'done', status: 'APPROVED', promotedTenantId: null },
+    ]);
+    render(await ApplicationsPage({ searchParams: Promise.resolve({}) }));
+    const band = screen.getByRole('region', { name: 'Applications at a glance' });
+    expect(within(band).getByText('2 to review')).toBeTruthy();
+    expect(
+      within(band).getByText('1 ready for decision · 0 in screening · 1 awaiting consent'),
+    ).toBeTruthy();
+    expect(within(band).getByRole('meter').getAttribute('aria-valuenow')).toBe('50');
+    expect(screen.getByRole('heading', { name: 'Invitations · none open' })).toBeTruthy();
+  });
+
   it('retains filters on selection and only scope on action hidden fields', async () => {
     mocks.findMany.mockResolvedValue([application()]);
     const { container } = render(
@@ -173,7 +191,8 @@ describe('light application review preserves eligibility and context', () => {
         }),
       }),
     );
-    const selection = container.querySelector('a[aria-current]')!;
+    // The selected applicant row (status filter tabs mark their own link with aria-current="page").
+    const selection = container.querySelector('a[aria-current="true"]')!;
     expect(selection.getAttribute('href')).toContain(
       'q=Nina&status=REVIEW&propertyId=property&unitId=unit&applicant=app',
     );

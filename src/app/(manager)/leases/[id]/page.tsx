@@ -7,7 +7,7 @@ import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/shell/PageHeader';
 import type { ReactNode } from 'react';
 import { workspaceTabHref } from '@/components/workspace/routes';
-import { Action, ActionGlyph, Alert, Avatar, Badge } from '@/components/ui';
+import { ActionGlyph, Alert, Avatar, Badge } from '@/components/ui';
 import { Icon } from '@/components/shell/Icons';
 import { requireManagerRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
@@ -17,14 +17,20 @@ import { leaseResult, leaseResultMessages } from './feedback';
 import styles from './lease-detail.module.css';
 import { dateInput } from '@/lib/leases/core';
 import { EVENT_LABEL } from '@/lib/leases/events';
-import { money, signLabel, statusLabel, term } from '@/lib/leases/format';
+import { money, signLabel, term } from '@/lib/leases/format';
 import { leasesDb } from '@/lib/leases/queries';
 import { formatAddress, formatDate, initials } from '@/lib/properties/format';
 import { EditTermsForm, LeaseStatusActions, NoticeForm } from '../LeaseForms';
 import type { TemplateItem } from '@/lib/lease-create/templates';
 import { RentLedger, RentLedgerRows } from '@/components/payments/RentLedger';
-import { toLastPayment, toLedgerRows, toPaymentViews } from '@/components/payments/ledger-view';
-import { ensureRentCharges, formatMoney, leaseLedger, periodLabel } from '@/lib/ledger';
+import {
+  recentLedgerRows,
+  toLastPayment,
+  toLedgerRows,
+  toPaymentViews,
+} from '@/components/payments/ledger-view';
+import { ensureRentCharges, leaseLedger, periodLabel } from '@/lib/ledger';
+import { formatFileSize, lateLine, leaseStatusBadge, signatureSummary } from './lease-view';
 
 const showSignedBody = (body: string) =>
   body
@@ -40,17 +46,26 @@ const showSignedBody = (body: string) =>
 const LEASE_TABS = [
   { key: 'overview', label: 'Overview' },
   { key: 'agreement', label: 'Agreement' },
-  { key: 'documents', label: 'Documents' },
+  { key: 'documents', label: 'Documents', short: 'Docs' },
   { key: 'payments', label: 'Payments' },
   { key: 'activity', label: 'Activity' },
 ] as const;
 
-function SectionHeader({ title, action }: { title: string; action?: ReactNode }) {
+function SectionHeader({ title, id, action }: { title: string; id?: string; action?: ReactNode }) {
   return (
     <div className={styles.sectionHeading}>
-      <h2>{title}</h2>
+      <h2 id={id}>{title}</h2>
       {action}
     </div>
+  );
+}
+
+/** A quiet text link with a trailing arrow, e.g. "Payments →". */
+function GoLink({ href, children, label }: { href: string; children: string; label?: string }) {
+  return (
+    <a className={styles.goLink} href={href} aria-label={label}>
+      {children} <span aria-hidden="true">→</span>
+    </a>
   );
 }
 
@@ -68,6 +83,7 @@ export default async function LeaseDetailPage({
     await ensureRentCharges(session.organizationId, new Date());
   const lease = await leasesDb(session.organizationId).detail(id);
   if (!lease) notFound();
+  const now = new Date();
   const property = lease.unit.property;
   const signedTerms =
     lease.termsSnapshot &&
@@ -83,12 +99,20 @@ export default async function LeaseDetailPage({
       ? (signedTerms.template as { name?: string })
       : null;
   const title = property.name + (lease.unit.isImplicit ? '' : ' · Unit ' + lease.unit.number);
-  const onlinePaymentsEnabled =
-    (await db.providerConnection.count({
+  const [connectedPayments, agreement] = await Promise.all([
+    db.providerConnection.count({
       where: { organizationId: session.organizationId, kind: 'PAYMENTS', status: 'CONNECTED' },
-    })) > 0;
+    }),
+    // Read-only: the stored state of the latest signing version for the signature panel.
+    db.leaseAgreement.findFirst({
+      where: { organizationId: session.organizationId, leaseId: lease.id },
+      orderBy: { version: 'desc' },
+      include: { parties: { orderBy: { id: 'asc' } }, files: true },
+    }),
+  ]);
+  const onlinePaymentsEnabled = connectedPayments > 0;
   // The same statement the property and unit Payments tabs show for this lease.
-  const ledger = leaseLedger(lease, new Date());
+  const ledger = leaseLedger(lease, now);
   const lastPayment = toLastPayment(ledger.lastPayment);
   const ledgerRows = toLedgerRows(ledger.rows);
   const terms = {
@@ -134,6 +158,7 @@ export default async function LeaseDetailPage({
     ? workspaceTabHref(property.id, 'leases', query.unitId ? lease.unitId : undefined)
     : '/leases';
   const paymentsHref = workspaceTabHref(property.id, 'payments', lease.unitId);
+  const ledgerHref = `/leases/${lease.id}/ledger`;
   const tabHref = (tab: string) => {
     const search = new URLSearchParams();
     if (scoped) search.set('propertyId', property.id);
@@ -141,26 +166,221 @@ export default async function LeaseDetailPage({
     if (tab !== 'overview') search.set('tab', tab);
     return `/leases/${lease.id}${search.size ? `?${search}` : ''}`;
   };
-  const signState =
-    lease.eSignStatus === 'SIGNED'
-      ? 'done'
-      : lease.eSignStatus === 'SENT' || lease.eSignStatus === 'PARTIALLY_SIGNED'
-        ? 'pending'
-        : 'attention';
-  const signHeadline =
-    lease.eSignStatus === 'SIGNED'
-      ? `Signed${lease.signedAt ? ` ${formatDate(lease.signedAt)}` : ''}`
-      : lease.eSignStatus === 'NOT_SENT'
-        ? 'Agreement not sent for signature'
-        : lease.eSignStatus === 'DECLINED'
-          ? 'Signature declined'
-          : signLabel(lease.eSignStatus);
+  const tenants = lease.tenants.map(({ tenant }) => ({ id: tenant.id, name: tenant.name }));
+  const leaseFile = lease.documents.find((d) => d.kind === 'LEASE') ?? null;
+  const signature = signatureSummary({
+    eSignStatus: lease.eSignStatus,
+    signedAt: lease.signedAt,
+    agreement: agreement && { ...agreement, archiveError: agreement.archiveLastError },
+    leaseFile: leaseFile && { id: leaseFile.id, name: leaseFile.name },
+    tenants,
+    formatDate,
+  });
+  const status = leaseStatusBadge(lease, now);
   const dueDay = `${lease.rentDueDay}${[1, 21].includes(lease.rentDueDay) ? 'st' : [2, 22].includes(lease.rentDueDay) ? 'nd' : [3, 23].includes(lease.rentDueDay) ? 'rd' : 'th'}`;
+  const placeText = lease.unit.isImplicit ? 'Whole property' : `Unit ${lease.unit.number}`;
+  const ledgerScope = [
+    'This lease only',
+    lease.unit.isImplicit ? 'Whole property' : lease.unit.number,
+    periodLabel({ start: lease.startDate, end: lease.endDate }, ledger.rows),
+    lease.status === 'ACTIVE' ? '' : status.label,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const addendums = lease.documents.filter((d) => d.kind === 'ADDENDUM');
+  // Late rows open this lease's reminder review; a reminder is never sent from the ledger.
+  // A plain object: this server page cannot hand functions to the client ledger rows.
+  const reminderHrefs = { [lease.id]: `${ledgerHref}#reminder-review` };
+
+  const ledgerActions = (
+    <span className={styles.actionRow}>
+      {lease.status === 'ACTIVE' && (
+        <a
+          className="btn btn-secondary btn-sm"
+          // Carries this lease so Payments records against it, never a sibling term.
+          href={`${paymentsHref}${paymentsHref.includes('?') ? '&' : '?'}record=1&lease=${encodeURIComponent(lease.id)}`}
+        >
+          Record payment
+        </a>
+      )}
+      <GoLink
+        href={paymentsHref}
+        label={`Payments: open ${lease.unit.isImplicit ? 'property' : 'unit'} Payments to create charges and send reminders`}
+      >
+        Payments
+      </GoLink>
+    </span>
+  );
+  const late = lateLine(ledgerRows, lease.graceDays);
+  const ledgerNotes = late ? <p className={styles.lateLine}>{late}</p> : null;
+  const ledgerFooter = (full: boolean) => (
+    <>
+      <span className="muted">
+        Late means unpaid after the {lease.graceDays}-day grace period. Scheduled charges are
+        upcoming.
+      </span>
+      {full ? (
+        <GoLink href={ledgerHref}>Full ledger &amp; reminder review</GoLink>
+      ) : (
+        <GoLink href={`${ledgerHref}#reminder-review`}>Review balance before any reminder</GoLink>
+      )}
+    </>
+  );
+  const noticeLine = `Notice: ${noticeGiven ? formatDate(lease.noticeGivenAt!) : 'none given'} · Move-out: ${lease.moveOutDate ? formatDate(lease.moveOutDate) : 'not scheduled'}`;
+
+  const termsCard = (
+    <section className={`${styles.section} ${styles.termsCard}`} aria-labelledby="lease-terms-card">
+      <SectionHeader title="Terms" id="lease-terms-card" />
+      <dl className={styles.termStats}>
+        <div>
+          <dt>Monthly rent</dt>
+          <dd>{money(lease.monthlyRent)}</dd>
+          <small>Due on the {dueDay}</small>
+        </div>
+        <div>
+          <dt>Deposit</dt>
+          <dd>{money(lease.deposit)}</dd>
+          <small>Security deposit</small>
+        </div>
+      </dl>
+      <dl className={styles.compactFacts}>
+        <dt>Term</dt>
+        <dd>{term(lease.startDate, lease.endDate)}</dd>
+        <dt>Late fee</dt>
+        <dd>
+          {money(lease.lateFee)} after a {lease.graceDays}-day grace period
+        </dd>
+        <dt>Notice</dt>
+        <dd>{noticeGiven ? formatDate(lease.noticeGivenAt!) : 'No notice given'}</dd>
+        <dt>Move-out</dt>
+        <dd>{lease.moveOutDate ? formatDate(lease.moveOutDate) : 'Not scheduled'}</dd>
+      </dl>
+      <div className={styles.cardFoot}>
+        <GoLink href={tabHref('agreement')}>Manage agreement &amp; notice</GoLink>
+      </div>
+    </section>
+  );
+
+  const documentsCard = (
+    <section className={styles.section} aria-labelledby="lease-documents-card">
+      <SectionHeader title="Documents" id="lease-documents-card" />
+      <h3 className="eyebrow">Signed agreement</h3>
+      <div className={styles.docLine}>
+        {signature.signedFileId ? (
+          <>
+            <span className={styles.docName}>
+              <strong>
+                {leaseFile?.id === signature.signedFileId
+                  ? leaseFile.name
+                  : 'Signed lease agreement.pdf'}
+              </strong>
+              <Badge tone="success">Signed</Badge>
+            </span>
+            <a
+              className="btn btn-secondary btn-sm"
+              href={`/api/files/${encodeURIComponent(signature.signedFileId)}/download`}
+              aria-label="Download the signed lease agreement"
+            >
+              Download
+            </a>
+          </>
+        ) : signature.pdfMissing ? (
+          <>
+            <span className={styles.docName}>
+              <strong>Signed PDF unavailable</strong>
+              <small>Signatures are recorded on the lease.</small>
+            </span>
+            <a
+              className="btn btn-secondary btn-sm"
+              href={tabHref('agreement')}
+              aria-label="Retry: check the signed PDF again from the agreement"
+            >
+              Retry
+            </a>
+          </>
+        ) : (
+          <span className={styles.docName}>
+            <strong>{signature.headline}</strong>
+          </span>
+        )}
+      </div>
+      <h3 className="eyebrow">Addendums</h3>
+      {addendums.length ? (
+        <ul className={styles.plainList}>
+          {addendums.map((file) => (
+            <li key={file.id} className={styles.docLine}>
+              <span className={styles.docName}>
+                <strong>{file.name}</strong>
+                <small>{formatDate(file.createdAt)}</small>
+              </span>
+              <a
+                className="btn btn-ghost btn-sm"
+                href={`/api/files/${encodeURIComponent(file.id)}/download`}
+                aria-label={`Download ${file.name}`}
+              >
+                Download
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">No addendums yet.</p>
+      )}
+      <div className={styles.cardFoot}>
+        <Link
+          className="btn btn-secondary btn-sm"
+          href="/leases/templates"
+          aria-label="Add addendum from lease templates"
+        >
+          Add addendum
+        </Link>
+        <GoLink href={tabHref('documents')}>{`Lease files (${lease.documents.length})`}</GoLink>
+        <GoLink href="/documents">Portfolio documents</GoLink>
+      </div>
+    </section>
+  );
+
+  const activityCard = (
+    <section className={styles.section} aria-labelledby="lease-activity-card">
+      <SectionHeader title="Activity" id="lease-activity-card" />
+      <ol className={styles.timeline}>
+        {activities.slice(0, 5).map((item, index) => (
+          <li className={styles.event} key={index}>
+            <span className={styles.eventDot} aria-hidden="true" />
+            <span className="file-meta">
+              <strong>{item.text}</strong>
+              <small>{formatDate(item.date)}</small>
+            </span>
+          </li>
+        ))}
+      </ol>
+      {activities.length > 5 && (
+        <div className={styles.cardFoot}>
+          <GoLink href={tabHref('activity')} label={`All activity: ${activities.length} events`}>
+            All activity
+          </GoLink>
+        </div>
+      )}
+      {/* Phones fold the Terms card away; notice and move-out stay here. */}
+      <p className={styles.phoneCaption}>{noticeLine}</p>
+    </section>
+  );
+
+  const sideColumn = (
+    <div className={`${styles.sideCol} ${styles.foldTerms}`}>
+      {termsCard}
+      {documentsCard}
+      {activityCard}
+    </div>
+  );
+
   return (
     <>
       <PageHeader
         title={title}
-        eyebrow="Lease"
+        eyebrow={`Lease · ${formatDate(lease.startDate)} → ${formatDate(lease.endDate)}`}
+        back={{ href: backHref, label: scoped ? `${property.name} leases` : 'Leases' }}
+        meta={`${placeText} · ${money(lease.monthlyRent)}/mo · Online payments ${onlinePaymentsEnabled ? 'enabled' : 'not connected'}`}
         actions={[
           ...(lease.status === 'DRAFT'
             ? [
@@ -178,23 +398,8 @@ export default async function LeaseDetailPage({
       />
 
       <div className={styles.workspace}>
-        <a className={styles.backLink} href={backHref}>
-          <ActionGlyph name="arrow-left" />
-          {scoped ? `${property.name} leases` : 'All leases'}
-        </a>
         <section className={styles.summaryLine} aria-label="Lease summary">
-          <Badge
-            tone={
-              lease.status === 'ACTIVE' ? 'success' : lease.status === 'DRAFT' ? 'info' : 'neutral'
-            }
-          >
-            {statusLabel(lease.status)}
-          </Badge>
-          {lease.status === 'ACTIVE' &&
-            lease.endDate >= new Date() &&
-            lease.endDate <= new Date(Date.now() + 60 * 86_400_000) && (
-              <Badge tone="warning">Expiring soon · {formatDate(lease.endDate)}</Badge>
-            )}
+          <Badge tone={status.tone}>{status.label}</Badge>
           {noticeGiven && (
             <Badge tone="warning">Notice given {formatDate(lease.noticeGivenAt!)}</Badge>
           )}
@@ -209,9 +414,8 @@ export default async function LeaseDetailPage({
                 ))
               : 'No tenants yet'}
           </span>
-          <span className={styles.metaItem}>
-            <ActionGlyph name="payments" />
-            Online payments {onlinePaymentsEnabled ? 'enabled' : 'not connected'}
+          <span>
+            {placeText} · {formatDate(lease.startDate)} → {formatDate(lease.endDate)}
           </span>
           {deletable && (
             <span className={styles.summaryAction}>
@@ -227,38 +431,75 @@ export default async function LeaseDetailPage({
           )}
         </section>
 
-        {/* One-line signing context; the Agreement tab holds the full signer panel. */}
-        <section className={styles.signing} data-state={signState} aria-label="Agreement signing">
-          <span className={styles.signingStatus}>
-            <ActionGlyph name={lease.eSignStatus === 'SIGNED' ? 'check' : 'signature'} />
-            <strong>{signHeadline}</strong>
+        {/* Signing state from stored records; the Agreement tab holds the full signer panel. */}
+        <section
+          className={styles.signing}
+          data-state={signature.state}
+          aria-label="Agreement signing"
+        >
+          <span className={styles.signingIcon} aria-hidden="true">
+            <ActionGlyph name={signature.state === 'done' ? 'check' : 'signature'} />
           </span>
-          <span className="action-group">
+          <div className={styles.signingText}>
+            <strong>{signature.headline}</strong>
+            <p>{signature.caption}</p>
+            {signature.signers.length > 0 && (
+              <ul className={styles.signers} aria-label="Signers">
+                {signature.signers.map((signer) => (
+                  <li key={signer.key}>
+                    <span>{signer.label}</span>
+                    <Badge tone={signer.note ? 'info' : signer.signed ? 'success' : 'neutral'}>
+                      {signer.note ?? (signer.signed ? 'Signed' : 'Awaiting')}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <span className={styles.signingActions}>
             {activeTab !== 'agreement' && (
-              <Action
-                icon="leases"
-                text={signState === 'done' ? 'Agreement' : 'Review signatures'}
+              <a
+                className={`btn btn-sm ${
+                  signature.state === 'done' || lease.status === 'DRAFT'
+                    ? 'btn-secondary'
+                    : 'btn-primary'
+                }`}
+                href={tabHref('agreement')}
                 // The accessible name starts with the visible words and keeps the agreement context.
-                label={
-                  signState === 'done'
-                    ? 'Agreement and signatures'
+                aria-label={
+                  signature.state === 'done'
+                    ? 'Review signatures and the agreement'
                     : 'Review signatures on the lease agreement'
                 }
-                // Drafts already lead with "Continue in lease wizard"; keep one primary step.
-                tone={signState === 'done' || lease.status === 'DRAFT' ? 'quiet' : 'primary'}
-                href={tabHref('agreement')}
-                document
-              />
+              >
+                Review signatures
+              </a>
             )}
-            <Action
-              icon="external"
-              text="Signing page"
-              label="Open owner / lessor signing page"
+            {signature.pdfMissing && activeTab !== 'agreement' && (
+              // Opening the agreement re-runs the stored PDF retry; signatures are never redone.
+              <a
+                className="btn btn-secondary btn-sm"
+                href={tabHref('agreement')}
+                aria-label="Retry PDF: check the signed PDF again from the agreement"
+              >
+                Retry PDF
+              </a>
+            )}
+            {activeTab !== 'documents' && (
+              <a className="btn btn-secondary btn-sm" href={tabHref('documents')}>
+                Review lease files
+              </a>
+            )}
+            <a
+              className="btn btn-ghost btn-sm"
               href={`/sign/leases/${lease.id}`}
-              document
-            />
+              aria-label="Signing page: open the owner / lessor signing page"
+            >
+              Signing page
+            </a>
           </span>
         </section>
+
         {/* Document links avoid the reproduced stalled client section transition. */}
         <LeaseSectionNavigation activeTab={activeTab} className={styles.tabs}>
           {LEASE_TABS.map((tab) => (
@@ -267,151 +508,116 @@ export default async function LeaseDetailPage({
               href={tabHref(tab.key)}
               aria-current={activeTab === tab.key ? 'page' : undefined}
             >
-              {tab.label}
+              {'short' in tab ? (
+                <>
+                  <span className={styles.tabLong}>{tab.label}</span>
+                  <span className={styles.tabShort} aria-hidden="true">
+                    {tab.short}
+                  </span>
+                </>
+              ) : (
+                tab.label
+              )}
             </a>
           ))}
         </LeaseSectionNavigation>
         <div className={styles.panel} id={`lease-${activeTab}`}>
           {activeTab === 'overview' && (
-            <>
-              <dl className={styles.facts} aria-label="Key lease terms">
-                <div>
-                  <dt>Monthly rent</dt>
-                  <dd>
-                    {money(lease.monthlyRent)}
-                    <small>Due on the {dueDay}</small>
-                  </dd>
-                </div>
-                <div>
-                  <dt>Start date</dt>
-                  <dd>{formatDate(lease.startDate)}</dd>
-                </div>
-                <div>
-                  <dt>End date</dt>
-                  <dd>{formatDate(lease.endDate)}</dd>
-                </div>
-                <div>
-                  <dt>Security deposit</dt>
-                  <dd>{money(lease.deposit)}</dd>
-                </div>
-              </dl>
-              <div className={styles.overviewGrid}>
-                <section className={styles.section}>
-                  <SectionHeader
-                    title="Leased premises"
-                    action={
-                      <Action
-                        icon="arrow-right"
-                        trailing
-                        text="Property"
-                        label="View property"
-                        href={`/properties/${property.id}`}
-                      />
-                    }
+            <div className={styles.grid}>
+              <div className={styles.mainCol}>
+                <RentLedger
+                  scope={ledgerScope}
+                  balanceCents={ledger.balanceCents}
+                  lastPayment={lastPayment}
+                  actions={ledgerActions}
+                  notes={ledgerNotes}
+                  footer={ledgerFooter(false)}
+                >
+                  <RentLedgerRows
+                    groups={[
+                      {
+                        id: lease.id,
+                        heading: `${title} · recent charges`,
+                        meta: '',
+                        balanceCents: ledger.balanceCents,
+                        active: lease.status === 'ACTIVE',
+                        rows: recentLedgerRows(ledgerRows),
+                      },
+                    ]}
+                    groupHeadings={false}
+                    compact
+                    reminderHrefs={reminderHrefs}
                   />
-                  <div className={styles.premises}>
-                    <span className={styles.building} aria-hidden="true">
-                      <Icon name="properties" />
-                    </span>
-                    <div>
-                      <h3>
-                        <a href={`/properties/${property.id}`}>{property.name}</a>
-                        {!lease.unit.isImplicit && (
-                          <>
-                            {' '}
-                            ·{' '}
-                            <a href={`/properties/${property.id}/units/${lease.unitId}`}>
-                              Unit {lease.unit.number}
-                            </a>
-                          </>
-                        )}
-                      </h3>
-                      <p className="muted">
-                        {formatAddress(property)} ·{' '}
-                        {lease.unit.isImplicit
-                          ? 'Whole property'
-                          : `Unit ${lease.unit.number} only`}
-                      </p>
-                    </div>
-                  </div>
-                </section>
-                <section className={styles.section}>
-                  <SectionHeader
-                    title="Tenants on this lease"
-                    action={
-                      <Badge>
-                        {lease.tenants.length} {lease.tenants.length === 1 ? 'tenant' : 'tenants'}
-                      </Badge>
-                    }
-                  />
-                  {!lease.tenants.length && <p className="muted">No tenants yet.</p>}
-                  {lease.tenants.map(({ tenant, isPrimary }) => (
-                    <a key={tenant.id} className="list-item" href={`/tenants/${tenant.id}`}>
-                      <Avatar initials={initials(tenant.name)} />
-                      <span className="file-meta">
-                        <strong>{tenant.name}</strong>
-                        <small>
-                          {isPrimary ? 'Primary tenant' : 'Tenant'} · {tenant.email ?? 'No email'}
-                        </small>
-                      </span>
-                      <ActionGlyph name="chevron-right" />
-                    </a>
-                  ))}
-                </section>
-                <section className={styles.section}>
-                  <SectionHeader
-                    title="Notice & move-out"
-                    action={
-                      <Action
-                        icon="arrow-right"
-                        trailing
-                        text="Manage agreement"
-                        label="Manage agreement"
-                        href={tabHref('agreement')}
-                        document
-                      />
-                    }
-                  />
-                  <dl className={styles.compactFacts}>
-                    {/* Signature status lives in the signing bar above the tabs. */}
-                    <dt>Notice</dt>
-                    <dd>{noticeGiven ? formatDate(lease.noticeGivenAt!) : 'No notice given'}</dd>
-                    <dt>Move-out</dt>
-                    <dd>{lease.moveOutDate ? formatDate(lease.moveOutDate) : 'Not scheduled'}</dd>
-                  </dl>
-                </section>
-                <section className={styles.section}>
-                  <SectionHeader
-                    title="Rent summary"
-                    action={
-                      <Action
-                        icon="arrow-right"
-                        trailing
-                        text="View rent ledger"
-                        label="View rent ledger"
-                        href={tabHref('payments')}
-                        document
-                      />
-                    }
-                  />
-                  <dl className={styles.compactFacts}>
-                    <dt>{ledger.balanceCents < 0 ? 'Credit on account' : 'Balance due'}</dt>
-                    <dd>{formatMoney(Math.abs(ledger.balanceCents))}</dd>
-                    <dt>Last payment</dt>
-                    <dd>{lastPayment ? lastPayment.dateLabel : 'None yet'}</dd>
-                  </dl>
-                  <a className={styles.secondaryLink} href={tabHref('documents')}>
-                    <ActionGlyph name="documents" />
-                    Lease documents ({lease.documents.length})
-                  </a>
-                </section>
+                </RentLedger>
               </div>
-            </>
+              {sideColumn}
+              {/* After the side cards in reading order so phones show ledger, documents, activity first. */}
+              <div className={styles.pairArea}>
+                <div className={styles.pair}>
+                  <section className={styles.section} aria-labelledby="lease-premises">
+                    <SectionHeader
+                      title="Leased premises"
+                      id="lease-premises"
+                      action={<GoLink href={`/properties/${property.id}`}>Property</GoLink>}
+                    />
+                    <div className={styles.premises}>
+                      <span className={styles.building} aria-hidden="true">
+                        <Icon name="properties" />
+                      </span>
+                      <div>
+                        <h3>
+                          <a href={`/properties/${property.id}`}>{property.name}</a>
+                          {!lease.unit.isImplicit && (
+                            <>
+                              {' '}
+                              ·{' '}
+                              <a href={`/properties/${property.id}/units/${lease.unitId}`}>
+                                Unit {lease.unit.number}
+                              </a>
+                            </>
+                          )}
+                        </h3>
+                        <p className="muted">
+                          {formatAddress(property)} ·{' '}
+                          {lease.unit.isImplicit
+                            ? 'Whole property'
+                            : `Unit ${lease.unit.number} only`}
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+                  <section className={styles.section} aria-labelledby="lease-tenants">
+                    <SectionHeader
+                      title="Tenants on this lease"
+                      id="lease-tenants"
+                      action={
+                        <Badge>
+                          {lease.tenants.length} {lease.tenants.length === 1 ? 'tenant' : 'tenants'}
+                        </Badge>
+                      }
+                    />
+                    {!lease.tenants.length && <p className="muted">No tenants yet.</p>}
+                    {lease.tenants.map(({ tenant, isPrimary }) => (
+                      <a key={tenant.id} className="list-item" href={`/tenants/${tenant.id}`}>
+                        <Avatar initials={initials(tenant.name)} />
+                        <span className="file-meta">
+                          <strong>{tenant.name}</strong>
+                          <small>
+                            {isPrimary ? 'Primary tenant' : 'Tenant'} · {tenant.email ?? 'No email'}
+                          </small>
+                        </span>
+                        <ActionGlyph name="chevron-right" />
+                      </a>
+                    ))}
+                  </section>
+                </div>
+              </div>
+            </div>
           )}
           {activeTab === 'agreement' && (
             <>
               {lease.eSignStatus !== 'NOT_SENT' && (
-                <details>
+                <details className={styles.prepare}>
                   <summary>Prepare current signing version</summary>
                   <SendAgreementButton leaseId={lease.id} />
                 </details>
@@ -544,85 +750,86 @@ export default async function LeaseDetailPage({
             </>
           )}
           {activeTab === 'documents' && (
-            <section className={styles.section} id="documents">
-              <div className="card-header">
-                <div>
-                  <h2>Lease documents</h2>
-                  <p className="muted" style={{ fontSize: 13 }}>
-                    Files owned by this lease
-                  </p>
-                </div>
-              </div>
-              <LeaseDocumentGrid
-                leaseId={lease.id}
-                withUploader
-                documents={lease.documents.map((file) => ({
-                  id: file.id,
-                  name: file.name,
-                  kind: file.kind.toLowerCase(),
-                  uploaded: formatDate(file.createdAt),
-                  mimeType: file.mimeType,
-                }))}
-              />
-            </section>
+            <div className={styles.grid}>
+              <section className={styles.section} id="documents" aria-labelledby="lease-files">
+                <SectionHeader
+                  title="Lease documents"
+                  id="lease-files"
+                  action={<GoLink href="/documents">Portfolio documents</GoLink>}
+                />
+                <p className={`muted ${styles.lede}`}>
+                  Files owned by this lease · {lease.documents.length}{' '}
+                  {lease.documents.length === 1 ? 'file' : 'files'}
+                </p>
+                <LeaseDocumentGrid
+                  leaseId={lease.id}
+                  withUploader
+                  documents={lease.documents.map((file) => ({
+                    id: file.id,
+                    name: file.name,
+                    kind: file.kind.toLowerCase(),
+                    uploaded: formatDate(file.createdAt),
+                    mimeType: file.mimeType,
+                    size: formatFileSize(Number(file.sizeBytes)) || undefined,
+                    // A historical file is on record, not proof of signatures (as in Documents).
+                    signed: file.id === signature.signedFileId && !signature.historical,
+                  }))}
+                />
+              </section>
+              <div className={styles.sideCol}>{termsCard}</div>
+            </div>
           )}
           {activeTab === 'payments' && (
-            <RentLedger
-              scope={[
-                'This lease only',
-                lease.unit.isImplicit ? 'Whole property' : lease.unit.number,
-                periodLabel({ start: lease.startDate, end: lease.endDate }, ledger.rows),
-                lease.status === 'ACTIVE' ? '' : statusLabel(lease.status),
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-              balanceCents={ledger.balanceCents}
-              lastPayment={lastPayment}
-              actions={
-                <span className="action-group">
-                  {lease.status === 'ACTIVE' && (
-                    <Action
-                      icon="payments"
-                      text="Record payment"
-                      label="Record payment"
-                      tone="secondary"
-                      // Carries this lease so Payments records against it, never a sibling term.
-                      href={`${paymentsHref}${paymentsHref.includes('?') ? '&' : '?'}record=1&lease=${encodeURIComponent(lease.id)}`}
-                      document
-                    />
-                  )}
-                  <Action
-                    icon="arrow-right"
-                    trailing
-                    text={lease.unit.isImplicit ? 'Property payments' : 'Unit payments'}
-                    label={`Open ${lease.unit.isImplicit ? 'property' : 'unit'} Payments to create charges and send reminders`}
-                    href={paymentsHref}
-                    document
+            <div className={styles.grid}>
+              <div className={styles.mainCol}>
+                <RentLedger
+                  scope={ledgerScope}
+                  balanceCents={ledger.balanceCents}
+                  lastPayment={lastPayment}
+                  actions={ledgerActions}
+                  notes={ledgerNotes}
+                  footer={ledgerFooter(true)}
+                >
+                  <RentLedgerRows
+                    groups={[
+                      {
+                        id: lease.id,
+                        heading: title,
+                        meta: '',
+                        balanceCents: ledger.balanceCents,
+                        active: lease.status === 'ACTIVE',
+                        rows: ledgerRows,
+                        payments: toPaymentViews(ledger.payments),
+                      },
+                    ]}
+                    groupHeadings={false}
+                    reminderHrefs={reminderHrefs}
                   />
-                </span>
-              }
-            >
-              <RentLedgerRows
-                groups={[
-                  {
-                    id: lease.id,
-                    heading: title,
-                    meta: '',
-                    balanceCents: ledger.balanceCents,
-                    active: lease.status === 'ACTIVE',
-                    rows: ledgerRows,
-                    payments: toPaymentViews(ledger.payments),
-                  },
-                ]}
-                groupHeadings={false}
-              />
-            </RentLedger>
+                </RentLedger>
+              </div>
+              {sideColumn}
+            </div>
           )}
           {activeTab === 'activity' && (
-            <div className={styles.overviewGrid}>
-              <section className={styles.section}>
+            <div className={styles.grid}>
+              <section className={styles.section} aria-labelledby="lease-activity">
+                <SectionHeader title="Activity" id="lease-activity" />
+                <ol className={styles.timeline}>
+                  {activities.map((item, index) => (
+                    <li className={styles.event} key={index}>
+                      <span className={styles.eventDot} aria-hidden="true" />
+                      <span className="file-meta">
+                        <strong>{item.text}</strong>
+                        <small>{formatDate(item.date)}</small>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+              <section className={styles.section} aria-labelledby="lease-esign-history">
                 <SectionHeader
                   title="E-signature history"
+                  id="lease-esign-history"
                   action={
                     <Badge
                       tone={
@@ -644,30 +851,13 @@ export default async function LeaseDetailPage({
                       ? 'Marked signed; signature time was not recorded.'
                       : 'No completed signature recorded yet.'}
                 </p>
-                <Action
-                  icon="signature"
-                  text="Signature status"
-                  label="See each party's current signature status"
-                  tone="secondary"
+                <a
+                  className="btn btn-secondary btn-sm"
                   href={tabHref('agreement')}
-                  document
-                />
-              </section>
-              <section className={styles.section}>
-                <SectionHeader title="Activity" />
-                <ol className={styles.timeline}>
-                  {activities.map((item, index) => (
-                    <li className={styles.event} key={index}>
-                      <span className={styles.eventDot} aria-hidden="true">
-                        ↗
-                      </span>
-                      <span className="file-meta">
-                        <strong>{item.text}</strong>
-                        <small>{formatDate(item.date)}</small>
-                      </span>
-                    </li>
-                  ))}
-                </ol>
+                  aria-label="Signature status: see each party's current signature status"
+                >
+                  Signature status
+                </a>
               </section>
             </div>
           )}

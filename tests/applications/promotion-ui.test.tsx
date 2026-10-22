@@ -1,8 +1,16 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { PromoteApplicant } from '@/components/applications/PromoteApplicant';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+beforeEach(() => {
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute('open', '');
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute('open');
+  };
+});
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -28,7 +36,13 @@ describe('tenant promotion UI', () => {
     await screen.findByText('Saved Name');
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('link', { name: 'Create lease' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Use existing tenant' }));
+    // The existing-contact confirmation is a modal naming the matched email.
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Promote to tenant · existing contact',
+    });
+    expect(within(dialog).getByText('saved@example.test')).toBeTruthy();
+    expect(within(dialog).getByText('This email already belongs to a tenant')).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Use existing tenant' }));
     await screen.findByRole('link', { name: 'View tenant' });
     expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({ existingTenantId: 'saved' });
     expect(screen.getByRole('link', { name: 'Create lease' }).getAttribute('href')).toBe(

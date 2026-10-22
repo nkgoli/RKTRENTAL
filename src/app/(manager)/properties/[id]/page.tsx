@@ -25,9 +25,10 @@ export default async function PropertyOverviewPage({
   ]);
   if (!property || (unitId && !unit)) notFound();
   const scope = { propertyId: id, unitId: unit && !unit.isImplicit ? unit.id : undefined };
-  const [timeline, payments] = await Promise.all([
+  const [timeline, payments, signals] = await Promise.all([
     loadWorkspaceTimeline(session.organizationId, scope),
     loadPaymentsMonth(session.organizationId, scope),
+    data.getOverviewSignals(id, scope.unitId),
   ]);
 
   if (unit && !unit.isImplicit) {
@@ -44,6 +45,7 @@ export default async function PropertyOverviewPage({
         canDelete={canDelete}
         timeline={timeline}
         payments={payments}
+        signals={signals}
       />
     );
   }
@@ -68,6 +70,7 @@ export default async function PropertyOverviewPage({
         owners={owners}
         timeline={timeline}
         payments={payments}
+        signals={signals}
         unitsPage={first(query.unitsPage)}
       />
     </>

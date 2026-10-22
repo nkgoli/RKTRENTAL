@@ -167,7 +167,7 @@ export function ManagerShell({
             <PageHeaderContext.Provider value={setOverride}>{children}</PageHeaderContext.Provider>
           </div>
         </main>
-        <nav className="tabbar" aria-label="Sections">
+        <nav className="tabbar manager-tabbar" aria-label="Sections">
           {mobileTabs.map((tab) => {
             const active = tab.href === mobileTab;
             return (

@@ -12,8 +12,12 @@ vi.mock('@/lib/analysis/rent', async (original) => ({
   ...(await original<object>()),
   loadRentProperties: mocks.properties,
 }));
-vi.mock('@/components/rent-comps/RentCompsPanel', () => ({
-  RentCompsPanel: (props: { unitId: string; currentLeaseRent: number; propertyLevel: boolean }) => (
+vi.mock('@/app/(manager)/rent-analysis/RentAnalysisComps', () => ({
+  RentAnalysisComps: (props: {
+    unitId: string;
+    currentLeaseRent: number;
+    propertyLevel: boolean;
+  }) => (
     <div>
       Subject {props.unitId}; lease {props.currentLeaseRent}; home {String(props.propertyLevel)}
     </div>
@@ -66,7 +70,7 @@ it('opens an implicit single-family subject without requiring a unit query', asy
   mocks.facts.mockResolvedValue({ type: 'SINGLE_UNIT', units: [{ id: 'u1', isImplicit: true }] });
   const html = await render({ property: 'maple' });
   expect(html).toContain('home true');
-  expect(html).not.toContain('Your units');
+  expect(html).not.toContain('Every unit vs saved market rent');
 });
 
 const unitHref = (html: string) =>

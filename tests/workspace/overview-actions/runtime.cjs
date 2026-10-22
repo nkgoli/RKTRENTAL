@@ -1,5 +1,4 @@
 // Isolated browser-review fixture. Never connects to the user's live database.
-/* eslint-disable @typescript-eslint/no-require-imports -- Standalone CommonJS Windows review launcher. */
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');

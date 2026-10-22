@@ -147,8 +147,10 @@ describe('shared Rent ledger', () => {
       'LATE',
     ]);
     expect(within(items[2]).getByText('Partially paid')).toBeTruthy();
-    expect(within(items[2]).getByText('$690.00 left')).toBeTruthy();
-    expect(within(items[3]).getByText('Late fee')).toBeTruthy();
+    expect(within(items[2]).getByText('Balance $690.00')).toBeTruthy();
+    // Type, due date and (once settled) paid date share one meta line.
+    expect(within(items[3]).getByText(/^Late fee · Due Oct 1, 2026$/)).toBeTruthy();
+    expect(within(items[1]).getByText('Late · past grace')).toBeTruthy();
     expect(screen.queryByRole('checkbox')).toBeNull();
     // Details open from the keyboard and list the applied payment.
     within(items[2])
@@ -159,6 +161,90 @@ describe('shared Rent ledger', () => {
     expect(within(dialog).getByText('Cash or check (recorded manually)')).toBeTruthy();
     await user.click(within(dialog).getByRole('button', { name: 'Done' }));
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('folds older paid months, switches views and links late rows to reminder review', async () => {
+    const user = userEvent.setup();
+    const paid = (month: string, name: string) =>
+      row({
+        key: month,
+        description: `${name} rent`,
+        dateLabel: `${name.slice(0, 3)} 1, 2026`,
+        status: 'PAID',
+        paidCents: 169_000,
+        balanceCents: 0,
+        month,
+        applied: [
+          {
+            id: `p-${month}`,
+            amountCents: 169_000,
+            dateLabel: `${name.slice(0, 3)} 2, 2026`,
+            method: 'Online payment',
+          },
+        ],
+      });
+    render(
+      <RentLedgerRows
+        groups={[
+          {
+            id: 'A',
+            heading: '18 Elm Street',
+            meta: '',
+            balanceCents: 169_000,
+            active: true,
+            rows: [
+              row({ key: 'oct', month: '2026-10' }),
+              paid('2026-09', 'September'),
+              paid('2026-08', 'August'),
+              paid('2026-07', 'July'),
+            ],
+            payments: [
+              {
+                id: 'p-2026-09',
+                dateLabel: 'Sep 2, 2026',
+                amountCents: 169_000,
+                status: 'SUCCEEDED',
+                method: 'Online payment',
+                reference: 'Rent · Sep 2026',
+                creditCents: 0,
+              },
+            ],
+          },
+        ]}
+        groupHeadings={false}
+        reminderHrefs={{ A: '/leases/A/ledger#reminder-review' }}
+      />,
+    );
+    const visible = within(screen.getByRole('list', { name: '18 Elm Street' })).getAllByRole(
+      'listitem',
+    );
+    // The newest paid month stays in view; the older run folds into one summary.
+    expect(visible.map((li) => li.textContent)).toEqual([
+      expect.stringContaining('October rent'),
+      expect.stringContaining('September rent'),
+    ]);
+    expect(within(visible[1]).getByText(/Paid Sep 2, 2026/)).toBeTruthy();
+    const folded = screen.getByText('July – August 2026 · 2 rent charges · all paid');
+    expect(folded.closest('details')?.open).toBe(false);
+    expect(
+      within(visible[0])
+        .getByRole('link', { name: /Review reminder/ })
+        .getAttribute('href'),
+    ).toBe('/leases/A/ledger#reminder-review');
+    expect(within(visible[1]).queryByRole('link')).toBeNull();
+    // Views: Payments hides the charges and opens the history.
+    const group = screen.getByRole('group', { name: 'Ledger view' });
+    expect(
+      within(group)
+        .getByRole('button', { name: /^Charges/ })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+    await user.click(within(group).getByRole('button', { name: 'Payments' }));
+    expect(screen.queryByRole('list', { name: '18 Elm Street' })).toBeNull();
+    expect(screen.getByRole('list', { name: 'Payments on 18 Elm Street' })).toBeTruthy();
+    await user.click(within(group).getByRole('button', { name: 'All activity' }));
+    expect(screen.getByRole('list', { name: '18 Elm Street' })).toBeTruthy();
+    expect(screen.getByText('Payment history (1 payment)').closest('details')?.open).toBe(true);
   });
 
   it('labels credit and an empty ledger plainly', () => {
@@ -301,9 +387,7 @@ describe('Record payment keeps the lease it was started for', () => {
   });
 
   it('asks for a choice with a single active lease when the target is stale', () => {
-    render(
-      <PaymentsBoard {...base} groups={[terms[1]]} openRecord recordLeaseId="OLD-TERM" />,
-    );
+    render(<PaymentsBoard {...base} groups={[terms[1]]} openRecord recordLeaseId="OLD-TERM" />);
     const dialog = screen.getByRole('dialog', { name: 'Record payment' });
     expect(leaseSelect(dialog).value).toBe('');
     expect(within(dialog).getByRole('alert')).toBeTruthy();

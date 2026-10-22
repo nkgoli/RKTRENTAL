@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Badge, Cover } from '@/components/ui';
+import { Action, Badge, Cover } from '@/components/ui';
 import type { CoverKind } from '@/components/ui';
 import type { WorkspaceScope, WorkspaceUnit } from './Workspace';
 import { UnitSwitcher } from './UnitSwitcher';
@@ -50,16 +50,19 @@ export function WorkspaceHeader({ scope, units, coverKind, coverSrc }: {
       </nav>
       <div className={styles.titleLine}>
         <h1>{title}</h1>
-        <div className={styles.badges}>
-          <Badge tone={status === 'Occupied' || status === 'Active' ? 'success' : 'info'}>{status}</Badge>
-          <span className="muted">{propertyTypeLabel(scope)}</span>
+        <Badge tone={status === 'Occupied' || status === 'Active' ? 'success' : 'info'}>{status}</Badge>
+      </div>
+      {/* The address and type live here once; overview cards do not repeat them. */}
+      <div className={styles.metaRow}>
+        <p className={styles.address}>
+          {scope.propertyAddress && <span>{scope.propertyAddress}</span>}
+          <span>{propertyTypeLabel(scope)}</span>
+        </p>
+        <div className={styles.headerActions}>
+          <Action icon="edit" text="Edit" label="Edit property" tone="secondary" href={`/properties/${scope.propertyId}/edit`} />
         </div>
-        {scope.propertyAddress && <p className={styles.address}>{scope.propertyAddress}</p>}
       </div>
       {propertyTypeLabel(scope) === 'Multi-unit' && <UnitSwitcher propertyName={scope.propertyName} units={units} />}
-      <div className={styles.headerActions}>
-        <Link className="btn btn-secondary btn-sm" href={`/properties/${scope.propertyId}/edit`}>Edit property</Link>
-      </div>
     </div>
     <div className={styles.cover}><Cover kind={coverKind ?? (scope.activeUnitCount === 1 ? 'house' : 'apartment')} src={coverSrc} /></div>
   </header>;

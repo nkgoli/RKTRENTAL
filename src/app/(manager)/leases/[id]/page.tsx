@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/shell/PageHeader';
 import type { ReactNode } from 'react';
 import { workspaceTabHref } from '@/components/workspace/routes';
-import { Alert, Avatar, Badge } from '@/components/ui';
+import { Action, ActionGlyph, Alert, Avatar, Badge } from '@/components/ui';
 import { Icon } from '@/components/shell/Icons';
 import { requireManagerRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
@@ -133,6 +133,20 @@ export default async function LeaseDetailPage({
     if (tab !== 'overview') search.set('tab', tab);
     return `/leases/${lease.id}${search.size ? `?${search}` : ''}`;
   };
+  const signState =
+    lease.eSignStatus === 'SIGNED'
+      ? 'done'
+      : lease.eSignStatus === 'SENT' || lease.eSignStatus === 'PARTIALLY_SIGNED'
+        ? 'pending'
+        : 'attention';
+  const signHeadline =
+    lease.eSignStatus === 'SIGNED'
+      ? `Signed${lease.signedAt ? ` ${formatDate(lease.signedAt)}` : ''}`
+      : lease.eSignStatus === 'NOT_SENT'
+        ? 'Agreement not sent for signature'
+        : lease.eSignStatus === 'DECLINED'
+          ? 'Signature declined'
+          : signLabel(lease.eSignStatus);
   const dueDay = `${lease.rentDueDay}${[1, 21].includes(lease.rentDueDay) ? 'st' : [2, 22].includes(lease.rentDueDay) ? 'nd' : [3, 23].includes(lease.rentDueDay) ? 'rd' : 'th'}`;
   return (
     <>
@@ -157,7 +171,8 @@ export default async function LeaseDetailPage({
 
       <div className={styles.workspace}>
         <a className={styles.backLink} href={backHref}>
-          ← {scoped ? `${property.name} leases` : 'All leases'}
+          <ActionGlyph name="arrow-left" />
+          {scoped ? `${property.name} leases` : 'All leases'}
         </a>
         <section className={styles.summaryLine} aria-label="Lease summary">
           <Badge
@@ -175,7 +190,8 @@ export default async function LeaseDetailPage({
           {noticeGiven && (
             <Badge tone="warning">Notice given {formatDate(lease.noticeGivenAt!)}</Badge>
           )}
-          <span>
+          <span className={styles.metaItem}>
+            <ActionGlyph name="tenants" />
             {lease.tenants.length
               ? lease.tenants.map(({ tenant }, index) => (
                   <span key={tenant.id}>
@@ -185,20 +201,39 @@ export default async function LeaseDetailPage({
                 ))
               : 'No tenants yet'}
           </span>
-          <span className="muted">· {signLabel(lease.eSignStatus)}</span>
-          <span className="muted">
-            · Online payments {onlinePaymentsEnabled ? 'enabled' : 'not connected'}
+          <span className={styles.metaItem}>
+            <ActionGlyph name="payments" />
+            Online payments {onlinePaymentsEnabled ? 'enabled' : 'not connected'}
           </span>
         </section>
 
-        <div className={styles.section}>
-          <a className="btn btn-primary" href={tabHref('agreement')}>
-            Review agreement & signatures
-          </a>
-          <p className="muted">
-            Owner / lessor signing link: <a href={`/sign/leases/${lease.id}`}>Open signing page</a>
-          </p>
-        </div>
+        {/* One-line signing context; the Agreement tab holds the full signer panel. */}
+        <section className={styles.signing} data-state={signState} aria-label="Agreement signing">
+          <span className={styles.signingStatus}>
+            <ActionGlyph name={lease.eSignStatus === 'SIGNED' ? 'check' : 'signature'} />
+            <strong>{signHeadline}</strong>
+          </span>
+          <span className="action-group">
+            {activeTab !== 'agreement' && (
+              <Action
+                icon="leases"
+                text={signState === 'done' ? 'Agreement' : 'Review signatures'}
+                label="Review agreement & signatures"
+                // Drafts already lead with "Continue in lease wizard"; keep one primary step.
+                tone={signState === 'done' || lease.status === 'DRAFT' ? 'quiet' : 'primary'}
+                href={tabHref('agreement')}
+                document
+              />
+            )}
+            <Action
+              icon="external"
+              text="Signing page"
+              label="Open owner / lessor signing page"
+              href={`/sign/leases/${lease.id}`}
+              document
+            />
+          </span>
+        </section>
         {/* Document links avoid the reproduced stalled client section transition. */}
         <LeaseSectionNavigation activeTab={activeTab} className={styles.tabs}>
           {LEASE_TABS.map((tab) => (
@@ -239,7 +274,15 @@ export default async function LeaseDetailPage({
                 <section className={styles.section}>
                   <SectionHeader
                     title="Leased premises"
-                    action={<Badge>One property · one unit</Badge>}
+                    action={
+                      <Action
+                        icon="arrow-right"
+                        trailing
+                        text="Property"
+                        label="View property"
+                        href={`/properties/${property.id}`}
+                      />
+                    }
                   />
                   <div className={styles.premises}>
                     <span className={styles.building} aria-hidden="true">
@@ -258,21 +301,14 @@ export default async function LeaseDetailPage({
                           </>
                         )}
                       </h3>
-                      <p className="muted" style={{ marginTop: 4 }}>
-                        {formatAddress(property)}
+                      <p className="muted">
+                        {formatAddress(property)} ·{' '}
+                        {lease.unit.isImplicit
+                          ? 'Whole property'
+                          : `Unit ${lease.unit.number} only`}
                       </p>
                     </div>
                   </div>
-                  <p className="muted" style={{ marginTop: 14 }}>
-                    This lease covers{' '}
-                    {lease.unit.isImplicit
-                      ? 'the whole property'
-                      : `Unit ${lease.unit.number} only`}{' '}
-                    at {property.name}.
-                  </p>
-                  <a className={styles.secondaryLink} href={`/properties/${property.id}`}>
-                    View property <span aria-hidden="true">→</span>
-                  </a>
                 </section>
                 <section className={styles.section}>
                   <SectionHeader
@@ -293,27 +329,26 @@ export default async function LeaseDetailPage({
                           {isPrimary ? 'Primary tenant' : 'Tenant'} · {tenant.email ?? 'No email'}
                         </small>
                       </span>
-                      <span aria-hidden="true">→</span>
+                      <ActionGlyph name="chevron-right" />
                     </a>
                   ))}
                 </section>
                 <section className={styles.section}>
                   <SectionHeader
-                    title="Agreement & move-out"
-                    action={<a href={tabHref('agreement')}>Manage agreement →</a>}
+                    title="Notice & move-out"
+                    action={
+                      <Action
+                        icon="arrow-right"
+                        trailing
+                        text="Manage agreement"
+                        label="Manage agreement"
+                        href={tabHref('agreement')}
+                        document
+                      />
+                    }
                   />
                   <dl className={styles.compactFacts}>
-                    <dt>Signature</dt>
-                    <dd>
-                      {signLabel(lease.eSignStatus)}
-                      {lease.signedAt && ` · ${formatDate(lease.signedAt)}`}
-                      {!signedTerms && (
-                        <small className="muted">
-                          {' '}
-                          · Signed copy: <Link href={tabHref('documents')}>see Documents →</Link>
-                        </small>
-                      )}
-                    </dd>
+                    {/* Signature status lives in the signing bar above the tabs. */}
                     <dt>Notice</dt>
                     <dd>{noticeGiven ? formatDate(lease.noticeGivenAt!) : 'No notice given'}</dd>
                     <dt>Move-out</dt>
@@ -323,7 +358,16 @@ export default async function LeaseDetailPage({
                 <section className={styles.section}>
                   <SectionHeader
                     title="Rent summary"
-                    action={<a href={tabHref('payments')}>View rent ledger →</a>}
+                    action={
+                      <Action
+                        icon="arrow-right"
+                        trailing
+                        text="View rent ledger"
+                        label="View rent ledger"
+                        href={tabHref('payments')}
+                        document
+                      />
+                    }
                   />
                   <dl className={styles.compactFacts}>
                     <dt>Balance due</dt>
@@ -336,7 +380,8 @@ export default async function LeaseDetailPage({
                     </dd>
                   </dl>
                   <a className={styles.secondaryLink} href={tabHref('documents')}>
-                    Lease documents ({lease.documents.length}) →
+                    <ActionGlyph name="documents" />
+                    Lease documents ({lease.documents.length})
                   </a>
                 </section>
               </div>
@@ -505,9 +550,14 @@ export default async function LeaseDetailPage({
               <SectionHeader
                 title="Rent ledger"
                 action={
-                  <a className="btn btn-ghost btn-sm" href={paymentsHref}>
-                    View payments →
-                  </a>
+                  <Action
+                    icon="arrow-right"
+                    trailing
+                    text="View payments"
+                    label="View payments"
+                    href={paymentsHref}
+                    document
+                  />
                 }
               />
               <div className={styles.ledgerFacts}>
@@ -570,9 +620,14 @@ export default async function LeaseDetailPage({
                       ? 'Marked signed; signature time was not recorded.'
                       : 'No completed signature recorded yet.'}
                 </p>
-                <a className="btn btn-secondary" href={tabHref('agreement')}>
-                  See each party&apos;s current signature status
-                </a>
+                <Action
+                  icon="signature"
+                  text="Signature status"
+                  label="See each party's current signature status"
+                  tone="secondary"
+                  href={tabHref('agreement')}
+                  document
+                />
               </section>
               <section className={styles.section}>
                 <SectionHeader title="Activity" />

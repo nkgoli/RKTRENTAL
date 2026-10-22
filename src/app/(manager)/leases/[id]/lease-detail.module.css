@@ -10,16 +10,6 @@
   font-weight: 600;
   letter-spacing: -0.04em;
 }
-:global(.main):has(.workspace) :global(.topbar h1)::after {
-  content: '✳';
-  display: inline-block;
-  margin-left: 8px;
-  color: #6171d9;
-  font:
-    28px Georgia,
-    serif;
-  transform: rotate(-12deg);
-}
 :global(.main):has(.workspace) :global(.topbar .eyebrow) {
   font-size: 10px;
   letter-spacing: 0.13em;
@@ -36,18 +26,69 @@
 .backLink {
   display: inline-flex;
   align-items: center;
-  min-height: 36px;
-  margin-bottom: 8px;
+  gap: 4px;
+  min-height: 32px;
+  margin-bottom: 4px;
   font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.backLink svg,
+.metaItem svg,
+.signingStatus svg,
+.secondaryLink svg,
+.section :global(.list-item) > svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
 }
 .summaryLine {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 9px;
-  padding-bottom: 19px;
+  gap: 8px 16px;
+  padding-bottom: 12px;
   font-size: 12px;
   color: var(--design-muted);
+}
+.metaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Compact signing context: one row, tone follows the signature state. */
+.signing {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-bottom: 14px;
+  padding: 6px 6px 6px 14px;
+  border: 1px solid var(--rr-border);
+  border-radius: var(--design-radius);
+  background: var(--design-surface);
+}
+.signing[data-state='done'] {
+  border-color: transparent;
+  background: var(--rr-ok-bg);
+}
+.signing[data-state='attention'] {
+  border-color: #f0d9a8;
+  background: var(--rr-warn-bg);
+}
+.signingStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  color: var(--design-text);
+}
+.signing[data-state='done'] .signingStatus svg {
+  color: var(--design-accent);
+}
+.signingStatus strong {
+  font-weight: 600;
 }
 .workspace :global(.badge) {
   font-size: 10px;
@@ -180,7 +221,8 @@
   min-width: 0;
 }
 .premises p {
-  font-size: 11px;
+  margin-top: 4px;
+  font-size: 12px;
 }
 .building {
   display: grid;
@@ -468,9 +510,6 @@
 @media (max-width: 760px) {
   :global(.main):has(.workspace) :global(.topbar h1) {
     font-size: 28px;
-  }
-  :global(.main):has(.workspace) :global(.topbar h1)::after {
-    font-size: 24px;
   }
   .summaryLine {
     gap: 8px;

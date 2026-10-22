@@ -1932,6 +1932,91 @@ h4 {
   background: var(--rr-hover);
   color: var(--design-text);
 }
+/* Workspace actions (ui/Action): icon + short label, full name in aria-label and tooltip. */
+.action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--design-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.action svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.action:hover {
+  background: var(--rr-primary-tint);
+  text-decoration: none;
+}
+.action-secondary {
+  border-color: var(--rr-border-strong);
+  background: var(--design-surface);
+  color: var(--design-text);
+}
+.action-secondary:hover {
+  background: var(--rr-hover);
+}
+.action-primary {
+  background: var(--design-primary);
+  color: #fff;
+}
+.action-primary:hover {
+  background: var(--rr-primary-hover);
+}
+.action-icon {
+  justify-content: center;
+  width: 32px;
+  padding: 0;
+}
+.action[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + 6px);
+  /* Grows leftward so a hidden tip never widens the page at the right edge. */
+  right: 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--design-text);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.action[data-tip]:hover::after,
+.action[data-tip]:focus-visible::after {
+  opacity: 1;
+}
+.action-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+@media (pointer: coarse), (max-width: 640px) {
+  .action {
+    min-height: 44px;
+  }
+  .action-icon {
+    width: 44px;
+  }
+}
 .btn-split {
   display: inline-flex;
 }
@@ -2688,5 +2773,11 @@ h4 {
 }
 
 /* Attention avatars share the light system palette. */
-.avatar-stack .av { background: var(--rr-primary-tint); color: var(--design-primary); }
-.avatar-stack .av.more { background: var(--rr-subtle); color: var(--design-text); }
+.avatar-stack .av {
+  background: var(--rr-primary-tint);
+  color: var(--design-primary);
+}
+.avatar-stack .av.more {
+  background: var(--rr-subtle);
+  color: var(--design-text);
+}

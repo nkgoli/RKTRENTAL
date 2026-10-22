@@ -23,7 +23,7 @@ import { formatAddress, formatDate, initials } from '@/lib/properties/format';
 import { EditTermsForm, LeaseStatusActions, NoticeForm } from '../LeaseForms';
 import type { TemplateItem } from '@/lib/lease-create/templates';
 import { RentLedger, RentLedgerRows } from '@/components/payments/RentLedger';
-import { toLastPayment, toLedgerRows } from '@/components/payments/ledger-view';
+import { toLastPayment, toLedgerRows, toPaymentViews } from '@/components/payments/ledger-view';
 import { ensureRentCharges, formatMoney, leaseLedger, periodLabel } from '@/lib/ledger';
 
 const showSignedBody = (body: string) =>
@@ -238,7 +238,12 @@ export default async function LeaseDetailPage({
               <Action
                 icon="leases"
                 text={signState === 'done' ? 'Agreement' : 'Review signatures'}
-                label="Review agreement & signatures"
+                // The accessible name starts with the visible words and keeps the agreement context.
+                label={
+                  signState === 'done'
+                    ? 'Agreement and signatures'
+                    : 'Review signatures on the lease agreement'
+                }
                 // Drafts already lead with "Continue in lease wizard"; keep one primary step.
                 tone={signState === 'done' || lease.status === 'DRAFT' ? 'quiet' : 'primary'}
                 href={tabHref('agreement')}
@@ -581,7 +586,8 @@ export default async function LeaseDetailPage({
                       text="Record payment"
                       label="Record payment"
                       tone="secondary"
-                      href={`${paymentsHref}${paymentsHref.includes('?') ? '&' : '?'}record=1`}
+                      // Carries this lease so Payments records against it, never a sibling term.
+                      href={`${paymentsHref}${paymentsHref.includes('?') ? '&' : '?'}record=1&lease=${encodeURIComponent(lease.id)}`}
                       document
                     />
                   )}
@@ -605,6 +611,7 @@ export default async function LeaseDetailPage({
                     balanceCents: ledger.balanceCents,
                     active: lease.status === 'ACTIVE',
                     rows: ledgerRows,
+                    payments: toPaymentViews(ledger.payments),
                   },
                 ]}
                 groupHeadings={false}

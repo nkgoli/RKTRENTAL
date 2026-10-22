@@ -6,7 +6,11 @@ import {
   loadPropertyLedger,
   summarizeUnits,
 } from '../../src/lib/ledger';
-import { toLastPayment, toLedgerRows } from '../../src/components/payments/ledger-view';
+import {
+  toLastPayment,
+  toLedgerRows,
+  toPaymentViews,
+} from '../../src/components/payments/ledger-view';
 
 /**
  * One data set read through every Rent ledger scope: the lease page, the unit Payments tab and the
@@ -151,20 +155,22 @@ type Where = {
   status: { in: string[] };
   unit?: { id?: string; propertyId?: string };
 };
-const client = {
-  lease: {
-    findMany: async ({ where }: { where: Where }) =>
-      all
-        .filter(
-          (l) =>
-            l.organizationId === where.organizationId &&
-            where.status.in.includes(l.status) &&
-            (!where.unit?.id || l.unit.id === where.unit.id) &&
-            (!where.unit?.propertyId || l.unit.propertyId === where.unit.propertyId),
-        )
-        .sort((a, b) => b.startDate.getTime() - a.startDate.getTime()),
-  },
-} as unknown as PrismaClient;
+const clientFor = (leases: (typeof A)[]) =>
+  ({
+    lease: {
+      findMany: async ({ where }: { where: Where }) =>
+        leases
+          .filter(
+            (l) =>
+              l.organizationId === where.organizationId &&
+              where.status.in.includes(l.status) &&
+              (!where.unit?.id || l.unit.id === where.unit.id) &&
+              (!where.unit?.propertyId || l.unit.propertyId === where.unit.propertyId),
+          )
+          .sort((a, b) => b.startDate.getTime() - a.startDate.getTime()),
+    },
+  }) as unknown as PrismaClient;
+const client = clientFor(all);
 
 const load = (scope: { propertyId: string; unitId?: string }) =>
   loadPropertyLedger('org', scope, asOf, client);
@@ -284,6 +290,30 @@ describe('Rent ledger scopes read the same data the same way', () => {
     ]);
   });
 
+  it('keeps payment-only history with its credit instead of hiding it', async () => {
+    const property = await load({ propertyId: 'P' });
+    const prev = property.groups.find((g) => g.leaseId === 'PREV')!;
+    expect(prev.rows).toEqual([]);
+    expect(prev.balanceCents).toBe(-10_000);
+    expect(prev.payments).toEqual([
+      expect.objectContaining({ amountCents: 10_000, status: 'SUCCEEDED', appliedCents: 0 }),
+    ]);
+    expect(toPaymentViews(prev.payments)).toEqual([
+      expect.objectContaining({
+        dateLabel: 'Jun 1, 2025',
+        creditCents: 10_000,
+        method: 'Cash or check (recorded manually)',
+      }),
+    ]);
+    // Failed attempts stay in history but never count as applied or credit.
+    const a = property.groups.find((g) => g.leaseId === 'A')!;
+    expect(a.payments).toHaveLength(6);
+    expect(a.payments[0]).toMatchObject({ status: 'FAILED', appliedCents: 0 });
+    expect(toPaymentViews(a.payments).every((p) => p.creditCents === 0)).toBe(true);
+    // The lease page reads the same history.
+    expect(leaseView(PREV).payments).toEqual(prev.payments);
+  });
+
   it('last payment ignores failed, pending and zero payments', () => {
     expect(
       lastSettledPayment([
@@ -295,5 +325,76 @@ describe('Rent ledger scopes read the same data the same way', () => {
       ]),
     ).toEqual({ date: d('2026-10-01'), amountCents: 300 });
     expect(lastSettledPayment([])).toBeNull();
+  });
+});
+
+describe('ended-only units and back-to-back active terms', () => {
+  // U1: the current term plus a renewal that is already ACTIVE for next year (no overlap).
+  const NOW = lease(
+    'NOW',
+    'U1',
+    'ACTIVE',
+    '2026-01-01',
+    '2026-12-31',
+    '1000.00',
+    'Avery Active',
+    months(9, 10).map((m) => charge('NOW', 'RENT', '1000.00', `${m}-01`, `rent:NOW:${m}`)),
+    [payment('NOW', '1000.00', '2026-09-02')],
+  );
+  const NEXT = lease(
+    'NEXT',
+    'U1',
+    'ACTIVE',
+    '2027-01-01',
+    '2027-12-31',
+    '1050.00',
+    'Avery Active',
+    [],
+    [payment('NEXT', '200.00', '2026-10-10')],
+  );
+  // U2: only an ended lease that still owes.
+  const GONE = lease(
+    'GONE',
+    'U2',
+    'ENDED',
+    '2025-01-01',
+    '2025-12-31',
+    '800.00',
+    'Gale Gone',
+    [charge('GONE', 'RENT', '800.00', '2025-12-01', 'rent:GONE:2025-12')],
+    [payment('GONE', '300.00', '2025-12-03')],
+  );
+  const loadAll = (scope: { propertyId: string; unitId?: string }) =>
+    loadPropertyLedger('org', scope, asOf, clientFor([NOW, NEXT, GONE]));
+
+  it('lists the ended-only unit without adding its balance to Balance due', async () => {
+    const property = await loadAll({ propertyId: 'P' });
+    const summary = summarizeUnits(property.groups);
+    expect(
+      summary.units.map((u) => [u.unitLabel, u.status, u.balanceCents, u.endedBalanceCents]),
+    ).toEqual([
+      ['Townhome 1', 'LATE', leaseView(NOW).balanceCents + leaseView(NEXT).balanceCents, 0],
+      ['Townhome 2', 'ENDED', 0, 50_000],
+    ]);
+    expect(summary.units[1]).toMatchObject({ leaseId: 'GONE', tenantNames: 'Gale Gone' });
+    expect(summary.totalBalanceCents).toBe(property.balanceCents);
+    expect(summary.endedBalanceCents).toBe(property.endedBalanceCents);
+    // The unit's own ledger still lists the ended term with its payment.
+    const unit = await loadAll({ propertyId: 'P', unitId: 'U2' });
+    expect(unit.balanceCents).toBe(0);
+    expect(unit.endedBalanceCents).toBe(50_000);
+    expect(unit.groups[0].payments.map((p) => p.amountCents)).toEqual([30_000]);
+  });
+
+  it('keeps both active terms as separate, identifiable groups', async () => {
+    const unit = await loadAll({ propertyId: 'P', unitId: 'U1' });
+    expect(unit.groups.map((g) => [g.leaseId, g.active, g.label])).toEqual([
+      ['NEXT', true, 'Jan 2027 – Dec 2027'],
+      ['NOW', true, 'Sep 2026 – Dec 2026'],
+    ]);
+    expect(unit.activeLeaseCount).toBe(2);
+    // The renewal's prepayment shows as its own credit, not as a payment on the current term.
+    expect(unit.groups[0].balanceCents).toBe(-20_000);
+    expect(unit.groups[1].payments.map((p) => p.amountCents)).toEqual([100_000]);
   });
 });

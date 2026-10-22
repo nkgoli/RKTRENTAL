@@ -104,10 +104,12 @@ test('lease workspace supports keyboard navigation and phone layouts', async ({ 
   await expect(page.getByRole('button', { name: 'Save terms' })).toBeVisible();
   await page.getByText('Record notice or move-out', { exact: true }).click();
   await expect(page.getByLabel('Planned move-out')).toBeVisible();
+  // Termination asks in a confirmation dialog; cancelling records nothing.
   await page.getByRole('button', { name: 'Terminate', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Confirm terminate' })).toBeVisible();
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Confirm terminate' })).toHaveCount(0);
+  const confirm = page.getByRole('dialog', { name: /Terminate lease for/ });
+  await expect(confirm.getByRole('button', { name: 'Terminate lease' })).toBeVisible();
+  await confirm.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(confirm).toBeHidden();
   await page.setViewportSize({ width: 390, height: 844 });
   for (const name of ['Overview', 'Agreement', 'Documents', 'Payments', 'Activity']) {
     await sections.getByRole('link', { name, exact: true }).click();

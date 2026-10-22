@@ -5,7 +5,9 @@ import { centsToDecimal, type Cents, type LedgerPayment } from './core';
 import { leaseTerms, toLedgerCharge, toLedgerPayment } from './store';
 import {
   buildLeaseStatement,
+  describePaymentReference,
   isReservedDescription,
+  paymentMethod,
   periodLabel,
   type LeaseStatement,
   type StatementRow,
@@ -16,6 +18,18 @@ type Client = PrismaClient;
 export type LedgerTenant = { id: string; name: string; initials: string };
 
 export type LastPayment = { date: Date; amountCents: Cents };
+
+/** One payment on a lease as recorded, with how much of it settled charges listed on the ledger. */
+export type PaymentHistoryEntry = {
+  id: string;
+  date: Date | null;
+  amountCents: Cents;
+  status: LedgerPayment['status'];
+  method: string;
+  reference: string;
+  /** Portion of a settled payment applied to listed charges; the rest is credit on the lease. */
+  appliedCents: Cents;
+};
 
 export type LedgerGroup = {
   leaseId: string;
@@ -29,6 +43,8 @@ export type LedgerGroup = {
   active: boolean;
   tenants: LedgerTenant[];
   rows: StatementRow[];
+  /** Every payment on the lease, newest first, including ones that settled no listed charge. */
+  payments: PaymentHistoryEntry[];
 };
 
 export type PropertyLedger = {
@@ -66,7 +82,7 @@ type LedgerLeaseRow = Parameters<typeof leaseTerms>[0] & {
 export function leaseLedger(
   lease: LedgerLeaseRow,
   asOf: Date,
-): LeaseStatement & { lastPayment: LastPayment | null } {
+): LeaseStatement & { lastPayment: LastPayment | null; payments: PaymentHistoryEntry[] } {
   const payments = lease.payments.map(toLedgerPayment);
   const statement = buildLeaseStatement({
     lease: leaseTerms(lease),
@@ -74,7 +90,33 @@ export function leaseLedger(
     payments,
     asOf,
   });
-  return { ...statement, lastPayment: lastSettledPayment(payments) };
+  return {
+    ...statement,
+    lastPayment: lastSettledPayment(payments),
+    payments: paymentHistory(payments, statement.rows),
+  };
+}
+
+/** Payments newest first with the amount each applied to the statement rows. */
+export function paymentHistory(
+  payments: LedgerPayment[],
+  rows: Pick<StatementRow, 'applied'>[],
+): PaymentHistoryEntry[] {
+  const applied = new Map<string, Cents>();
+  for (const row of rows)
+    for (const a of row.applied)
+      applied.set(a.paymentId, (applied.get(a.paymentId) ?? 0) + a.amountCents);
+  return payments
+    .map((p, index) => ({
+      id: p.id ?? `payment-${index}`,
+      date: p.paidAt ?? p.createdAt ?? null,
+      amountCents: p.amountCents,
+      status: p.status,
+      method: paymentMethod(p.providerReference),
+      reference: describePaymentReference(p.providerReference),
+      appliedCents: (p.id && applied.get(p.id)) || 0,
+    }))
+    .sort((a, b) => (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0));
 }
 
 const initialsOf = (name: string) =>
@@ -135,6 +177,7 @@ export async function loadPropertyLedger(
         initials: initialsOf(tenant.name),
       })),
       rows: statement.rows,
+      payments: statement.payments,
     });
   }
   groups.sort((a, b) => Number(b.active) - Number(a.active));
@@ -153,46 +196,72 @@ export async function loadPropertyLedger(
   };
 }
 
-export type UnitHealth = 'LATE' | 'DUE' | 'CURRENT';
+export type UnitHealth = 'LATE' | 'DUE' | 'CURRENT' | 'ENDED';
 
 export type UnitSummary = {
   unitId: string;
+  /** The unit's current active lease, else its most recent ended lease. */
   leaseId: string;
   unitLabel: string;
+  /** Tenants on the active lease(s); for an ended-only unit, the most recent ended lease's tenants. */
   tenantNames: string;
+  /** Balance due across the unit's active leases only; ended-only units carry 0 here. */
   balanceCents: Cents;
+  /** Balance still open on the unit's ended leases; never part of balanceCents or the total. */
+  endedBalanceCents: Cents;
+  activeLeaseCount: number;
+  endedLeaseCount: number;
   status: UnitHealth;
   nextDue: { dueDate: Date; amountCents: Cents } | null;
 };
 
-export type UnitSummaryTable = { units: UnitSummary[]; totalBalanceCents: Cents };
+export type UnitSummaryTable = {
+  units: UnitSummary[];
+  /** Sum of active balances: equals the property's Balance due. */
+  totalBalanceCents: Cents;
+  endedBalanceCents: Cents;
+};
 
 /**
- * One row per unit with an active lease: balance, health (Late if any charge is late, Due if
- * something is owed now) and the next unpaid charge. Late units sort first, then by unit label.
+ * One row per unit with any ledger history: active balance, health (Late if any charge is late,
+ * Due if something is owed now, Ended when only ended leases remain) and the next unpaid charge.
+ * Ended balances stay separate so the total still equals the property's Balance due.
+ * Late units sort first, ended-only units last, then by unit label.
  */
 export function summarizeUnits(groups: LedgerGroup[]): UnitSummaryTable {
-  const units = groups
-    .filter((g) => g.active)
-    .map((g): UnitSummary => {
-      const open = g.rows.filter((r) => r.balanceCents > 0);
-      const status: UnitHealth = open.some((r) => r.status === 'LATE')
+  const byUnit = new Map<string, LedgerGroup[]>();
+  for (const g of groups) byUnit.set(g.unitId, [...(byUnit.get(g.unitId) ?? []), g]);
+  const units = [...byUnit.values()].map((list): UnitSummary => {
+    const active = list.filter((g) => g.active);
+    const ended = list.filter((g) => !g.active);
+    const open = active
+      .flatMap((g) => g.rows)
+      .filter((r) => r.balanceCents > 0)
+      .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+    const status: UnitHealth = !active.length
+      ? 'ENDED'
+      : open.some((r) => r.status === 'LATE')
         ? 'LATE'
         : open.some((r) => r.status === 'DUE' || r.status === 'PARTIAL')
           ? 'DUE'
           : 'CURRENT';
-      const next = open.find((r) => r.status !== 'LATE') ?? open[0];
-      return {
-        unitId: g.unitId,
-        leaseId: g.leaseId,
-        unitLabel: g.unitLabel,
-        tenantNames: g.tenants.map((t) => t.name).join(', '),
-        balanceCents: g.balanceCents,
-        status,
-        nextDue: next ? { dueDate: next.dueDate, amountCents: next.balanceCents } : null,
-      };
-    });
-  const rank: Record<UnitHealth, number> = { LATE: 0, DUE: 1, CURRENT: 2 };
+    const next = open.find((r) => r.status !== 'LATE') ?? open[0];
+    const named = active.length ? active : ended.slice(0, 1);
+    const names = [...new Set(named.flatMap((g) => g.tenants.map((t) => t.name)))];
+    return {
+      unitId: list[0].unitId,
+      leaseId: (active[0] ?? ended[0]).leaseId,
+      unitLabel: list[0].unitLabel,
+      tenantNames: names.join(', '),
+      balanceCents: active.reduce((sum, g) => sum + g.balanceCents, 0),
+      endedBalanceCents: ended.reduce((sum, g) => sum + g.balanceCents, 0),
+      activeLeaseCount: active.length,
+      endedLeaseCount: ended.length,
+      status,
+      nextDue: next ? { dueDate: next.dueDate, amountCents: next.balanceCents } : null,
+    };
+  });
+  const rank: Record<UnitHealth, number> = { LATE: 0, DUE: 1, CURRENT: 2, ENDED: 3 };
   units.sort(
     (a, b) =>
       rank[a.status] - rank[b.status] ||
@@ -201,6 +270,7 @@ export function summarizeUnits(groups: LedgerGroup[]): UnitSummaryTable {
   return {
     units,
     totalBalanceCents: units.reduce((sum, u) => sum + u.balanceCents, 0),
+    endedBalanceCents: units.reduce((sum, u) => sum + u.endedBalanceCents, 0),
   };
 }
 

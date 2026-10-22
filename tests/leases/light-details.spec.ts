@@ -124,7 +124,7 @@ for (const width of [1280, 390]) {
       );
       await expect(page.getByRole('link', { name: 'Record payment' })).toHaveAttribute(
         'href',
-        `/properties/${propertyId}/payments?unit=light-detail-active-unit&record=1`,
+        `/properties/${propertyId}/payments?unit=light-detail-active-unit&record=1&lease=light-detail-active`,
       );
     });
 
@@ -268,24 +268,25 @@ for (const width of [1280, 390]) {
       await card.getByRole('button', { name: 'Save name' }).click();
       card = page.locator('article').filter({ hasText: longName });
       await expect(card.getByRole('status')).toHaveText('Document renamed.');
+      // Deleting confirms in the shared dialog: Cancel is focused first and focus returns on close.
       await card.getByRole('button', { name: 'Delete', exact: true }).click();
-      await expect(
-        card.getByRole('group', { name: `Delete ${longName}`, exact: true }),
-      ).toBeFocused();
-      await card.getByRole('button', { name: 'Cancel', exact: true }).click();
+      const confirm = card.getByRole('dialog', { name: `Delete ${longName}?` });
+      await expect(confirm.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();
+      await confirm.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await expect(confirm).toBeHidden();
       await expect(card.getByRole('button', { name: 'Delete', exact: true })).toBeFocused();
       const endpoint = href!.replace('/download', '');
       await page.route(`**${endpoint}`, (request) =>
         request.fulfill({ status: 500, body: 'Fixture failure' }),
       );
       await card.getByRole('button', { name: 'Delete', exact: true }).click();
-      await card.getByRole('button', { name: 'Confirm delete', exact: true }).click();
-      await expect(card.getByRole('alert')).toHaveText(
+      await confirm.getByRole('button', { name: 'Confirm delete', exact: true }).click();
+      await expect(confirm.getByRole('alert')).toHaveText(
         'The file could not be deleted. Please try again.',
       );
       await capture(page, `document-delete-error-${width}`);
       await page.unroute(`**${endpoint}`);
-      await card.getByRole('button', { name: 'Confirm delete', exact: true }).click();
+      await confirm.getByRole('button', { name: 'Confirm delete', exact: true }).click();
       await expect(card).toHaveCount(0);
       await expect(
         page.getByRole('status').filter({ hasText: `${longName} deleted.` }),
@@ -315,10 +316,19 @@ for (const width of [1280, 390]) {
       await page.goto(route('ended', 'activity'));
       await expect(page.getByText('No completed signature recorded yet.')).toBeVisible();
       await expect(page.getByText('Lease created', { exact: true })).toBeVisible();
+      // Activity lists each signer's recorded event; the full signer panel lives in Agreement.
       await page.goto(route('pending', 'activity'));
-      const signers = page.getByLabel('Signers');
-      for (const label of ['Signed', 'Awaiting', 'Declined'])
-        await expect(signers.getByText(label, { exact: true })).toBeVisible();
+      await expect(page.getByText('Partially signed', { exact: true }).first()).toBeVisible();
+      for (const text of [
+        'Signed: Review signed tenant',
+        'Sent for signature: Review awaiting tenant',
+        'Declined to sign: Review declined tenant',
+      ])
+        await expect(page.getByText(text, { exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: /current signature status/ })).toHaveAttribute(
+        'href',
+        /tab=agreement/,
+      );
       await capture(page, `signature-pending-${width}`);
       await page.goto('/leases/seed-lease-maple-11?tab=payments');
       await expect(page.getByRole('heading', { name: 'Rent ledger', exact: true })).toBeVisible();
@@ -348,13 +358,16 @@ test('draft activation restrictions, ended restrictions and fixture termination 
   await page.goto(route('ended'));
   for (const name of ['Edit terms', 'Record notice or move-out', 'Activate lease', 'Terminate'])
     await expect(page.getByText(name, { exact: true })).toHaveCount(0);
-  await expect(page.getByText(/No agreement snapshot is recorded/)).toBeVisible();
+  // An ended lease without saved terms simply has no "Prepared lease terms" section.
+  await expect(page.getByRole('heading', { name: 'Prepared lease terms' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Lease terms', exact: true })).toBeVisible();
   await capture(page, 'ended-agreement-390');
   await page.goto(route('terminate'));
   await page.getByRole('button', { name: 'Terminate', exact: true }).click();
-  await expect(page.getByRole('form', { name: 'Confirm lease termination' })).toBeFocused();
+  const confirm = page.getByRole('dialog', { name: /Terminate lease for/ });
+  await expect(confirm.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();
   await capture(page, 'terminate-confirm-390');
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await confirm.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Terminate', exact: true })).toBeFocused();
   expect((await db.lease.findUniqueOrThrow({ where: { id: fixtureId('terminate') } })).status).toBe(
     'ACTIVE',
@@ -362,7 +375,9 @@ test('draft activation restrictions, ended restrictions and fixture termination 
   await page.getByRole('button', { name: 'Terminate', exact: true }).click();
   await submitResult(
     page,
-    page.getByRole('button', { name: 'Confirm terminate', exact: true }),
+    page
+      .getByRole('dialog', { name: /Terminate lease for/ })
+      .getByRole('button', { name: 'Terminate lease', exact: true }),
     'terminated',
   );
   await expect(

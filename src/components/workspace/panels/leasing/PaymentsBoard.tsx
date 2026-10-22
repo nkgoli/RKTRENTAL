@@ -7,7 +7,11 @@ import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Field, FormRow, Input, Select } from '@/components/ui/Forms';
 import { RentLedger, RentLedgerRows } from '@/components/payments/RentLedger';
-import type { LastPaymentView, LedgerRowView } from '@/components/payments/ledger-view';
+import type {
+  LastPaymentView,
+  LedgerRowView,
+  PaymentView,
+} from '@/components/payments/ledger-view';
 import { formatMoney } from '@/lib/ledger/statement';
 import { createPropertyChargeAction, recordPropertyPaymentAction } from './actions';
 import { withUnit } from './scope';
@@ -23,6 +27,7 @@ export type BoardGroup = {
   tenantNames: string;
   balanceCents: number;
   rows: BoardRow[];
+  payments: PaymentView[];
 };
 export type BoardTenant = { id: string; name: string; initials: string };
 export type BoardUnit = {
@@ -31,20 +36,29 @@ export type BoardUnit = {
   unitLabel: string;
   tenantNames: string;
   balanceCents: number;
-  status: 'LATE' | 'DUE' | 'CURRENT';
+  /** Open on the unit's ended leases; never part of balanceCents or the total. */
+  endedBalanceCents: number;
+  endedLeaseCount: number;
+  status: 'LATE' | 'DUE' | 'CURRENT' | 'ENDED';
   nextDue: { dateLabel: string; amountCents: number } | null;
 };
 export type BoardSummary = { units: BoardUnit[]; totalBalanceCents: number };
+/** Lease a page asked to record a payment for (e.g. from the lease page), by id. */
+export type RecordTarget = { open: boolean; leaseId?: string };
 
 const unitPill: Record<BoardUnit['status'], { tone: BadgeTone; label: string }> = {
   LATE: { tone: 'danger', label: 'Late' },
   DUE: { tone: 'info', label: 'Due' },
   CURRENT: { tone: 'success', label: 'Current' },
+  ENDED: { tone: 'neutral', label: 'Ended' },
 };
 
 /** "Townhome 1 · Sample Tenant"; the unit is left out for a single-family lease. */
 const groupHeading = (g: Pick<BoardGroup, 'place' | 'tenantNames'>) =>
   [g.place, g.tenantNames].filter(Boolean).join(' · ') || 'Whole property';
+/** Heading plus term, so two terms for the same unit and tenant can be told apart. */
+const leaseName = (g: Pick<BoardGroup, 'place' | 'tenantNames' | 'label'>) =>
+  `${groupHeading(g)} · ${g.label}`;
 
 export function PaymentsBoard({
   propertyId,
@@ -60,6 +74,7 @@ export function PaymentsBoard({
   groups,
   summary,
   openRecord,
+  recordLeaseId,
   today,
 }: {
   propertyId: string;
@@ -77,17 +92,27 @@ export function PaymentsBoard({
   /** Set for a multi-unit property without a unit scope: replaces the ledger with a per-unit table. */
   summary: BoardSummary | null;
   openRecord: boolean;
+  /**
+   * Lease the page was asked to record a payment for (the lease page's Record payment). It is used
+   * only when it is an active lease in this scope; otherwise the manager must choose explicitly.
+   */
+  recordLeaseId?: string;
   today: string;
 }) {
   const [chargeOpen, setChargeOpen] = useState(false);
-  const [paymentOpen, setPaymentOpen] = useState(false);
   const chargeFormId = useId();
   const paymentFormId = useId();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [amount, setAmount] = useState('');
   const activeGroups = groups.filter((g) => g.active);
-  const defaultLease = summary ? '' : (activeGroups[0]?.leaseId ?? '');
-  const [leaseId, setLeaseId] = useState(defaultLease);
+  // One active lease is unambiguous; with several, nothing is preselected.
+  const defaultLease = !summary && activeGroups.length === 1 ? activeGroups[0].leaseId : '';
+  const target = recordLeaseId ? activeGroups.find((g) => g.leaseId === recordLeaseId) : undefined;
+  // A requested lease that ended, moved or is outside this scope never falls back to another one.
+  const staleTarget = Boolean(openRecord && recordLeaseId && !target);
+  const [leaseId, setLeaseId] = useState(target?.leaseId ?? (staleTarget ? '' : defaultLease));
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [staleNotice, setStaleNotice] = useState(staleTarget && activeGroups.length > 0);
 
   const cell = (group: BoardGroup, row: BoardRow) => `${group.leaseId}|${row.key}`;
   const picked = groups.flatMap((g) =>
@@ -106,9 +131,14 @@ export function PaymentsBoard({
   }, [openRecord, activeGroups.length]);
 
   const openPayment = (lease: string, cents: number) => {
+    setStaleNotice(false);
     setLeaseId(lease);
     setAmount(cents > 0 ? (cents / 100).toFixed(2) : '');
     setPaymentOpen(true);
+  };
+  const closePayment = () => {
+    setStaleNotice(false);
+    setPaymentOpen(false);
   };
   const hidden = (
     <>
@@ -116,29 +146,35 @@ export function PaymentsBoard({
       {unitId && <input type="hidden" name="unitId" value={unitId} />}
     </>
   );
+  const staleMessage = `The lease you started from can no longer take payments here: it has ended or is not in this ${unitId ? 'unit' : 'property'}.`;
+  const occupied = summary?.units.filter((u) => u.status !== 'ENDED').length ?? 0;
+  const chosen = activeGroups.find((g) => g.leaseId === leaseId);
   const leasePicker =
-    activeGroups.length > 1 || summary ? (
-      <Field label={summary ? 'Unit' : 'Lease'}>
+    activeGroups.length > 1 || summary || !chosen ? (
+      <Field label={summary ? 'Unit and lease' : 'Lease'}>
         <Select
           name="leaseId"
-          value={leaseId}
+          value={chosen ? leaseId : ''}
           onChange={(e) => setLeaseId(e.target.value)}
           required
         >
-          {summary && (
-            <option value="" disabled>
-              Choose a unit
-            </option>
-          )}
+          <option value="" disabled>
+            {summary ? 'Choose a unit' : 'Choose a lease'}
+          </option>
           {activeGroups.map((g) => (
             <option key={g.leaseId} value={g.leaseId}>
-              {groupHeading(g)}
+              {leaseName(g)}
             </option>
           ))}
         </Select>
       </Field>
     ) : (
-      <input type="hidden" name="leaseId" value={leaseId || defaultLease} />
+      <>
+        <p className={styles.note} data-testid="dialog-lease">
+          {leaseName(chosen)}
+        </p>
+        <input type="hidden" name="leaseId" value={chosen.leaseId} />
+      </>
     );
 
   const actions = (
@@ -203,12 +239,20 @@ export function PaymentsBoard({
             )}
             {summary && (
               <span className={styles.note} data-testid="occupied-units">
-                {summary.units.length} occupied {summary.units.length === 1 ? 'unit' : 'units'}
+                {occupied} occupied {occupied === 1 ? 'unit' : 'units'}
+                {summary.units.length > occupied &&
+                  ` · ${summary.units.length - occupied} with ended leases only`}
               </span>
+            )}
+            {staleTarget && activeGroups.length === 0 && (
+              <p className={styles.warning} role="alert" data-testid="stale-lease">
+                {staleMessage}
+              </p>
             )}
             {endedBalanceCents !== 0 && (
               <p className={styles.note} data-testid="ended-balance">
-                Ended leases carry {formatMoney(endedBalanceCents)}, shown in their own groups and
+                Ended leases carry {formatMoney(endedBalanceCents)},{' '}
+                {summary ? 'listed on each unit’s Rent ledger' : 'shown in their own groups'} and
                 not included in Balance due.
               </p>
             )}
@@ -274,8 +318,25 @@ export function PaymentsBoard({
                           {u.unitLabel}
                         </Link>
                       </td>
-                      <td>{u.tenantNames || '—'}</td>
-                      <td className={styles.num}>{formatMoney(u.balanceCents)}</td>
+                      <td>
+                        {u.tenantNames || '—'}
+                        {u.endedLeaseCount > 0 && (
+                          <small className={styles.note}>
+                            {u.status === 'ENDED' ? 'Previous tenant · ' : ''}
+                            {u.endedLeaseCount} ended {u.endedLeaseCount === 1 ? 'lease' : 'leases'}
+                          </small>
+                        )}
+                      </td>
+                      <td className={styles.num}>
+                        {u.status === 'ENDED' ? '—' : formatMoney(u.balanceCents)}
+                        {u.endedBalanceCents !== 0 && (
+                          <small>
+                            {formatMoney(Math.abs(u.endedBalanceCents))}
+                            {u.endedBalanceCents < 0 ? ' credit' : ''} on ended{' '}
+                            {u.endedLeaseCount === 1 ? 'lease' : 'leases'}
+                          </small>
+                        )}
+                      </td>
                       <td>
                         <Badge tone={p.tone}>{p.label}</Badge>
                       </td>
@@ -327,6 +388,7 @@ export function PaymentsBoard({
               balanceCents: g.balanceCents,
               active: g.active,
               rows: g.rows,
+              payments: g.payments,
             }))}
             groupHeadings
             selection={{ selected, onChange: setSelected }}
@@ -351,9 +413,6 @@ export function PaymentsBoard({
       >
         <form id={chargeFormId} action={createPropertyChargeAction} className="form">
           {hidden}
-          {!summary && activeGroups.length === 1 && (
-            <p className={styles.note}>{groupHeading(activeGroups[0])}</p>
-          )}
           {leasePicker}
           <FormRow>
             <Field label="Type">
@@ -378,11 +437,11 @@ export function PaymentsBoard({
 
       <Dialog
         open={paymentOpen}
-        onClose={() => setPaymentOpen(false)}
+        onClose={closePayment}
         title="Record payment"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setPaymentOpen(false)}>
+            <Button variant="secondary" onClick={closePayment}>
               Cancel
             </Button>
             <Button type="submit" form={paymentFormId} variant="primary">
@@ -393,8 +452,10 @@ export function PaymentsBoard({
       >
         <form id={paymentFormId} action={recordPropertyPaymentAction} className="form">
           {hidden}
-          {!summary && activeGroups.length === 1 && (
-            <p className={styles.note}>{groupHeading(activeGroups[0])}</p>
+          {staleNotice && (
+            <p className={styles.warning} role="alert" data-testid="stale-lease">
+              {staleMessage} Choose the lease to apply this payment to.
+            </p>
           )}
           {leasePicker}
           <Field

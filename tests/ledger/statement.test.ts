@@ -336,18 +336,33 @@ describe('summarizeUnits', () => {
     ({ status, dueDate: d(due), balanceCents: balance }) as LedgerGroup['rows'][number];
   const group = (over: Partial<LedgerGroup>): LedgerGroup => ({
     leaseId: 'L', label: '', unitId: 'U', unitLabel: '1', balanceCents: 0, lastPayment: null, singleUnit: false,
-    active: true, tenants: [{ id: 't', name: 'T', initials: 'T' }], rows: [], ...over,
+    active: true, tenants: [{ id: 't', name: 'T', initials: 'T' }], rows: [], payments: [], ...over,
   });
   it('sorts late units first, picks the next unpaid charge and totals balances', () => {
-    const { units, totalBalanceCents } = summarizeUnits([
+    const { units, totalBalanceCents, endedBalanceCents } = summarizeUnits([
       group({ leaseId: 'A', unitId: 'UA', unitLabel: '1', balanceCents: 0, rows: [row('PAID', '2026-10-01', 0), row('SCHEDULED', '2026-11-01', 100)] }),
       group({ leaseId: 'B', unitId: 'UB', unitLabel: '2', balanceCents: 100, rows: [row('LATE', '2026-10-01', 100), row('SCHEDULED', '2026-11-01', 100)] }),
       group({ leaseId: 'C', unitId: 'UC', unitLabel: '10', balanceCents: 50, rows: [row('DUE', '2026-10-15', 50)] }),
       group({ leaseId: 'OLD', unitId: 'UD', unitLabel: '3', active: false, balanceCents: 999 }),
     ]);
-    expect(units.map((u) => [u.unitLabel, u.status])).toEqual([['2', 'LATE'], ['10', 'DUE'], ['1', 'CURRENT']]);
+    // The ended-only unit stays listed (last) but its balance never joins the active total.
+    expect(units.map((u) => [u.unitLabel, u.status])).toEqual([['2', 'LATE'], ['10', 'DUE'], ['1', 'CURRENT'], ['3', 'ENDED']]);
     expect(units[0].nextDue).toEqual({ dueDate: d('2026-11-01'), amountCents: 100 });
     expect(units[1].nextDue?.amountCents).toBe(50);
+    expect(units[3]).toMatchObject({ leaseId: 'OLD', balanceCents: 0, endedBalanceCents: 999, nextDue: null });
     expect(totalBalanceCents).toBe(150);
+    expect(endedBalanceCents).toBe(999);
+  });
+
+  it('keeps one row per unit when two active terms share it', () => {
+    const { units, totalBalanceCents } = summarizeUnits([
+      group({ leaseId: 'NEXT', unitId: 'U1', balanceCents: 0, rows: [row('SCHEDULED', '2027-01-01', 100)] }),
+      group({ leaseId: 'NOW', unitId: 'U1', balanceCents: 100, rows: [row('LATE', '2026-10-01', 100)] }),
+      group({ leaseId: 'PAST', unitId: 'U1', active: false, balanceCents: -20 }),
+    ]);
+    expect(units).toHaveLength(1);
+    expect(units[0]).toMatchObject({ status: 'LATE', balanceCents: 100, endedBalanceCents: -20, activeLeaseCount: 2, endedLeaseCount: 1 });
+    expect(units[0].nextDue).toEqual({ dueDate: d('2027-01-01'), amountCents: 100 });
+    expect(totalBalanceCents).toBe(100);
   });
 });

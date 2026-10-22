@@ -18,6 +18,7 @@ export default async function PropertyPaymentsPage({
       organizationId={session.organizationId}
       scope={scope}
       recording={first(query.record) !== undefined}
+      recordLeaseId={first(query.lease)?.trim() || undefined}
       notice={first(query.notice)}
       remindersHref={`/notifications?propertyId=${id}${scope.unitId ? `&unitId=${scope.unitId}` : ''}`}
     />

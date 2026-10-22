@@ -201,6 +201,51 @@
   border-color: var(--rr-border, #e5e7eb);
   background: var(--rr-primary-tint, #e8eefc);
 }
+.noCharges {
+  margin: 0;
+  padding: 14px 0;
+  border-top: 1px solid #e7edf5;
+  color: var(--design-muted, #64748b);
+  font-size: 13px;
+}
+/* Payment history: every payment on the term, folded under the charges unless there are none. */
+.history {
+  border-top: 1px solid #e7edf5;
+}
+.history summary {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  color: var(--design-primary, #1e3a8a);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.history summary:focus-visible {
+  outline: 2px solid var(--design-primary, #1e3a8a);
+  outline-offset: 2px;
+}
+.historyList {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.historyList li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(110px, auto);
+  grid-template-areas: 'main status amount';
+  align-items: center;
+  gap: 4px 14px;
+  padding: 10px 0;
+  border-top: 1px dashed #e7edf5;
+}
+.card .historyList :global(.badge) {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.detailLease {
+  grid-column: 1 / -1;
+}
 .detailFacts {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -265,6 +310,12 @@
   }
   .view {
     justify-self: end;
+  }
+  .historyList li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'main amount'
+      'status .';
   }
   .groupMeta {
     margin-left: 20px;

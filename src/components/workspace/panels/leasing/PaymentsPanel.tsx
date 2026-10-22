@@ -9,7 +9,12 @@ import {
   summarizeUnits,
 } from '@/lib/ledger';
 import type { ScopeFilter } from '@/lib/workspace/scope';
-import { ledgerDate, toLastPayment, toLedgerRows } from '@/components/payments/ledger-view';
+import {
+  ledgerDate,
+  toLastPayment,
+  toLedgerRows,
+  toPaymentViews,
+} from '@/components/payments/ledger-view';
 import { PaymentsBoard, type BoardGroup } from './PaymentsBoard';
 import styles from './leasing.module.css';
 
@@ -32,12 +37,15 @@ export async function PaymentsPanel({
   organizationId,
   scope,
   recording,
+  recordLeaseId,
   notice,
   remindersHref,
 }: {
   organizationId: string;
   scope: ScopeFilter;
   recording: boolean;
+  /** Lease the caller asked to record a payment for; validated against this scope's active leases. */
+  recordLeaseId?: string;
   notice?: string;
   remindersHref?: string;
 }) {
@@ -66,6 +74,7 @@ export async function PaymentsPanel({
     tenantNames: group.tenants.map((t) => t.name).join(', '),
     balanceCents: group.balanceCents,
     rows: toLedgerRows(group.rows),
+    payments: toPaymentViews(group.payments),
   }));
   // Say exactly what the balance covers so unit, property and lease views can be compared.
   const scoped = ledger.groups.find((g) => g.active) ?? ledger.groups[0];
@@ -94,7 +103,7 @@ export async function PaymentsPanel({
         />
       )}
       <PaymentsBoard
-        key={`${scope.propertyId}:${scope.unitId ?? 'all'}`}
+        key={`${scope.propertyId}:${scope.unitId ?? 'all'}:${recordLeaseId ?? ''}`}
         propertyId={scope.propertyId ?? ''}
         unitId={scope.unitId}
         scopeLabel={scopeLabel}
@@ -115,6 +124,8 @@ export async function PaymentsPanel({
               unitLabel: u.unitLabel,
               tenantNames: u.tenantNames,
               balanceCents: u.balanceCents,
+              endedBalanceCents: u.endedBalanceCents,
+              endedLeaseCount: u.endedLeaseCount,
               status: u.status,
               nextDue: u.nextDue && {
                 dateLabel: ledgerDate(u.nextDue.dueDate),
@@ -124,6 +135,7 @@ export async function PaymentsPanel({
           }
         }
         openRecord={recording}
+        recordLeaseId={recordLeaseId}
         today={now.toISOString().slice(0, 10)}
       />
     </section>

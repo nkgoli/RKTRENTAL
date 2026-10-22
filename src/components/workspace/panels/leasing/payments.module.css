@@ -3,6 +3,18 @@
   color: var(--design-muted, #64748b);
   font-size: 13px;
 }
+.warning {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--rr-warn-bg, #fffaeb);
+  color: var(--rr-warn, #b54708);
+  font-size: 13px;
+  font-weight: 500;
+}
+.ledger td small.note {
+  display: block;
+}
 .connection {
   padding: 4px 12px;
   border-radius: 999px;

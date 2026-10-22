@@ -102,7 +102,7 @@ describe('lease workspace', () => {
     expect(html).toContain('aria-label="Agreement signing"');
     expect(html).toContain('data-state="done"');
     expect(html).toContain('Signed Nov 18, 2025');
-    expect(html).toContain('aria-label="Review agreement &amp; signatures"');
+    expect(html).toContain('aria-label="Agreement and signatures"');
     expect(html).toContain('aria-label="Open owner / lessor signing page"');
     expect(html).toContain('href="/sign/leases/lease-1"');
     expect(html).not.toContain('Review signatures');
@@ -111,10 +111,29 @@ describe('lease workspace', () => {
     expect(html).toContain('data-state="attention"');
     expect(html).toContain('Agreement not sent for signature');
     expect(html).toContain('class="action action-primary"');
+    // The visible words lead the accessible name, which keeps the agreement context.
+    expect(html).toMatch(
+      /aria-label="Review signatures on the lease agreement"[^>]*>.*?<span>Review signatures<\/span>/,
+    );
     // The agreement tab already holds the signer panel, so the bar keeps only the signing link.
     html = await render({ tab: 'agreement' });
-    expect(html).not.toContain('aria-label="Review agreement &amp; signatures"');
+    expect(html).not.toContain('Review signatures on the lease agreement');
     expect(html).toContain('href="/sign/leases/lease-1"');
+  });
+
+  it('includes the visible text in every labelled action’s accessible name', async () => {
+    for (const eSignStatus of ['SIGNED', 'SENT', 'NOT_SENT']) {
+      fixture.lease.eSignStatus = eSignStatus;
+      for (const tab of ['overview', 'agreement', 'documents', 'payments', 'activity']) {
+        const html = await render({ tab });
+        const labelled = [
+          ...html.matchAll(/<a [^>]*aria-label="([^"]+)"[^>]*>(?:<svg.*?<\/svg>)?<span>([^<]+)<\/span>/g),
+        ];
+        expect(labelled.length).toBeGreaterThan(0);
+        for (const [, label, text] of labelled)
+          expect(label.toLowerCase(), `${tab}: "${text}"`).toContain(text.toLowerCase());
+      }
+    }
   });
 
   it('keeps editing, notice, templates and termination in the agreement', async () => {
@@ -252,11 +271,37 @@ describe('lease workspace', () => {
     ])
       expect(html).toContain(text);
     expect(html).toContain('$1,350.00 left');
-    expect(html).toContain('/properties/property-1/payments?unit=unit-1&amp;record=1');
+    // Record payment names this lease so a sibling term on the unit is never chosen instead.
+    expect(html).toContain('/properties/property-1/payments?unit=unit-1&amp;record=1&amp;lease=lease-1');
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-10-15T12:00:00Z'));
     const overview = await render().finally(() => vi.useRealTimers());
     expect(overview).toContain('$1,425.00');
     expect(overview).toContain('Oct 3, 2026');
+  });
+
+  it('shows payment-only history and credit on an ended lease without inventing charges', async () => {
+    fixture.lease.status = 'ENDED';
+    fixture.lease.payments = [
+      {
+        id: 'p-only',
+        leaseId: 'lease-1',
+        amount: '100.00',
+        status: 'SUCCEEDED',
+        paidAt: day('2025-06-01'),
+        createdAt: day('2025-06-01'),
+        providerReference: 'manual:lease-1:2025-06-01',
+      },
+    ];
+    const html = await render({ tab: 'payments' });
+    expect(html).toContain('Credit on account');
+    expect(html).toContain('No charges on this lease · $100.00 credit.');
+    expect(html).toContain('Payment history (1 payment)');
+    expect(html).toMatch(/<details[^>]* open=""/);
+    expect(html).toContain('Jun 1, 2025 · Cash or check (recorded manually)');
+    expect(html).toContain('$100.00 credit');
+    expect(html).not.toContain('No charges due yet.');
+    // An ended lease cannot take a new payment from here.
+    expect(html).not.toContain('record=1');
   });
 });

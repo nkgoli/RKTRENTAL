@@ -91,6 +91,9 @@
   background: #edf0f5;
   cursor: default;
 }
+.deleteDraft {
+  flex: none;
+}
 
 .intro {
   display: flex;
@@ -1220,13 +1223,29 @@ button.step:hover .stepLabel {
   .pickerFooter .btn {
     width: 100%;
   }
+  /* The page is a flex column; without flex: none the wrapped bar shrinks to its min-height and
+     the second row spills over the steps. Row one: back and place; row two: status and actions. */
   .topbar {
+    flex: none;
     flex-wrap: wrap;
     gap: 8px;
   }
+  .place {
+    flex-basis: calc(100% - 52px);
+  }
   .saveStatus {
-    width: 100%;
-    padding-left: 48px;
+    flex: 1;
+    min-width: 0;
+    padding-left: 52px;
+  }
+  /* Icon only beside Save and exit; the accessible name and tooltip keep the full label. */
+  .deleteDraft {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
+  .deleteDraft > span {
+    display: none;
   }
 }
 

@@ -1,4 +1,4 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -26,7 +26,7 @@ const renderButton = (props: Partial<Parameters<typeof DeleteDraftButton>[0]> = 
   render(
     <DeleteDraftButton
       leaseId="lease-synthetic"
-      placeLabel="Synthetic Court Â· Unit 2"
+      placeLabel="Synthetic Court · Unit 2"
       tenantName="Synthetic Tenant"
       {...props}
     />,
@@ -37,12 +37,12 @@ describe('Delete draft confirmation', () => {
     const user = userEvent.setup();
     renderButton({ renewal: true, fileCount: 2 });
     const trigger = screen.getByRole('button', {
-      name: 'Delete draft lease for Synthetic Court Â· Unit 2',
+      name: 'Delete draft lease for Synthetic Court · Unit 2',
     });
     expect(trigger).toHaveProperty('textContent', 'Delete draft');
     await user.click(trigger);
     const dialog = screen.getByRole('dialog');
-    expect(dialog.textContent).toContain('Delete draft lease for Synthetic Court Â· Unit 2?');
+    expect(dialog.textContent).toContain('Delete draft lease for Synthetic Court · Unit 2?');
     expect(dialog.textContent).toContain('for Synthetic Tenant');
     expect(dialog.textContent).toContain('and 2 uploaded files');
     expect(dialog.textContent).toContain('The lease it renews stays active and unchanged.');

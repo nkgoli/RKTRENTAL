@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { deleteDraftLeaseAction, type DeleteDraftState } from '@/app/(manager)/leases/actions';
 import { Action, Alert } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -22,6 +22,9 @@ export function DeleteDraftButton({
   fileCount = 0,
   returnTo = 'leases',
   text = 'Delete draft',
+  disabled = false,
+  onPendingChange,
+  className,
 }: {
   leaseId: string;
   /** Property and unit, as shown in the surrounding list ("18 Elm Street · Unit 2"). */
@@ -34,12 +37,20 @@ export function DeleteDraftButton({
   returnTo?: DeleteDraftReturn;
   /** Visible text; null renders an icon-only action named by the full label. */
   text?: string | null;
+  /** Another operation on the draft (a save or send) is in flight; the action cannot open. */
+  disabled?: boolean;
+  /** Reports the confirmed delete starting and settling, so the host can hold its own writes. */
+  onPendingChange?: (pending: boolean) => void;
+  className?: string;
 }) {
   const [state, action, pending] = useActionState(deleteDraftLeaseAction, initial);
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState<DeleteDraftState>(initial);
   // Success redirects on the server, so `pending` lasts until the next page loads.
   const busy = pending;
+  useEffect(() => {
+    onPendingChange?.(busy);
+  }, [busy, onPendingChange]);
   const error = state.message && state !== dismissed ? state.message : null;
   const subject = `draft lease for ${placeLabel}`;
   const files =
@@ -51,6 +62,8 @@ export function DeleteDraftButton({
         tone="danger"
         text={text ?? undefined}
         label={`Delete ${subject}`}
+        className={className}
+        disabled={disabled}
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
       />

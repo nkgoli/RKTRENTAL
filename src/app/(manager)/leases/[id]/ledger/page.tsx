@@ -80,6 +80,8 @@ export default async function LeaseLedgerPage({
         eyebrow="Rent ledger"
         title={tenantNames ? `${title} · ${tenantNames}` : title}
         back={{ href: unitPayments, label: 'Payments' }}
+        // The Leases section's "Create lease" shortcut does not belong on a ledger.
+        actions={[]}
         meta={[
           tenantNames,
           lease.eSignStatus === 'SIGNED' ? 'Signed lease' : 'Lease not fully signed',

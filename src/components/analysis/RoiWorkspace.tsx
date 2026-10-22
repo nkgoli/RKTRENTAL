@@ -1188,10 +1188,10 @@ export function RoiWorkspace({
                     onPanel={changeChart}
                   />
                   {chart === 'equity' && result && (
-                    <>
+                    <div className={styles.stack}>
                       <OutcomeCard result={result} />
                       <ProjectionMilestones result={result} />
-                    </>
+                    </div>
                   )}
                 </div>
                 <div

@@ -487,8 +487,9 @@
     font-size: 11px;
     padding-bottom: 13px;
   }
+  /* All five sections fit a 390px row, so nothing depends on scrolling the row after a resize. */
   .tabs {
-    gap: 20px;
+    gap: 14px;
   }
   .tabs a {
     min-height: 48px;

@@ -37,14 +37,27 @@ Statuses are shared: Paid, Partially paid, Late, Due, Scheduled.
 - Rows are newest first and nothing is truncated. The lease tab shows the full statement, including
   scheduled rent and assessed fees, not a three-row excerpt.
 - A multi-unit property without a unit filter keeps the per-unit balance table (stacked cards
-  at 390px) inside the same card. The table total equals Balance due.
+  at 390px) inside the same card. The table total equals Balance due. Units whose leases have all
+  ended stay listed last with an **Ended** status, the previous tenant and "$x on ended lease"
+  (or "$x credit on ended lease"); that amount never joins Balance due or the total. Two ACTIVE
+  terms on one unit stay one row whose balance is the sum of both.
+- Every lease term lists its **Payment history** (date, method, reference, Received/Pending/Failed/
+  Refunded, and any credit not applied to a listed charge). It is folded under the charges, and open
+  when the term has no charges, so payment-only history reads "No charges on this lease · $x credit."
+  instead of disappearing. Group headings say "Credit $x" when payments exceed charges.
+- Charge Details name the lease term (heading and period) so the term stays identifiable.
 
 ## Actions
 
 - Property/unit: Create a charge (primary), Record payment, Reminders & history, Settings, row
   selection with "Record payment for selected" and per-row Details (applied payments).
 - Lease: Record payment (opens the unit/property Payments with the dialog) and a trailing-arrow
-  link to the unit/property Payments for charges and reminders.
+  link to the unit/property Payments for charges and reminders. The link carries lease=<id>; the
+  dialog preselects exactly that lease when it is ACTIVE in the scope. A stale, ended or foreign id
+  shows a warning and an empty, required lease choice; it never falls back to another lease. With
+  several active terms and no target nothing is preselected, and options read
+  "Unit · Tenant · Period". The server action also accepts only an ACTIVE lease in the scope.
 
 Equivalent-scope regressions: `tests/ledger/rent-ledger-scope.test.ts`. Component behaviour:
-`tests/payments/rent-ledger.test.tsx`.
+`tests/payments/rent-ledger.test.tsx`. Browser proof (1280px and 390px, isolated database on port 55434):
+`tests/ledger/ledger-history.spec.ts` with `tests/ledger/ledger-review-fixtures.ts`.

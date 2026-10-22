@@ -331,7 +331,8 @@ export function PaymentsBoard({
                         {u.status === 'ENDED' ? '—' : formatMoney(u.balanceCents)}
                         {u.endedBalanceCents !== 0 && (
                           <small>
-                            {formatMoney(u.endedBalanceCents)} on ended{' '}
+                            {formatMoney(Math.abs(u.endedBalanceCents))}
+                            {u.endedBalanceCents < 0 ? ' credit' : ''} on ended{' '}
                             {u.endedLeaseCount === 1 ? 'lease' : 'leases'}
                           </small>
                         )}

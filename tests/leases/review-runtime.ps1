@@ -4,6 +4,8 @@ $reviewRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $reviewData = Join-Path $PSScriptRoot '.runtime'
 $recordPath = Join-Path $reviewData 'runtime.json'
 if ($Action -eq 'Start') {
+  # A fresh checkout has no .runtime yet; logs and the process record live there.
+  New-Item -ItemType Directory -Force $reviewData | Out-Null
   $env:DATABASE_URL = 'postgresql://rocketrental:rocketrental@localhost:55434/rocketrental?schema=public'
   $env:ROCKETRENTAL_AUTH_SECRET = 'lease-detail-local-fixture-only-01234567890123456789'
   $env:ROCKETRENTAL_SANDBOX = 'true'

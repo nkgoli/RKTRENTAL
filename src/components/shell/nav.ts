@@ -74,7 +74,15 @@ export const managerNav: ManagerNavGroup[] = [
         label: 'Tenants',
         href: '/tenants',
         icon: 'tenants',
-        actions: [{ label: 'Add tenant', href: '/tenants?add=1', primary: true, icon: 'plus' }],
+        // Tenants are created from approved applicants, so the shortcut leads to Applications.
+        actions: [
+          {
+            label: 'Review applications',
+            href: '/applications',
+            primary: true,
+            icon: 'arrow-right',
+          },
+        ],
       },
     ],
   },

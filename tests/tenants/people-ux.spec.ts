@@ -25,7 +25,11 @@ for (const width of [1280, 390]) {
     await page.getByRole('searchbox').press('Enter');
     await expect(page).toHaveURL(/view=directory/);
     await expect(page).toHaveURL(/property=seed-property-maple/);
-    await page.getByRole('link', { name: /Alex Rivera alex.rivera/ }).click();
+    await expect(page).toHaveURL(/q=alex.rivera/);
+    await page
+      .getByRole('link', { name: /Alex Rivera/ })
+      .first()
+      .click();
     await expect(page.getByRole('heading', { name: 'Alex Rivera', exact: true })).toBeVisible();
     await expect(page.locator('#contact a').first()).toHaveAttribute(
       'href',
@@ -51,22 +55,23 @@ for (const width of [1280, 390]) {
     await page.getByRole('link', { name: 'Back to tenants' }).click();
     await expect(page).toHaveURL(/q=alex.rivera/);
     await page.getByRole('link', { name: 'Status', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Tenant status' })).toBeVisible();
-    const checklist = page.getByRole('region', { name: 'Tenant setup checklist' });
+    await expect(page.getByRole('heading', { name: 'Payment setup' })).toBeVisible();
+    const checklist = page.getByRole('region', { name: 'Tenant payment setup' });
     if (width === 390)
       expect(await checklist.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
     expect((await new AxeBuilder({ page }).include('main').analyze()).violations).toEqual([]);
-    await page.getByRole('link', { name: '+ Add tenant', exact: true }).click();
-    await page
-      .locator('#add-tenant')
-      .getByRole('button', { name: 'Save tenant', exact: true })
-      .click();
-    await expect(page.locator('#add-tenant [name=name]')).toBeFocused();
-    await expect(page.locator('#add-tenant [name=name]')).toHaveAttribute('aria-invalid', 'true');
-    await expect(page.locator('#add-tenant [name=propertyId]')).toHaveValue('seed-property-maple');
-    expect((await new AxeBuilder({ page }).include('#add-tenant').analyze()).violations).toEqual(
-      [],
-    );
+    // Tenants come from approved applicants: no manual creation, Applications keeps the property.
+    await expect(page.getByRole('link', { name: /Add (a )?tenant/ })).toHaveCount(0);
+    const review = page.getByRole('link', { name: 'Review applications', exact: true });
+    await expect(review).toHaveAttribute('href', '/applications?propertyId=seed-property-maple');
+    await review.focus();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/applications\?propertyId=seed-property-maple$/);
+    await page.goto('/tenants?view=directory&property=seed-property-maple&add=1');
+    await expect(page).toHaveURL(/\/applications\?propertyId=seed-property-maple$/);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.goto('/tenants?add=1');
+    await expect(page).toHaveURL(/\/applications$/);
     await page.goto('/tenants?q=zz-no-match-ux');
     await expect(page.getByRole('heading', { name: 'No tenants match this view' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(

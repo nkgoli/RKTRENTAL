@@ -1,3 +1,11 @@
+/**
+ * Tenants join through the applicant workflow, so creation entry points lead to Applications,
+ * keeping the directory's property scope when one is selected.
+ */
+export function applicationsHref(propertyId?: string): string {
+  return propertyId ? `/applications?${new URLSearchParams({ propertyId })}` : '/applications';
+}
+
 /** Keep directory state without allowing a return link outside the tenant workspace. */
 export function tenantReturnHref(value: unknown): string {
   if (typeof value !== 'string') return '/tenants?view=directory';

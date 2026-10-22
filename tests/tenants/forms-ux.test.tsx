@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { AddTenantForm, MoveOutDialog } from '@/app/(manager)/tenants/TenantForms';
+import { EditTenantForm, MoveOutDialog } from '@/app/(manager)/tenants/TenantForms';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn() }) }));
 beforeEach(() => {
   HTMLDialogElement.prototype.showModal = function () {
@@ -14,10 +14,6 @@ beforeEach(() => {
 });
 
 afterEach(cleanup);
-const properties = [
-  { id: 'maple', name: 'Maple Court', units: [{ id: '4b', number: '4B' }] },
-  { id: 'elm', name: 'Elm Street', units: [] },
-];
 
 describe('tenant form feedback', () => {
   it('requires confirmation before recording a move-out and explains today semantics', async () => {
@@ -39,37 +35,47 @@ describe('tenant form feedback', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(action).not.toHaveBeenCalled();
   });
-  it('starts in the selected property and clears the unit when property changes', async () => {
-    const user = userEvent.setup();
-    render(<AddTenantForm properties={properties} initialPropertyId="maple" action={vi.fn()} />);
-    expect(screen.getByRole('dialog', { name: 'Add tenant' })).toBeTruthy();
-    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Full name' }));
-    const unit = screen.getByRole('combobox', { name: 'Unit' }) as HTMLSelectElement;
-    await user.selectOptions(unit, '4b');
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Property' }), 'elm');
-    expect((screen.getByRole('combobox', { name: 'Unit' }) as HTMLSelectElement).value).toBe('');
-    expect(screen.getByRole('combobox', { name: 'Unit' }).hasAttribute('disabled')).toBe(true);
-    expect(screen.getByText('No vacant units available')).toBeTruthy();
-  });
-  it('focuses the first rejected field and associates its returned error', async () => {
+  it('keeps profile editing: prefills values and focuses the first rejected field', async () => {
     const user = userEvent.setup();
     render(
-      <AddTenantForm
-        properties={properties}
+      <EditTenantForm
+        tenant={{
+          name: 'Demo Tenant',
+          email: 'demo.tenant@example.test',
+          phone: null,
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+          emergencyContactRelationship: null,
+        }}
+        cancelHref="/tenants/demo"
         action={async () => ({
           errors: { email: 'Enter a valid email.' },
           values: { name: 'Demo Tenant', email: 'invalid' },
         })}
       />,
     );
-    await user.type(screen.getByRole('textbox', { name: 'Full name' }), 'Demo Tenant');
-    await user.type(screen.getByRole('textbox', { name: 'Email' }), 'invalid');
-    await user.click(screen.getByRole('button', { name: 'Save tenant' }));
-    const email = screen.getByRole('textbox', { name: /Email/ });
-    await waitFor(() => expect(document.activeElement).toBe(email));
-    expect(email.getAttribute('aria-invalid')).toBe('true');
-    expect(document.getElementById(email.getAttribute('aria-describedby')!)?.textContent).toBe(
+    expect(screen.getByRole('textbox', { name: 'Full name' })).toHaveProperty(
+      'value',
+      'Demo Tenant',
+    );
+    const email = screen.getByRole('textbox', { name: 'Email' });
+    await user.clear(email);
+    await user.type(email, 'invalid');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('textbox', { name: /Email/ })),
+    );
+    const rejected = screen.getByRole('textbox', { name: /Email/ });
+    expect(rejected.getAttribute('aria-invalid')).toBe('true');
+    expect(document.getElementById(rejected.getAttribute('aria-describedby')!)?.textContent).toBe(
       'Enter a valid email.',
     );
+    expect(screen.getByRole('link', { name: 'Cancel' }).getAttribute('href')).toBe('/tenants/demo');
+  });
+  it('no longer offers a standalone add-tenant form', async () => {
+    const forms = await import('@/app/(manager)/tenants/TenantForms');
+    const actions = await import('@/app/(manager)/tenants/actions');
+    expect('AddTenantForm' in forms).toBe(false);
+    expect('addTenantAction' in actions).toBe(false);
   });
 });

@@ -22,7 +22,6 @@ import {
   resolveReturnsPeriod,
 } from '@/lib/returns';
 import { RangePicker, YearOverYear } from '@/components/returns/RangePicker';
-import { addExpenseAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,6 +73,10 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
       ...extra,
     }).toString();
   const exportHref = `/returns/export?${query()}`;
+  // Opening, cancelling and submitting Add expense reload the report as a document, like the
+  // range chips: a same-route client transition here can stall in production builds and leave
+  // the form open (docs/verification/expense-cancel.md).
+  const addHref = `/returns?${query({ add: '1' })}#add-expense`;
   const metrics = scope?.metrics;
   const occupancy =
     (scope?.units ?? 0) > 0 ? Math.round(((scope?.occupied ?? 0) / (scope?.units ?? 1)) * 100) : 0;
@@ -402,8 +405,6 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
               <EmptyState
                 title="No expenses this period"
                 description="Record an expense to include it in your returns."
-                action="Add expense"
-                href={`/returns?${query({ add: '1' })}#add-expense`}
               />
             )}
             {expenseBreakdown.map((entry) => (
@@ -429,13 +430,9 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             ))}
           </div>
           <div style={{ marginTop: 16 }}>
-            <Button
-              href={`/returns?${query({ add: '1' })}#add-expense`}
-              variant="secondary"
-              size="sm"
-            >
+            <a className="btn btn-secondary btn-sm" href={addHref}>
               + Add expense
-            </Button>
+            </a>
           </div>
         </Card>
         <Card>
@@ -474,12 +471,12 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           <CardHeader
             title="Add expense"
             action={
-              <Button href={`/returns?${query()}`} size="sm" variant="ghost">
+              <a className="btn btn-ghost btn-sm" href={`/returns?${query()}`}>
                 Cancel
-              </Button>
+              </a>
             }
           />
-          <form action={addExpenseAction} className="form">
+          <form method="post" action="/returns/expense" className="form">
             {Object.entries(range).map(([name, value]) => (
               <input key={name} type="hidden" name={name} value={value} />
             ))}

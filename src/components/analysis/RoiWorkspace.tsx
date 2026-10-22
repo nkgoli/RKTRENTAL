@@ -41,10 +41,9 @@ import {
   scopedWhatIf,
   simulate,
   whatIfEntryFrom,
-  type WhatIfMetricKey,
   type WhatIfState,
 } from '@/lib/analysis/what-if';
-import { TRIGGER_ID, WhatIfPanel, WhatIfStrip } from './RoiWhatIf';
+import { TRIGGER_ID, WhatIfPanel, WhatIfStatus } from './RoiWhatIf';
 import w from './what-if.module.css';
 import { PropertySelector } from './PropertySelector';
 import { AnalysisTabs, RoiProjections } from './RoiProjections';
@@ -130,25 +129,6 @@ const SECTIONS = [
   { id: 'benchmarks', label: 'Benchmarks' },
   { id: 'compare', label: 'Compare' },
 ] as const;
-/** The metrics each view shows, compared baseline → what if in its simulated strip. */
-const VIEW_METRICS: Record<string, WhatIfMetricKey[]> = {
-  summary: ['monthlyCashFlow', 'annualCashFlow', 'noi', 'cashOnCash', 'capRate', 'dscr', 'irr'],
-  actual: [
-    'effectiveGrossIncome',
-    'totalOperatingExpenses',
-    'noi',
-    'annualDebtService',
-    'annualCashFlow',
-  ],
-  equity: ['finalEquity', 'irr', 'equityMultiple'],
-  'cash-flow': ['annualCashFlow', 'cumulativeCashFlow'],
-  expenses: ['totalOperatingExpenses', 'noi'],
-  amortization: ['loanAmount', 'annualDebtService'],
-  exit: ['irr', 'equityMultiple', 'finalEquity'],
-  sensitivity: ['cashOnCash', 'irr'],
-  benchmarks: ['irr', 'equityMultiple', 'cashOnCash'],
-  compare: ['irr', 'equityMultiple', 'cashOnCash', 'annualCashFlow'],
-};
 const SlidersIcon = () =>
   glyph('M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6');
 const WhatIfIcon = () => glyph('M3 17l6-6 4 4 8-8M14 7h7v7');
@@ -834,23 +814,6 @@ export function RoiWorkspace({
     );
   }
   const metrics = shownResult?.summaryMetrics;
-  /** The simulated strip for one view: baseline → what if for the metrics it shows. */
-  const strip = (keys: WhatIfMetricKey[], note?: string, series?: 'equity' | 'cashFlow') =>
-    simulating && simulation && result && calculatedPayload ? (
-      <WhatIfStrip
-        name={caseName}
-        saved={!!savedCase}
-        values={caseValues ?? {}}
-        base={calculatedPayload}
-        baseline={result}
-        simulation={simulation}
-        metrics={keys}
-        note={note}
-        series={series}
-        onEdit={openWhatIf}
-        onReset={() => setWhatIf(emptyWhatIf(selected))}
-      />
-    ) : null;
   // Fields whose latest evidence is a fictional demo value the manager has not replaced.
   const demoFields = payload
     ? allFields.flatMap((f) => {
@@ -1180,6 +1143,16 @@ export function RoiWorkspace({
                     </label>
                   </div>
                 </div>
+                {simulating && simulation && result && (
+                  <WhatIfStatus
+                    name={caseName}
+                    saved={!!savedCase}
+                    changes={changedCount}
+                    simulation={simulation}
+                    onEdit={openWhatIf}
+                    onReset={() => setWhatIf(emptyWhatIf(selected))}
+                  />
+                )}
                 <div className={whatIfOpen && !narrow ? w.split : undefined}>
                   <div className={w.main}>
                     <div
@@ -1188,10 +1161,6 @@ export function RoiWorkspace({
                       aria-labelledby="roi-section-tab-actual"
                       hidden={view !== 'actual'}
                     >
-                      {strip(
-                        VIEW_METRICS.actual,
-                        'Recorded rent payments and expenses are actual records and are not simulated; only the projected side changes.',
-                      )}
                       <RoiActuals
                         propertyId={selected}
                         propertyName={property?.name ?? 'Property'}
@@ -1215,12 +1184,6 @@ export function RoiWorkspace({
                         aria-labelledby={`roi-section-tab-${panel}`}
                         hidden={view !== panel}
                       >
-                        {strip(
-                          VIEW_METRICS[panel],
-                          panel === 'compare'
-                            ? 'Market reference returns are not simulated. Saved cases below keep their own overrides; a temporary what-if joins them as an unsaved column.'
-                            : 'Market reference returns are reference data and are not simulated.',
-                        )}
                         <RoiBenchmarks
                           key={`${selected}-${panel}`}
                           selected={benchmarks}
@@ -1272,19 +1235,6 @@ export function RoiWorkspace({
                       aria-labelledby="roi-section-tab-charts"
                       hidden={view !== 'charts'}
                     >
-                      {strip(
-                        VIEW_METRICS[chart] ?? VIEW_METRICS.equity,
-                        chart === 'sensitivity'
-                          ? 'Sensitivity grids run around the what-if values.'
-                          : chart === 'expenses'
-                            ? 'Projected budgets only; recorded expenses are not simulated.'
-                            : undefined,
-                        chart === 'equity' || chart === 'exit'
-                          ? 'equity'
-                          : chart === 'cash-flow'
-                            ? 'cashFlow'
-                            : undefined,
-                      )}
                       <RoiProjections
                         key={selected}
                         result={shownResult}
@@ -1311,7 +1261,6 @@ export function RoiWorkspace({
                       hidden={view !== 'summary'}
                     >
                       <div className={styles.stack}>
-                        {strip(VIEW_METRICS.summary)}
                         {!result && (
                           <section className={`${styles.card} ${styles.empty}`}>
                             <h2>No projection yet</h2>

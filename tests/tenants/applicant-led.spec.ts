@@ -20,6 +20,7 @@ for (const width of [1280, 390]) {
 
     // Directory: no manual creation; header leads to Applications with the property kept.
     await page.goto('/tenants?view=directory&property=seed-property-maple');
+    await page.waitForLoadState('networkidle');
     const review = page.getByRole('link', { name: 'Review applications', exact: true });
     await expect(review).toHaveAttribute('href', '/applications?propertyId=seed-property-maple');
     await expect(page.getByRole('link', { name: /Add (a )?tenant/ })).toHaveCount(0);
@@ -39,14 +40,19 @@ for (const width of [1280, 390]) {
     await page.screenshot({ path: `${shots}/review-focus-${width}.png` });
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/\/applications\?propertyId=seed-property-maple$/);
+    await expect(page.getByRole('heading', { name: 'Applications', level: 1 })).toBeVisible();
+    await expect(page.getByRole('searchbox', { name: 'Search applicants or units' })).toBeVisible();
 
     // Legacy add links never reopen a form.
     await page.goto('/tenants?view=directory&property=seed-property-maple&add=1');
     await expect(page).toHaveURL(/\/applications\?propertyId=seed-property-maple$/);
+    await expect(page.getByRole('heading', { name: 'Applications', level: 1 })).toBeVisible();
+    await expect(page.getByRole('searchbox', { name: 'Search applicants or units' })).toBeVisible();
     await expect(page.locator('#add-tenant, [name=unitId]')).toHaveCount(0);
     await page.screenshot({ path: `${shots}/legacy-add-${width}.png` });
     await page.goto('/tenants?add=1');
     await expect(page).toHaveURL(/\/applications$/);
+    await expect(page.getByRole('heading', { name: 'Applications', level: 1 })).toBeVisible();
 
     // Filtered empty state still offers Clear filters only.
     await page.goto('/tenants?view=directory&q=zz-no-match-ux');
@@ -64,12 +70,24 @@ for (const width of [1280, 390]) {
     await expect(page.getByLabel('Note', { exact: true })).toBeVisible();
     await expect(page.locator('#lease-summary a').first()).toBeVisible();
     await page.getByRole('link', { name: 'Edit profile', exact: true }).click();
+    await expect(page).toHaveURL(/[?&]edit=1#edit-profile$/);
+    await page.waitForLoadState('networkidle');
     const edit = page.locator('#edit-profile');
-    await expect(edit.getByLabel('Full name', { exact: true })).toHaveValue('Alex Rivera');
-    await edit.getByLabel('Full name', { exact: true }).focus();
+    const fullName = edit.getByLabel('Full name', { exact: true });
+    await expect(fullName).toHaveValue('Alex Rivera');
+    // Wait for a visible form response before keyboard navigation; an invalid save writes nothing.
+    await fullName.fill('');
+    await edit.getByRole('button', { name: 'Save changes', exact: true }).click();
+    await expect(fullName).toHaveAttribute('aria-invalid', 'true');
+    await expect(fullName).toBeFocused();
+    await fullName.fill('Alex Rivera unsaved edit');
+    await expect(fullName).toHaveValue('Alex Rivera unsaved edit');
     await page.screenshot({ path: `${shots}/edit-profile-${width}.png` });
-    await edit.getByRole('link', { name: 'Cancel', exact: true }).focus();
-    await page.keyboard.press('Enter');
+    const cancel = edit.getByRole('link', { name: 'Cancel', exact: true });
+    await cancel.focus();
+    await expect(cancel).toBeFocused();
+    await cancel.press('Enter');
+    await expect(page).not.toHaveURL(/[?&]edit=1/);
     await expect(page.locator('#edit-profile')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Alex Rivera', exact: true })).toBeVisible();
   });

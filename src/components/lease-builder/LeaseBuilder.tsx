@@ -54,6 +54,7 @@ export type LeaseBuilderProps = {
   sourceLabel?: string;
   /** Extra guidance for the Tenants step, e.g. an applicant who is not a tenant yet. */
   notice?: string;
+  noticeApplicantId?: string;
   backHref: string;
   /** Property of the lease's unit; read from backHref when omitted. */
   propertyId?: string;
@@ -266,6 +267,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
       onReviewApplicants={reviewApplicants}
       sourceLabel={props.sourceLabel}
       notice={props.notice}
+      noticeApplicantId={props.noticeApplicantId}
     />,
     <OptionsStep key="options" draft={draft} update={update} errors={errors} />,
     <TemplateTermsStep

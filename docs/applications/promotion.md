@@ -17,7 +17,7 @@ Promotion creates no lease, occupancy, charge, document, screening consent or no
 
 The transaction takes an organization-scoped PostgreSQL advisory lock, shared with the existing tenant create/update services, then an application row lock. This serializes competing promotions, different applications with the same email, and tenant contact creation/edits. All current application tenant-contact writers participate; direct administrative SQL/imports must follow this lock protocol or otherwise coordinate contact writes. Historical duplicate contacts are preserved rather than rejected by a new global uniqueness migration.
 
-Lease links deliberately use `unit` and `tenant` without the legacy `applicant` query parameter: the current wizard gives its email-based applicant lookup priority over a supplied tenant. Passing only the stable tenant ID avoids selecting a different contact after an email edit. Wizard labels and its general applicant picker remain owned by the separate wizard task.
+Lease links use `unit` and the saved `tenant` ID. The general wizard applicant picker and legacy `?applicant=` links also resolve the saved `promotedTenantId`, only for an approved application whose tenant is in the manager's organization. An email match alone never makes an applicant selectable. Unpromoted applicants lead to their scoped Applications review; following the link saves the draft first. Deliberate existing-tenant selection, renewal tenants and saved draft selections retain their existing behavior.
 
 ## Migration
 
@@ -46,15 +46,15 @@ Browser MCP sessions reset during checks; completed flows were resumed after rea
 Screenshots are local, excluded from Git, in this retained checkout:
 `C:/Users/nkgol/RocketRental/.orchestra/workspaces/@6i6c2szp8fsilp8xf1k/repository`.
 
-| Flow | Desktop | 390px |
-| --- | --- | --- |
-| Invitation | `.playwright-mcp/promotion-invitation-1280.png` | `.playwright-mcp/promotion-invitation-390.png` |
-| Submission | `.playwright-mcp/promotion-submitted-1280.png` | `.playwright-mcp/promotion-submitted-390.png` |
-| Review | `.playwright-mcp/promotion-review-1280.png` | `.playwright-mcp/promotion-review-390.png` |
-| Approved | `.playwright-mcp/promotion-approved-1280.png` | `.playwright-mcp/promotion-approved-390.png` |
-| Promoted | `.playwright-mcp/promotion-linked-1280.png` | `.playwright-mcp/promotion-linked-390.png` |
-| Profile | `.playwright-mcp/promotion-profile-1280.png` | `.playwright-mcp/promotion-profile-390.png` |
-| Directory | `.playwright-mcp/promotion-directory-1280.png` | `.playwright-mcp/promotion-directory-390.png` |
+| Flow            | Desktop                                              | 390px                                               |
+| --------------- | ---------------------------------------------------- | --------------------------------------------------- |
+| Invitation      | `.playwright-mcp/promotion-invitation-1280.png`      | `.playwright-mcp/promotion-invitation-390.png`      |
+| Submission      | `.playwright-mcp/promotion-submitted-1280.png`       | `.playwright-mcp/promotion-submitted-390.png`       |
+| Review          | `.playwright-mcp/promotion-review-1280.png`          | `.playwright-mcp/promotion-review-390.png`          |
+| Approved        | `.playwright-mcp/promotion-approved-1280.png`        | `.playwright-mcp/promotion-approved-390.png`        |
+| Promoted        | `.playwright-mcp/promotion-linked-1280.png`          | `.playwright-mcp/promotion-linked-390.png`          |
+| Profile         | `.playwright-mcp/promotion-profile-1280.png`         | `.playwright-mcp/promotion-profile-390.png`         |
+| Directory       | `.playwright-mcp/promotion-directory-1280.png`       | `.playwright-mcp/promotion-directory-390.png`       |
 | Lease selection | `.playwright-mcp/promotion-lease-selection-1280.png` | `.playwright-mcp/promotion-lease-selection-390.png` |
 
 Existing-contact confirmation: `.playwright-mcp/promotion-existing-1280.png`.

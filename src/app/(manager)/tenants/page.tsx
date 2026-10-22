@@ -211,7 +211,7 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
                 <p>
                   {filtered
                     ? 'Clear the filters to see all tenants.'
-                    : 'Tenants appear here once an approved applicant moves in.'}
+                    : 'Tenants appear here when you promote an approved applicant. Lease setup and move-in are separate steps.'}
                 </p>
                 <Link
                   className="btn btn-secondary"

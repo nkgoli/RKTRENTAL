@@ -82,9 +82,12 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
     existingDraftId = existing;
   }
 
-  const applicantTenant = applicant
-    ? options.tenants.find((t) => t.email?.toLowerCase() === applicant.applicantEmail.toLowerCase())
-    : undefined;
+  // formOptions is organization-scoped. Email is editable contact data, not a promotion.
+  const promotedTenant = (application: { status: string; promotedTenantId: string | null }) =>
+    application.status === 'APPROVED' && application.promotedTenantId
+      ? options.tenants.find((tenant) => tenant.id === application.promotedTenantId)
+      : undefined;
+  const applicantTenant = applicant ? promotedTenant(applicant) : undefined;
   const unitId = snapshot?.unitId ?? requestedUnitId;
   const unit = unitId ? options.units.find((u) => u.id === unitId) : undefined;
   if (!unit || existingDraftId) {
@@ -233,7 +236,13 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
   const renewSource = snapshot?.renewId && !source ? await data.detail(snapshot.renewId) : source;
   const applications = await db.application.findMany({
     where: { organizationId, unitId: unit.id, status: { in: ['APPROVED', 'REVIEW'] } },
-    select: { id: true, applicantName: true, applicantEmail: true, status: true },
+    select: {
+      id: true,
+      applicantName: true,
+      applicantEmail: true,
+      status: true,
+      promotedTenantId: true,
+    },
     orderBy: { appliedAt: 'desc' },
   });
   const lessorSigner = unit.property.ownerId
@@ -253,9 +262,7 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
         name: application.applicantName,
         email: application.applicantEmail,
         status: application.status === 'APPROVED' ? 'Approved' : 'Ready for review',
-        tenantId: options.tenants.find(
-          (tenant) => tenant.email?.toLowerCase() === application.applicantEmail.toLowerCase(),
-        )?.id,
+        tenantId: promotedTenant(application)?.id,
       }))}
       leaseId={snapshot?.leaseId ?? null}
       renewId={snapshot?.renewId ?? renewId ?? null}
@@ -271,9 +278,10 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
       }
       notice={
         applicant && !applicantTenant
-          ? `${applicant.applicantName} (${applicant.applicantEmail}) isn’t a tenant yet. Add them as a tenant, then return here to select them.`
+          ? `${applicant.applicantName} (${applicant.applicantEmail}) needs an approved application and explicit promotion before you can select them as a tenant.`
           : undefined
       }
+      noticeApplicantId={applicant && !applicantTenant ? applicant.id : undefined}
       backHref={`/properties/${unit.propertyId}/leases`}
       exitHref="/leases?tab=drafts"
     />

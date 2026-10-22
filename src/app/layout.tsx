@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import '@/styles/globals.css';
 import '@/styles/accessibility.css';
 import '@/styles/redisgn.css';
+import '@/styles/hero-density.css';
 
 export const metadata: Metadata = {
   title: 'RocketRental',

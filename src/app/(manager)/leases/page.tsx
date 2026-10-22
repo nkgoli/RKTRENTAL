@@ -103,7 +103,7 @@ export default async function LeasesPage({
   };
 
   return (
-    <div className={styles.page}>
+    <div className={`hero-flow ${styles.page}`}>
       {notice && <NoticeToast message={notice} tone="success" />}
       <ScopedWorkspace organizationId={session.organizationId} filter={scope} activeTab="leases" />
       <PageHeader
@@ -139,7 +139,7 @@ export default async function LeasesPage({
             detail: 'Pending signatures',
           },
         ]}
-      />{' '}
+      />
       <Card flush>
         <div className={styles.portfolioHeader}>
           <div className={styles.toolbar}>

@@ -42,3 +42,38 @@ step list.
 - Stale: a draft deleted in a second tab refuses Next without recreating it, then Delete reports it
   was already deleted. Ineligible: a draft marked sent keeps the refusal in the dialog.
 - Opening a deleted draft's old `?draft=` link directly still shows the existing not-found page.
+
+## Tenants step: new people go through Applications
+
+The wizard no longer links to standalone tenant creation (`/tenants?add=1`). Tenants are created
+only by promoting an approved applicant, so the Tenants step points there instead:
+
+- **Applicant who isn't a tenant yet** shows "Not a tenant yet" with **Review application**, linking
+  to `/applications?propertyId=…&unitId=…&applicant=…#selected-applicant`. It has no checkbox, so
+  it can't be added to the lease until promotion makes them a tenant.
+- **Review applicants for this unit** (under the search) and the empty state ("No tenants yet.
+  Tenants are added by approving and promoting an applicant for this unit.") replace the old
+  "Add a new tenant" links. The unit picker copy reads "choose existing tenants".
+- **Draft progress.** A plain click or Enter saves the current step (non-strict) and then opens
+  Applications in the same tab. If the save fails, the wizard stays put and shows the error.
+  Ctrl/Cmd/Shift-click and middle-click are left to the browser, so a new tab keeps the wizard open.
+  Browser Back, or **Resume draft** from the unit picker or Drafts, returns to the Tenants step
+  with the saved selection.
+- Existing tenants and promoted applicants are still selectable. Delete draft, Cancel, save and send
+  locking, renewal carry-over and signing are unchanged.
+
+### Verification (seeded data, isolated database on port 55519)
+
+- Maple Court · Unit 3A at 1440px: empty selection and populated selection (Sam Wilson as primary).
+  Olivia Reed (in review, not a tenant) shows **Review application** without a checkbox. The only
+  `/tenants` link is the sidebar.
+- Keyboard: removed Sam, picked Lena Castillo (status "Unsaved changes"), focused **Review
+  application** and pressed Enter. Applications opened scoped to Maple Court · Unit 3A with Olivia
+  selected. Back returned to the Tenants step with Lena as primary and "Draft saved".
+- 390px: no horizontal overflow; Delete draft is still in the top bar. Enter on **Review applicants
+  for this unit** opened scoped Applications, and Back restored the unsaved selection (Sam Wilson).
+- The "No tenants yet" empty state, the scoped hrefs, save-before-leave, save failure and
+  modified-click behaviour are covered in `tests/lease-builder/tenants-applications.test.tsx`. The
+  wizard and deletion suites (`tests/lease-builder`, `tests/lease-create`) pass.
+- Screenshots are kept locally in `.playwright-mcp/` (not committed, because of the repository size
+  cap).

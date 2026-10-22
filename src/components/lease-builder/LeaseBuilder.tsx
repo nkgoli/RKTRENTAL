@@ -55,6 +55,8 @@ export type LeaseBuilderProps = {
   /** Extra guidance for the Tenants step, e.g. an applicant who is not a tenant yet. */
   notice?: string;
   backHref: string;
+  /** Property of the lease's unit; read from backHref when omitted. */
+  propertyId?: string;
   /** Where Save and exit goes. */
   exitHref: string;
 };
@@ -194,6 +196,24 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
     });
   }
 
+  const propertyId =
+    props.propertyId ?? /^\/properties\/([^/?#]+)\//.exec(props.backHref)?.[1] ?? '';
+  function applicationsHref(applicantId?: string) {
+    const query = new URLSearchParams();
+    if (propertyId) query.set('propertyId', decodeURIComponent(propertyId));
+    if (draft.unitId) query.set('unitId', draft.unitId);
+    if (applicantId) query.set('applicant', applicantId);
+    return `/applications${query.size ? `?${query}` : ''}${applicantId ? '#selected-applicant' : ''}`;
+  }
+
+  /** Applications is a separate page, so persist the draft before leaving the wizard. */
+  function reviewApplicants(href: string) {
+    if (busy) return;
+    startTransition(async () => {
+      if (await save(step, step, false)) window.location.assign(href);
+    });
+  }
+
   function send() {
     const local = validateStep(STEP.review, draftRef.current, validationOptions);
     if (Object.keys(local).length) {
@@ -242,6 +262,8 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
       errors={errors}
       tenants={tenants}
       applicants={props.applicants}
+      applicationsHref={applicationsHref}
+      onReviewApplicants={reviewApplicants}
       sourceLabel={props.sourceLabel}
       notice={props.notice}
     />,

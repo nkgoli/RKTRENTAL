@@ -59,8 +59,8 @@ export function UnitPicker({
                 <p className={styles.kicker}>Before you begin</p>
                 <h1 id="pick-title">Which unit is this lease for?</h1>
                 <p className={styles.sub}>
-                  Choose one unit or a whole single-family home. Then set the term, add tenants and
-                  review the agreement. You can save a draft along the way.
+                  Choose one unit or a whole single-family home. Then set the term, choose existing
+                  tenants and review the agreement. You can save a draft along the way.
                 </p>
               </div>
             </div>

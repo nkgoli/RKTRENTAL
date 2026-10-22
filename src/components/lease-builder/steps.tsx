@@ -29,7 +29,6 @@ import { previewScheduledCharges, prorateFirstMonth } from '@/lib/ledger/lease-s
 import { formatMoney } from '@/lib/ledger/statement';
 import styles from './lease-builder.module.css';
 import { contextFromDraft, resolveTerms } from '@/lib/lease-create/templates';
-import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 
 export type StepProps = {
@@ -558,12 +557,37 @@ export function TenantsStep({
   sourceLabel,
   notice,
   applicants = [],
+  applicationsHref = (applicantId) =>
+    `/applications?${new URLSearchParams({
+      unitId: draft.unitId,
+      ...(applicantId ? { applicant: applicantId } : {}),
+    })}${applicantId ? '#selected-applicant' : ''}`,
+  onReviewApplicants,
 }: StepProps & {
   tenants: TenantOption[];
   sourceLabel?: string;
   notice?: string;
   applicants?: ApplicantOption[];
+  /** Builds the Applications link scoped to this lease's property and unit. */
+  applicationsHref?: (applicantId?: string) => string;
+  /** Saves the draft before leaving for Applications; plain clicks only. */
+  onReviewApplicants?: (href: string) => void;
 }) {
+  // Tenants are created only by promoting an approved applicant, never by hand from the wizard.
+  const reviewLink = (href: string, label: string, ariaLabel?: string) => (
+    <a
+      href={href}
+      aria-label={ariaLabel}
+      onClick={(event) => {
+        if (!onReviewApplicants || event.metaKey || event.ctrlKey || event.shiftKey) return;
+        if (event.button !== 0) return;
+        event.preventDefault();
+        onReviewApplicants(href);
+      }}
+    >
+      {label}
+    </a>
+  );
   const [search, setSearch] = useState('');
   const query = search.trim().toLowerCase();
   const selected = tenants.filter((tenant) => draft.tenantIds.includes(tenant.id));
@@ -629,9 +653,14 @@ export function TenantsStep({
                   <span className={styles.checkCopy}>
                     <strong>{applicant.name}</strong>
                     <small>{applicant.email}</small>
-                    <Link href="/tenants?add=1" target="_blank" rel="noopener noreferrer">
-                      Add tenant contact (new tab)
-                    </Link>
+                    <small>
+                      Not a tenant yet. Promote them from their application to select them here.
+                    </small>
+                    {reviewLink(
+                      applicationsHref(applicant.id),
+                      'Review application',
+                      `Review ${applicant.name}'s application`,
+                    )}
                   </span>
                 )}
                 <Badge tone={applicant.status === 'Approved' ? 'success' : 'info'}>
@@ -681,16 +710,21 @@ export function TenantsStep({
             </label>
           );
         })}
-        {!tenants.length && <p className={styles.sub}>No tenants yet. Add a tenant first.</p>}
+        {!tenants.length && (
+          <p className={styles.sub}>
+            No tenants yet. Tenants are added by approving and promoting an applicant for this unit.
+          </p>
+        )}
       </div>
       {errors.tenantIds && (
         <p id="tenant-selection-error" className={styles.error} role="alert">
           {errors.tenantIds}
         </p>
       )}
-      <Link href="/tenants?add=1" target="_blank" rel="noopener noreferrer">
-        Add a new tenant (opens in a new tab)
-      </Link>
+      <p className={styles.sub}>
+        Someone new? {reviewLink(applicationsHref(), 'Review applicants for this unit')}. Your
+        draft is saved first, so you can resume it from Leases › Drafts.
+      </p>
       <Field label="Primary tenant" error={errors.primaryTenantId}>
         <select
           value={draft.primaryTenantId}

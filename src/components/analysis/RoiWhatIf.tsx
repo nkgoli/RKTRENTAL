@@ -1,42 +1,30 @@
 'use client';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import type { AnalysisPayload, ValidationIssue } from '@/lib/analysis';
+import { useEffect, useId, useMemo, useRef } from 'react';
+import type { AnalysisPayload } from '@/lib/analysis';
 import type { ProjectionResult } from '@/lib/analysis/projections';
-import { levers as leverRows, targetFixes } from '@/lib/analysis/deal-insights';
+import { targetFixes } from '@/lib/analysis/deal-insights';
 import { scenarioExamples, type ScenarioDraft } from '@/lib/analysis/scenarios';
 import {
   activeOverrides,
   deltaTone,
   formatDelta,
   formatMetric,
+  formatSlider,
   metricDeltas,
   presetValues,
-  withLever,
+  sliders,
+  withSlider,
   type MetricKind,
   type Simulation,
+  type Slider,
   type WhatIfMetricKey,
   type WhatIfState,
 } from '@/lib/analysis/what-if';
 import { wholeDollars } from '@/lib/analysis/chart-data';
 import { dollars } from '@/lib/analysis/projections';
-import { readPath } from './fields';
-import { CalculationAssumptions, inputFields } from './RoiScenarios';
+import { overrideLabel } from './RoiScenarios';
 import w from './what-if.module.css';
 
-/** The assumptions most what-ifs change; every other input sits under "More assumptions". */
-const KEY_PATHS = [
-  'income.monthlyRent',
-  'income.vacancyRate',
-  'income.annualRentGrowth',
-  'financing.interestRate',
-  'financing.downPaymentPercent',
-  'purchase.purchasePrice',
-  'expenses.maintenancePercent',
-  'expenses.propertyManagementPercent',
-  'expenses.annualExpenseGrowth',
-  'appreciationExit.annualAppreciation',
-  'appreciationExit.holdingPeriodYears',
-];
 const PANEL_METRICS: WhatIfMetricKey[] = [
   'monthlyCashFlow',
   'cashOnCash',
@@ -45,12 +33,6 @@ const PANEL_METRICS: WhatIfMetricKey[] = [
   'finalEquity',
 ];
 export const TRIGGER_ID = 'roi-whatif-trigger';
-const MAX_CASES = 20;
-
-const baseText = (base: AnalysisPayload, path: string) => {
-  const v = readPath(base.input, path);
-  return v === undefined || v === '' ? 'Not set' : String(v);
-};
 
 /** Signed change beside a metric: "+$83 vs baseline −$213". Screen readers hear both values. */
 export function DeltaNote({
@@ -73,20 +55,18 @@ export function DeltaNote({
 }
 
 /**
- * One slim line under the view tabs while a what-if is active: which case is simulated, or
- * that it is paused (so baseline figures are not read as simulated), with Edit and Reset.
+ * One slim line under the view tabs while a what-if is active: what is simulated, or that it is
+ * paused (so baseline figures are not read as simulated), with Edit and Reset.
  * The existing charts and metrics show the simulated values themselves.
  */
 export function WhatIfStatus({
   name,
-  saved,
   changes,
   simulation,
   onEdit,
   onReset,
 }: {
   name: string;
-  saved: boolean;
   changes: number;
   simulation: Simulation;
   onEdit: () => void;
@@ -102,9 +82,7 @@ export function WhatIfStatus({
         <span className={w.simBadge}>{simulation.ok ? 'Simulated' : 'Paused'}</span>
         <b>What if{name === 'What if' ? '' : ` · ${name}`}</b>
         {simulation.ok
-          ? saved
-            ? ' · saved case'
-            : ` · ${changes} ${changes === 1 ? 'change' : 'changes'}, not saved`
+          ? ` · ${changes} ${changes === 1 ? 'change' : 'changes'}, not saved`
           : ` · ${(simulation.errors[0]?.message ?? 'Check the changed assumptions').replace(/\.$/, '')}. Figures show the baseline.`}
       </p>
       <div className={w.statusActions}>
@@ -112,7 +90,7 @@ export function WhatIfStatus({
           Edit what if
         </button>
         <button type="button" onClick={onReset}>
-          {saved ? 'Show baseline' : 'Reset to baseline'}
+          Reset to baseline
         </button>
       </div>
     </section>
@@ -120,9 +98,10 @@ export function WhatIfStatus({
 }
 
 /**
- * The one What if panel: case choice, presets and suggested changes, editable assumptions with
- * their baseline, the effect on key metrics, and Save as case / Reset / Exit. A side panel on
- * wide screens (the analysis stays visible beside it); a modal sheet on narrower screens.
+ * The What if panel: a starting point and live sliders under Suggested changes. Every slider
+ * movement updates the views at once; nothing here is saved, and saved cases are only copied.
+ * A side panel on wide screens (the analysis stays visible beside it); a modal sheet on
+ * narrower screens.
  */
 export function WhatIfPanel({
   open,
@@ -131,19 +110,12 @@ export function WhatIfPanel({
   scopeLabel,
   state,
   onState,
-  base,
   baselinePayload,
   baselineResult,
   simulation,
-  drafts,
-  onDrafts,
-  errors,
-  saving,
-  busy = false,
-  dirty,
-  saveLabel,
-  onSave,
+  cases,
   onExit,
+  onManageCases,
 }: {
   open: boolean;
   /** True on narrow screens: the panel is a modal sheet that traps focus. */
@@ -152,31 +124,17 @@ export function WhatIfPanel({
   scopeLabel: string;
   state: WhatIfState;
   onState: (next: WhatIfState) => void;
-  /** Baseline assumptions as entered (shown as each field's baseline). */
-  base: AnalysisPayload;
   baselinePayload: AnalysisPayload | null;
   baselineResult: ProjectionResult | null;
   simulation: Simulation | null;
-  drafts: ScenarioDraft[];
-  onDrafts: (next: ScenarioDraft[]) => void;
-  errors: ValidationIssue[];
-  saving: boolean;
-  /** True while a save request is in flight: saved-case edits wait so the reply cannot drop them. */
-  busy?: boolean;
-  dirty: boolean;
-  saveLabel: string;
-  onSave: () => void;
+  /** Saved cases, offered as starting points only; they are never edited here. */
+  cases: ScenarioDraft[];
   onExit: () => void;
+  onManageCases: () => void;
 }) {
   const box = useRef<HTMLElement>(null);
   const titleId = useId();
-  const savedIndex =
-    state.source.kind === 'saved'
-      ? drafts.findIndex((d) => d.id === (state.source as { id: string }).id)
-      : -1;
-  const saved = savedIndex >= 0 ? drafts[savedIndex] : null;
-  const values = saved ? saved.values : state.values;
-  const [more, setMore] = useState(false);
+  const values = state.values;
 
   useEffect(() => {
     if (!open) return;
@@ -190,8 +148,6 @@ export function WhatIfPanel({
       if (box.current && !box.current.contains(document.activeElement))
         box.current.querySelector<HTMLElement>('h2')?.focus();
     };
-    // A button that disables itself (Saving...) drops focus to the page; Escape still closes
-    // the sheet and focus returns inside it.
     const escape = (event: KeyboardEvent) => {
       if (
         event.key !== 'Escape' ||
@@ -208,54 +164,30 @@ export function WhatIfPanel({
       document.removeEventListener('keydown', escape);
     };
   }, [open, modal, onClose]);
-  useEffect(() => {
-    if (open && modal && !saving && box.current && !box.current.contains(document.activeElement))
-      box.current.querySelector<HTMLElement>('h2')?.focus();
-  }, [open, modal, saving]);
 
-  const suggestions = useMemo(() => {
-    if (!baselinePayload || !baselineResult) return { levers: [], targets: [] };
+  const targets = useMemo(() => {
+    if (!baselinePayload || !baselineResult) return [];
     try {
-      return {
-        levers: leverRows(baselinePayload, baselineResult),
-        targets: targetFixes(baselinePayload, baselineResult),
-      };
+      return targetFixes(baselinePayload, baselineResult);
     } catch {
-      return { levers: [], targets: [] };
+      return [];
     }
   }, [baselinePayload, baselineResult]);
+  const rows = useMemo(
+    () => (baselinePayload ? sliders(baselinePayload.input, values) : []),
+    [baselinePayload, values],
+  );
 
   if (!open) return null;
 
   const pathError = (path: string) =>
-    saved
-      ? errors.find((e) => e.path === `scenarios.${savedIndex}.overrides.${path}`)
-      : simulation && !simulation.ok
-        ? simulation.errors.find((e) => e.path === path)
-        : undefined;
-  const caseErrors = saved
-    ? errors.filter(
-        (e) =>
-          e.path === `scenarios.${savedIndex}` ||
-          e.path === `scenarios.${savedIndex}.name` ||
-          (e.path.startsWith(`scenarios.${savedIndex}.`) && !e.path.includes('.overrides.')),
-      )
-    : simulation && !simulation.ok
-      ? simulation.errors.filter((e) => !e.path)
-      : [];
-  // Saved-case entries are part of the analysis being saved; they are locked until the reply.
-  const caseLocked = !!saved && busy;
-  const setValues = (next: Record<string, string>, name?: string) => {
-    if (caseLocked) return;
-    if (saved) onDrafts(drafts.map((d, i) => (i === savedIndex ? { ...d, values: next } : d)));
-    else onState({ ...state, values: next, ...(name ? { name } : {}) });
-  };
-  const fieldId = (path: string) =>
-    saved ? `scenarios.${savedIndex}.overrides.${path}` : `whatif.${path}`;
-  const moreFields = inputFields.filter((f) => !KEY_PATHS.includes(f.path.slice(6)));
-  const moreOpen =
-    more || moreFields.some((f) => values[f.path.slice(6)]?.trim() || pathError(f.path.slice(6)));
-  // A percentage override cannot move an inherited fixed annual amount; say so plainly.
+    simulation && !simulation.ok ? simulation.errors.find((e) => e.path === path) : undefined;
+  const generalErrors =
+    simulation && !simulation.ok ? simulation.errors.filter((e) => !e.path) : [];
+  const shownPaths = new Set(rows.map((r) => r.path));
+  // Overrides from a preset or a copied case that have no slider stay applied; list them.
+  const others = Object.keys(activeOverrides(values)).filter((p) => !shownPaths.has(p));
+  // A percentage cannot move a fixed annual amount the engine uses; say so plainly.
   const precedence = (
     [
       ['maintenancePercent', 'maintenance', 'maintenance'],
@@ -263,77 +195,89 @@ export function WhatIfPanel({
       ['propertyManagementPercent', 'propertyManagement', 'management'],
     ] as const
   ).flatMap(([percent, fixed, name]) => {
-    const amount = base.input.expenses?.[fixed];
-    return values[`expenses.${percent}`]?.trim() &&
-      !values[`expenses.${fixed}`]?.trim() &&
-      amount !== undefined
+    const typed = values[`expenses.${fixed}`]?.trim();
+    const amount = typed ? Number(typed) : baselinePayload?.input.expenses?.[fixed];
+    return values[`expenses.${percent}`]?.trim() && amount !== undefined
       ? [[percent, amount, name] as const]
       : [];
   });
-  const rows =
+  const effects =
     simulation?.ok && baselineResult
       ? metricDeltas(baselineResult, simulation.result, PANEL_METRICS)
       : [];
+  const target = (path: string) =>
+    targets.find(
+      (t) => (t.lever === 'Rent' ? 'income.monthlyRent' : 'financing.interestRate') === path,
+    );
 
-  function field(path: string) {
-    const spec = inputFields.find((f) => f.path === `input.${path}`);
-    if (!spec) return null;
-    const id = fieldId(path);
-    const error = pathError(path);
-    const set = !!values[path]?.trim();
+  function start(choice: string) {
+    const savedCase = choice.startsWith('case:')
+      ? cases.find((c) => `case:${c.id}` === choice)
+      : undefined;
+    const preset = choice.startsWith('preset:') ? choice.slice(7) : null;
+    onState({
+      scope: state.scope,
+      ...(state.context ? { context: state.context } : {}),
+      values: savedCase
+        ? { ...activeOverrides(savedCase.values) }
+        : preset
+          ? (presetValues(preset) ?? {})
+          : {},
+      name: savedCase ? `${savedCase.name || 'Unnamed case'} (copy)` : (preset ?? 'What if'),
+      ...(choice ? { start: choice } : {}),
+      ...(savedCase?.options ? { options: savedCase.options } : {}),
+    });
+  }
+
+  function slider(row: Slider) {
+    const id = `whatif.${row.path}`;
+    const error = pathError(row.path);
+    const changed = !!values[row.path]?.trim();
+    const shown = formatSlider(row.unit, row.value);
+    const hint = target(row.path);
     return (
-      <label key={path} className={w.field} data-overridden={set || undefined}>
-        <span>
-          {spec.label}
-          <small> · Baseline {baseText(base, path)}</small>
-        </span>
-        {spec.kind === 'select' ? (
-          <select
-            id={id}
-            value={values[path] ?? ''}
-            disabled={caseLocked}
-            aria-invalid={!!error}
-            aria-describedby={error ? `${id}-error` : undefined}
-            onChange={(e) => setValues({ ...values, [path]: e.target.value })}
-          >
-            <option value="">Baseline</option>
-            {spec.choices?.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-        ) : (
-          <input
-            id={id}
-            type={spec.kind === 'date' ? 'date' : 'text'}
-            inputMode={spec.kind === 'date' ? undefined : 'decimal'}
-            value={values[path] ?? ''}
-            disabled={caseLocked}
-            placeholder={`Baseline ${baseText(base, path)}`}
-            aria-invalid={!!error}
-            aria-describedby={error ? `${id}-error` : undefined}
-            onChange={(e) => setValues({ ...values, [path]: e.target.value })}
-          />
-        )}
+      <div key={row.path} className={w.slider} data-overridden={changed || undefined}>
+        <div className={w.sliderHead}>
+          <label htmlFor={id}>
+            {row.label}
+            {row.basis && <small> · % {row.basis}</small>}
+          </label>
+          <output htmlFor={id} aria-hidden="true">
+            {shown}
+          </output>
+        </div>
+        <input
+          id={id}
+          type="range"
+          min={row.min}
+          max={row.max}
+          step={row.step}
+          value={row.value}
+          aria-valuetext={`${shown}${row.basis ? ` ${row.basis}` : ''}${changed ? '' : ', baseline'}`}
+          aria-invalid={!!error}
+          aria-describedby={`${id}-note${error ? ` ${id}-error` : ''}`}
+          onChange={(e) =>
+            onState({ ...state, values: withSlider(values, row, Number(e.target.value)) })
+          }
+        />
+        <small id={`${id}-note`} className={w.sliderNote}>
+          {row.baseline == null
+            ? 'Not set in the baseline'
+            : changed
+              ? `Baseline ${formatSlider(row.unit, row.baseline)}`
+              : 'Baseline'}
+          {row.note ? ` · ${row.note}` : ''}
+          {hint
+            ? ` · ${hint.lever === 'Rent' ? wholeDollars(hint.target) : `${hint.target.toFixed(2)}%`} reaches ${hint.outcome}`
+            : ''}
+        </small>
         {error && (
           <small id={`${id}-error`} className={w.error}>
             {error.message}
           </small>
         )}
-      </label>
+      </div>
     );
-  }
-
-  function saveAsCase() {
-    const index = drafts.length;
-    const id = crypto.randomUUID();
-    const name = state.name === 'What if' ? `Case ${index + 1}` : state.name;
-    onDrafts([...drafts, { id, name, values: { ...activeOverrides(state.values) } }]);
-    onState({ ...state, source: { kind: 'saved', id }, values: {}, name: 'What if' });
-    setTimeout(() => {
-      const input = document.getElementById(`scenarios.${index}.name`) as HTMLInputElement | null;
-      input?.focus();
-      input?.select();
-    }, 0);
   }
 
   const panel = (
@@ -381,218 +325,93 @@ export function WhatIfPanel({
       </header>
       <div className={w.body}>
         <p className={w.lead}>
-          Temporary. Saved assumptions and recorded rent, lease, payment, expense and market-rent
-          records stay unchanged.
+          Temporary. Saved assumptions, saved cases and recorded rent, lease, payment, expense and
+          market-rent records stay unchanged.
         </p>
         <label className={w.field}>
-          <span>Case</span>
+          <span>Start from</span>
           <select
-            id="whatif-case"
-            value={saved ? saved.id : 'temporary'}
-            onChange={(e) =>
-              onState({
-                ...state,
-                source:
-                  e.target.value === 'temporary'
-                    ? { kind: 'temporary' }
-                    : { kind: 'saved', id: e.target.value },
-              })
-            }
+            id="whatif-start"
+            value={state.start ?? ''}
+            onChange={(e) => start(e.target.value)}
           >
-            <option value="temporary">
-              {state.name === 'What if' ? 'Temporary what if' : state.name} · not saved
+            <option value="">
+              {state.start || state.name === 'What if' ? 'Baseline' : state.name}
             </option>
-            {drafts.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name || 'Unnamed case'} · saved case
-              </option>
-            ))}
+            <optgroup label="Illustrative presets">
+              {scenarioExamples.map((preset) => (
+                <option key={preset.name} value={`preset:${preset.name}`}>
+                  {preset.name}
+                </option>
+              ))}
+            </optgroup>
+            {cases.length > 0 && (
+              <optgroup label="Saved cases (copied, not changed)">
+                {cases.map((c) => (
+                  <option key={c.id} value={`case:${c.id}`}>
+                    {c.name || 'Unnamed case'}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </label>
 
-        {saved ? (
-          <div className={w.caseBox}>
-            <div
-              id={`scenarios.${savedIndex}`}
-              tabIndex={-1}
-              role="region"
-              aria-label={`${saved.name || 'Unnamed case'}: case assumptions`}
-            >
-              {caseErrors.map((e, i) => (
-                <p role="alert" className={w.error} id={`${e.path}-error`} key={i}>
+        <section className={w.section} aria-labelledby={`${titleId}-suggest`}>
+          <h3 id={`${titleId}-suggest`}>Suggested changes</h3>
+          {!baselineResult || !baselinePayload ? (
+            <p className={w.paused}>
+              Results paused until the flagged entries are corrected. Nothing is estimated for
+              missing or invalid inputs.
+            </p>
+          ) : (
+            <>
+              <p className={w.hint}>
+                Drag or use the arrow keys; every view updates as you go. Back at the baseline mark,
+                a slider inherits the baseline.
+              </p>
+              {precedence.map(([key, amount, name]) => (
+                <p key={key} className={w.paused}>
+                  Fixed {name} of {dollars(amount)} per year takes precedence. This {name}{' '}
+                  percentage will not change that amount, including when the fixed amount is zero.
+                </p>
+              ))}
+              {generalErrors.map((e, i) => (
+                <p key={i} className={w.error} role="alert">
                   {e.message}
                 </p>
               ))}
-            </div>
-            <div className={w.nameRow}>
-              <label className={w.field}>
-                <span>Case name</span>
-                <input
-                  id={`scenarios.${savedIndex}.name`}
-                  value={saved.name}
-                  maxLength={200}
-                  disabled={saving}
-                  aria-invalid={errors.some((e) => e.path === `scenarios.${savedIndex}.name`)}
-                  aria-describedby={
-                    errors.some((e) => e.path === `scenarios.${savedIndex}.name`)
-                      ? `scenarios.${savedIndex}.name-error`
-                      : undefined
-                  }
-                  onChange={(e) =>
-                    onDrafts(
-                      drafts.map((d, i) => (i === savedIndex ? { ...d, name: e.target.value } : d)),
-                    )
-                  }
-                />
-              </label>
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => {
-                  onDrafts(drafts.filter((_, i) => i !== savedIndex));
-                  onState({ ...state, source: { kind: 'temporary' } });
-                  setTimeout(() => document.getElementById('whatif-case')?.focus(), 0);
-                }}
-              >
-                Remove {saved.name || 'case'}
-              </button>
-            </div>
-            <p className={w.hint}>
-              Blank fields inherit the baseline. Edits to a saved case are kept with the analysis
-              when you save it.
-            </p>
-            {caseLocked && (
-              <p className={w.hint} role="status">
-                Saving… this case can be edited again when the save finishes.
-              </p>
-            )}
-          </div>
-        ) : (
-          <>
-            <section className={w.section} aria-labelledby={`${titleId}-start`}>
-              <h3 id={`${titleId}-start`}>Start from</h3>
-              <div className={w.pills}>
-                {scenarioExamples.map((preset) => (
-                  <button
-                    key={preset.name}
-                    type="button"
-                    aria-pressed={state.name === preset.name}
-                    onClick={() =>
-                      onState({ ...state, values: presetValues(preset.name)!, name: preset.name })
-                    }
-                  >
-                    {preset.name}
-                  </button>
-                ))}
+              <div className={w.sliders}>
+                {rows.map((row) =>
+                  'missing' in row ? (
+                    <div key={row.path} className={w.slider}>
+                      <div className={w.sliderHead}>
+                        <span>{row.label}</span>
+                      </div>
+                      <small className={w.sliderNote}>{row.missing}</small>
+                    </div>
+                  ) : (
+                    slider(row)
+                  ),
+                )}
               </div>
-              <p className={w.hint}>Illustrative presets, not promised outcomes.</p>
-            </section>
-            {!!suggestions.levers.length && (
-              <section className={w.section} aria-labelledby={`${titleId}-suggest`}>
-                <h3 id={`${titleId}-suggest`}>Suggested changes</h3>
-                <ul className={w.suggestions}>
-                  {suggestions.levers.map((lever) => (
-                    <li key={lever.key}>
-                      <button
-                        type="button"
-                        disabled={lever.value == null}
-                        onClick={() =>
-                          baselinePayload &&
-                          setValues(withLever(baselinePayload.input, state.values, lever.key))
-                        }
-                      >
-                        <span>
-                          {lever.name} <small>{lever.change}</small>
-                        </span>
-                        <b>
-                          {lever.value == null
-                            ? 'Unavailable'
-                            : `${lever.value >= 0 ? '+' : '−'}${wholeDollars(Math.abs(lever.value))}/yr`}
-                        </b>
-                      </button>
-                    </li>
-                  ))}
-                  {suggestions.targets.map((target) => (
-                    <li key={target.lever}>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setValues({
-                            ...state.values,
-                            [target.lever === 'Rent'
-                              ? 'income.monthlyRent'
-                              : 'financing.interestRate']: String(target.target),
-                          })
-                        }
-                      >
-                        <span>
-                          {target.lever === 'Rent' ? 'Rent' : 'Interest rate'}{' '}
-                          {target.lever === 'Rent'
-                            ? wholeDollars(target.target)
-                            : `${target.target.toFixed(2)}%`}
-                          <small> to reach {target.outcome}</small>
-                        </span>
-                        <b>Target</b>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                <p className={w.hint}>Each adds to your what-if; Year 1 effect vs baseline.</p>
-              </section>
-            )}
-          </>
-        )}
-
-        <section className={w.section} aria-labelledby={`${titleId}-fields`}>
-          <h3 id={`${titleId}-fields`}>Assumptions</h3>
-          {precedence.map(([key, amount, name]) => (
-            <p key={key} className={w.paused}>
-              Fixed {name} of {dollars(amount)} per year takes precedence. This {name} percentage
-              will not change that amount, including when the fixed amount is zero.
-            </p>
-          ))}
-          <div className={w.fields}>{KEY_PATHS.map(field)}</div>
-          <details
-            className={w.more}
-            open={moreOpen}
-            onToggle={(e) => setMore((e.target as HTMLDetailsElement).open)}
-          >
-            <summary>More assumptions</summary>
-            <div className={w.fields}>{moreFields.map((f) => field(f.path.slice(6)))}</div>
-          </details>
-          {saved?.options && (
-            <details className={w.more}>
-              <summary>Explicit scenario calculation options</summary>
-              <CalculationAssumptions options={saved.options} />
-              <p className={w.hint}>
-                These saved assumptions apply only to this case. Use base calculation options to
-                inherit the dates, discount rate and tax assumptions from the analysis.
-              </p>
-              <button
-                type="button"
-                disabled={caseLocked}
-                onClick={() =>
-                  onDrafts(
-                    drafts.map((d, i) => (i === savedIndex ? { ...d, options: undefined } : d)),
-                  )
-                }
-              >
-                Use base calculation options
-              </button>
-            </details>
+              {others.length > 0 && (
+                <p className={w.hint}>
+                  Also applied from {state.name}:{' '}
+                  {others.map((p) => `${overrideLabel(p)} ${values[p]}`).join(' · ')}
+                </p>
+              )}
+            </>
           )}
         </section>
 
         <section className={w.section} aria-labelledby={`${titleId}-effect`} aria-live="polite">
           <h3 id={`${titleId}-effect`}>Effect</h3>
-          {!baselineResult ? (
-            <p className={w.paused}>
-              Results paused until the flagged entries are corrected. Nothing is estimated for
-              missing or invalid inputs.
-            </p>
-          ) : !simulation ? null : simulation.ok ? (
+          {!baselineResult ? null : !simulation ? (
+            <p className={w.hint}>Showing the baseline. Move a slider to see the effect.</p>
+          ) : simulation.ok ? (
             <ul className={w.effects}>
-              {rows.map((row) => (
+              {effects.map((row) => (
                 <li key={row.key} data-changed={row.changed || undefined}>
                   <span>{row.label}</span>
                   <b>{formatMetric(row.kind, row.simulated)}</b>
@@ -602,42 +421,28 @@ export function WhatIfPanel({
             </ul>
           ) : (
             <p className={w.paused} role="status">
-              Simulation paused. Correct the highlighted entry; your entries are kept and the
-              analysis keeps showing the baseline.
+              Simulation paused. Adjust the highlighted slider; the analysis keeps showing the
+              baseline.
             </p>
           )}
         </section>
       </div>
       <footer className={w.foot}>
-        {!saved && (
-          <button
-            type="button"
-            className={w.primary}
-            disabled={saving || drafts.length >= MAX_CASES}
-            onClick={saveAsCase}
-          >
-            Save as case
-          </button>
-        )}
-        {dirty && (
-          <button type="button" disabled={saving} onClick={onSave}>
-            {saving ? 'Saving...' : saveLabel}
-          </button>
-        )}
-        {!saved && (
-          <button
-            type="button"
-            disabled={!Object.keys(activeOverrides(state.values)).length}
-            onClick={() => onState({ ...state, values: {}, name: 'What if', context: undefined })}
-          >
-            Reset to baseline
-          </button>
-        )}
+        <button
+          type="button"
+          disabled={!Object.keys(activeOverrides(values)).length}
+          onClick={() => onState({ scope: state.scope, values: {}, name: 'What if' })}
+        >
+          Reset to baseline
+        </button>
         <button type="button" onClick={onExit}>
           Exit what if
         </button>
         <p className={w.hint}>
-          {drafts.length} of {MAX_CASES} saved cases · compare them on Compare.
+          Nothing here is saved.{' '}
+          <button type="button" className={w.linkButton} onClick={onManageCases}>
+            Manage saved cases on Compare
+          </button>
         </p>
       </footer>
     </aside>

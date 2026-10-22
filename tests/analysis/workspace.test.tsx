@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RoiWorkspace } from '@/components/analysis/RoiWorkspace';
+import { WhatIfStatus } from '@/components/analysis/RoiWhatIf';
 import { allFields, applyValues, valuesFrom } from '@/components/analysis/fields';
 import { browser } from '@/components/analysis/browser';
 import { PayloadSchema, calculatePayload, issues } from '@/lib/analysis';
@@ -111,16 +112,20 @@ function openWhatIf() {
   if (whatIfTrigger().getAttribute('aria-expanded') !== 'true') fireEvent.click(whatIfTrigger());
   return within(screen.getByRole('dialog', { name: 'What if' }));
 }
-/** Saves the (empty) temporary what-if as a case, then names it, as a manager would. */
+/** Adds a case in Compare → Saved cases, then names it, as a manager would. */
 function addScenario(name: string) {
-  fireEvent.click(openWhatIf().getByRole('button', { name: 'Save as case' }));
+  fireEvent.click(screen.getByRole('tab', { name: 'Compare' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Add case' }));
   fireEvent.change(scenarioName(), { target: { value: name } });
 }
-/** Shows a saved case in What if by name. */
+/** Opens a saved case's editor on Compare by name. */
 function showCase(name: string) {
-  const select = openWhatIf().getByLabelText('Case') as HTMLSelectElement;
-  const option = Array.from(select.options).find((o) => o.text.startsWith(name))!;
-  fireEvent.change(select, { target: { value: option.value } });
+  fireEvent.click(screen.getByRole('tab', { name: 'Compare' }));
+  const editor = screen.getByRole('region', { name: 'Saved cases' });
+  const summary = Array.from(editor.querySelectorAll('summary')).find((s) =>
+    s.textContent?.startsWith(name),
+  )!;
+  if (!(summary.parentElement as HTMLDetailsElement).open) fireEvent.click(summary);
 }
 /** True when the workspace let an ordinary link navigate (jsdom navigation is then suppressed). */
 function navigates(link: HTMLElement) {
@@ -552,7 +557,7 @@ describe('ROI summary workspace', () => {
       <RoiWorkspace selection={{ ok: true, data: properties }} initialPropertyId="b" />,
     );
     expect(screen.getByRole('alertdialog')).toBeTruthy();
-    expect(window.location.search).toBe('?property=a');
+    expect(window.location.search).toBe('?property=a&view=compare');
     fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
     await waitFor(() => expect(document.activeElement).toBe(scenarioName()));
     const change = toolbarButton('Change property');
@@ -911,19 +916,25 @@ describe('scenario examples and merged failure recovery', () => {
     });
     await open();
     const panel = openWhatIf();
-    expect(panel.getByText('0 of 20 saved cases · compare them on Compare.')).toBeTruthy();
-    fireEvent.click(panel.getByRole('button', { name: 'Best Case' }));
+    fireEvent.change(panel.getByLabelText('Start from'), { target: { value: 'preset:Best Case' } });
     // A preset is a temporary what-if: nothing is saved or marked unsaved yet.
     expect(panel.getByText(/Fixed maintenance of/).textContent).toContain('$0.00');
-    expect(
-      (document.getElementById('whatif.expenses.maintenancePercent') as HTMLInputElement).value,
-    ).toBe('3');
-    expect(panel.getByText('0 of 20 saved cases · compare them on Compare.')).toBeTruthy();
+    // The engine uses the fixed amount, so its slider is shown instead of the percentage.
+    expect(document.getElementById('whatif.expenses.maintenancePercent')).toBeNull();
+    const fixed = document.getElementById('whatif.expenses.maintenance') as HTMLInputElement;
+    expect(fixed.value).toBe('0');
+    expect(fixed.getAttribute('aria-describedby')).toContain('whatif.expenses.maintenance-note');
+    expect(document.getElementById('whatif.expenses.maintenance-note')!.textContent).toMatch(
+      /Fixed annual amount, which takes precedence over a maintenance percentage/,
+    );
+    expect(panel.queryByRole('button', { name: /Save/ })).toBeNull();
     expect(screen.queryByText('Unsaved changes')).toBeNull();
-    fireEvent.click(panel.getByRole('button', { name: 'Save as case' }));
-    expect(field('overrides.expenses.maintenancePercent').value).toBe('3');
+    // A case is created separately on Compare; the preset is not copied into it.
+    addScenario('My best case');
+    expect(field('overrides.expenses.maintenancePercent').value).toBe('');
     expect(field('overrides.expenses.maintenance').value).toBe('');
-    fireEvent.change(field('name'), { target: { value: 'My best case' } });
+    fireEvent.change(field('overrides.expenses.maintenancePercent'), { target: { value: '3' } });
+    fireEvent.change(field('overrides.income.annualRentGrowth'), { target: { value: '5' } });
     fireEvent.change(field('overrides.income.vacancyRate'), { target: { value: '4' } });
     fireEvent.click(toolbarButton('Save ready'));
     await screen.findByText('Saved ready - revision 1');
@@ -974,11 +985,12 @@ describe('scenario examples and merged failure recovery', () => {
           ? field('overrides.financing.loanAmount')
           : document.getElementById('scenarios.0');
       await waitFor(() => expect(document.activeElement).toBe(target));
-      // Corrected in the What if panel, beside the view the manager was on.
-      expect(screen.getByRole('tab', { name: 'Charts' }).getAttribute('aria-selected')).toBe(
+      // Corrected in Compare → Saved cases, never in the temporary What if.
+      expect(screen.getByRole('tab', { name: 'Compare' }).getAttribute('aria-selected')).toBe(
         'true',
       );
-      expect(screen.getByRole('dialog', { name: 'What if' }).contains(target)).toBe(true);
+      expect(screen.getByRole('region', { name: 'Saved cases' }).contains(target)).toBe(true);
+      expect(screen.queryByRole('dialog', { name: 'What if' })).toBeNull();
       expect(target?.closest('[hidden]')).toBeNull();
       if (kind === 'loan') {
         expect(field('overrides.financing.loanAmount').value).toBe('100001');
@@ -1071,7 +1083,7 @@ describe('scenario examples and merged failure recovery', () => {
     fireEvent.click(screen.getByText('Explicit scenario calculation options'));
     expect(screen.getByText('Federal income tax (%)', { selector: 'dt' })).toBeTruthy();
     expect(screen.getByText('Discount rate', { selector: 'dt' })).toBeTruthy();
-    expect(screen.getByRole('dialog', { name: 'What if' }).querySelector('pre')).toBeNull();
+    expect(screen.getByRole('region', { name: 'Saved cases' }).querySelector('pre')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Use base calculation options' }));
     fireEvent.click(toolbarButton('Save ready'));
     await screen.findByText('Saved ready - revision 1');
@@ -1085,9 +1097,7 @@ describe('scenario examples and merged failure recovery', () => {
 
 it('creates, validates, saves and removes named scenarios through shared state', async () => {
   await open();
-  fireEvent.click(openWhatIf().getByRole('button', { name: 'Save as case' }));
-  const name = document.getElementById('scenarios.0.name') as HTMLInputElement;
-  fireEvent.change(name, { target: { value: 'Rent case' } });
+  addScenario('Rent case');
   const override = document.getElementById(
     'scenarios.0.overrides.income.monthlyRent',
   ) as HTMLInputElement;
@@ -1177,10 +1187,11 @@ it('retains scenario edits through conflicts and invalid navigation recovery, th
   // Property b has no cases, and property a's what-if never follows to it.
   expect(screen.queryByRole('dialog', { name: 'What if' })).toBeNull();
   expect(
-    Array.from((openWhatIf().getByLabelText('Case') as HTMLSelectElement).options).map(
-      (o) => o.value,
-    ),
-  ).toEqual(['temporary']);
+    Array.from((openWhatIf().getByLabelText('Start from') as HTMLSelectElement).options)
+      .map((o) => o.value)
+      .filter((v) => v.startsWith('case:')),
+  ).toEqual([]);
+  expect(document.getElementById('scenarios.0.name')).toBeNull();
 });
 
 it('saves benchmark selections across panels and restores them by property', async () => {
@@ -1361,14 +1372,29 @@ describe('What if: one shared, scoped simulation across views', () => {
   };
   const rentField = () => document.getElementById('whatif.income.monthlyRent') as HTMLInputElement;
 
-  it('updates the existing metrics directly under one compact status line, then resets', async () => {
+  it('moves the existing metrics live from Suggested changes sliders, then resets', async () => {
     await open();
     expect(strip()).toHaveLength(0);
     const snapshot = () => screen.getByRole('region', { name: 'Deal Snapshot' });
     const baseline = snapshot().textContent;
     const panel = openWhatIf();
-    expect(panel.getByText(/Temporary\. Saved assumptions and recorded rent/)).toBeTruthy();
-    fireEvent.change(rentField(), { target: { value: '1200' } });
+    expect(
+      panel.getByText(/Temporary\. Saved assumptions, saved cases and recorded rent/),
+    ).toBeTruthy();
+    // Sliders sit directly under Suggested changes; there is no text-entry form or save step.
+    const suggested = within(panel.getByRole('region', { name: 'Suggested changes' }));
+    expect(suggested.getAllByRole('slider').length).toBeGreaterThanOrEqual(10);
+    expect(panel.queryAllByRole('textbox')).toHaveLength(0);
+    expect(panel.queryByRole('button', { name: /Save|Apply/ })).toBeNull();
+    const rent = suggested.getByRole('slider', { name: 'Monthly rent' }) as HTMLInputElement;
+    expect(rent).toBe(rentField());
+    expect([rent.min, rent.max, rent.step, rent.value]).toEqual(['500', '1500', '10', '1000']);
+    expect(rent.getAttribute('aria-valuetext')).toBe('$1,000/mo, baseline');
+    fireEvent.change(rent, { target: { value: '1200' } });
+    expect(rent.getAttribute('aria-valuetext')).toBe('$1,200/mo');
+    expect(document.getElementById('whatif.income.monthlyRent-note')!.textContent).toContain(
+      'Baseline $1,000/mo',
+    );
     // Temporary edits are not unsaved analysis changes.
     expect(screen.queryByText('Unsaved changes')).toBeNull();
     expect(whatIfTrigger().textContent).toContain('1 change');
@@ -1382,6 +1408,9 @@ describe('What if: one shared, scoped simulation across views', () => {
     // The existing metrics carry the simulated figure and its change from baseline.
     expect(snapshot().textContent).not.toBe(baseline);
     expect(snapshot().textContent).toMatch(/vs baseline/);
+    const moved = snapshot().textContent;
+    fireEvent.change(rent, { target: { value: '1250' } });
+    expect(snapshot().textContent).not.toBe(moved);
     for (const name of ['Actual vs projected', 'Charts', 'Benchmarks', 'Compare']) {
       fireEvent.click(screen.getByRole('tab', { name }));
       expect(visibleStrip().getByRole('button', { name: 'Edit what if' })).toBeTruthy();
@@ -1393,9 +1422,13 @@ describe('What if: one shared, scoped simulation across views', () => {
         name: 'What if (not saved)',
       }),
     ).toBeTruthy();
+    // Back at the baseline mark, the slider inherits the baseline again.
+    fireEvent.change(rent, { target: { value: '1000' } });
+    expect(strip()).toHaveLength(0);
+    fireEvent.change(rent, { target: { value: '1100' } });
     fireEvent.click(visibleStrip().getByRole('button', { name: 'Reset to baseline' }));
     expect(strip()).toHaveLength(0);
-    expect(rentField().value).toBe('');
+    expect(rentField().value).toBe('1000');
     fireEvent.click(screen.getByRole('tab', { name: 'Summary' }));
     expect(snapshot().textContent).toBe(baseline);
     // Saving after a reset stores the untouched baseline and no case.
@@ -1408,10 +1441,11 @@ describe('What if: one shared, scoped simulation across views', () => {
     expect(saved.payload.scenarios).toEqual([]);
   });
 
-  it('keeps baseline and records unchanged while simulating, and saves a case only on request', async () => {
+  it('keeps baseline, records and saved cases unchanged while simulating', async () => {
     await open();
     openWhatIf();
     fireEvent.change(rentField(), { target: { value: '1500' } });
+    expect(saveRoiAnalysisAction).not.toHaveBeenCalled();
     fireEvent.click(toolbarButton('Save draft'));
     await screen.findByText('Saved draft - revision 1');
     let saved = vi.mocked(saveRoiAnalysisAction).mock.calls[0][0] as {
@@ -1421,10 +1455,13 @@ describe('What if: one shared, scoped simulation across views', () => {
     expect(saved.payload.scenarios).toEqual([]);
     // The simulation survives the save untouched.
     expect(rentField().value).toBe('1500');
-    fireEvent.click(openWhatIf().getByRole('button', { name: 'Save as case' }));
-    fireEvent.change(scenarioName(), { target: { value: 'Higher rent' } });
-    expect(screen.getByText('Unsaved changes')).toBeTruthy();
-    fireEvent.click(openWhatIf().getByRole('button', { name: 'Save draft' }));
+    // A case is made separately on Compare; the what-if is not copied into it.
+    addScenario('Higher rent');
+    const caseRent = () =>
+      document.getElementById('scenarios.0.overrides.income.monthlyRent') as HTMLInputElement;
+    expect(caseRent().value).toBe('');
+    fireEvent.change(caseRent(), { target: { value: '1400' } });
+    fireEvent.click(toolbarButton('Save draft'));
     await screen.findByText('Saved draft - revision 2');
     saved = vi.mocked(saveRoiAnalysisAction).mock.calls[1][0] as {
       payload: ReturnType<typeof make>;
@@ -1433,23 +1470,44 @@ describe('What if: one shared, scoped simulation across views', () => {
     expect(saved.payload.scenarios).toEqual([
       expect.objectContaining({
         name: 'Higher rent',
-        overrides: { income: { monthlyRent: 1500 } },
+        overrides: { income: { monthlyRent: 1400 } },
       }),
     ]);
+    expect(screen.queryByText('Unsaved changes')).toBeNull();
+    // Starting from the saved case copies it; moving a slider never edits the case.
+    fireEvent.change(openWhatIf().getByLabelText('Start from'), {
+      target: { value: `case:${saved.payload.scenarios[0].id}` },
+    });
+    expect(rentField().value).toBe('1400');
+    expect(visibleStrip().getByRole('status').textContent).toBe(
+      'SimulatedWhat if · Higher rent (copy) · 1 change, not saved',
+    );
+    fireEvent.change(rentField(), { target: { value: '1450' } });
+    expect(caseRent().value).toBe('1400');
+    expect(screen.queryByText('Unsaved changes')).toBeNull();
+    fireEvent.click(openWhatIf().getByRole('button', { name: 'Exit what if' }));
+    expect(caseRent().value).toBe('1400');
+    expect(screen.queryByText('Unsaved changes')).toBeNull();
+    // Slider input never sent a save request of its own.
+    expect(saveRoiAnalysisAction).toHaveBeenCalledTimes(2);
   });
 
-  it('marks invalid input on its field and keeps every view on the baseline', async () => {
-    await open();
-    openWhatIf();
-    fireEvent.change(rentField(), { target: { value: 'lots' } });
-    expect(rentField().getAttribute('aria-invalid')).toBe('true');
-    expect(visibleStrip().getByRole('status').textContent).toMatch(
-      /^PausedWhat if · .+\. Figures show the baseline\.$/,
+  it('says plainly when a simulation is paused and the figures show the baseline', () => {
+    render(
+      <WhatIfStatus
+        name="What if"
+        changes={1}
+        simulation={{
+          ok: false,
+          errors: [{ path: 'financing.loanAmount', message: 'Loan exceeds purchase price' }],
+        }}
+        onEdit={() => {}}
+        onReset={() => {}}
+      />,
     );
-    expect(screen.getByRole('region', { name: 'Deal Snapshot' }).textContent).not.toMatch(
-      /vs baseline/,
+    expect(screen.getByRole('status').textContent).toBe(
+      'PausedWhat if · Loan exceeds purchase price. Figures show the baseline.',
     );
-    expect(document.body.textContent).not.toMatch(/NaN/);
   });
 
   it('closes with Escape back to the trigger, keeps simulating, and Exit restores the baseline', async () => {
@@ -1470,7 +1528,7 @@ describe('What if: one shared, scoped simulation across views', () => {
   it('never carries one property’s what-if to another', async () => {
     await open();
     openWhatIf();
-    fireEvent.change(rentField(), { target: { value: '1800' } });
+    fireEvent.change(rentField(), { target: { value: '1400' } });
     fireEvent.click(toolbarButton('Change property'));
     fireEvent.click(screen.getByRole('button', { name: /Property b/ }));
     await screen.findByRole('heading', { name: 'Property b', level: 1 });
@@ -1478,7 +1536,7 @@ describe('What if: one shared, scoped simulation across views', () => {
     expect(strip()).toHaveLength(0);
     expect(whatIfTrigger().textContent).not.toMatch(/change/);
     openWhatIf();
-    expect(rentField().value).toBe('');
+    expect(rentField().value).toBe('1000');
     act(() => {
       window.history.replaceState(null, '', '/roi-analysis?property=a');
       window.dispatchEvent(new PopStateEvent('popstate'));
@@ -1506,7 +1564,7 @@ describe('What if: one shared, scoped simulation across views', () => {
       'Property a · whole property · From Rent analysis · Unit 3A +$240/mo',
     );
     expect(rentField().value).toBe('1240');
-    expect(within(dialog).getByLabelText('Case').textContent).toContain(
+    expect(within(dialog).getByLabelText('Start from').textContent).toContain(
       'Unit 3A at suggested rent',
     );
     expect(window.location.search).toBe('?property=a');
@@ -1528,7 +1586,7 @@ describe('What if: one shared, scoped simulation across views', () => {
     render(<RoiWorkspace selection={{ ok: true, data: withUnits }} />);
     const dialog = await screen.findByRole('dialog', { name: 'What if' });
     expect(dialog.textContent).toContain('unit not found in this property, no rent change applied');
-    expect(rentField().value).toBe('');
+    expect(rentField().value).toBe('1000');
     expect(strip()).toHaveLength(0);
     expect(document.body.textContent).toContain(
       'The Rent analysis unit is not part of Property a, so no rent change was applied.',
@@ -1573,18 +1631,15 @@ describe('What if: one shared, scoped simulation across views', () => {
     expect(baseRent()).toBe('$1,500.00');
     fireEvent.change(rentField(), { target: { value: '1200' } });
     expect(baseRent()).toBe('$1,200.00');
-    // Saved as a case, back to the temporary what-if, then the saved case again.
-    fireEvent.click(openWhatIf().getByRole('button', { name: 'Save as case' }));
-    expect(exitPanel().textContent).toContain('Exact sale statement, year 3');
-    expect(baseRent()).toBe('$1,200.00');
-    fireEvent.change(openWhatIf().getByLabelText('Case'), { target: { value: 'temporary' } });
+    // Reset in the panel, then a preset start, then Reset from the status line.
+    fireEvent.click(openWhatIf().getByRole('button', { name: 'Reset to baseline' }));
     expect(exitPanel().textContent).toBe(baselineExit);
     expect(baseRent()).toBe('$1,000.00');
-    showCase('Case 1');
-    expect(baseRent()).toBe('$1,200.00');
-    // Show baseline from the strip, then a fresh edit and Exit.
-    fireEvent.click(screen.getByRole('tab', { name: 'Charts' }));
-    fireEvent.click(visibleStrip().getByRole('button', { name: 'Show baseline' }));
+    fireEvent.change(openWhatIf().getByLabelText('Start from'), {
+      target: { value: 'preset:Worst Case' },
+    });
+    expect(exitPanel().textContent).not.toBe(baselineExit);
+    fireEvent.click(visibleStrip().getByRole('button', { name: 'Reset to baseline' }));
     expect(exitPanel().textContent).toBe(baselineExit);
     expect(baseRent()).toBe('$1,000.00');
     fireEvent.change(rentField(), { target: { value: '1300' } });
@@ -1607,7 +1662,7 @@ describe('What if: one shared, scoped simulation across views', () => {
           finish = resolve;
         }) as never,
     );
-    fireEvent.click(openWhatIf().getByRole('button', { name: 'Save draft' }));
+    fireEvent.click(toolbarButton('Save draft'));
     await screen.findByText(/this case can be edited again when the save finishes/);
     expect(caseRent().disabled).toBe(true);
     expect(scenarioName().disabled).toBe(true);
@@ -1633,19 +1688,15 @@ describe('What if: one shared, scoped simulation across views', () => {
     await screen.findByText('Saved draft - revision 1');
     expect(caseRent().disabled).toBe(false);
     expect(caseRent().value).toBe('1400');
-    // The dialog keeps focus inside and still closes with Escape.
     fireEvent.change(caseRent(), { target: { value: '1600' } });
     vi.mocked(saveRoiAnalysisAction).mockRejectedValueOnce(Error('offline'));
-    fireEvent.click(openWhatIf().getByRole('button', { name: 'Save draft' }));
+    fireEvent.click(toolbarButton('Save draft'));
     await screen.findByText('Could not save analysis. Your entries are kept. Try again.');
     expect(caseRent().disabled).toBe(false);
     expect(caseRent().value).toBe('1600');
     expect(screen.getByText('Unsaved changes')).toBeTruthy();
     fireEvent.change(caseRent(), { target: { value: '1650' } });
     expect(caseRent().value).toBe('1650');
-    fireEvent.keyDown(caseRent(), { key: 'Escape' });
-    expect(screen.queryByRole('dialog', { name: 'What if' })).toBeNull();
-    await waitFor(() => expect(document.activeElement).toBe(whatIfTrigger()));
   });
 
   it('lands a retired Scenarios address on Compare’s saved cases', async () => {

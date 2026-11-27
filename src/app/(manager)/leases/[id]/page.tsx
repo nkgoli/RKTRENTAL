@@ -155,18 +155,12 @@ export default async function LeaseDetailPage({
       ? (signedTerms.template as { name?: string })
       : null;
   const title = property.name + (lease.unit.isImplicit ? '' : ' · Unit ' + lease.unit.number);
-  const [connectedPayments, agreement] = await Promise.all([
-    db.providerConnection.count({
-      where: { organizationId: session.organizationId, kind: 'PAYMENTS', status: 'CONNECTED' },
-    }),
-    // Read-only: the stored state of the latest signing version for the signature panel.
-    db.leaseAgreement.findFirst({
-      where: { organizationId: session.organizationId, leaseId: lease.id },
-      orderBy: { version: 'desc' },
-      include: { parties: { orderBy: { id: 'asc' } }, files: true },
-    }),
-  ]);
-  const onlinePaymentsEnabled = connectedPayments > 0;
+  // Read-only: the stored state of the latest signing version for the signature panel.
+  const agreement = await db.leaseAgreement.findFirst({
+    where: { organizationId: session.organizationId, leaseId: lease.id },
+    orderBy: { version: 'desc' },
+    include: { parties: { orderBy: { id: 'asc' } }, files: true },
+  });
   // The same statement the property and unit Payments tabs show for this lease.
   const ledger = leaseLedger(lease, now);
   const lastPayment = toLastPayment(ledger.lastPayment);

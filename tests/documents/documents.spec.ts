@@ -13,7 +13,7 @@ test('manager uploads a lease file, finds it, previews and downloads it', async 
   await page.goto('/documents');
   await expect(page.getByRole('heading', { name: 'Documents', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Lease documents' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Property files' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Property files', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Photos', exact: true })).toBeVisible();
   await page.screenshot({ path: 'test-results/documents-library.png', fullPage: true });
 

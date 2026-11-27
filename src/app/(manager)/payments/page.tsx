@@ -311,7 +311,11 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={5}>
-                    <EmptyState title="No rent charges in this view" action="View leases" href="/leases" />
+                    <EmptyState
+                      title="No rent charges in this view"
+                      action="View leases"
+                      href="/leases"
+                    />
                   </td>
                 </tr>
               )}

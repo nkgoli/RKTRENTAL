@@ -251,7 +251,8 @@ describe('rent comparison decisions', () => {
 
   it('names the single-family subject and uses the vacancy continuation without changing the action target', () => {
     render(<CompsWorkbench {...props} propertyLevel occupied={false} />);
-    expect(screen.getByText('Schematic map: distance and direction from the home.')).toBeTruthy();
+    expect(screen.getByText('Subject home', { selector: 'text' })).toBeTruthy();
+    expect(screen.getByText('Schematic, not to scale.')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Create lease' }).getAttribute('href')).toBe(
       '/leases/new?unit=fixture-unit',
     );
@@ -302,12 +303,12 @@ describe('rent analysis layout', () => {
       </ToastProvider>,
     );
     const band = within(screen.getByRole('region', { name: 'Suggested rent' }));
-    expect(band.getByText('Suggested rent · estimate · Unit 3A · 2 bd · vacant')).toBeTruthy();
+    expect(band.getByText('Suggested rent · Unit 3A · 2 bd · vacant')).toBeTruthy();
     expect(band.getByTestId('suggested-rent').textContent).toBe('$1,800');
     expect(band.getByText(/Matches the \$1,800 listed rent/)).toBeTruthy();
     expect(band.getByRole('meter').getAttribute('aria-valuetext')).toBe('Confidence low');
     expect(band.getByTestId('current-market-rent').textContent).toBe('$1,675');
-    expect(band.getByText('−$125 vs listed rent · last applied value')).toBeTruthy();
+    expect(band.getByText('−$125 vs listed rent')).toBeTruthy();
     const compare = within(screen.getByRole('region', { name: 'Unit 3A against nearby comps' }));
     const rows = compare.getAllByRole('row').map((row) => row.textContent);
     expect(rows[1]).toContain('Unit 3A · listed');

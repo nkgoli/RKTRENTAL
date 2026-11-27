@@ -147,7 +147,7 @@ describe('property autofill and calculation sufficiency', () => {
     await open();
     expect(glance().getByText('$10,800')).toBeTruthy();
     const card = within(screen.getByRole('region', { name: 'Deal Snapshot' }));
-    expect(card.getByText('Year 1 · Projected estimate · before tax · USD')).toBeTruthy();
+    expect(card.getByText('Projected cash flow · Year 1')).toBeTruthy();
     expect(card.getByRole('button', { name: 'Annual' }).getAttribute('aria-pressed')).toBe('true');
     expect(card.getByText('/ year')).toBeTruthy();
     expect(
@@ -161,8 +161,8 @@ describe('property autofill and calculation sufficiency', () => {
     ).toBeTruthy();
     fireEvent.click(screen.getByText(/^Exact annual cash flow, all \d+ years$/));
     expect(screen.getByRole('region', { name: 'Annual cash flow' })).toBeTruthy();
-    expect(summaryCard().getByText('Assumptions from property details')).toBeTruthy();
-    expect(screen.getByText('Revision 0')).toBeTruthy();
+    expect(summaryCard().queryByText('Assumptions from property details')).toBeNull();
+    expect(screen.queryByText('Revision 0')).toBeNull();
     expect(summaryCard().queryByRole('definition')).toBeNull();
     // No inline baseline editor remains on the dashboard.
     expect(document.getElementById('input.income.monthlyRent')).toBeNull();
@@ -298,7 +298,7 @@ describe('property autofill and calculation sufficiency', () => {
     });
     await open();
     expect(summaryCard().queryByText('$0/mo')).toBeNull();
-    expect(screen.getByText('Saved draft · revision 3')).toBeTruthy();
+    expect(screen.getByText('Revision 3')).toBeTruthy();
     expect(screen.getByText('Loaded draft - revision 3').className).toMatch(/srOnly/);
     expect(
       href(summaryCard().getByRole('link', { name: 'Complete assumptions' })).searchParams.get(
@@ -1080,7 +1080,7 @@ describe('scenario examples and merged failure recovery', () => {
     });
     await open();
     showCase(p.scenarios[0].name);
-    fireEvent.click(screen.getByText('Explicit scenario calculation options'));
+    fireEvent.click(screen.getByText('Calculation options'));
     expect(screen.getByText('Federal income tax (%)', { selector: 'dt' })).toBeTruthy();
     expect(screen.getByText('Discount rate', { selector: 'dt' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Saved cases' }).querySelector('pre')).toBeNull();
@@ -1379,7 +1379,7 @@ describe('What if: one shared, scoped simulation across views', () => {
     const baseline = snapshot().textContent;
     const panel = openWhatIf();
     expect(
-      panel.getByText(/Temporary\. Saved assumptions, saved cases and recorded rent/),
+      panel.getByText(/Temporary\. Nothing here changes your saved analysis or records/),
     ).toBeTruthy();
     // Sliders sit directly under Suggested changes; there is no text-entry form or save step.
     const suggested = within(panel.getByRole('region', { name: 'Suggested changes' }));

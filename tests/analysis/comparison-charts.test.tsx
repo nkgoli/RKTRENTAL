@@ -268,10 +268,9 @@ describe('Rental Distribution (C25) presentation', () => {
         rangeHigh={1950}
       />,
     );
-    const card = screen.getByRole('region', { name: 'Rental Distribution' });
-    expect(within(card).getByRole('list', { name: 'Data basis' }).textContent).toContain(
-      'USD per month',
-    );
+    const card = screen.getByRole('region', { name: 'Rent distribution' });
+    // No metadata chips: the stats, legend and note carry the basis.
+    expect(within(card).queryByRole('list', { name: 'Data basis' })).toBeNull();
     expect(within(card).getByText('Yours vs average').nextSibling!.textContent).toBe('−$250');
     expect(card.textContent).toContain('Suggested range $1,750–$1,950');
     expect(card.textContent).toContain('standard deviation ($112)');

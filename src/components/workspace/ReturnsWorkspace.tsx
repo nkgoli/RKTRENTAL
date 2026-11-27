@@ -46,8 +46,8 @@ export function ReturnsWorkspace({
             </a>
             {returns.unitId && (
               <span className={styles.footNote}>
-                Unit income follows settled payments; property costs are shared by rent.
-                Projections cover the whole property.
+                Unit income follows settled payments; property costs are shared by rent. Projections
+                cover the whole property.
               </span>
             )}
           </>

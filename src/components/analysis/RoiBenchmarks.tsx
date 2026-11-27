@@ -299,7 +299,7 @@ export function RoiBenchmarks({
   );
 
   return (
-    <div className={s.wrap}>
+    <div className={`${s.wrap} ${compare ? b.compare : ''}`}>
       <section className={`${styles.card} ${b.intro}`}>
         <div className={b.introHead}>
           <h2>{compare ? 'Asset comparison' : 'Benchmarks'}</h2>

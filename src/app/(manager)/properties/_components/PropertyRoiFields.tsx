@@ -246,9 +246,7 @@ export function PropertyRoiFields({
                     {propertyValues &&
                       values[field.path] === original?.[field.path] &&
                       onProperty !== (original?.[field.path] ?? '') && (
-                        <span className="muted">
-                          Analysis value. Property details: {onProperty || 'blank'}.
-                        </span>
+                        <span className="muted">Property details: {onProperty || 'blank'}</span>
                       )}
                   </Field>
                 );

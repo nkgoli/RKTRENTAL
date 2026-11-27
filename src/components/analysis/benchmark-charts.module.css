@@ -1,5 +1,9 @@
 /* Benchmarks and Compare in the shared chart style: one intro card with a single
    "Hypothetical" marker, a calm summary card, chip pickers and toggle legends. */
+/* On Compare the saved-case comparison follows in the same panel. */
+.compare {
+  margin-bottom: 20px;
+}
 .intro {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

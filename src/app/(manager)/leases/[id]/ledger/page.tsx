@@ -147,10 +147,7 @@ export default async function LeaseLedgerPage({
                 <span>No open charges</span>
               )}
               {summary.pendingCents > 0 && (
-                <span>
-                  {' '}
-                  · {formatMoney(summary.pendingCents)} pending, not deducted
-                </span>
+                <span> · {formatMoney(summary.pendingCents)} pending, not deducted</span>
               )}
             </>
           }

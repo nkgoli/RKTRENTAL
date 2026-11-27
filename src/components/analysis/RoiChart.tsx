@@ -462,13 +462,6 @@ export function useHorizon(length: number, label: string, preferred = 30) {
 
 /** Lucide icon outlines used on the chart cards. */
 const iconPaths = {
-  target: (
-    <>
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="6" />
-      <circle cx="12" cy="12" r="2" />
-    </>
-  ),
   down: (
     <>
       <path d="M22 17 13.5 8.5 8.5 13.5 2 7" />
@@ -481,49 +474,11 @@ const iconPaths = {
       <path d="M16 7h6v6" />
     </>
   ),
-  zap: (
-    <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" />
-  ),
-  dollar: (
-    <>
-      <path d="M12 2v20" />
-      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-    </>
-  ),
-  clock: (
-    <>
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 6v6l4 2" />
-    </>
-  ),
-  calendar: (
-    <>
-      <rect width="18" height="18" x="3" y="4" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </>
-  ),
-  percent: (
-    <>
-      <path d="M19 5 5 19" />
-      <circle cx="6.5" cy="6.5" r="2.5" />
-      <circle cx="17.5" cy="17.5" r="2.5" />
-    </>
-  ),
-  piggy: (
-    <>
-      <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z" />
-      <path d="M2 9v1c0 1.1.9 2 2 2h1" />
-      <path d="M16 11h.01" />
-    </>
-  ),
   eye: (
     <>
       <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
       <circle cx="12" cy="12" r="3" />
     </>
-  ),
-  sparkles: (
-    <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
   ),
   settings: (
     <>
@@ -540,12 +495,6 @@ const iconPaths = {
   ),
   chevronDown: <path d="m6 9 6 6 6-6" />,
   chevronRight: <path d="m9 18 6-6-6-6" />,
-  pie: (
-    <>
-      <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
-      <path d="M22 12A10 10 0 0 0 12 2v10z" />
-    </>
-  ),
 };
 export type IconName = keyof typeof iconPaths;
 
@@ -894,7 +843,13 @@ export function ComboChart({
   const legendItems: LegendItem[] = legend ?? [
     ...series
       .filter((s) => !s.hideLegend)
-      .map((s) => ({ label: s.label, kind: s.kind === 'bar' ? ('bar' as const) : 'line', color: s.color })),
+      .map(
+        (s): LegendItem => ({
+          label: s.label,
+          kind: s.kind === 'bar' ? 'bar' : 'line',
+          color: s.color,
+        }),
+      ),
     ...(hasNegativeBar
       ? [{ label: 'Negative year', kind: 'bar' as const, color: chartColors.negative }]
       : []),
@@ -1174,7 +1129,10 @@ export function ComboChart({
               const flip = marker.align === 'end' ? x - m.left > 90 : x > width - m.right - 90;
               return (
                 <g key={`${marker.index}-${marker.label}`} className={c.marker}>
-                  <line x1={x} x2={x} y1={m.top} y2={m.top + innerH} />
+                  {/* A label over its column needs no line through the bar. */}
+                  {marker.align !== 'center' && (
+                    <line x1={x} x2={x} y1={m.top} y2={m.top + innerH} />
+                  )}
                   {marker.label && (
                     <text
                       x={marker.align === 'center' ? x : x + (flip ? -6 : 6)}

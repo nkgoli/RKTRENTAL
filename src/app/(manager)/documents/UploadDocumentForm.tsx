@@ -125,9 +125,7 @@ export function UploadDocumentForm({
             : 'No destinations of this type yet.'}
         </p>
       )}
-      {targetId && (
-        <p className={styles.uploadHint}>Files upload as soon as you select them.</p>
-      )}
+      {targetId && <p className={styles.uploadHint}>Files upload as soon as you select them.</p>}
     </div>
   );
 }

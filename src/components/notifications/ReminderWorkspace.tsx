@@ -407,7 +407,7 @@ export function ReminderWorkspace({
               {initialTenantId && lease.tenants.some((t) => t.id === initialTenantId)
                 ? ` for ${lease.tenants.find((t) => t.id === initialTenantId)!.name}`
                 : ''}
-.
+              .
             </p>
           )}
           {!overdue.length && <p className={styles.good}>No overdue balances in this scope.</p>}
@@ -464,7 +464,10 @@ export function ReminderWorkspace({
                 <h2>All caught up</h2>
                 <p>No overdue balance for this lease.</p>
                 {fromRentRoll && leaseId === initialLeaseId && (
-                  <p>The rent roll showed it as late; it may have been paid since the rent roll loaded.</p>
+                  <p>
+                    The rent roll showed it as late; it may have been paid since the rent roll
+                    loaded.
+                  </p>
                 )}
               </section>
             )}
@@ -514,9 +517,7 @@ export function ReminderWorkspace({
                     )}
                   </div>
                   <fieldset className={styles.recipients} disabled={blocked}>
-                    <legend>
-                      Recipients
-                    </legend>
+                    <legend>Recipients</legend>
                     {!snapshot.recipients.length && (
                       <p>
                         No eligible contacts. Choose another channel or update the tenant’s contact

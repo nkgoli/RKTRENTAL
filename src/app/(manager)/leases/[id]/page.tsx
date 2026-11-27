@@ -232,8 +232,13 @@ export default async function LeaseDetailPage({
     tenants,
     formatDate,
   });
-  // The Agreement tab holds the full signing section, so the banner stays off it.
-  const banner = activeTab === 'agreement' ? null : signatureBanner(signature, lease, formatDate);
+  // Shown only while its one action leads elsewhere: the Agreement tab holds the full signing
+  // section and the Documents tab the upload.
+  const signing = signatureBanner(signature, lease, formatDate);
+  const banner =
+    activeTab !== 'agreement' && signing?.action && signing.action.tab !== activeTab
+      ? { ...signing, action: signing.action }
+      : null;
   const status = leaseStatusBadge(lease, now);
   const progress = termProgress(lease, now, formatDate);
   const dueDay = ordinal(lease.rentDueDay);
@@ -355,8 +360,10 @@ export default async function LeaseDetailPage({
     </span>
   ) : signature.pdfMissing ? (
     'PDF not stored'
+  ) : signature.badge.label === 'Signed' ? (
+    'PDF processing'
   ) : (
-    signature.headline
+    signature.badge.label
   );
 
   /** Terms, tenants, unit and documents: one quiet column beside the overview's charges. */
@@ -580,16 +587,14 @@ export default async function LeaseDetailPage({
               <strong>{banner.title}</strong>
               {banner.detail && <span>{banner.detail}</span>}
             </p>
-            {banner.action && banner.action.tab !== activeTab && (
-              <a
-                className="btn btn-secondary btn-sm"
-                href={tabHref(banner.action.tab)}
-                // The accessible name starts with the visible words and keeps the context.
-                aria-label={banner.action.ariaLabel}
-              >
-                {banner.action.label}
-              </a>
-            )}
+            <a
+              className="btn btn-secondary btn-sm"
+              href={tabHref(banner.action.tab)}
+              // The accessible name starts with the visible words and keeps the context.
+              aria-label={banner.action.ariaLabel}
+            >
+              {banner.action.label}
+            </a>
           </section>
         )}
 
@@ -650,7 +655,9 @@ export default async function LeaseDetailPage({
                       ]}
                       groupHeadings={false}
                       compact
-                      emptyText={lease.status === 'DRAFT' ? 'No charges yet.' : undefined}
+                      emptyText={
+                        lease.status === 'DRAFT' ? 'No charges until the lease is sent.' : undefined
+                      }
                       reminderHrefs={reminderHrefs}
                     />
                   </section>
@@ -749,7 +756,7 @@ export default async function LeaseDetailPage({
                       </FormDisclosure>
                     )}
                   </CardHead>
-                  <dl className={styles.facts}>
+                  <dl className={cx(styles.factGrid, styles.twoUp)}>
                     <div>
                       <dt>Notice given</dt>
                       <dd>{noticeGiven ? formatDate(lease.noticeGivenAt!) : 'No notice given'}</dd>
@@ -830,7 +837,10 @@ export default async function LeaseDetailPage({
                   {snapshotItems.length > 0 && (
                     <details className={styles.wording}>
                       <summary>
-                        Show all {snapshotItems.length} clauses, rules and disclosures
+                        <span className={styles.whenClosed}>
+                          Show all {snapshotItems.length} clauses, rules and disclosures
+                        </span>
+                        <span className={styles.whenOpen}>Hide wording</span>
                       </summary>
                       <div className={styles.desk}>
                         <article className={styles.paper} aria-label="Prepared lease wording">

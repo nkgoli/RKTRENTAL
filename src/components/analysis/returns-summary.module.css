@@ -46,6 +46,14 @@ p.caption {
   margin: 0;
   padding: 0;
   list-style: none;
+  container-type: inline-size;
+}
+/* In the narrow column beside the cash-flow table, each link sits under its figure. */
+@container (max-width: 420px) {
+  .gaps li {
+    flex-direction: column;
+    gap: 2px;
+  }
 }
 .gaps li {
   display: flex;

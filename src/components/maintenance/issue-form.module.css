@@ -1,4 +1,4 @@
-/* New repair request (Designs/redisgn): a 2:1 grid of the request card and "What happens next". */
+/* Repair request form: one column, then two thirds of the width on desktop. */
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -134,7 +134,6 @@
   background: #e3f3ea;
 }
 
-/* "What happens next": a quiet bordered panel of three explanations. */
 @media (min-width: 1024px) {
   .layout {
     grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);

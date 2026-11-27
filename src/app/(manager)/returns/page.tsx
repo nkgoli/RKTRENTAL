@@ -215,7 +215,8 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
         </section>
       )}
 
-      <section className="split">
+      {/* One selected property: the chart takes the row; a one-bar NOI ranking adds nothing. */}
+      <section className={selected ? undefined : 'split'}>
         <Card>
           <CardHeader title="Income vs expenses" />
           <IncomeExpenseChart
@@ -224,28 +225,30 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             height={240}
           />
         </Card>
-        <Card>
-          <CardHeader title="NOI by property" />
-          <ul className={styles.barList} aria-label="Net operating income by property">
-            {noiRanking.map((property) => (
-              <li key={property.propertyId}>
-                <Link href={returnsHref(property.propertyId)}>{property.propertyName}</Link>
-                <strong>{formatUsd(property.metrics.noiCents)}</strong>
-                <span
-                  className={styles.bar}
-                  data-negative={property.metrics.noiCents < 0 ? 'true' : undefined}
-                  style={{ width: `${(Math.abs(property.metrics.noiCents) / maxNoi) * 100}%` }}
-                  aria-hidden="true"
-                />
-              </li>
-            ))}
-          </ul>
-          {zeroNoi > 0 && (
-            <p className={styles.barNote}>
-              {zeroNoi} {zeroNoi === 1 ? 'property' : 'properties'} at {formatUsd(0)}
-            </p>
-          )}
-        </Card>
+        {!selected && (
+          <Card>
+            <CardHeader title="NOI by property" />
+            <ul className={styles.barList} aria-label="Net operating income by property">
+              {noiRanking.map((property) => (
+                <li key={property.propertyId}>
+                  <Link href={returnsHref(property.propertyId)}>{property.propertyName}</Link>
+                  <strong>{formatUsd(property.metrics.noiCents)}</strong>
+                  <span
+                    className={styles.bar}
+                    data-negative={property.metrics.noiCents < 0 ? 'true' : undefined}
+                    style={{ width: `${(Math.abs(property.metrics.noiCents) / maxNoi) * 100}%` }}
+                    aria-hidden="true"
+                  />
+                </li>
+              ))}
+            </ul>
+            {zeroNoi > 0 && (
+              <p className={styles.barNote}>
+                {zeroNoi} {zeroNoi === 1 ? 'property' : 'properties'} at {formatUsd(0)}
+              </p>
+            )}
+          </Card>
+        )}
       </section>
 
       {yearly.length > 1 && (
@@ -380,7 +383,10 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
         {expenseBreakdown.length === 0 ? (
           <p className="muted">No expenses this period.</p>
         ) : (
-          <ul className={`${styles.barList} ${styles.twoColumns}`} aria-label="Expenses by category">
+          <ul
+            className={`${styles.barList} ${styles.twoColumns}`}
+            aria-label="Expenses by category"
+          >
             {expenseBreakdown.map((entry) => {
               const share = totalExpenses > 0 ? (entry.amountCents / totalExpenses) * 100 : 0;
               return (

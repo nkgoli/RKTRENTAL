@@ -133,7 +133,7 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.barList strong .muted {
+.barList strong :global(.muted) {
   font-weight: 400;
 }
 /* Thin horizontal bars: rounded at the data end, square at the baseline, no track. NOI is the
@@ -173,7 +173,7 @@
   align-items: baseline;
   gap: 4px 12px;
 }
-.headTitle .muted {
+.headTitle :global(.muted) {
   font-size: 13px;
 }
 .expenseHead {

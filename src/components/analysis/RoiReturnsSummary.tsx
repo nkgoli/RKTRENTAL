@@ -210,7 +210,7 @@ export function ActualVsProjectedSummary({
           </p>
         </div>
         <label className={`field ${styles.period}`}>
-          Period
+          <span className={styles.srOnly}>Period</span>
           <select
             value={choice.key}
             disabled={state.status === 'loading'}

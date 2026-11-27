@@ -1,6 +1,6 @@
 /* Property & unit overview (Designs/redisgn "property"): summary band, Next steps beside
-   Property details (2:1), units & lease terms, archive row. Cards, buttons, badges, tables and
-   the band come from the shared look; this file only lays them out. */
+   Property details (2:1; details alone span the row), units, then the archive action. Cards,
+   buttons, badges, tables and the band come from the shared look; this file only lays them out. */
 .page {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

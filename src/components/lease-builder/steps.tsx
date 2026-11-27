@@ -1,14 +1,6 @@
 'use client';
 
-import {
-  cloneElement,
-  isValidElement,
-  useId,
-  useMemo,
-  useState,
-  type ReactElement,
-  type ReactNode,
-} from 'react';
+import { cloneElement, useId, useMemo, useState, type ReactElement, type ReactNode } from 'react';
 import { FileUploader, type UploadedDocument } from '@/components/upload';
 import {
   CLAUSE_OPTIONS,
@@ -19,17 +11,40 @@ import {
   disclosureLabels,
   optionLabels,
   ruleLabels,
-  type ClauseOption,
 } from '@/lib/lease-create/clauses';
 import { feesFromDraft } from '@/lib/lease-create/fees';
-import type { TenantOption, WizardDraft, WizardErrors } from '@/lib/lease-create/types';
-import { dueAtSigning, endOptionDates, termLabel } from '@/lib/lease-create/validation';
+import type { ResolvedTerm, TemplateSection } from '@/lib/lease-create/templates';
+import {
+  STEP,
+  type TenantOption,
+  type WizardDraft,
+  type WizardErrors,
+} from '@/lib/lease-create/types';
+import { endOptionDates, validateReview } from '@/lib/lease-create/validation';
 import { parseLeaseDate } from '@/lib/leases/core';
-import { previewScheduledCharges, prorateFirstMonth } from '@/lib/ledger/lease-setup';
+import { prorateFirstMonth } from '@/lib/ledger/lease-setup';
 import { formatMoney } from '@/lib/ledger/statement';
-import styles from './lease-builder.module.css';
-import { contextFromDraft, resolveTerms } from '@/lib/lease-create/templates';
 import { Badge } from '@/components/ui/Badge';
+import { Glyph } from './icons';
+import styles from './lease-builder.module.css';
+import {
+  blanksIn,
+  chargesPreview,
+  cx,
+  draftTerms,
+  dueAtMoveIn,
+  fieldName,
+  initials,
+  longDate,
+  mediumDate,
+  moneyText,
+  monthYear,
+  ordinal,
+  shortDate,
+  splitMoveIn,
+  termFacts,
+  type TermFacts,
+} from './summary';
 
 export type StepProps = {
   draft: WizardDraft;
@@ -37,310 +52,443 @@ export type StepProps = {
   errors: WizardErrors;
 };
 
-const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
+type ControlProps = {
+  id?: string;
+  className?: string;
+  'aria-invalid'?: boolean;
+  'aria-describedby'?: string;
+};
 
-function Err({ errors, name }: { errors: WizardErrors; name: string }) {
-  return errors[name] ? (
-    <small className={styles.error} role="alert">
-      {errors[name]}
-    </small>
-  ) : null;
-}
+const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
 
+/** Label, control (with an optional "$" adornment), then hint and error as its description. */
 function Field({
   label,
   hint,
   error,
-  children,
+  optional,
+  prefix,
   className,
+  children,
 }: {
   label: string;
   hint?: ReactNode;
   error?: string;
-  children: ReactNode;
+  optional?: boolean;
+  prefix?: string;
   className?: string;
+  children: ReactElement<ControlProps>;
 }) {
-  const descriptionId = useId();
-  const control = isValidElement(children)
-    ? cloneElement(
-        children as ReactElement<{ 'aria-invalid'?: boolean; 'aria-describedby'?: string }>,
-        {
-          'aria-invalid': Boolean(error),
-          'aria-describedby': hint || error ? descriptionId : undefined,
-        },
-      )
-    : children;
+  const id = useId();
+  const controlId = children.props.id ?? `${id}control`;
+  const helpId = `${id}help`;
+  const control = cloneElement(children, {
+    id: controlId,
+    className: cx(styles.input, children.props.className),
+    'aria-invalid': Boolean(error),
+    'aria-describedby': hint || error ? helpId : undefined,
+  });
   return (
-    <label className={cx(styles.field, className)}>
-      {label}
-      {control}
+    <div className={cx(styles.field, className)}>
+      <label className={styles.label} htmlFor={controlId}>
+        {label}
+        {optional && <span className={styles.optional}>Optional</span>}
+      </label>
+      {prefix ? (
+        <span className={styles.adorned}>
+          <span className={styles.prefix} aria-hidden="true">
+            {prefix}
+          </span>
+          {control}
+        </span>
+      ) : (
+        control
+      )}
       {(hint || error) && (
-        <span id={descriptionId} className={styles.fieldHelp}>
-          {hint ? <small>{hint}</small> : null}
-          {error ? <small className={styles.error}>{error}</small> : null}
+        <span id={helpId} className={styles.help}>
+          {hint && <span>{hint}</span>}
+          {error && <span className={styles.error}>{error}</span>}
         </span>
       )}
-    </label>
+    </div>
   );
 }
 
-function CheckList({
-  options,
-  selected,
+/** An on/off row: a label (and short detail) with a switch; revealed content follows it. */
+function ToggleRow({
+  label,
+  detail,
+  checked,
   onChange,
-  name,
+  aside,
+  children,
 }: {
-  options: ClauseOption[];
-  selected: string[];
-  onChange: (next: string[]) => void;
-  name: string;
+  label: string;
+  detail?: string;
+  checked: boolean;
+  onChange: (on: boolean) => void;
+  aside?: ReactNode;
+  children?: ReactNode;
 }) {
+  const id = useId();
   return (
-    <div className={styles.checks} role="group" aria-label={name}>
-      {options.map((option) => {
-        const on = selected.includes(option.id);
-        return (
-          <label key={option.id} className={cx(styles.check, on && styles.checkOn)}>
-            <input
-              type="checkbox"
-              checked={on}
-              onChange={(e) =>
-                onChange(
-                  e.target.checked
-                    ? [...selected, option.id]
-                    : selected.filter((id) => id !== option.id),
-                )
-              }
-            />
-            <span className={styles.checkCopy}>
-              <strong>{option.label}</strong>
-              <small>{option.description}</small>
-            </span>
+    <div className={cx(styles.row, checked && styles.rowOn)}>
+      <div className={styles.rowHead}>
+        <span className={styles.rowText}>
+          <label className={styles.rowLabel} htmlFor={id}>
+            {label}
           </label>
-        );
-      })}
+          {detail && (
+            <span className={styles.rowDetail} id={`${id}detail`}>
+              {detail}
+            </span>
+          )}
+        </span>
+        {aside}
+        <input
+          id={id}
+          type="checkbox"
+          role="switch"
+          className={styles.switch}
+          checked={checked}
+          aria-describedby={detail ? `${id}detail` : undefined}
+          onChange={(event) => onChange(event.target.checked)}
+        />
+      </div>
+      {children}
     </div>
+  );
+}
+
+/** A compact "$" amount for a row; its label is read by assistive tech, not shown. */
+function Amount({
+  label,
+  value,
+  onChange,
+  error,
+  errorId,
+  placeholder = '0.00',
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  errorId?: string;
+  placeholder?: string;
+}) {
+  const id = useId();
+  return (
+    <span className={styles.amount}>
+      <label className={styles.srOnly} htmlFor={id}>
+        {label}
+      </label>
+      <span className={styles.adorned}>
+        <span className={styles.prefix} aria-hidden="true">
+          $
+        </span>
+        <input
+          id={id}
+          className={styles.input}
+          inputMode="decimal"
+          value={value}
+          placeholder={placeholder}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? errorId : undefined}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </span>
+    </span>
+  );
+}
+
+/** A fee that is switched on before its amount is asked for. */
+function FeeRow({
+  label,
+  detail,
+  enabled,
+  onToggle,
+  amountLabel,
+  value,
+  onValue,
+  error,
+  placeholder,
+}: {
+  label: string;
+  detail: string;
+  enabled: boolean;
+  onToggle: (on: boolean) => void;
+  amountLabel: string;
+  value: string;
+  onValue: (value: string) => void;
+  error?: string;
+  placeholder?: string;
+}) {
+  const errorId = useId();
+  return (
+    <ToggleRow
+      label={label}
+      detail={detail}
+      checked={enabled}
+      onChange={onToggle}
+      aside={
+        enabled && (
+          <Amount
+            label={amountLabel}
+            value={value}
+            onChange={onValue}
+            error={error}
+            errorId={errorId}
+            placeholder={placeholder}
+          />
+        )
+      }
+    >
+      {enabled && error && (
+        <small id={errorId} className={cx(styles.error, styles.rowError)}>
+          {error}
+        </small>
+      )}
+    </ToggleRow>
+  );
+}
+
+/** A fee amount kept with the agreement wording; blank leaves it to the agreement. */
+function AmountRow({
+  label,
+  detail,
+  value,
+  onChange,
+}: {
+  label: string;
+  detail: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const id = useId();
+  return (
+    <div className={styles.row}>
+      <div className={styles.rowHead}>
+        <span className={styles.rowText}>
+          <label className={styles.rowLabel} htmlFor={id}>
+            {label}
+          </label>
+          <span className={styles.rowDetail}>{detail}</span>
+        </span>
+        <span className={styles.amount}>
+          <span className={styles.adorned}>
+            <span className={styles.prefix} aria-hidden="true">
+              $
+            </span>
+            <input
+              id={id}
+              className={styles.input}
+              inputMode="decimal"
+              value={value}
+              placeholder="0.00"
+              onChange={(event) => onChange(event.target.value)}
+            />
+          </span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Wording with unfilled {{placeholders}} shown as small named blanks. */
+function Wording({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(\{\{[a-z_]+\}\})/g).map((part, index) =>
+        /^\{\{[a-z_]+\}\}$/.test(part) ? (
+          <mark key={index} className={styles.blank}>
+            {fieldName(part.slice(2, -2))}
+          </mark>
+        ) : (
+          part
+        ),
+      )}
+    </>
   );
 }
 
 // ------------------------------------------------------------------------------------ 1. Lease term
 
-const longDate = (isoDate: string) => {
-  const parsed = parseLeaseDate(isoDate);
-  return parsed
-    ? parsed.toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-        timeZone: 'UTC',
-      })
-    : isoDate;
-};
+const END_OPTIONS = [
+  { value: 'full-year', title: 'Full year', detail: '12-month fixed term' },
+  { value: 'month-to-month', title: 'Month-to-month', detail: 'Renews each month' },
+  { value: 'custom', title: 'Custom end date', detail: 'Shorter or longer term' },
+] as const;
+
+/** Start ●──── length ────● end, under the term choices. */
+function Timeline({ term, monthly }: { term: NonNullable<TermFacts>; monthly: boolean }) {
+  return (
+    <div
+      className={styles.timeline}
+      role="img"
+      aria-label={
+        monthly
+          ? `Month-to-month from ${longDate(term.start)}`
+          : `${term.length}, ${longDate(term.start)} to ${longDate(term.end)}`
+      }
+    >
+      <div className={styles.timelineTrack}>
+        <span className={styles.timelineDot} />
+        <span className={cx(styles.timelineLine, monthly && styles.timelineOpen)}>
+          <span className={styles.timelineLabel}>{term.length}</span>
+        </span>
+        <span className={cx(styles.timelineDot, monthly && styles.timelineEnd)} />
+      </div>
+      <div className={styles.timelineDates}>
+        <span>{mediumDate(term.start)}</span>
+        <span>{monthly ? `First period ends ${shortDate(term.end)}` : mediumDate(term.end)}</span>
+      </div>
+    </div>
+  );
+}
 
 export function TermStep({ draft, update, errors }: StepProps) {
+  const id = useId();
   const dates = endOptionDates(draft.startDate);
+  const term = termFacts(draft);
+  const custom = draft.endOption === 'custom';
   const pick = (endOption: WizardDraft['endOption']) =>
     update({
       endOption,
       customEndDate: draft.customEndDate || (endOption === 'custom' ? dates.fullYear : ''),
     });
-  const startLabel = (() => {
-    const parsed = parseLeaseDate(draft.startDate);
-    return parsed
-      ? parsed.toLocaleDateString('en-US', {
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
-          timeZone: 'UTC',
-        })
-      : null;
-  })();
+  const long = (iso: string) => {
+    const date = parseLeaseDate(iso);
+    return date ? longDate(date) : '';
+  };
+  const endText: Record<WizardDraft['endOption'], string> = {
+    'full-year': dates.fullYear ? `Ends ${long(dates.fullYear)}` : '',
+    'month-to-month': dates.monthToMonth ? `First period ends ${long(dates.monthToMonth)}` : '',
+    custom: custom ? '' : 'Choose a date',
+  };
   return (
     <div className={styles.fields}>
-      <div className={styles.two}>
-        <Field
-          label="Start date"
-          error={errors.startDate}
-          hint="Move-in charges begin on this date."
-        >
-          <input
-            type="date"
-            value={draft.startDate}
-            onInput={(e) => update({ startDate: e.currentTarget.value })}
-          />
-        </Field>
-        <div className={styles.hintbar}>
-          <span>
-            {startLabel ? (
-              <>
-                Dates below are calculated from a <strong>{startLabel}</strong> start. Select a term
-                to set the end date.
-              </>
-            ) : (
-              'Select a start date to calculate the end date for each term.'
-            )}
-          </span>
-        </div>
-      </div>
-      <hr className={styles.rule} />
-      <fieldset className={styles.radios}>
-        <legend>End date</legend>
-        <div className={styles.choiceList}>
-          <label className={cx(styles.choice, draft.endOption === 'full-year' && styles.choiceOn)}>
-            <input
-              type="radio"
-              name="endOption"
-              checked={draft.endOption === 'full-year'}
-              onChange={() => pick('full-year')}
-            />
-            <span className={styles.choiceCopy}>
-              <span className={styles.choiceTitle}>
-                <span>Full year</span>
-                <em>Ends {longDate(dates.fullYear)}</em>
-              </span>
-              <span className={styles.choiceDesc}>
-                A 12-month fixed term, ending the day before the anniversary.
-              </span>
-            </span>
-          </label>
-          <label
-            className={cx(styles.choice, draft.endOption === 'month-to-month' && styles.choiceOn)}
-          >
-            <input
-              type="radio"
-              name="endOption"
-              checked={draft.endOption === 'month-to-month'}
-              onChange={() => pick('month-to-month')}
-            />
-            <span className={styles.choiceCopy}>
-              <span className={styles.choiceTitle}>
-                <span>Month-to-month</span>
-                <em>First period ends {longDate(dates.monthToMonth)}</em>
-              </span>
-              <span className={styles.choiceDesc}>
-                The first period ends on the last day of the start month.
-              </span>
-            </span>
-          </label>
-          <div className={cx(styles.choice, draft.endOption === 'custom' && styles.choiceOn)}>
-            <input
-              type="radio"
-              name="endOption"
-              aria-label="Custom end date"
-              checked={draft.endOption === 'custom'}
-              onChange={() => pick('custom')}
-            />
-            <div className={styles.choiceCopy}>
-              <span className={styles.choiceTitle}>
-                <span>Custom end date</span>
-                <em>Choose a date</em>
-              </span>
-              <span className={styles.choiceDesc}>
-                Set a specific end date for a shorter or longer term.
-              </span>
-              <div className={styles.customDate}>
-                <label className={styles.field} htmlFor="custom-end-date">
-                  Custom end date
+      <Field label="Start date" error={errors.startDate} className={styles.dateField}>
+        <input
+          type="date"
+          value={draft.startDate}
+          onInput={(e) => update({ startDate: e.currentTarget.value })}
+        />
+      </Field>
+      <fieldset
+        className={styles.choices}
+        aria-describedby={errors.endDate && !custom ? `${id}end-error` : undefined}
+      >
+        <legend className={styles.label}>End date</legend>
+        {END_OPTIONS.map((option) => {
+          const on = draft.endOption === option.value;
+          const key = `${id}${option.value}`;
+          return (
+            <div key={option.value} className={cx(styles.choice, on && styles.choiceOn)}>
+              <label className={styles.choiceMain}>
+                <input
+                  type="radio"
+                  name="endOption"
+                  checked={on}
+                  onChange={() => pick(option.value)}
+                  aria-labelledby={`${key}title`}
+                  aria-describedby={`${key}detail ${key}date`}
+                />
+                <span className={styles.choiceText}>
+                  <span className={styles.choiceTitle} id={`${key}title`}>
+                    {option.title}
+                  </span>
+                  <span className={styles.choiceDetail} id={`${key}detail`}>
+                    {option.detail}
+                  </span>
+                </span>
+                <span className={styles.choiceDate} id={`${key}date`}>
+                  {endText[option.value]}
+                </span>
+              </label>
+              {option.value === 'custom' && on && (
+                <div className={styles.choiceExtra}>
+                  <label className={styles.label} htmlFor="custom-end-date">
+                    End date
+                  </label>
                   <input
                     id="custom-end-date"
-                    className={styles.dateInput}
+                    className={cx(styles.input, styles.dateInput)}
                     type="date"
                     aria-invalid={Boolean(errors.endDate)}
                     aria-describedby={errors.endDate ? 'custom-end-date-error' : undefined}
                     value={draft.customEndDate}
                     onChange={(e) => update({ endOption: 'custom', customEndDate: e.target.value })}
                   />
-                </label>
-                {errors.endDate ? (
-                  <small id="custom-end-date-error" className={styles.error} role="alert">
-                    {errors.endDate}
-                  </small>
-                ) : null}
-              </div>
+                  {errors.endDate && (
+                    <small id="custom-end-date-error" className={styles.error}>
+                      {errors.endDate}
+                    </small>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-        </div>
+          );
+        })}
+        {errors.endDate && !custom && (
+          <small id={`${id}end-error`} className={styles.error}>
+            {errors.endDate}
+          </small>
+        )}
       </fieldset>
-      <div className={styles.hintbar}>
-        <span>
-          Full-year and month-to-month end dates follow your start date. A custom end date stays as
-          entered.
-        </span>
-      </div>
+      {term && <Timeline term={term} monthly={draft.endOption === 'month-to-month'} />}
     </div>
   );
 }
 
 // ------------------------------------------------------------------------------------ 2. Rent
 
-const shortDate = (date: Date) =>
-  date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-const monthYear = (date: Date) =>
-  date.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
-
+/** The Payments ledger preview as a receipt: everything due at move-in, then the rent that repeats. */
 export function ChargesPreview({ draft }: { draft: WizardDraft }) {
-  const preview = useMemo(() => {
-    const start = parseLeaseDate(draft.startDate);
-    const end = parseLeaseDate(draft.endDate);
-    if (!start || !end || end < start) return null;
-    return previewScheduledCharges({
-      startDate: start,
-      endDate: end,
-      fees: feesFromDraft(draft),
-      asOf: new Date(),
-    });
-  }, [draft]);
-  if (!preview || (!preview.moveIn.length && !preview.monthly.length))
+  const preview = useMemo(() => chargesPreview(draft), [draft]);
+  const term = termFacts(draft);
+  if (!term || !preview || (!preview.moveIn.length && !preview.monthly.length))
     return (
-      <div className={styles.ledger}>
-        <div className={styles.ledgerHead}>
-          <h3>Scheduled charges preview</h3>
-        </div>
-        <p className={styles.ledgerNote}>Enter the rent and lease dates to preview the charges.</p>
-        <p className={styles.ledgerNote}>
-          Preview only. Charges are created when the lease is sent or activated.
-        </p>
+      <div className={styles.receipt}>
+        <h3 className={styles.receiptTitle}>Scheduled charges preview</h3>
+        <p className={styles.receiptEmpty}>Enter the rent and lease dates to preview the charges.</p>
       </div>
     );
-  const first = preview.monthly[0];
-  const last = preview.monthly.at(-1);
+  const moveIn = splitMoveIn(preview, term.start);
+  const next = moveIn.recurring[0];
+  const last = moveIn.recurring.at(-1);
   return (
-    <div className={styles.ledger} data-testid="charges-preview">
-      <div className={styles.ledgerHead}>
-        <h3>Scheduled charges preview</h3>
-        <span>Created in the Payments ledger</span>
-      </div>
-      {preview.moveIn.map((row) => (
-        <div key={row.label} className={styles.ledgerRow}>
-          <span>{shortDate(row.date)}</span>
-          <span>{row.label}</span>
-          <strong>{formatMoney(row.amountCents)}</strong>
-        </div>
-      ))}
-      {preview.moveIn.length > 0 && (
-        <div className={cx(styles.ledgerRow, styles.ledgerTotal)}>
-          <span>Move-in</span>
-          <span>Total scheduled at move-in</span>
-          <strong>{formatMoney(preview.moveInTotalCents)}</strong>
-        </div>
+    <div className={styles.receipt} data-testid="charges-preview">
+      <h3 className={styles.receiptTitle}>Scheduled charges preview</h3>
+      {moveIn.rows.length > 0 && (
+        <>
+          <ul className={styles.receiptRows}>
+            {moveIn.rows.map((row) => (
+              <li key={row.label} className={styles.receiptRow}>
+                <span className={styles.receiptDate}>{shortDate(row.date)}</span>
+                <span className={styles.receiptItem}>{row.label}</span>
+                <span className={styles.money}>{formatMoney(row.amountCents)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className={styles.receiptTotal}>
+            <span>Due at move-in</span>
+            <span className={styles.money}>{formatMoney(moveIn.totalCents)}</span>
+          </p>
+        </>
       )}
-      {first && last && (
-        <div className={styles.ledgerRow}>
-          <span>{shortDate(first.date)}</span>
-          <span>
+      {next && last && (
+        <p className={cx(styles.receiptRow, styles.receiptRepeat)}>
+          <span className={styles.receiptDate}>{shortDate(next.date)}</span>
+          <span className={styles.receiptItem}>
             Monthly rent
-            {preview.monthly.length > 1
-              ? ` · repeats on the ${draft.rentDueDay}${[1, 21].includes(draft.rentDueDay) ? 'st' : [2, 22].includes(draft.rentDueDay) ? 'nd' : [3, 23].includes(draft.rentDueDay) ? 'rd' : 'th'} through ${monthYear(last.date)}`
+            {moveIn.recurring.length > 1
+              ? ` · repeats on the ${ordinal(draft.rentDueDay)} through ${monthYear(last.date)}`
               : ''}
           </span>
-          <strong>{formatMoney(first.amountCents)}</strong>
-        </div>
+          <span className={styles.money}>{formatMoney(next.amountCents)}</span>
+        </p>
       )}
-      <p className={styles.ledgerNote}>
-        {preview.monthly.length} monthly rent charge{preview.monthly.length === 1 ? '' : 's'} are
-        scheduled. Late fees are conditional and are not included until the rule applies.
-      </p>
-      <p className={styles.ledgerNote}>
+      <p className={styles.receiptNote}>
         Preview only. Charges are created when the lease is sent or activated.
       </p>
     </div>
@@ -348,6 +496,7 @@ export function ChargesPreview({ draft }: { draft: WizardDraft }) {
 }
 
 export function RentStep({ draft, update, errors }: StepProps) {
+  const id = useId();
   const start = parseLeaseDate(draft.startDate);
   const end = parseLeaseDate(draft.endDate);
   const fees = feesFromDraft(draft);
@@ -355,185 +504,170 @@ export function RentStep({ draft, update, errors }: StepProps) {
     start && fees.monthlyRentCents > 0
       ? prorateFirstMonth(start, fees.monthlyRentCents, end ?? undefined, draft.rentDueDay)
       : null;
-  const prorationText = proration
-    ? `${shortDate(proration.from)}–${shortDate(proration.to)} · ${proration.days} of ${proration.daysInMonth} days · auto-calculated from monthly rent.`
-    : start && fees.monthlyRentCents > 0
-      ? 'The lease starts on the due day, so the first billing period is a full month.'
-      : 'Enter the monthly rent and a start date to calculate this.';
+  const firstFullRent = proration ? new Date(proration.to.getTime() + 86_400_000) : null;
   return (
     <div className={styles.fields}>
       <div className={styles.two}>
-        <Field label="Monthly rent" error={errors.monthlyRent}>
+        <Field label="Monthly rent" prefix="$" error={errors.monthlyRent}>
           <input
             inputMode="decimal"
             value={draft.monthlyRent}
-            placeholder="1850.00"
+            placeholder="0.00"
             onChange={(e) => update({ monthlyRent: e.target.value })}
           />
         </Field>
-        <Field
-          label="Rent due day"
-          hint="Choose any day from the 1st through the 28th. The first rent period ends before the next due date."
-          error={errors.rentDueDay}
-        >
+        <Field label="Security deposit" prefix="$" error={errors.deposit}>
+          <input
+            inputMode="decimal"
+            value={draft.deposit}
+            placeholder="0.00"
+            onChange={(e) => update({ deposit: e.target.value })}
+          />
+        </Field>
+        <Field label="Rent due day" error={errors.rentDueDay}>
           <select
+            className={styles.select}
             value={draft.rentDueDay}
             onChange={(e) => update({ rentDueDay: Number(e.target.value) })}
           >
             {Array.from({ length: 28 }, (_, index) => index + 1).map((day) => (
               <option key={day} value={day}>
-                {day}
-                {[1, 21].includes(day)
-                  ? 'st'
-                  : [2, 22].includes(day)
-                    ? 'nd'
-                    : [3, 23].includes(day)
-                      ? 'rd'
-                      : 'th'}{' '}
-                of each month
+                {ordinal(day)} of each month
               </option>
             ))}
           </select>
         </Field>
+        <div className={styles.field}>
+          <span className={styles.label}>First month</span>
+          <div className={cx(styles.firstMonth, !proration && styles.firstMonthStatic)}>
+            {proration ? (
+              <>
+                <label className={styles.firstMonthText} htmlFor={`${id}prorate`}>
+                  {draft.prorateFirstMonth ? (
+                    <>
+                      Prorated <strong>{formatMoney(proration.cents)}</strong>
+                    </>
+                  ) : (
+                    `Full rent from ${shortDate(firstFullRent!)}`
+                  )}
+                </label>
+                <input
+                  id={`${id}prorate`}
+                  type="checkbox"
+                  role="switch"
+                  className={styles.switch}
+                  aria-label="Prorate first month"
+                  aria-describedby={`${id}period`}
+                  checked={draft.prorateFirstMonth}
+                  onChange={(e) => update({ prorateFirstMonth: e.target.checked })}
+                />
+              </>
+            ) : (
+              <span className={styles.firstMonthText}>
+                {start && fees.monthlyRentCents > 0 ? 'Full month' : '—'}
+              </span>
+            )}
+          </div>
+          {proration && (
+            <span className={styles.help} id={`${id}period`}>
+              {shortDate(proration.from)} – {shortDate(proration.to)} · {proration.days} of{' '}
+              {proration.daysInMonth} days
+            </span>
+          )}
+        </div>
       </div>
-      <div className={styles.two}>
-        <Field label="Prorated first month" hint={prorationText}>
-          <input
-            readOnly
-            value={proration ? formatMoney(proration.cents) : formatMoney(fees.monthlyRentCents)}
+
+      <section className={styles.group} aria-labelledby={`${id}fees`}>
+        <h3 className={styles.groupTitle} id={`${id}fees`}>
+          Fees
+        </h3>
+        <div className={styles.rows}>
+          <FeeRow
+            label="Move-in fee"
+            detail="One-time, due at move-in"
+            enabled={draft.moveInFeeEnabled}
+            onToggle={(moveInFeeEnabled) => update({ moveInFeeEnabled })}
+            amountLabel="Move-in fee amount"
+            value={draft.moveInFee}
+            onValue={(moveInFee) => update({ moveInFee })}
+            error={errors.moveInFee}
+            placeholder="150.00"
           />
-        </Field>
-        <Field
-          label="Security deposit"
-          hint="Scheduled as a one-time charge when the lease starts."
-          error={errors.deposit}
-        >
-          <input
-            inputMode="decimal"
-            value={draft.deposit}
-            placeholder="1850.00"
-            onChange={(e) => update({ deposit: e.target.value })}
+          <FeeRow
+            label="Pet deposit"
+            detail="Refundable, due at move-in"
+            enabled={draft.petDepositEnabled}
+            onToggle={(petDepositEnabled) => update({ petDepositEnabled })}
+            amountLabel="Pet deposit amount"
+            value={draft.petDeposit}
+            onValue={(petDeposit) => update({ petDeposit })}
+            error={errors.petDeposit}
+            placeholder="250.00"
           />
-        </Field>
-      </div>
-      {proration && (
-        <label className={styles.radio}>
-          <input
-            type="checkbox"
-            checked={draft.prorateFirstMonth}
-            onChange={(e) => update({ prorateFirstMonth: e.target.checked })}
-          />
-          <span>
-            Charge the prorated first period (otherwise the first full rent is due on the next due
-            day)
-          </span>
-        </label>
-      )}
-      <hr className={styles.rule} />
-      <h3 className={styles.sectionTitle}>Optional fees</h3>
-      <div className={styles.two}>
-        <Field label="Returned payment fee">
-          <input
-            inputMode="decimal"
+          <ToggleRow
+            label="Late fee"
+            detail="Charged when rent is late"
+            checked={draft.lateFeeEnabled}
+            onChange={(lateFeeEnabled) => update({ lateFeeEnabled })}
+          >
+            {draft.lateFeeEnabled && (
+              <>
+                <div className={styles.lateRule}>
+                  <span>Charge</span>
+                  <Amount
+                    label="Late fee amount"
+                    value={draft.lateFee}
+                    onChange={(lateFee) => update({ lateFee })}
+                    error={errors.lateFee}
+                    errorId={`${id}late-error`}
+                  />
+                  <span>after</span>
+                  <span className={styles.amount}>
+                    <label className={styles.srOnly} htmlFor={`${id}grace`}>
+                      Late fee grace period (days)
+                    </label>
+                    <input
+                      id={`${id}grace`}
+                      className={cx(styles.input, styles.days)}
+                      type="number"
+                      min={0}
+                      max={31}
+                      value={draft.graceDays}
+                      aria-invalid={Boolean(errors.graceDays)}
+                      aria-describedby={errors.graceDays ? `${id}grace-error` : undefined}
+                      onChange={(e) => update({ graceDays: Number(e.target.value) })}
+                    />
+                  </span>
+                  <span>grace days</span>
+                </div>
+                {errors.lateFee && (
+                  <small id={`${id}late-error`} className={cx(styles.error, styles.rowError)}>
+                    {errors.lateFee}
+                  </small>
+                )}
+                {errors.graceDays && (
+                  <small id={`${id}grace-error`} className={cx(styles.error, styles.rowError)}>
+                    {errors.graceDays}
+                  </small>
+                )}
+              </>
+            )}
+          </ToggleRow>
+          <AmountRow
+            label="Returned payment fee"
+            detail="Per returned payment"
             value={draft.returnedPaymentFee}
-            onChange={(e) => update({ returnedPaymentFee: e.target.value })}
+            onChange={(returnedPaymentFee) => update({ returnedPaymentFee })}
           />
-        </Field>
-        <Field label="Key replacement fee">
-          <input
-            inputMode="decimal"
+          <AmountRow
+            label="Key replacement fee"
+            detail="Per key"
             value={draft.keyFee}
-            onChange={(e) => update({ keyFee: e.target.value })}
+            onChange={(keyFee) => update({ keyFee })}
           />
-        </Field>
-      </div>
-      <div className={styles.fees}>
-        <div className={cx(styles.check, styles.feeCard, draft.moveInFeeEnabled && styles.checkOn)}>
-          <label className={styles.feeToggle}>
-            <input
-              type="checkbox"
-              checked={draft.moveInFeeEnabled}
-              onChange={(e) => update({ moveInFeeEnabled: e.target.checked })}
-            />
-            <span className={styles.checkCopy}>
-              <strong>Move-in fee</strong>
-              <small>One-time charge due at move-in</small>
-            </span>
-          </label>
-          {draft.moveInFeeEnabled && (
-            <div className={styles.feeFields}>
-              <Field label="Move-in fee amount" error={errors.moveInFee}>
-                <input
-                  inputMode="decimal"
-                  value={draft.moveInFee}
-                  placeholder="150.00"
-                  onChange={(e) => update({ moveInFee: e.target.value })}
-                />
-              </Field>
-            </div>
-          )}
         </div>
-        <div
-          className={cx(styles.check, styles.feeCard, draft.petDepositEnabled && styles.checkOn)}
-        >
-          <label className={styles.feeToggle}>
-            <input
-              type="checkbox"
-              checked={draft.petDepositEnabled}
-              onChange={(e) => update({ petDepositEnabled: e.target.checked })}
-            />
-            <span className={styles.checkCopy}>
-              <strong>Pet deposit</strong>
-              <small>One-time, refundable deposit</small>
-            </span>
-          </label>
-          {draft.petDepositEnabled && (
-            <div className={styles.feeFields}>
-              <Field label="Pet deposit amount" error={errors.petDeposit}>
-                <input
-                  inputMode="decimal"
-                  value={draft.petDeposit}
-                  placeholder="250.00"
-                  onChange={(e) => update({ petDeposit: e.target.value })}
-                />
-              </Field>
-            </div>
-          )}
-        </div>
-        <div className={cx(styles.check, styles.feeCard, draft.lateFeeEnabled && styles.checkOn)}>
-          <label className={styles.feeToggle}>
-            <input
-              type="checkbox"
-              checked={draft.lateFeeEnabled}
-              onChange={(e) => update({ lateFeeEnabled: e.target.checked })}
-            />
-            <span className={styles.checkCopy}>
-              <strong>Late fee rules</strong>
-              <small>Apply only if rent remains unpaid after the grace period.</small>
-            </span>
-          </label>
-          {draft.lateFeeEnabled && (
-            <div className={cx(styles.feeFields, styles.two)}>
-              <Field label="Late fee grace period (days)" error={errors.graceDays}>
-                <input
-                  type="number"
-                  min={0}
-                  max={31}
-                  value={draft.graceDays}
-                  onChange={(e) => update({ graceDays: Number(e.target.value) })}
-                />
-              </Field>
-              <Field label="Late fee amount" error={errors.lateFee}>
-                <input
-                  inputMode="decimal"
-                  value={draft.lateFee}
-                  onChange={(e) => update({ lateFee: e.target.value })}
-                />
-              </Field>
-            </div>
-          )}
-        </div>
-      </div>
+      </section>
+
       <ChargesPreview draft={draft} />
     </div>
   );
@@ -590,19 +724,21 @@ export function TenantsStep({
       {label}
     </a>
   );
+  const id = useId();
   const [search, setSearch] = useState('');
   const query = search.trim().toLowerCase();
-  const selected = tenants.filter((tenant) => draft.tenantIds.includes(tenant.id));
+  const selected = draft.tenantIds.flatMap((tenantId) => tenants.filter((t) => t.id === tenantId));
   const matches =
     query.length >= 2
-      ? tenants.filter(
-          (tenant) =>
-            !draft.tenantIds.includes(tenant.id) &&
-            `${tenant.name} ${tenant.email ?? ''}`.toLowerCase().includes(query),
+      ? tenants.filter((tenant) =>
+          `${tenant.name} ${tenant.email ?? ''}`.toLowerCase().includes(query),
         )
       : [];
-  const toggle = (id: string, checked: boolean) => {
-    const tenantIds = checked ? [...draft.tenantIds, id] : draft.tenantIds.filter((t) => t !== id);
+  const unpromoted = applicants.some((applicant) => !applicant.tenantId);
+  const toggle = (tenantId: string, checked: boolean) => {
+    const tenantIds = checked
+      ? [...draft.tenantIds.filter((t) => t !== tenantId), tenantId]
+      : draft.tenantIds.filter((t) => t !== tenantId);
     update({
       tenantIds,
       primaryTenantId:
@@ -611,297 +747,294 @@ export function TenantsStep({
           : (tenantIds[0] ?? ''),
     });
   };
+  const selectionError = errors.tenantIds ? 'tenant-selection-error' : undefined;
   return (
     <div className={styles.fields}>
-      {sourceLabel && (
-        <p className={styles.sub}>
-          Renewal for {sourceLabel}. Tenants carry over from the current lease.
-        </p>
-      )}
+      {sourceLabel && <p className={styles.note}>Renewing {sourceLabel}</p>}
       {notice && (
-        <p className={styles.sub}>
-          {notice}{' '}
-          {noticeApplicantId &&
-            reviewLink(applicationsHref(noticeApplicantId), 'Review application')}
+        <p className={cx(styles.note, styles.noteWarn)}>
+          <Glyph name="alert" className={styles.noteIcon} />
+          <span>
+            {notice}{' '}
+            {noticeApplicantId &&
+              reviewLink(applicationsHref(noticeApplicantId), 'Review application')}
+          </span>
         </p>
       )}
-      {selected.length > 0 && (
-        <div className={styles.selectedTenants} aria-label="Selected tenants">
-          {selected.map((tenant) => (
-            <button
-              type="button"
-              className={styles.btn}
-              key={tenant.id}
-              onClick={() => toggle(tenant.id, false)}
-              aria-label={`Remove ${tenant.name}`}
-            >
-              {tenant.name}
-              {draft.primaryTenantId === tenant.id ? ' · Primary' : ''}{' '}
-              <span aria-hidden="true">×</span>
-            </button>
-          ))}
-        </div>
-      )}
+
+      <section className={styles.group} aria-labelledby={`${id}selected`}>
+        <h3 className={styles.groupTitle} id={`${id}selected`}>
+          On this lease
+          {selected.length > 0 && <span className={styles.countPill}>{selected.length}</span>}
+        </h3>
+        {selected.length ? (
+          <ul className={styles.people} aria-label="Selected tenants">
+            {selected.map((tenant) => (
+              <li key={tenant.id} className={styles.person}>
+                <span className={styles.avatar} aria-hidden="true">
+                  {initials(tenant.name)}
+                </span>
+                <span className={styles.personText}>
+                  <span className={styles.personName}>{tenant.name}</span>
+                  <span className={styles.personMeta}>{tenant.email ?? 'No email on file'}</span>
+                </span>
+                <label className={styles.primaryPick}>
+                  <input
+                    type="radio"
+                    name="primary-tenant"
+                    value={tenant.id}
+                    checked={draft.primaryTenantId === tenant.id}
+                    aria-label={`Primary tenant: ${tenant.name}`}
+                    aria-describedby={errors.primaryTenantId ? `${id}primary-error` : undefined}
+                    onChange={() => update({ primaryTenantId: tenant.id })}
+                  />
+                  <span aria-hidden="true">Primary</span>
+                </label>
+                <button
+                  type="button"
+                  className={styles.iconButton}
+                  onClick={() => toggle(tenant.id, false)}
+                  aria-label={`Remove ${tenant.name}`}
+                >
+                  <Glyph name="close" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className={styles.emptyRow}>No tenants on this lease yet</p>
+        )}
+        {errors.primaryTenantId && (
+          <small id={`${id}primary-error`} className={styles.error}>
+            {errors.primaryTenantId}
+          </small>
+        )}
+      </section>
+
+      <div className={styles.group}>
+        <label className={styles.label} htmlFor={`${id}search`}>
+          Search existing tenants
+        </label>
+        <span className={styles.searchBox}>
+          <Glyph name="search" className={styles.searchIcon} />
+          <input
+            id={`${id}search`}
+            className={styles.input}
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Name or email"
+            aria-invalid={Boolean(errors.tenantIds)}
+            aria-describedby={cx('tenant-search-help', selectionError) || undefined}
+          />
+        </span>
+        <span id="tenant-search-help" className={styles.help}>
+          {query.length < 2
+            ? tenants.length
+              ? 'Type at least 2 characters.'
+              : ''
+            : matches.length > 8
+              ? `${matches.length} matches · showing 8`
+              : `${matches.length} ${matches.length === 1 ? 'match' : 'matches'}`}
+        </span>
+        {matches.length > 0 && (
+          <div
+            className={styles.results}
+            role="group"
+            aria-label="Matching tenants"
+            aria-describedby={selectionError}
+          >
+            {matches.slice(0, 8).map((tenant) => {
+              const on = draft.tenantIds.includes(tenant.id);
+              return (
+                <label key={tenant.id} className={cx(styles.result, on && styles.resultOn)}>
+                  <span className={styles.avatar} aria-hidden="true">
+                    {initials(tenant.name)}
+                  </span>
+                  <span className={styles.personText}>
+                    <span className={styles.personName}>{tenant.name}</span>
+                    <span className={styles.personMeta}>{tenant.email ?? 'No email on file'}</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    className={styles.addToggle}
+                    checked={on}
+                    onChange={(event) => toggle(tenant.id, event.target.checked)}
+                  />
+                </label>
+              );
+            })}
+          </div>
+        )}
+        {!tenants.length && (
+          <p className={styles.emptyRow}>No tenants yet. Promote an approved applicant to add one.</p>
+        )}
+        {errors.tenantIds && (
+          <small id="tenant-selection-error" className={styles.error}>
+            {errors.tenantIds}
+          </small>
+        )}
+      </div>
+
       {applicants.length > 0 && (
-        <section aria-label="Applicants for this unit">
-          <h3 className={styles.sectionTitle}>Applicants for this unit</h3>
-          <div className={styles.checks}>
+        <section className={styles.group} aria-labelledby={`${id}applicants`}>
+          <h3 className={styles.groupTitle} id={`${id}applicants`}>
+            Applicants for this unit
+          </h3>
+          {unpromoted && (
+            <p className={styles.groupHint}>Promote an approved applicant to add them.</p>
+          )}
+          <ul className={styles.applicants}>
             {applicants.map((applicant) => (
-              <div key={applicant.id} className={styles.check}>
+              <li key={applicant.id} className={styles.applicant}>
                 {applicant.tenantId ? (
-                  <label className={styles.checkCopy}>
+                  <label className={styles.applicantName}>
                     <input
                       type="checkbox"
                       checked={draft.tenantIds.includes(applicant.tenantId)}
                       onChange={(event) => toggle(applicant.tenantId!, event.target.checked)}
-                    />{' '}
-                    {applicant.name}
+                    />
+                    <span>{applicant.name}</span>
                   </label>
                 ) : (
-                  <span className={styles.checkCopy}>
-                    <strong>{applicant.name}</strong>
-                    <small>{applicant.email}</small>
-                    <small>
-                      Not a tenant yet. Promote them from their application to select them here.
-                    </small>
-                    {reviewLink(
-                      applicationsHref(applicant.id),
-                      'Review application',
-                      `Review ${applicant.name}'s application`,
-                    )}
-                  </span>
+                  <span className={styles.applicantName}>{applicant.name}</span>
                 )}
                 <Badge tone={applicant.status === 'Approved' ? 'success' : 'info'}>
                   {applicant.status}
                 </Badge>
-              </div>
+                {!applicant.tenantId && (
+                  <span className={styles.applicantAction}>
+                    {reviewLink(
+                      applicationsHref(applicant.id),
+                      'Review',
+                      `Review ${applicant.name}'s application`,
+                    )}
+                  </span>
+                )}
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       )}
-      <label className={styles.field}>
-        Search existing tenants
-        <input
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Name or email (at least 2 characters)"
-          aria-describedby="tenant-search-help"
-        />
-      </label>
-      <p id="tenant-search-help" className={styles.sub}>
-        {query.length < 2
-          ? 'Type at least 2 characters to find a tenant.'
-          : `${matches.length} matching tenants${matches.length > 8 ? ' · Showing the first 8; refine your search.' : ''}`}
+
+      <p className={styles.footNote}>
+        Someone new? {reviewLink(applicationsHref(), 'Review applicants for this unit')}
       </p>
-      <div
-        className={styles.checks}
-        role="group"
-        aria-label="Tenants"
-        aria-describedby={errors.tenantIds ? 'tenant-selection-error' : undefined}
-      >
-        {matches.slice(0, 8).map((t) => {
-          const on = draft.tenantIds.includes(t.id);
-          return (
-            <label key={t.id} className={cx(styles.check, on && styles.checkOn)}>
-              <input
-                type="checkbox"
-                checked={on}
-                aria-invalid={Boolean(errors.tenantIds)}
-                aria-describedby={errors.tenantIds ? 'tenant-selection-error' : undefined}
-                onChange={(e) => toggle(t.id, e.target.checked)}
-              />
-              <span className={styles.checkCopy}>
-                <strong>{t.name}</strong>
-                <small>{t.email ?? 'No email on file'}</small>
-              </span>
-            </label>
-          );
-        })}
-        {!tenants.length && (
-          <p className={styles.sub}>
-            No tenants yet. Tenants are added by approving and promoting an applicant for this unit.
-          </p>
-        )}
-      </div>
-      {errors.tenantIds && (
-        <p id="tenant-selection-error" className={styles.error} role="alert">
-          {errors.tenantIds}
-        </p>
-      )}
-      <p className={styles.sub}>
-        Someone new? {reviewLink(applicationsHref(), 'Review applicants for this unit')}. Your draft
-        is saved first, so you can resume it from Leases › Drafts.
-      </p>
-      <Field label="Primary tenant" error={errors.primaryTenantId}>
-        <select
-          value={draft.primaryTenantId}
-          onChange={(e) => update({ primaryTenantId: e.target.value })}
-        >
-          <option value="">Select a primary tenant</option>
-          {tenants
-            .filter((t) => draft.tenantIds.includes(t.id))
-            .map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-        </select>
-      </Field>
     </div>
   );
 }
 
-// ------------------------------------------------------------------------------------ 4–7 lists
+// ------------------------------------------------------------------------------------ 4. Options
+
+const FEATURES = [
+  ['assignedParking', 'Assigned parking'],
+  ['balconyPatio', 'Balcony or patio'],
+  ['sharedLaundry', 'Shared laundry'],
+  ['floodZone', 'Flood zone'],
+] as const;
+const UTILITIES = ['Electricity', 'Gas', 'Water', 'Trash', 'Internet'];
 
 export function OptionsStep({ draft, update, errors }: StepProps) {
+  const id = useId();
+  const toggleIn = (list: string[], value: string, on: boolean) =>
+    on ? [...list.filter((item) => item !== value), value] : list.filter((item) => item !== value);
   return (
     <div className={styles.fields}>
       <div className={styles.two}>
-        <Field label="Renewal notice period" error={errors.renewalNoticeDays}>
-          <select
-            value={draft.renewalNoticeDays}
-            onChange={(e) => update({ renewalNoticeDays: Number(e.target.value) })}
-          >
-            <option value={30}>30 days before end date</option>
-            <option value={60}>60 days before end date</option>
-            <option value={90}>90 days before end date</option>
-          </select>
-        </Field>
-        <Field
-          label="Occupants (optional)"
-          error={errors.occupants}
-          hint="Names of everyone who will live in the unit."
+        <fieldset
+          className={styles.field}
+          aria-describedby={errors.renewalNoticeDays ? `${id}notice-error` : undefined}
         >
-          <input value={draft.occupants} onChange={(e) => update({ occupants: e.target.value })} />
+          <legend className={styles.label}>Renewal notice</legend>
+          <span className={styles.segmented}>
+            {[30, 60, 90].map((days) => (
+              <label
+                key={days}
+                className={cx(styles.segment, draft.renewalNoticeDays === days && styles.segmentOn)}
+              >
+                <input
+                  type="radio"
+                  name="renewalNoticeDays"
+                  value={days}
+                  checked={draft.renewalNoticeDays === days}
+                  onChange={() => update({ renewalNoticeDays: days })}
+                />
+                <span>{days} days</span>
+              </label>
+            ))}
+          </span>
+          {errors.renewalNoticeDays && (
+            <small id={`${id}notice-error`} className={styles.error}>
+              {errors.renewalNoticeDays}
+            </small>
+          )}
+        </fieldset>
+        <Field label="Occupants" optional error={errors.occupants}>
+          <input
+            value={draft.occupants}
+            placeholder="Everyone who will live in the unit"
+            onChange={(e) => update({ occupants: e.target.value })}
+          />
         </Field>
       </div>
-      <CheckList
-        name="Lease options"
-        options={OPTION_CHOICES}
-        selected={draft.options}
-        onChange={(options) => update({ options })}
-      />
-      <Err errors={errors} name="options" />
-      <label className={styles.check}>
-        <input
-          type="checkbox"
-          checked={draft.assignedParking}
-          onChange={(e) => update({ assignedParking: e.target.checked })}
-        />
-        <span className={styles.checkCopy}>
-          <strong>Assigned parking</strong>
-          <small>Add the parking rule when this lease includes a space.</small>
-        </span>
-      </label>
-      <label className={styles.check}>
-        <input
-          type="checkbox"
-          checked={draft.balconyPatio}
-          onChange={(e) => update({ balconyPatio: e.target.checked })}
-        />
-        <span className={styles.checkCopy}>
-          <strong>Balcony or patio</strong>
-          <small>Include the outdoor space rule.</small>
-        </span>
-      </label>
-      <label className={styles.check}>
-        <input
-          type="checkbox"
-          checked={draft.sharedLaundry}
-          onChange={(e) => update({ sharedLaundry: e.target.checked })}
-        />
-        <span className={styles.checkCopy}>
-          <strong>Shared laundry</strong>
-          <small>Include the laundry rule.</small>
-        </span>
-      </label>
-      <label className={styles.check}>
-        <input
-          type="checkbox"
-          checked={draft.floodZone}
-          onChange={(e) => update({ floodZone: e.target.checked })}
-        />
-        <span className={styles.checkCopy}>
-          <strong>Flood zone</strong>
-          <small>Include the flood disclosure.</small>
-        </span>
-      </label>
-      <fieldset className={styles.radios}>
-        <legend>Utilities paid by tenant</legend>
-        {['Electricity', 'Gas', 'Water', 'Trash', 'Internet'].map((utility) => (
-          <label key={utility} className={styles.radio}>
-            <input
-              type="checkbox"
-              checked={draft.tenantUtilities.includes(utility)}
-              onChange={(e) =>
-                update({
-                  tenantUtilities: e.target.checked
-                    ? [...draft.tenantUtilities, utility]
-                    : draft.tenantUtilities.filter((u) => u !== utility),
-                })
-              }
+
+      <section className={styles.group} aria-labelledby={`${id}options`}>
+        <h3 className={styles.groupTitle} id={`${id}options`}>
+          Lease options
+        </h3>
+        <div className={styles.rows}>
+          {OPTION_CHOICES.map((option) => (
+            <ToggleRow
+              key={option.id}
+              label={option.label}
+              checked={draft.options.includes(option.id)}
+              onChange={(on) => update({ options: toggleIn(draft.options, option.id, on) })}
             />
-            {utility}
-          </label>
-        ))}
+          ))}
+        </div>
+        {errors.options && <small className={styles.error}>{errors.options}</small>}
+      </section>
+
+      <section className={styles.group} aria-labelledby={`${id}features`}>
+        <h3 className={styles.groupTitle} id={`${id}features`}>
+          Property features
+        </h3>
+        <p className={styles.groupHint}>Adds the matching rules and disclosures.</p>
+        <div className={styles.rows}>
+          {FEATURES.map(([key, label]) => (
+            <ToggleRow
+              key={key}
+              label={label}
+              checked={draft[key]}
+              onChange={(on) => update({ [key]: on })}
+            />
+          ))}
+        </div>
+      </section>
+
+      <fieldset className={styles.group}>
+        <legend className={styles.groupTitle}>Utilities paid by tenant</legend>
+        <span className={styles.chipSet}>
+          {UTILITIES.map((utility) => {
+            const on = draft.tenantUtilities.includes(utility);
+            return (
+              <label key={utility} className={cx(styles.chipToggle, on && styles.chipToggleOn)}>
+                <input
+                  type="checkbox"
+                  checked={on}
+                  onChange={(e) =>
+                    update({
+                      tenantUtilities: toggleIn(draft.tenantUtilities, utility, e.target.checked),
+                    })
+                  }
+                />
+                {on && <Glyph name="check" className={styles.chipCheck} />}
+                {utility}
+              </label>
+            );
+          })}
+        </span>
       </fieldset>
-    </div>
-  );
-}
-
-export function ClausesStep({ draft, update, errors }: StepProps) {
-  return (
-    <div className={styles.fields}>
-      <CheckList
-        name="Included lease terms"
-        options={CLAUSE_OPTIONS}
-        selected={draft.clauses}
-        onChange={(clauses) => update({ clauses })}
-      />
-      <Err errors={errors} name="clauses" />
-      <Field label="Custom clause (optional)" error={errors.customClause}>
-        <textarea
-          value={draft.customClause}
-          maxLength={600}
-          onChange={(e) => update({ customClause: e.target.value })}
-        />
-      </Field>
-    </div>
-  );
-}
-
-export function RulesStep({ draft, update, errors }: StepProps) {
-  return (
-    <div className={styles.fields}>
-      <CheckList
-        name="House rules"
-        options={RULE_OPTIONS}
-        selected={draft.rules}
-        onChange={(rules) => update({ rules })}
-      />
-      <Err errors={errors} name="rules" />
-      <Field label="Additional rules (optional)" error={errors.customRules}>
-        <textarea
-          value={draft.customRules}
-          maxLength={1100}
-          onChange={(e) => update({ customRules: e.target.value })}
-        />
-      </Field>
-    </div>
-  );
-}
-
-export function DisclosuresStep({ draft, update, errors }: StepProps) {
-  return (
-    <div className={styles.fields}>
-      <CheckList
-        name="Disclosures"
-        options={DISCLOSURE_OPTIONS}
-        selected={draft.disclosures}
-        onChange={(disclosures) => update({ disclosures })}
-      />
-      <Err errors={errors} name="disclosures" />
     </div>
   );
 }
@@ -931,19 +1064,11 @@ export function AttachmentsStep({
 }) {
   const [typeError, setTypeError] = useState('');
   const [savingType, setSavingType] = useState<string | null>(null);
-  if (!leaseId)
-    return <p className={styles.sub}>Save the lease term first, then add documents here.</p>;
+  if (!leaseId) return <p className={styles.emptyRow}>Save the draft first to add files.</p>;
   return (
-    <div className={styles.fields}>
-      <h3 className={styles.sectionTitle}>Documents to include</h3>
-      {files.length === 0 && (
-        <p className={styles.sub}>
-          No documents added yet. Include any lease agreement, addenda or disclosure files the
-          tenant should review.
-        </p>
-      )}
+    <div className={cx(styles.fields, styles.attachments)}>
       {typeError && (
-        <p className={styles.alert} role="alert">
+        <p className={styles.inlineAlert} role="alert">
           {typeError}
         </p>
       )}
@@ -1012,56 +1137,156 @@ export function AttachmentsStep({
           onRemoved(id);
         }}
       />
-      <p className={styles.caption}>
-        Each file is stored as a lease document with the type selected above. Review required
-        disclosures before sending.
-      </p>
+      <p className={styles.footNote}>Only addenda are signed with the lease.</p>
     </div>
   );
 }
 
 // ------------------------------------------------------------------------------------ 9. Lessor
 
-export function LessorStep({ draft, update, errors }: StepProps) {
+export function LessorStep({
+  draft,
+  update,
+  errors,
+  lessorSigner,
+}: StepProps & { lessorSigner?: { name: string; email: string } | null }) {
   return (
     <div className={styles.fields}>
       <div className={styles.two}>
-        <Field label="Lessor name" error={errors.lessorName}>
+        <Field label="Lessor name" error={errors.lessorName} className={styles.span2}>
           <input
+            autoComplete="organization"
             value={draft.lessorName}
             onChange={(e) => update({ lessorName: e.target.value })}
           />
         </Field>
-        <Field label="Phone (optional)">
+        <Field label="Mailing address" error={errors.lessorAddress} className={styles.span2}>
           <input
+            autoComplete="street-address"
+            value={draft.lessorAddress}
+            onChange={(e) => update({ lessorAddress: e.target.value })}
+          />
+        </Field>
+        <Field label="Email" optional error={errors.lessorEmail}>
+          <input
+            type="email"
+            autoComplete="email"
+            value={draft.lessorEmail}
+            onChange={(e) => update({ lessorEmail: e.target.value })}
+          />
+        </Field>
+        <Field label="Phone" optional>
+          <input
+            type="tel"
+            autoComplete="tel"
             value={draft.lessorPhone}
             onChange={(e) => update({ lessorPhone: e.target.value })}
           />
         </Field>
       </div>
-      <Field label="Mailing address" error={errors.lessorAddress}>
-        <input
-          value={draft.lessorAddress}
-          onChange={(e) => update({ lessorAddress: e.target.value })}
-        />
-      </Field>
-      <Field label="Email (optional)" error={errors.lessorEmail}>
-        <input
-          type="email"
-          value={draft.lessorEmail}
-          onChange={(e) => update({ lessorEmail: e.target.value })}
-        />
-      </Field>
+      <div className={styles.group}>
+        <h3 className={styles.groupTitle}>Signs for the lessor</h3>
+        {lessorSigner ? (
+          <p className={styles.person}>
+            <span className={styles.avatar} aria-hidden="true">
+              {initials(lessorSigner.name)}
+            </span>
+            <span className={styles.personText}>
+              <span className={styles.personName}>{lessorSigner.name}</span>
+              <span className={styles.personMeta}>{lessorSigner.email}</span>
+            </span>
+          </p>
+        ) : (
+          <p className={cx(styles.note, styles.noteWarn)}>
+            <Glyph name="alert" className={styles.noteIcon} />
+            <span>No owner account on this property yet. Assign one before sending.</span>
+          </p>
+        )}
+      </div>
     </div>
   );
 }
 
 // ------------------------------------------------------------------------------------ 10. Review
 
-const money = (value: string) => {
-  const n = Number(value.replace(/[$,]/g, ''));
-  return value && Number.isFinite(n) ? formatMoney(Math.round(n * 100)) : '—';
-};
+const SECTIONS = [
+  { section: 'CLAUSE', label: 'Clauses', step: STEP.clauses },
+  { section: 'RULE', label: 'Rules', step: STEP.rules },
+  { section: 'DISCLOSURE', label: 'Disclosures', step: STEP.disclosures },
+] as const satisfies readonly { section: TemplateSection; label: string; step: number }[];
+
+const LEGACY = [
+  { label: 'Clauses', titles: (draft: WizardDraft) => clauseLabels(draft.clauses) },
+  { label: 'Rules', titles: (draft: WizardDraft) => ruleLabels(draft.rules) },
+  { label: 'Disclosures', titles: (draft: WizardDraft) => disclosureLabels(draft.disclosures) },
+];
+
+/** The agreement as the signers will read it, laid out as a page. */
+function AgreementPaper({
+  draft,
+  unitLabel,
+  term,
+  included,
+}: {
+  draft: WizardDraft;
+  unitLabel: string;
+  term: TermFacts;
+  included: ResolvedTerm[];
+}) {
+  const ordered = SECTIONS.flatMap(({ section }) => included.filter((t) => t.section === section));
+  const extras = [
+    ...OPTION_CHOICES.filter((c) => draft.options.includes(c.id)).map((c) => ['option', c] as const),
+    ...CLAUSE_OPTIONS.filter((c) => draft.clauses.includes(c.id)).map((c) => ['clause', c] as const),
+    ...RULE_OPTIONS.filter((c) => draft.rules.includes(c.id)).map((c) => ['rule', c] as const),
+    ...DISCLOSURE_OPTIONS.filter((c) => draft.disclosures.includes(c.id)).map(
+      (c) => ['disclosure', c] as const,
+    ),
+  ];
+  return (
+    <div className={styles.desk}>
+      <article className={styles.paper} aria-label="Agreement wording">
+        <header className={styles.paperHead}>
+          <p className={styles.paperKind}>{draft.template?.name ?? 'Lease agreement'}</p>
+          <h4 className={styles.paperTitle}>{unitLabel}</h4>
+          <p className={styles.paperMeta}>{term ? term.range : 'Dates not set'}</p>
+        </header>
+        {SECTIONS.map(({ section, label }) => {
+          const items = ordered.filter((t) => t.section === section);
+          if (!items.length) return null;
+          return (
+            <section key={section} className={styles.paperSection}>
+              <h5 className={styles.paperGroup}>{label}</h5>
+              {items.map((t) => (
+                <div key={t.id} className={styles.paperItem}>
+                  <h6 className={styles.paperItemTitle}>
+                    <span className={styles.paperNumber}>{ordered.indexOf(t) + 1}.</span>
+                    {t.title}
+                  </h6>
+                  <p className={styles.paperText}>
+                    <Wording text={t.body} />
+                  </p>
+                </div>
+              ))}
+            </section>
+          );
+        })}
+        {(extras.length > 0 || draft.customClause || draft.customRules) && (
+          <section className={styles.paperSection}>
+            <h5 className={styles.paperGroup}>Additional terms</h5>
+            {extras.map(([group, choice]) => (
+              <div key={`${group}-${choice.id}`} className={styles.paperItem}>
+                <h6 className={styles.paperItemTitle}>{choice.label}</h6>
+                <p className={styles.paperText}>{choice.description}</p>
+              </div>
+            ))}
+            {draft.customClause && <p className={styles.paperText}>{draft.customClause}</p>}
+            {draft.customRules && <p className={styles.paperText}>{draft.customRules}</p>}
+          </section>
+        )}
+      </article>
+    </div>
+  );
+}
 
 export function ReviewStep({
   draft,
@@ -1070,6 +1295,8 @@ export function ReviewStep({
   tenants,
   attachments,
   lessorSigner,
+  isRenewal = false,
+  onJump,
 }: {
   draft: WizardDraft;
   errors: WizardErrors;
@@ -1077,197 +1304,282 @@ export function ReviewStep({
   tenants: TenantOption[];
   attachments: AttachmentFile[];
   lessorSigner?: { name: string; email: string } | null;
+  isRenewal?: boolean;
+  /** Opens an earlier step to fix what the checklist flags. */
+  onJump?: (step: number) => void;
 }) {
-  const names = tenants.filter((t) => draft.tenantIds.includes(t.id)).map((t) => t.name);
-
-  const list = (items: string[]) => (items.length ? items.join('; ') : 'None');
+  const id = useId();
+  const term = termFacts(draft);
+  const due = dueAtMoveIn(draft);
+  const selected = draft.tenantIds.flatMap((tenantId) => tenants.filter((t) => t.id === tenantId));
+  const included = draftTerms(draft).filter((t) => t.included);
+  const groups = draft.template
+    ? SECTIONS.map(({ section, label, step }) => {
+        const items = included.filter((t) => t.section === section);
+        return {
+          label,
+          step,
+          titles: items.map((t) => t.title),
+          blanks: items.reduce((sum, t) => sum + blanksIn(t.body).length, 0),
+        };
+      })
+    : LEGACY.map(({ label, titles }) => ({ label, step: STEP.clauses, titles: titles(draft), blanks: 0 }));
+  const blanks = groups.reduce((sum, group) => sum + group.blanks, 0);
+  const firstBlank = groups.find((group) => group.blanks > 0);
+  const options = optionLabels(draft.options);
+  const problems: WizardErrors = { ...validateReview(draft, { tenants, isRenewal }), ...errors };
+  const issue = (...fields: string[]) => fields.map((field) => problems[field]).find(Boolean);
+  const checks: { done: string; issue?: string; step?: number; action?: string; verb?: string }[] =
+    [
+      {
+        done: 'Term set',
+        issue: issue('startDate', 'endDate'),
+        step: STEP.term,
+        action: 'Edit lease term',
+      },
+      {
+        done: 'Rent and deposit set',
+        issue: issue(
+          'monthlyRent',
+          'deposit',
+          'rentDueDay',
+          'lateFee',
+          'graceDays',
+          'moveInFee',
+          'petDeposit',
+        ),
+        step: STEP.rent,
+        action: 'Edit rent and fees',
+      },
+      {
+        done: `${count(selected.length, 'tenant')} will sign`,
+        issue: issue('unitId', 'tenantIds', 'primaryTenantId'),
+        step: STEP.tenants,
+        action: 'Edit tenants',
+      },
+      {
+        done: 'Agreement complete',
+        issue: blanks
+          ? `${count(blanks, 'blank')} to fill`
+          : issue(
+              'renewalNoticeDays',
+              'options',
+              'occupants',
+              'clauses',
+              'customClause',
+              'rules',
+              'customRules',
+              'disclosures',
+              'documentNames',
+            ),
+        step: firstBlank?.step ?? (issue('renewalNoticeDays', 'options', 'occupants') ? STEP.options : STEP.clauses),
+        action: firstBlank ? `Fill blanks in ${firstBlank.label.toLowerCase()}` : 'Edit agreement',
+        verb: firstBlank ? 'Fill blanks' : undefined,
+      },
+      {
+        done: 'Lessor set',
+        issue: issue('lessorName', 'lessorAddress', 'lessorEmail'),
+        step: STEP.lessor,
+        action: 'Edit lessor info',
+      },
+      {
+        done: 'Owner signer assigned',
+        issue: lessorSigner
+          ? undefined
+          : 'Assign an owner / lessor account to this property before sending.',
+      },
+    ];
+  const open = checks.filter((check) => check.issue).length;
   return (
-    <div>
-      <h3 className={styles.reviewSection}>Lease</h3>
-      <dl className={styles.review}>
-        <dt>Unit</dt>
-        <dd>{unitLabel}</dd>
-        <dt>Tenants</dt>
-        <dd>{names.join(', ') || 'Not selected'}</dd>
-        <dt>Term</dt>
-        <dd>
-          {termLabel(draft)}
-          {draft.endOption === 'month-to-month' ? ' · month to month' : ''}
-        </dd>
-        <dt>Renewal notice</dt>
-        <dd>{draft.renewalNoticeDays} days</dd>
-      </dl>
-      <h3 className={styles.reviewSection}>Rent, deposit &amp; fees</h3>
-      <dl className={styles.review}>
-        <dt>Monthly rent</dt>
-        <dd>
-          {money(draft.monthlyRent)}, due on the {draft.rentDueDay}
-          {[1, 21].includes(draft.rentDueDay)
-            ? 'st'
-            : [2, 22].includes(draft.rentDueDay)
-              ? 'nd'
-              : [3, 23].includes(draft.rentDueDay)
-                ? 'rd'
-                : 'th'}
-        </dd>
-        <dt>Security deposit</dt>
-        <dd>{money(draft.deposit)}</dd>
-        {draft.moveInFeeEnabled && (
-          <>
-            <dt>Move-in fee</dt>
-            <dd>{money(draft.moveInFee)}</dd>
-          </>
-        )}
-        {draft.petDepositEnabled && (
-          <>
-            <dt>Pet deposit</dt>
-            <dd>{money(draft.petDeposit)}</dd>
-          </>
-        )}
-        <dt>Late fee</dt>
-        <dd>
-          {draft.lateFeeEnabled
-            ? `${money(draft.lateFee)} after a ${draft.graceDays}-day grace period`
-            : 'None'}
-        </dd>
-        <dt>Due at signing</dt>
-        <dd>{formatMoney(Math.round(dueAtSigning(draft) * 100))}</dd>
-      </dl>
-      <ChargesPreview draft={draft} />
-      <h3 className={styles.reviewSection}>Terms</h3>
-      <dl className={styles.review}>
-        <dt>Options</dt>
-        <dd>{list(optionLabels(draft.options))}</dd>
-        <dt>Clauses</dt>
-        <dd>
-          {draft.template
-            ? list(
-                resolveTerms(
-                  draft.template,
-                  contextFromDraft(draft),
-                  draft.termOverrides,
-                  draft.renewalTerms,
-                )
-                  .filter((t) => t.included && t.section === 'CLAUSE')
-                  .map((t) => t.title),
-              )
-            : list(clauseLabels(draft.clauses))}
-        </dd>
-        <dt>Rules</dt>
-        <dd>
-          {draft.template
-            ? list(
-                resolveTerms(
-                  draft.template,
-                  contextFromDraft(draft),
-                  draft.termOverrides,
-                  draft.renewalTerms,
-                )
-                  .filter((t) => t.included && t.section === 'RULE')
-                  .map((t) => t.title),
-              )
-            : list(ruleLabels(draft.rules))}
-        </dd>
-        <dt>Disclosures</dt>
-        <dd>
-          {draft.template
-            ? list(
-                resolveTerms(
-                  draft.template,
-                  contextFromDraft(draft),
-                  draft.termOverrides,
-                  draft.renewalTerms,
-                )
-                  .filter((t) => t.included && t.section === 'DISCLOSURE')
-                  .map((t) => t.title),
-              )
-            : list(disclosureLabels(draft.disclosures))}
-        </dd>
-        <dt>Attachments</dt>
-        <dd>{attachments.length ? attachments.map((a) => a.name).join(', ') : 'None'}</dd>
-      </dl>
-      <h3 className={styles.reviewSection}>Lessor and signature</h3>
-      <dl className={styles.review}>
-        <dt>Lessor</dt>
-        <dd>
-          {draft.lessorName || '—'}
-          {draft.lessorAddress ? ` · ${draft.lessorAddress}` : ''}
-        </dd>
-        <dt>Signature</dt>
-        <dd>Electronic · owner / lessor and every tenant sign independently</dd>
-        <dt>Owner / lessor account</dt>
-        <dd>
-          {lessorSigner
-            ? `${lessorSigner.name} · ${lessorSigner.email}`
-            : 'Assign an owner / lessor account to this property before sending.'}
-        </dd>
-        <dt>Tenant accounts</dt>
-        <dd>
-          {tenants
-            .filter((t) => draft.tenantIds.includes(t.id))
-            .map((t) => (
-              <p key={t.id}>
-                {t.name} · {t.email || 'Email required'}
-              </p>
-            ))}
-        </dd>
-      </dl>
-      <h3 className={styles.reviewSection}>Full agreement wording</h3>
-      {draft.template &&
-        resolveTerms(
-          draft.template,
-          contextFromDraft(draft),
-          draft.termOverrides,
-          draft.renewalTerms,
-        )
-          .filter((t) => t.included)
-          .map((t) => (
-            <section key={t.id} style={{ marginTop: 16 }}>
-              <h4>{t.title}</h4>
-              <p style={{ whiteSpace: 'pre-wrap' }}>{t.body}</p>
-            </section>
-          ))}
-      {[
-        [OPTION_CHOICES, draft.options],
-        [CLAUSE_OPTIONS, draft.clauses],
-        [RULE_OPTIONS, draft.rules],
-        [DISCLOSURE_OPTIONS, draft.disclosures],
-      ].map(([choices, selected], group) =>
-        (choices as ClauseOption[])
-          .filter((c) => (selected as string[]).includes(c.id))
-          .map((c) => (
-            <section key={`${group}-${c.id}`} style={{ marginTop: 16 }}>
-              <h4>{c.label}</h4>
-              <p>{c.description}</p>
-            </section>
-          )),
-      )}
-      {draft.customClause && <p style={{ whiteSpace: 'pre-wrap' }}>{draft.customClause}</p>}
-      {draft.customRules && <p style={{ whiteSpace: 'pre-wrap' }}>{draft.customRules}</p>}
-      <h3 className={styles.reviewSection}>Separate files to review</h3>
-      {attachments.map((file) => (
-        <p key={file.id}>
-          <strong>{file.name}</strong> ·{' '}
-          {file.kind === 'ADDENDUM' ? 'Included addendum' : 'Supporting document'} ·{' '}
-          <a href={`/api/files/${file.id}/preview`} target="_blank" rel="noreferrer">
-            Preview
-          </a>{' '}
-          · <a href={`/api/files/${file.id}/download`}>Download</a>
+    <div className={styles.review}>
+      <section className={styles.reviewHero} aria-labelledby={`${id}place`}>
+        <h3 className={styles.reviewPlace} id={`${id}place`}>
+          {unitLabel}
+        </h3>
+        <p className={styles.reviewMeta}>
+          {term ? `${term.range} · ${term.length}` : 'Dates not set'} ·{' '}
+          {draft.renewalNoticeDays}-day renewal notice
         </p>
-      ))}
-      <p className={styles.sub}>
-        Only files marked Addendum are included in the signed agreement. Other files remain
-        supporting documents.
-      </p>
-      {Object.keys(errors).length > 0 && (
-        <div className={styles.alert} role="alert" style={{ marginTop: 16 }}>
-          {Object.values(errors).join(' ')}
+        <dl className={styles.stats}>
+          <div className={styles.stat}>
+            <dt>Monthly rent</dt>
+            <dd className={styles.statValue}>{moneyText(draft.monthlyRent)}</dd>
+            <dd className={styles.statMeta}>Due on the {ordinal(draft.rentDueDay)}</dd>
+          </div>
+          <div className={styles.stat}>
+            <dt>Security deposit</dt>
+            <dd className={styles.statValue}>{moneyText(draft.deposit)}</dd>
+          </div>
+          <div className={styles.stat}>
+            <dt>Due at move-in</dt>
+            <dd className={styles.statValue}>{due === null ? '—' : formatMoney(due)}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section className={styles.reviewBlock} aria-labelledby={`${id}ready`}>
+        <h3 className={styles.blockTitle} id={`${id}ready`}>
+          {open ? `${count(open, 'item')} to finish` : 'Ready to send'}
+        </h3>
+        <ul className={styles.checklist}>
+          {checks.map((check) => (
+            <li key={check.done} className={cx(styles.checkItem, check.issue && styles.checkIssue)}>
+              <span className={styles.checkMark} aria-hidden="true">
+                <Glyph name={check.issue ? 'alert' : 'check'} />
+              </span>
+              <span className={styles.checkText}>
+                <span className={styles.srOnly}>{check.issue ? 'To do: ' : 'Done: '}</span>
+                {check.issue ?? check.done}
+              </span>
+              {check.issue && check.step !== undefined && onJump && (
+                <button
+                  type="button"
+                  className={styles.textButton}
+                  aria-label={check.action}
+                  onClick={() => onJump(check.step!)}
+                >
+                  {check.verb ?? 'Edit'}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <ChargesPreview draft={draft} />
+
+      <section className={styles.reviewBlock} aria-labelledby={`${id}agreement`}>
+        <div className={styles.blockHead}>
+          <h3 className={styles.blockTitle} id={`${id}agreement`}>
+            Agreement
+          </h3>
+          {draft.template && (
+            <span className={styles.blockMeta}>
+              {draft.template.name} · v{draft.template.version}
+            </span>
+          )}
         </div>
-      )}
-      <p className={styles.sub} style={{ marginTop: 16 }}>
-        Sending creates an active lease, adds its scheduled charges to Payments and makes the
-        agreement available for each designated party to sign. No email or text notification is
-        sent.
+        <div className={styles.disclosures}>
+          {groups.map((group) => (
+            <details key={group.label} className={styles.disclosure}>
+              <summary>
+                <span className={styles.disclosureLabel}>{group.label}</span>
+                {group.blanks > 0 && (
+                  <span className={styles.blankBadge}>{count(group.blanks, 'blank')}</span>
+                )}
+                <span className={styles.disclosureCount}>{group.titles.length}</span>
+                <Glyph name="chevron" className={styles.chevron} />
+              </summary>
+              {group.titles.length ? (
+                <ol className={styles.titleList}>
+                  {group.titles.map((title, index) => (
+                    <li key={`${index}-${title}`}>{title}</li>
+                  ))}
+                </ol>
+              ) : (
+                <p className={styles.emptyRow}>None</p>
+              )}
+            </details>
+          ))}
+          {options.length > 0 && (
+            <details className={styles.disclosure}>
+              <summary>
+                <span className={styles.disclosureLabel}>Lease options</span>
+                <span className={styles.disclosureCount}>{options.length}</span>
+                <Glyph name="chevron" className={styles.chevron} />
+              </summary>
+              <ul className={styles.titleList}>
+                {options.map((option) => (
+                  <li key={option}>{option}</li>
+                ))}
+              </ul>
+            </details>
+          )}
+          <details className={styles.disclosure}>
+            <summary>
+              <span className={styles.disclosureLabel}>Attachments</span>
+              <span className={styles.disclosureCount}>{attachments.length}</span>
+              <Glyph name="chevron" className={styles.chevron} />
+            </summary>
+            {attachments.length ? (
+              <ul className={styles.files}>
+                {attachments.map((file) => (
+                  <li key={file.id} className={styles.fileRow}>
+                    <Glyph name="doc" className={styles.fileIcon} />
+                    <span className={styles.personText}>
+                      <span className={styles.personName}>{file.name}</span>
+                      <span className={styles.personMeta}>
+                        {file.kind === 'ADDENDUM' ? 'Signed with the lease' : 'Supporting document'}
+                      </span>
+                    </span>
+                    <a href={`/api/files/${file.id}/preview`} target="_blank" rel="noreferrer">
+                      Preview
+                    </a>
+                    <a href={`/api/files/${file.id}/download`}>Download</a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.emptyRow}>None</p>
+            )}
+          </details>
+        </div>
+      </section>
+
+      <section className={styles.reviewBlock} aria-labelledby={`${id}signers`}>
+        <h3 className={styles.blockTitle} id={`${id}signers`}>
+          Signers
+        </h3>
+        <ul className={styles.people}>
+          {selected.map((tenant) => (
+            <li key={tenant.id} className={styles.person}>
+              <span className={styles.avatar} aria-hidden="true">
+                {initials(tenant.name)}
+              </span>
+              <span className={styles.personText}>
+                <span className={styles.personName}>{tenant.name}</span>
+                <span className={styles.personMeta}>
+                  Tenant{tenant.id === draft.primaryTenantId ? ' · Primary' : ''}
+                </span>
+              </span>
+              <span className={cx(styles.personEmail, !tenant.email && styles.warnText)}>
+                {tenant.email || 'Email required'}
+              </span>
+            </li>
+          ))}
+          <li className={styles.person}>
+            <span className={styles.avatar} aria-hidden="true">
+              {lessorSigner ? initials(lessorSigner.name) : '?'}
+            </span>
+            <span className={styles.personText}>
+              <span className={styles.personName}>{lessorSigner?.name ?? 'No owner account'}</span>
+              <span className={styles.personMeta}>Owner / lessor</span>
+            </span>
+            <span className={cx(styles.personEmail, !lessorSigner && styles.warnText)}>
+              {lessorSigner?.email ?? 'Assign before sending'}
+            </span>
+          </li>
+        </ul>
+        <p className={styles.footNote}>
+          Lessor on the agreement: {draft.lessorName || '—'}
+          {draft.lessorAddress ? ` · ${draft.lessorAddress}` : ''}
+        </p>
+      </section>
+
+      <details className={styles.wording}>
+        <summary>
+          <span className={styles.disclosureLabel}>Full agreement wording</span>
+          <span className={styles.disclosureCount}>
+            {count(included.length || groups.reduce((n, g) => n + g.titles.length, 0), 'section')}
+          </span>
+          <Glyph name="chevron" className={styles.chevron} />
+        </summary>
+        <AgreementPaper draft={draft} unitLabel={unitLabel} term={term} included={included} />
+      </details>
+
+      <p className={styles.footNote}>
+        Sending activates the lease and adds its charges to Payments. Templates may not fit every
+        situation; verify the agreement with your advisors.
       </p>
     </div>
   );

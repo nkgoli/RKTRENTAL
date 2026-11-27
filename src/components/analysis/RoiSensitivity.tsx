@@ -36,7 +36,7 @@ const cellText = (v: number) => {
   const p = v * 100;
   return `${Math.abs(p) >= 10 ? p.toFixed(0) : p.toFixed(1)}%`;
 };
-const rentTick = (v: number) => `$${(v / 1000).toFixed(1)}k`;
+const rentTick = (v: number) => `$${(v / 1000).toFixed(1)}K`;
 const vacancyTick = (v: number) => `${Number(v.toFixed(2))}%`;
 
 /** White or slate-900 text, whichever contrasts more with the cell. */

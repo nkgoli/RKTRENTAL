@@ -318,9 +318,16 @@
   font-size: 13px;
   font-weight: 400;
 }
+.factGrid.twoUp {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 @container (max-width: 560px) {
   .factGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* The date range reads on one line. */
+  .factGrid:not(.twoUp) > div:first-child {
+    grid-column: 1 / -1;
   }
 }
 
@@ -406,7 +413,6 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: 4px 10px;
 }
 .signers :global(.badge) {
@@ -425,6 +431,9 @@
 }
 .disclosure[open] {
   flex-basis: 100%;
+}
+.cardHead:has(> .disclosure[open]) {
+  margin-bottom: 0;
 }
 .disclosure[open] > summary {
   display: none;
@@ -568,6 +577,10 @@
 .wording[open] > summary::after {
   margin-top: 3px;
   transform: rotate(-135deg);
+}
+.wording:not([open]) .whenOpen,
+.wording[open] .whenClosed {
+  display: none;
 }
 .desk {
   margin-top: 12px;
@@ -868,7 +881,7 @@
 @media (max-width: 760px) {
   .workspace {
     gap: 16px;
-    margin-top: -4px;
+    margin-top: 4px;
   }
   .progress {
     flex-basis: 100%;
@@ -890,7 +903,7 @@
   }
   /* "Docs" on phones; the full word stays the accessible name. */
   .tabs {
-    gap: 20px;
+    gap: 14px;
   }
   .tabs a {
     min-height: 48px;

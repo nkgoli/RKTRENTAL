@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import { referenceScale } from '@/lib/analysis/chart-data';
+import { niceScale } from '@/lib/analysis/chart-data';
 import { chartColors } from './RoiChart';
 import c from './roi-chart.module.css';
 
@@ -43,22 +43,28 @@ export type ScatterPoint = {
   x: number;
   y: number;
   color: string;
-  /** Bubble radius in px (the reference sizes the property larger). */
+  /** Point radius in px (default 6). */
   r?: number;
 };
 
+type Box = { x0: number; x1: number; y0: number; y1: number };
+const overlaps = (a: Box, b: Box) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+/** Approximate width of 12 px Inter text. */
+const textWidth = (text: string) => text.length * 6.6 + 2;
+
 /**
  * Risk vs return scatter (RealROI C20): X volatility %, Y annualized return %.
- * `refLines` mark an asset whose volatility is not measured (it has a return
- * but no honest x position), labelled at the right end.
+ * `refLines` mark an asset whose volatility is not measured (it has a return but no
+ * honest x position). Every point is labelled directly; labels try right, left, above and
+ * below their point and never sit on another label, point or reference line.
  */
 export function ScatterChart({
   label,
   points,
   refLines = [],
   height = 256,
-  xTitle = 'Volatility (%)',
-  yTitle = 'Annualized Return (%)',
+  xTitle = 'Volatility',
+  yTitle = 'Annual return',
 }: {
   label: string;
   points: ScatterPoint[];
@@ -71,12 +77,12 @@ export function ScatterChart({
   const [active, setActive] = useState<number | null>(null);
   const id = useId();
   const narrow = width < 480;
-  const xs = referenceScale(
+  const xs = niceScale(
     points.map((p) => p.x),
     narrow ? 4 : 5,
   );
-  const ys = referenceScale([...points.map((p) => p.y), ...refLines.map((r) => r.value)]);
-  const m = { top: 20, right: narrow ? 12 : 30, bottom: 44, left: 58 };
+  const ys = niceScale([...points.map((p) => p.y), ...refLines.map((r) => r.value)], 5);
+  const m = { top: 16, right: narrow ? 8 : 16, bottom: 44, left: 52 };
   const iw = Math.max(1, width - m.left - m.right);
   const ih = height - m.top - m.bottom;
   const x = (v: number) => m.left + ((v - xs.min) / (xs.max - xs.min)) * iw;
@@ -85,6 +91,55 @@ export function ScatterChart({
   const spoken = point
     ? `${point.label}: volatility ${point.x.toFixed(1)}%, return ${point.y.toFixed(2)}%`
     : '';
+  const radius = (p: ScatterPoint) => p.r ?? 6;
+  const bounds: Box = { x0: m.left, x1: m.left + iw, y0: m.top - 6, y1: m.top + ih };
+  const inside = (b: Box) =>
+    b.x0 >= bounds.x0 && b.x1 <= bounds.x1 && b.y0 >= bounds.y0 && b.y1 <= bounds.y1;
+  const textBox = (tx: number, baseline: number, w: number, anchor: 'start' | 'end' | 'middle') => {
+    const x0 = anchor === 'start' ? tx : anchor === 'end' ? tx - w : tx - w / 2;
+    return { x0, x1: x0 + w, y0: baseline - 11, y1: baseline + 3 };
+  };
+  // Obstacles: every point (with its ring), and each reference line.
+  const taken: Box[] = [
+    ...points.map((p) => {
+      const r = radius(p) + 3;
+      return { x0: x(p.x) - r, x1: x(p.x) + r, y0: y(p.y) - r, y1: y(p.y) + r };
+    }),
+    ...refLines.map((r) => ({ x0: m.left, x1: m.left + iw, y0: y(r.value) - 2, y1: y(r.value) + 2 })),
+  ];
+  const place = (
+    text: string,
+    candidates: { x: number; baseline: number; anchor: 'start' | 'end' | 'middle' }[],
+  ) => {
+    const w = textWidth(text);
+    const boxes = candidates.map((c) => ({ ...c, box: textBox(c.x, c.baseline, w, c.anchor) }));
+    const pick =
+      boxes.find((c) => inside(c.box) && !taken.some((t) => overlaps(t, c.box))) ??
+      boxes.find((c) => inside(c.box)) ??
+      boxes[0];
+    taken.push(pick.box);
+    return pick;
+  };
+  const refLabels = refLines.map((r) => {
+    const ry = y(r.value);
+    return place(r.label, [
+      { x: m.left + 4, baseline: ry - 6, anchor: 'start' },
+      { x: m.left + iw - 4, baseline: ry - 6, anchor: 'end' },
+      { x: m.left + 4, baseline: ry + 15, anchor: 'start' },
+      { x: m.left + iw - 4, baseline: ry + 15, anchor: 'end' },
+    ]);
+  });
+  const pointLabels = points.map((p) => {
+    const px = x(p.x);
+    const py = y(p.y);
+    const r = radius(p);
+    return place(p.label, [
+      { x: px + r + 6, baseline: py + 4, anchor: 'start' },
+      { x: px - r - 6, baseline: py + 4, anchor: 'end' },
+      { x: px, baseline: py - r - 7, anchor: 'middle' },
+      { x: px, baseline: py + r + 15, anchor: 'middle' },
+    ]);
+  });
   return (
     <div className={c.chart}>
       <div
@@ -110,9 +165,9 @@ export function ScatterChart({
           <title id={`${id}-t`}>{label}</title>
           {xs.ticks.map((t) => (
             <g key={`x${t}`} className={c.grid}>
-              <line x1={x(t)} x2={x(t)} y1={m.top} y2={m.top + ih} strokeDasharray="3 3" />
-              <text x={x(t)} y={m.top + ih + 16} textAnchor="middle">
-                {t}
+              <line x1={x(t)} x2={x(t)} y1={m.top} y2={m.top + ih} />
+              <text x={x(t)} y={m.top + ih + 18} textAnchor="middle">
+                {`${t}%`}
               </text>
             </g>
           ))}
@@ -123,16 +178,13 @@ export function ScatterChart({
                 x2={m.left + iw}
                 y1={y(t)}
                 y2={y(t)}
-                strokeDasharray={t === 0 ? undefined : '3 3'}
                 data-zero={t === 0 || undefined}
               />
               <text x={m.left - 8} y={y(t) + 4} textAnchor="end">
-                {`${t.toFixed(0)}%`}
+                {`${t}%`}
               </text>
             </g>
           ))}
-          <line className={c.axis} x1={m.left} x2={m.left} y1={m.top} y2={m.top + ih} />
-          <line className={c.axis} x1={m.left} x2={m.left + iw} y1={m.top + ih} y2={m.top + ih} />
           <text className={c.ytitle} x={m.left + iw / 2} y={height - 4} textAnchor="middle">
             {xTitle}
           </text>
@@ -143,16 +195,10 @@ export function ScatterChart({
           >
             {yTitle}
           </text>
-          {refLines.map((r) => (
+          {refLines.map((r, k) => (
             <g key={r.label} className={c.refLine} style={{ color: r.color }}>
-              <line
-                x1={m.left}
-                x2={m.left + iw}
-                y1={y(r.value)}
-                y2={y(r.value)}
-                strokeDasharray="6 4"
-              />
-              <text x={m.left + iw - 4} y={y(r.value) - 6} textAnchor="end">
+              <line x1={m.left} x2={m.left + iw} y1={y(r.value)} y2={y(r.value)} />
+              <text x={refLabels[k].x} y={refLabels[k].baseline} textAnchor={refLabels[k].anchor}>
                 {r.label}
               </text>
             </g>
@@ -163,32 +209,26 @@ export function ScatterChart({
                 key={p.label}
                 cx={x(p.x)}
                 cy={y(p.y)}
-                r={(p.r ?? 9) + (active === i ? 2 : 0)}
+                r={radius(p) + (active === i ? 1.5 : 0)}
                 fill={p.color}
-                stroke={active === i ? 'white' : undefined}
-                strokeWidth={active === i ? 2 : undefined}
+                stroke="#fff"
+                strokeWidth={2}
                 onPointerEnter={() => setActive(i)}
                 onPointerDown={() => setActive(i)}
                 style={{ cursor: 'pointer' }}
               />
             ))}
-            {/* Direct labels on wide charts, so the points read without the key. */}
-            {!narrow &&
-              points.map((p) => {
-                const right = x(p.x) < m.left + iw * 0.75;
-                return (
-                  <text
-                    key={`l${p.label}`}
-                    className={c.xtick}
-                    x={x(p.x) + (right ? 1 : -1) * ((p.r ?? 9) + 6)}
-                    y={y(p.y) + 4}
-                    textAnchor={right ? 'start' : 'end'}
-                    style={{ fontWeight: 600, fill: chartColors.ink }}
-                  >
-                    {p.label}
-                  </text>
-                );
-              })}
+            {points.map((p, i) => (
+              <text
+                key={`l${p.label}`}
+                className={c.pointLabel}
+                x={pointLabels[i].x}
+                y={pointLabels[i].baseline}
+                textAnchor={pointLabels[i].anchor}
+              >
+                {p.label}
+              </text>
+            ))}
           </g>
         </svg>
         {point && (
@@ -229,9 +269,9 @@ export function ScatterChart({
 export type RadarSeries = { label: string; color: string; values: (number | null)[] };
 
 /**
- * Multi-dimensional comparison radar (RealROI C23), 0–100 per axis, fill 0.2.
- * Unlike the reference it has a tooltip: hover, tap or arrow keys read an axis.
- * A `null` score leaves that vertex out (dashed edge) and reads "Not measured".
+ * Multi-dimensional comparison radar (RealROI C23), 0–100 per axis, with a soft fill.
+ * Hover, tap or arrow keys read an axis. A `null` score leaves that vertex out (the shape
+ * stays open with dashed edges) and reads "Not measured".
  */
 export function RadarChart({
   label,
@@ -261,6 +301,17 @@ export function RadarChart({
       : `${axes[active]}: ${series.map((s) => `${s.label} ${fmt(s.values[active])}`).join('; ')}`;
   return (
     <div className={c.chart}>
+      <ul className={c.legend} aria-label={`${label} legend`}>
+        {series.map((s) => (
+          <li key={s.label}>
+            <i
+              data-kind={s.values.every((v) => v != null) ? 'bar' : 'dashed'}
+              style={{ color: s.color }}
+            />
+            {s.label}
+          </li>
+        ))}
+      </ul>
       <div
         ref={wrap}
         className={c.plot}
@@ -303,7 +354,7 @@ export function RadarChart({
               key={ring}
               points={axes.map((_, i) => pt(i, ring).join(',')).join(' ')}
               fill="none"
-              stroke={chartColors.border}
+              stroke={chartColors.grid}
             />
           ))}
           {axes.map((axis, i) => {
@@ -311,7 +362,7 @@ export function RadarChart({
             const [lx, ly] = pt(i, 118);
             return (
               <g key={axis}>
-                <line x1={cx} y1={cy} x2={ex} y2={ey} stroke={chartColors.border} />
+                <line x1={cx} y1={cy} x2={ex} y2={ey} stroke={chartColors.grid} />
                 <text
                   className={c.xtick}
                   x={lx}
@@ -350,9 +401,10 @@ export function RadarChart({
                     <polygon
                       points={pts.map((p) => p!.join(',')).join(' ')}
                       fill={s.color}
-                      fillOpacity={0.2}
+                      fillOpacity={0.12}
                       stroke={s.color}
                       strokeWidth={2}
+                      strokeLinejoin="round"
                     />
                   ) : (
                     pts.map((p, i) => {
@@ -380,7 +432,7 @@ export function RadarChart({
                         r={active === i ? 5 : complete ? 0 : 4}
                         fill={s.color}
                         stroke="white"
-                        strokeWidth={active === i ? 2 : 1}
+                        strokeWidth={2}
                       />
                     ) : null,
                   )}
@@ -410,17 +462,6 @@ export function RadarChart({
       <p className={c.srOnly} aria-live="polite">
         {spoken}
       </p>
-      <ul className={c.legend} aria-label={`${label} legend`}>
-        {series.map((s) => (
-          <li key={s.label}>
-            <i
-              data-kind={s.values.every((v) => v != null) ? 'bar' : 'dashed'}
-              style={{ color: s.color }}
-            />
-            {s.label}
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

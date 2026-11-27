@@ -365,6 +365,16 @@
   font-size: 12px !important;
   fill: var(--chart-axis) !important;
 }
+/* Direct labels on scatter points: text colour, with a surface halo over the grid. */
+.pointLabel {
+  font-size: 12px !important;
+  font-weight: 500;
+  fill: var(--design-text) !important;
+  paint-order: stroke;
+  stroke: var(--design-surface);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
 /* Hover wash behind the year the card describes. */
 .hover {
   fill: rgb(62 79 229 / 0.06);

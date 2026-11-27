@@ -105,9 +105,7 @@ export function RequestDetails({
         </div>
         <section className={styles.section} aria-label="Request photos">
           <h3>Photos</h3>
-          {request.photos.length === 0 && (
-            <p className="muted">No photos yet.</p>
-          )}
+          {request.photos.length === 0 && <p className="muted">No photos yet.</p>}
           <div className={styles.photos}>
             {request.photos.map(
               (photo) =>

@@ -604,11 +604,12 @@ export function CompsWorkbench(props: WorkbenchProps) {
       {sourceRow}
       <div className={styles.comparison}>
         <Card flush>
-          <div className={styles.mapHead}>
-            <h3>Comparable rentals map</h3>
-            <Badge tone="neutral">Within {radiusMiles} mi</Badge>
-          </div>
-          {map}
+          <details className="disclosure">
+            <summary>
+              Comparable rentals map <Badge tone="neutral">Within {radiusMiles} mi</Badge>
+            </summary>
+            {map}
+          </details>
           <div className={styles.nearest}>
             <strong className={styles.nearestTitle}>Nearest comps</strong>
             {nearest.length === 0 && <p className="muted">No included comps.</p>}

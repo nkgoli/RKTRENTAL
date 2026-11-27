@@ -561,7 +561,11 @@ export default async function DocumentsPage({
                     );
                   })
                 ) : (
-                  <EmptyState title="No lease documents in this view" action="View leases" href="/leases" />
+                  <EmptyState
+                    title="No lease documents in this view"
+                    action="View leases"
+                    href="/leases"
+                  />
                 )}
                 <Pagination
                   page={leasePage}
@@ -766,7 +770,11 @@ export default async function DocumentsPage({
                     </div>
                   </>
                 ) : (
-                  <EmptyState title="No photos in this view" action="View properties" href="/properties" />
+                  <EmptyState
+                    title="No photos in this view"
+                    action="View properties"
+                    href="/properties"
+                  />
                 )}
                 <Pagination
                   page={photoPage}

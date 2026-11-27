@@ -105,7 +105,16 @@ function ProviderCard({ provider }: { provider: ProviderView }) {
                 </>
               )}
             </dl>
-            <ConfirmButton label="Disconnect" variant="danger" size="sm" title={`Disconnect ${provider.name}?`} description="New requests will stop using this provider until you reconnect. Existing records stay saved." confirmLabel="Disconnect" action={disconnectAction} fields={{ kind: provider.kind, provider: provider.provider, name: provider.name }} />
+            <ConfirmButton
+              label="Disconnect"
+              variant="danger"
+              size="sm"
+              title={`Disconnect ${provider.name}?`}
+              description="New requests will stop using this provider until you reconnect. Existing records stay saved."
+              confirmLabel="Disconnect"
+              action={disconnectAction}
+              fields={{ kind: provider.kind, provider: provider.provider, name: provider.name }}
+            />
           </details>
         </>
       ) : (

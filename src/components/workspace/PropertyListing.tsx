@@ -27,13 +27,13 @@ export async function PropertyListing({
     </section>;
   }
 
-  if (!units.length) return <EmptyState title="No units to compare yet" description="Add a unit with its size, beds and baths to compare nearby rentals." action="Go to property" href={`/properties/${property.id}#add-unit`} />;
+  if (!units.length) return <EmptyState title="No units to compare yet" action="Add unit" href={`/properties/${property.id}#add-unit`} />;
 
   const hasConfiguration = units.some((unit) => unit.bedrooms != null || unit.bathrooms != null);
+  const priced = units.filter((unit) => unit.marketRent != null).length;
   return <Card flush>
-    <CardHeader title="Market rent by unit" action={<span className={styles.count}>{units.length} units · {units.filter((unit) => unit.marketRent != null).length} with market rent</span>} />
-    <p className={styles.intro}>Review each unit against nearby rentals. Market rent is the saved estimate; open comps to review a new suggestion.</p>
-    {!hasConfiguration && <p className={styles.intro}><Link href={`/properties/${property.id}#units`}>Add unit details to improve comps → Edit units</Link></p>}
+    <CardHeader title="Market rent by unit" action={<span className={styles.count}>{priced} of {units.length} with market rent</span>} />
+    {!hasConfiguration && <p className={styles.intro}><Link href={`/properties/${property.id}#units`}>Add unit details →</Link></p>}
     <div className={styles.tableWrap} role="region" aria-label="Market rent by unit table" tabIndex={0}>
       <Table mobile="cards" aria-label="Market rent by unit">
         <thead><tr><th scope="col">Unit</th>{hasConfiguration && <th scope="col">Configuration</th>}<th scope="col" className="num">Current / listed</th><th scope="col" className="num">Market rent</th><th scope="col" className="num">Gap / month</th><th scope="col">Status</th><th scope="col" aria-label="Compare rentals" /></tr></thead>
@@ -55,6 +55,5 @@ export async function PropertyListing({
         </tbody>
       </Table>
     </div>
-    <p className={styles.note}>Comps are compared at the unit level. A property-wide rent estimate is not shown for multi-unit buildings.</p>
   </Card>;
 }

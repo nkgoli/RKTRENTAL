@@ -33,7 +33,6 @@ import {
   leaseFileSections,
   leaseLocation,
   librarySummary,
-  photoSummary,
   previewDocument,
   primaryTenant,
   sortByName,
@@ -336,7 +335,6 @@ export default async function DocumentsPage({
   const previewTenant = previewGroup ? primaryTenant(previewGroup) : null;
   const previewOwner = preview && !preview.leaseId ? fileOwner(preview) : undefined;
   const previewIsPdf = preview ? fileKind(preview.mimeType) === 'pdf' : false;
-  const photoOverview = photoSummary(matchingFiles);
   const leaseFileCount = allLeaseGroups.reduce((total, group) => total + group.files.length, 0);
 
   const leaseOptions = leaseTargets.map((lease) => {
@@ -365,7 +363,6 @@ export default async function DocumentsPage({
       />
       <PageHeader
         title="Documents"
-        meta="Documents and photos · open a lease or property to rename, share or delete its files"
         actions={[{ label: 'Upload files', href: '#upload', primary: true }]}
       />
       <div className={`stack ${styles.library}`}>
@@ -374,22 +371,17 @@ export default async function DocumentsPage({
           value={plural(summary.total, 'file')}
           detail={`${formatBytes(summary.bytes)} stored · ${plural(summary.leaseDocuments, 'lease document')} · ${plural(summary.propertyFiles, 'property file')}`}
           footer={
-            <>
-              <a className="btn btn-primary btn-sm" href="#upload">
-                Upload files
-              </a>
-              {summary.latestLease && (
-                <Link
-                  className="btn btn-ghost btn-sm"
-                  href={`/leases/${summary.latestLease.leaseId}?tab=documents`}
-                >
-                  {latestTenant
-                    ? `Open ${latestTenant.name}’s lease`
-                    : `Open the ${leaseLocation(summary.latestLease)} lease`}
-                  <Icon name="arrow-right" />
-                </Link>
-              )}
-            </>
+            summary.latestLease && (
+              <Link
+                className="btn btn-ghost btn-sm"
+                href={`/leases/${summary.latestLease.leaseId}?tab=documents`}
+              >
+                {latestTenant
+                  ? `Open ${latestTenant.name}’s lease`
+                  : `Open the ${leaseLocation(summary.latestLease)} lease`}
+                <Icon name="arrow-right" />
+              </Link>
+            )
           }
           stats={[
             {
@@ -399,15 +391,13 @@ export default async function DocumentsPage({
                 ? [leaseLocation(signedFirst), primaryTenant(signedFirst)?.name]
                     .filter(Boolean)
                     .join(' · ')
-                : 'No signed agreement stored yet',
+                : undefined,
               href: signedFirst ? `/leases/${signedFirst.leaseId}?tab=agreement` : undefined,
             },
             {
               label: 'Restricted access',
               value: summary.restricted.count,
-              detail: restrictedFirst
-                ? `${restrictedFirst.name} · tenant identity`
-                : 'No identity documents stored',
+              detail: restrictedFirst ? `${restrictedFirst.name} · tenant identity` : undefined,
               href: summary.restricted.count ? '/documents?kind=ID' : undefined,
             },
           ]}
@@ -436,8 +426,10 @@ export default async function DocumentsPage({
               propertyId: unit.property.id,
               label: `${unit.property.name} · ${unitLabel(unit)}`,
             }))}
+            // Server elements rendered inside the client filters carry keys, or React warns.
             tabs={
               <Tabs
+                key="tabs"
                 label="File type"
                 items={KIND_FILTERS.map((item) => ({
                   label: item.label,
@@ -447,7 +439,7 @@ export default async function DocumentsPage({
               />
             }
             caption={
-              <span className={styles.caption} role="status">
+              <span key="caption" className={styles.caption} role="status">
                 {plural(matchingFiles.length, 'matching file')}
               </span>
             }
@@ -459,11 +451,6 @@ export default async function DocumentsPage({
             <EmptyState
               title={
                 libraryFiles.length ? 'No files match these filters' : 'No documents or photos yet'
-              }
-              description={
-                libraryFiles.length
-                  ? 'Try a different name, file type or property. Clear filters to see the full library.'
-                  : 'Upload a signed lease, inspection or photo and keep it with the right property or unit.'
               }
               action={libraryFiles.length ? 'Clear filters' : 'Upload files'}
               href={libraryFiles.length ? '/documents' : '#upload'}
@@ -477,8 +464,7 @@ export default async function DocumentsPage({
                 <div className={styles.panelHead}>
                   <h2 className={styles.panelTitle}>Lease documents</h2>
                   <span className={styles.caption}>
-                    Grouped by lease · {plural(allLeaseGroups.length, 'lease')} ·{' '}
-                    {plural(leaseFileCount, 'file')}
+                    {plural(allLeaseGroups.length, 'lease')} · {plural(leaseFileCount, 'file')}
                   </span>
                 </div>
                 {leaseGroups.length ? (
@@ -575,12 +561,7 @@ export default async function DocumentsPage({
                     );
                   })
                 ) : (
-                  <EmptyState
-                    title="No lease documents in this view"
-                    description="Lease documents will appear here after they are added."
-                    action="View leases"
-                    href="/leases"
-                  />
+                  <EmptyState title="No lease documents in this view" action="View leases" href="/leases" />
                 )}
                 <Pagination
                   page={leasePage}
@@ -608,13 +589,9 @@ export default async function DocumentsPage({
                       <strong>
                         {preview.name} · {formatBytes(preview.sizeBytes)}
                       </strong>
-                      <small>
-                        {isRestrictedDocument(preview)
-                          ? 'Restricted access · tenant identity. Open it only when you need to verify the tenant.'
-                          : previewIsPdf
-                            ? 'No page preview here. Open the PDF in a new tab or download it to read it.'
-                            : 'No inline preview here. Open the file in a new tab or download it.'}
-                      </small>
+                      {isRestrictedDocument(preview) && (
+                        <small>Restricted · open only to verify the tenant.</small>
+                      )}
                       <a
                         href={`/api/files/${preview.id}/preview`}
                         target="_blank"
@@ -691,7 +668,7 @@ export default async function DocumentsPage({
                     <h2 id="preview-heading" className={styles.previewTitle}>
                       No file selected
                     </h2>
-                    <p className="muted">Choose a lease or property file to see its details.</p>
+                    <p className="muted">Select a file to preview it.</p>
                   </>
                 )}
               </Card>
@@ -705,7 +682,6 @@ export default async function DocumentsPage({
                     Property files
                   </h2>
                 </div>
-                <span className={styles.caption}>Not tied to a single lease</span>
                 {propertyFiles.length ? (
                   propertyFiles.map((file) => (
                     <DocumentRow
@@ -717,10 +693,7 @@ export default async function DocumentsPage({
                   ))
                 ) : (
                   <div className={styles.emptyPanel}>
-                    <h3>Nothing uploaded for properties yet</h3>
-                    <p className="muted">
-                      Upload a file from a property to keep it with the portfolio.
-                    </p>
+                    <h3>No property files yet</h3>
                     <Link className="btn btn-secondary btn-sm" href="/properties">
                       View properties
                       <Icon name="arrow-right" />
@@ -739,18 +712,10 @@ export default async function DocumentsPage({
                   <h2 id="photos-heading" className={styles.panelTitle}>
                     Photos
                   </h2>
-                  <span className={styles.caption}>
-                    Property and unit photos · {allPhotos.length}
-                  </span>
+                  <span className={styles.caption}>{plural(allPhotos.length, 'photo')}</span>
                 </div>
                 {photos.length ? (
                   <>
-                    <div className={styles.inset}>
-                      <strong>
-                        {plural(photoOverview.total, 'photo')} · {photoOverview.text}
-                      </strong>
-                      <small>Open a property to rename, reorder or delete its photos.</small>
-                    </div>
                     <div className={styles.photoGrid}>
                       <Gallery>
                         {photos.map((photo, index) => {
@@ -801,12 +766,7 @@ export default async function DocumentsPage({
                     </div>
                   </>
                 ) : (
-                  <EmptyState
-                    title="No photos in this view"
-                    description="Add property or unit photos to make them available here."
-                    action="View properties"
-                    href="/properties"
-                  />
+                  <EmptyState title="No photos in this view" action="View properties" href="/properties" />
                 )}
                 <Pagination
                   page={photoPage}

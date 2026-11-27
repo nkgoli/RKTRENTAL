@@ -138,11 +138,6 @@
   flex-wrap: wrap;
   margin-bottom: 14px;
 }
-.sectionHead p {
-  color: var(--design-muted);
-  font-size: 12px;
-  margin-top: 4px;
-}
 .sectionHead h2 {
   margin: 0;
 }
@@ -425,14 +420,6 @@
 }
 
 /* Tenant profile. */
-.backLink {
-  width: fit-content;
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-  font-size: 13px;
-  font-weight: 600;
-}
 .profileBand {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -939,9 +926,11 @@
     padding: 12px;
     position: relative;
   }
+  /* Cards size to their content, not the 44px desktop row height. */
   .directoryTable td,
   .directoryTable tbody th {
     display: block;
+    height: auto;
     padding: 0;
     min-width: 0;
   }

@@ -31,11 +31,6 @@ const timeframes: { id: Timeframe; label: string; year: number }[] = [
   { id: 'stabilized', label: 'Stabilized', year: 3 },
   { id: 'year5', label: 'Year 5', year: 5 },
 ];
-const describe: Record<Timeframe, string> = {
-  year1: 'Showing first-year cash-on-cash returns based on initial assumptions.',
-  stabilized: 'Showing stabilized returns (Year 3) after initial lease-up period.',
-  year5: 'Showing Year 5 returns accounting for rent growth and expense increases.',
-};
 const short = (v: number) => `${(v * 100).toFixed(1)}%`;
 const cellText = (v: number) => {
   const p = v * 100;
@@ -55,9 +50,9 @@ function ink(hex: string) {
 }
 
 /**
- * C15 · visx-style heatmap: rent across, vacancy up, a continuous 3-stop scale,
- * the base cell outlined with a ● corner and a dashed break-even contour. Cells
- * come from the engine; unavailable cells stay grey and say why.
+ * C15 · Heatmap: rent across, vacancy up, a diverging scale centred on break-even, the base
+ * cell outlined with a ● corner and a dashed break-even contour. Cells come from the engine;
+ * unavailable cells stay grey and say why.
  */
 function Heatmap({
   grid,
@@ -94,8 +89,8 @@ function Heatmap({
   const narrow = w < 480;
   const h = narrow ? 340 : 420;
   const m = narrow
-    ? { top: 16, right: 8, bottom: 56, left: 54 }
-    : { top: 24, right: 24, bottom: 72, left: 80 };
+    ? { top: 8, right: 8, bottom: 48, left: 52 }
+    : { top: 8, right: 16, bottom: 56, left: 72 };
   const cols = grid.rents.length;
   const rowsN = grid.vacancies.length;
   // matrix[row][col]: rows are vacancy (bottom = lowest), columns are rent.
@@ -128,6 +123,18 @@ function Heatmap({
           reason: reason(grid.cells[active.col][active.row]),
         };
   const zeroAt = min < 0 && max > 0 ? ((0 - min) / (max - min)) * 100 : null;
+  const shade = (v: number) => heatColor(min, max, v, palette);
+  // The base cell is the readout's resting state, so the box never sits empty.
+  const shownCell =
+    current ??
+    (baseRow >= 0 && baseCol >= 0
+      ? {
+          rent: grid.rents[baseCol],
+          vacancy: grid.vacancies[baseRow],
+          value: matrix[baseRow][baseCol],
+          reason: reason(grid.cells[baseCol][baseRow]),
+        }
+      : null);
   return (
     <div className={d.heat}>
       <div
@@ -161,8 +168,7 @@ function Heatmap({
           <g transform={`translate(${m.left} ${m.top})`}>
             {matrix.map((row, r) =>
               row.map((v, c) => {
-                const fill =
-                  v == null || !Number.isFinite(v) ? '#f1f5f9' : heatColor(min, max, v, palette);
+                const fill = v == null || !Number.isFinite(v) ? '#f4f5f8' : shade(v);
                 const base = r === baseRow && c === baseCol;
                 const isActive = active?.row === r && active.col === c;
                 return (
@@ -176,15 +182,15 @@ function Heatmap({
                       y={y(r)}
                       width={cellW}
                       height={cellH}
-                      rx={2}
+                      rx={4}
                       fill={fill}
-                      stroke={base ? chartColors.primary : isActive ? chartColors.ink : '#ffffff'}
-                      strokeWidth={base ? 3 : isActive ? 2 : 1}
+                      stroke={base ? chartColors.primary : isActive ? chartColors.ink : 'none'}
+                      strokeWidth={2}
                       className={d.cell}
                     />
                     {base && (
                       <g aria-hidden="true">
-                        <circle cx={x(c) + 7} cy={y(r) + 7} r={3} fill={chartColors.primary} />
+                        <circle cx={x(c) + 8} cy={y(r) + 8} r={3} fill={chartColors.primary} />
                       </g>
                     )}
                     {(showValues || v == null) && (
@@ -221,38 +227,42 @@ function Heatmap({
                     .join(' ')}
                 />
               ))}
-            <line className={d.axis} x1={0} x2={innerW} y1={innerH} y2={innerH} />
-            <line className={d.axis} x1={0} x2={0} y1={0} y2={innerH} />
             {grid.rents.map((rent, c) => (
-              <g key={`x-${c}`}>
-                <line className={d.axis} x1={cxAt(c)} x2={cxAt(c)} y1={innerH} y2={innerH + 6} />
-                <text className={d.tick} x={cxAt(c)} y={innerH + 20} textAnchor="middle">
-                  {rentTick(rent)}
-                </text>
-              </g>
+              <text
+                key={`x-${c}`}
+                className={d.tick}
+                x={cxAt(c)}
+                y={innerH + 18}
+                textAnchor="middle"
+              >
+                {rentTick(rent)}
+              </text>
             ))}
             {grid.vacancies.map((v, r) => (
-              <g key={`y-${r}`}>
-                <line className={d.axis} x1={-6} x2={0} y1={cyAt(r)} y2={cyAt(r)} />
-                <text className={d.tick} x={-9} y={cyAt(r) + 3.5} textAnchor="end">
-                  {vacancyTick(v)}
-                </text>
-              </g>
+              <text
+                key={`y-${r}`}
+                className={d.tick}
+                x={-8}
+                y={cyAt(r) + 4}
+                textAnchor="end"
+              >
+                {vacancyTick(v)}
+              </text>
             ))}
             <text
               className={d.axisTitle}
               x={innerW / 2}
-              y={innerH + (narrow ? 44 : 50)}
+              y={innerH + (narrow ? 40 : 44)}
               textAnchor="middle"
             >
-              Monthly Rent
+              Monthly rent
             </text>
             <text
               className={d.axisTitle}
-              transform={`translate(${narrow ? -42 : -60} ${innerH / 2}) rotate(-90)`}
+              transform={`translate(${narrow ? -40 : -54} ${innerH / 2}) rotate(-90)`}
               textAnchor="middle"
             >
-              Vacancy Rate
+              Vacancy
             </text>
           </g>
         </svg>
@@ -263,75 +273,65 @@ function Heatmap({
           : ''}
       </p>
       <div className={d.scale}>
-        <p>{valueLabel}</p>
         {finite.length ? (
-          <>
-            <div className={d.gradient}>
-              <b data-tone={min < 0 ? 'red' : 'green'}>{short(min)}</b>
-              <span
-                style={{
-                  background: `linear-gradient(to right, ${palette.low}, ${palette.mid}, ${palette.high})`,
-                }}
-              >
-                {zeroAt != null && (
-                  <i style={{ left: `${zeroAt}%` }}>
-                    <em>0% Break-even</em>
-                  </i>
-                )}
-              </span>
-              <b data-tone={max < 0 ? 'red' : 'green'}>{short(max)}</b>
-            </div>
-            <small>
-              Range: {short(min)} to {short(max)}
-            </small>
-          </>
+          <div className={d.gradient}>
+            <b>{short(min)}</b>
+            <span
+              style={{
+                background:
+                  zeroAt == null
+                    ? `linear-gradient(to right, ${shade(min)}, ${shade(max)})`
+                    : `linear-gradient(to right, ${shade(min)}, ${palette.mid} ${zeroAt}%, ${shade(max)})`,
+              }}
+            >
+              {zeroAt != null && (
+                <i style={{ left: `${zeroAt}%` }}>
+                  <em>0% break-even</em>
+                </i>
+              )}
+            </span>
+            <b>{short(max)}</b>
+          </div>
         ) : (
           <small>No cell has a value for this metric.</small>
         )}
+        <ul className={d.markers}>
+          {baseRow >= 0 && baseCol >= 0 && (
+            <li>
+              <i data-kind="base" aria-hidden="true" />
+              Your saved assumptions
+            </li>
+          )}
+          {(baseRow < 0 || baseCol < 0) && (
+            <li>Your saved rent or vacancy is outside these ranges.</li>
+          )}
+          {hasContour && (
+            <li>
+              <i data-kind="contour" aria-hidden="true" />
+              Break-even line
+            </li>
+          )}
+        </ul>
       </div>
-      <ul className={d.markers}>
-        {baseRow >= 0 && baseCol >= 0 && (
-          <li>
-            <i data-kind="base" aria-hidden="true">
-              ●
-            </i>
-            Your saved assumptions
-          </li>
-        )}
-        {(baseRow < 0 || baseCol < 0) && (
-          <li>Your saved rent or vacancy is outside these ranges, so no cell is marked.</li>
-        )}
-        {hasContour && (
-          <li>
-            <i data-kind="contour" aria-hidden="true" />
-            Break-even line
-          </li>
-        )}
-      </ul>
       <div className={d.readout} aria-hidden="true">
-        {current ? (
+        {shownCell && (
           <>
             <span>
-              <small>Monthly Rent:</small> <b>{rentTick(current.rent)}</b>
+              <small>Rent</small> <b>{rentTick(shownCell.rent)}</b>
             </span>
             <span>
-              <small>Vacancy Rate:</small> <b>{vacancyTick(current.vacancy)}</b>
+              <small>Vacancy</small> <b>{vacancyTick(shownCell.vacancy)}</b>
             </span>
             <span data-result>
-              <small>{valueLabel}:</small>{' '}
-              {current.value == null ? (
+              <small>{valueLabel}</small>{' '}
+              {shownCell.value == null ? (
                 <b data-tone="muted">Unavailable</b>
               ) : (
-                <>
-                  <b data-tone={current.value >= 0 ? 'green' : 'red'}>{short(current.value)}</b>
-                  {current.value < 0 && <em>(negative)</em>}
-                </>
+                <b data-tone={shownCell.value < 0 ? 'red' : undefined}>{short(shownCell.value)}</b>
               )}
             </span>
-            {current.value == null && current.reason && <small>{current.reason}</small>}
+            {shownCell.value == null && shownCell.reason && <small>{shownCell.reason}</small>}
           </>
-        ) : (
-          <em className={d.hint}>Hover, tap or use the arrow keys on a cell to see details</em>
         )}
       </div>
     </div>
@@ -462,19 +462,11 @@ export function Sensitivity({
   const vacancy = payload.input.income?.vacancyRate;
   return (
     <ChartCard
-      title={`Sensitivity Analysis: ${metric === 'irr' ? 'Leveraged IRR' : 'Cash-on-Cash Return'}`}
-      subtitle={`How ${metric === 'irr' ? 'leveraged IRR' : 'cash-on-cash return'} would change if rent or vacancy differed from your saved assumptions.`}
-      basis={[
-        'Projected',
-        metric === 'irr'
-          ? `${hold}-year hold, including the sale`
-          : tf!.label === 'Stabilized'
-            ? 'Year 3 (stabilized)'
-            : tf!.label,
-        'Percent',
-        custom ? 'Temporary custom ranges' : 'Default ranges',
-        'Before tax',
-      ]}
+      title={metric === 'irr' ? 'IRR sensitivity' : 'Cash-on-cash sensitivity'}
+      subtitle={
+        metric === 'irr' ? `${hold}-year hold, including the sale` : tf!.id === 'stabilized' ? 'Year 3' : undefined
+      }
+      tag={custom ? 'Custom ranges' : undefined}
     >
       <div className={d.heatControls}>
         <div className={d.heatChoice}>
@@ -521,7 +513,7 @@ export function Sensitivity({
             onClick={() => setRanges(!ranges)}
           >
             <Icon name="settings" size={14} />
-            Customize Ranges
+            Customize ranges
           </button>
         </div>
       </div>
@@ -551,7 +543,7 @@ export function Sensitivity({
           <fieldset disabled={stale || saving}>
             <div className={d.rangeGrid}>
               <div>
-                <h4>Monthly Rent Range</h4>
+                <h4>Monthly rent</h4>
                 <div className={d.pair}>
                   {field('rentMin', 'Minimum rent ($ / month)', 'Min', '$')}
                   {field('rentMax', 'Maximum rent ($ / month)', 'Max', '$')}
@@ -563,7 +555,7 @@ export function Sensitivity({
                 </small>
               </div>
               <div>
-                <h4>Vacancy Rate Range</h4>
+                <h4>Vacancy rate</h4>
                 <div className={d.pair}>
                   {field('vacancyMin', 'Minimum vacancy (%)', 'Min', '%')}
                   {field('vacancyMax', 'Maximum vacancy (%)', 'Max', '%')}
@@ -572,12 +564,7 @@ export function Sensitivity({
                 <small>Saved assumption: {vacancy == null ? 'Not set' : `${vacancy}%`}</small>
               </div>
             </div>
-            <p>
-              Ranges are temporary probes; your saved rent and vacancy do not change. Rent: $0–$10
-              billion / month. Vacancy: 0–100%. 1–9 steps per axis; your rent and vacancy are added
-              when they fall inside the range, up to 100 calculations. For one step, enter equal
-              limits.
-            </p>
+            <p>Temporary; your saved rent and vacancy don&apos;t change. 1–9 steps per axis.</p>
             <button type="submit">Update sensitivity</button>
           </fieldset>
         </form>
@@ -587,11 +574,6 @@ export function Sensitivity({
           </p>
         )}
       </div>
-      <p className={d.describe}>
-        {metric === 'irr'
-          ? `Showing the hold-period leveraged IRR over the ${hold}-year hold, including the sale.`
-          : describe[timeframe]}
-      </p>
       {grid ? (
         <>
           <Heatmap
@@ -602,11 +584,9 @@ export function Sensitivity({
             baseVacancy={payload.input.income?.vacancyRate}
             palette={colorblind ? colorblindPalette : heatPalette}
             showValues={showValues}
-            valueLabel={metric === 'irr' ? 'Leveraged IRR' : 'Cash-on-Cash'}
+            valueLabel={metric === 'irr' ? 'Leveraged IRR' : 'Cash-on-cash'}
           />
-          <MoreDetail
-            summary={`Exact grid to one decimal, ${grid.rents.length} rents × ${grid.vacancies.length} vacancy rates`}
-          >
+          <MoreDetail summary="View exact grid">
             <div
               className={`${styles.table} ${chartStyles.exact} ${chartStyles.heat}`}
               role="region"
@@ -663,9 +643,8 @@ export function Sensitivity({
               : 'Not applied yet. Press Update sensitivity to see results for these ranges.'}
         </p>
       )}
-      <p className={styles.notice}>
-        Sensitivity is a model. It does not establish market rent. Review comparable rentals before
-        changing a rent assumption.
+      <p className={d.caveat}>
+        A model, not a market rent: check comparable rentals before changing rent.
       </p>
     </ChartCard>
   );

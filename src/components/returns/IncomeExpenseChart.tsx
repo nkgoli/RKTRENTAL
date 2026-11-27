@@ -15,7 +15,16 @@ const withYear = (rows: SeriesPoint[]) =>
   new Set(rows.map((row) => row.month.slice(0, 4))).size > 1;
 
 /** A readable chart and an equivalent, keyboard-accessible table of exact ledger amounts. */
-export function IncomeExpenseChart({ rows, label }: { rows: SeriesPoint[]; label: string }) {
+export function IncomeExpenseChart({
+  rows,
+  label,
+  height = 200,
+}: {
+  rows: SeriesPoint[];
+  label: string;
+  /** Plot height in px; taller where the chart shares a row with a long list. */
+  height?: number;
+}) {
   const hasActivity = rows.some((row) => row.incomeCents !== 0 || row.expensesCents !== 0);
   return (
     <div>
@@ -37,7 +46,7 @@ export function IncomeExpenseChart({ rows, label }: { rows: SeriesPoint[]; label
           }))}
           format={money}
           axisFormat={(cents) => compactUsd.format(cents / 100)}
-          height={200}
+          height={height}
         />
       )}
       <details className={styles.exact}>

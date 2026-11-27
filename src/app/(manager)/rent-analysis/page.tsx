@@ -54,53 +54,43 @@ export default async function RentAnalysisPage({
       <>
         <PageHeader title="Choose a property" />
         <div className={styles.workspace}>
-          <p className="muted">Start with a property, then compare rent at the unit level.</p>
-          <div className={styles.selection}>
-            <Card>
-              <h2>Your properties</h2>
-              <p className="muted">{properties.length} active properties</p>
-              <form action="/rent-analysis" className={styles.search}>
-                <SearchField defaultValue={search} placeholder="Search properties" />
-              </form>
-              {matches.map((p) => (
+          <Card>
+            <form action="/rent-analysis" className={styles.search}>
+              <SearchField defaultValue={search} placeholder="Search properties" />
+            </form>
+            {matches.map((p) => {
+              const occupied = p.units.filter((u) => u.status === 'OCCUPIED').length;
+              return (
                 <div className={styles.property} key={p.id}>
                   <div>
                     <h3>{p.name}</h3>
-                    <p className="muted">{formatAddress(p)}</p>
-                    <small>
-                      {p.units.length} available units ·{' '}
-                      {p.units.filter((u) => u.status === 'OCCUPIED').length} occupied
-                    </small>
+                    <p className="muted">
+                      {formatAddress(p)} · {p.units.length}{' '}
+                      {p.units.length === 1 ? 'unit' : 'units'} · {occupied} occupied
+                    </p>
                   </div>
                   <Link
-                    className="btn btn-secondary"
+                    className="btn btn-ghost btn-sm"
                     href={buildCompsHref(rentAnalysisContext(p.id))}
                   >
                     Open rent analysis
                   </Link>
                 </div>
-              ))}
-              {!matches.length && (
-                <EmptyState
-                  title={properties.length ? 'No matching properties' : 'No properties yet'}
-                  description={
-                    properties.length
-                      ? 'Try a different name or street.'
-                      : 'Add your first property, then return here.'
-                  }
-                  action={properties.length ? 'Clear search' : 'Go to properties'}
-                  href={properties.length ? '/rent-analysis' : '/properties'}
-                />
-              )}
-            </Card>
-            <Card>
-              <h2>What you’ll need</h2>
-              <p className="muted">
-                Rent analysis uses a property address and unit features. Review saved estimates
-                before choosing a unit. Only properties you can manage appear here.
-              </p>
-            </Card>
-          </div>
+              );
+            })}
+            {!matches.length && (
+              <EmptyState
+                title={properties.length ? 'No matching properties' : 'No properties yet'}
+                description={
+                  properties.length
+                    ? 'Try a different name or street.'
+                    : 'Add your first property, then return here.'
+                }
+                action={properties.length ? 'Clear search' : 'Go to properties'}
+                href={properties.length ? '/rent-analysis' : '/properties'}
+              />
+            )}
+          </Card>
         </div>
       </>
     );
@@ -152,14 +142,12 @@ export default async function RentAnalysisPage({
   const atMarket = gaps.filter((gap) => gap === 0).length;
   const above = gaps.filter((gap) => gap !== null && gap < 0).length;
   const notSet = gaps.filter((gap) => gap === null).length;
-  const occupied = property.units.filter((u) => u.status === 'OCCUPIED').length;
   const vacant = property.units.filter((u) => u.status === 'VACANT').length;
   const unitCount = property.units.length;
   const meta = [
     formatAddress(property),
-    implicit
-      ? null
-      : `${unitCount} ${unitCount === 1 ? 'unit' : 'units'}, ${occupied} occupied · ${vacant} vacant`,
+    implicit ? null : `${unitCount} ${unitCount === 1 ? 'unit' : 'units'}`,
+    implicit || !vacant ? null : `${vacant} vacant`,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -215,26 +203,17 @@ export default async function RentAnalysisPage({
             currentLeaseRent={currentRent(subject.id)}
           />
         ) : (
-          <p className={styles.prompt}>
-            Choose a unit to compare it with nearby rentals. A multi-unit property has no blended
-            comparable rent.
-          </p>
+          <p className={styles.prompt}>Choose a unit to compare it with nearby rentals.</p>
         )}
         {!implicit && (
           <Card>
             <div className={styles.unitsHead}>
-              <div>
-                <h2>Every unit vs saved market rent</h2>
-                <p className={styles.caption}>
-                  {property.name} · per unit, per month · no blended rent for a multi-unit property
-                  · gap = saved market minus current lease, or listed rent when vacant
-                </p>
-              </div>
+              <h2>Every unit vs saved market rent</h2>
               {!!unitCount && (
                 <div className={styles.badges}>
-                  <Badge tone="info">{below} below market</Badge>
-                  <Badge>{atMarket} at market</Badge>
-                  <Badge tone="warning">{above} above market</Badge>
+                  {below > 0 && <Badge tone="info">{below} below market</Badge>}
+                  {atMarket > 0 && <Badge>{atMarket} at market</Badge>}
+                  {above > 0 && <Badge tone="warning">{above} above market</Badge>}
                   {notSet > 0 && <Badge>{notSet} not set</Badge>}
                 </div>
               )}
@@ -277,17 +256,23 @@ export default async function RentAnalysisPage({
                           >
                             Unit {u.number}
                           </Link>
-                          {selected && <span className={styles.selectedTag}> · selected</span>}
                         </th>
                         <td data-cell="status">
                           <Badge tone={u.status === 'OCCUPIED' ? 'success' : 'neutral'}>
                             {u.status.charAt(0) + u.status.slice(1).toLowerCase()}
                           </Badge>
                         </td>
-                        <td data-cell="meta">Current {money(currentRent(u.id))}</td>
+                        <td data-cell="meta">
+                          <span className={styles.cellLabel}>Current </span>
+                          {money(currentRent(u.id))}
+                        </td>
                         <td data-cell="hide">{money(u.listedRent)}</td>
-                        <td data-cell="amount">Market {money(u.marketRent)}</td>
+                        <td data-cell="amount">
+                          <span className={styles.cellLabel}>Market </span>
+                          {money(u.marketRent)}
+                        </td>
                         <td data-cell="sub">
+                          <span className={styles.cellLabel}>Gap </span>
                           <span
                             className={
                               (gap ?? 0) > 0
@@ -300,10 +285,9 @@ export default async function RentAnalysisPage({
                             {(gap ?? 0) > 0 ? '+' : ''}
                             {money(gap)}
                           </span>
-                          <small className="muted">
-                            {' '}
-                            vs {currentRent(u.id) === null ? 'listed rent' : 'current lease'}
-                          </small>
+                          {gap !== null && currentRent(u.id) === null && (
+                            <small className="muted"> vs listed</small>
+                          )}
                         </td>
                       </tr>
                     );
@@ -311,11 +295,9 @@ export default async function RentAnalysisPage({
                 </tbody>
               </table>
             </div>
-            {!property.units.length && (
-              <p>No available units. Add or restore a unit in Properties.</p>
-            )}
+            {!property.units.length && <p>No units to compare.</p>}
             <Link className={styles.textLink} href={`/properties/${property.id}/leases`}>
-              Review leases for renewal pricing →
+              Review leases for renewals →
             </Link>
           </Card>
         )}

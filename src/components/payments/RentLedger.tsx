@@ -402,7 +402,7 @@ function ChargeDetail({ row, group }: { row: LedgerRowView; group: RentLedgerGro
       </dl>
       {row.derived && (
         <p className={styles.note}>
-          Upcoming rent from the lease schedule. It becomes a charge when it comes due.
+          Scheduled from the lease; it becomes a charge when due.
         </p>
       )}
       <h3 className={styles.appliedTitle}>Payments applied</h3>

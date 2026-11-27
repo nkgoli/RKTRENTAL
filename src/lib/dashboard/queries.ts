@@ -392,7 +392,7 @@ export async function loadDashboardData(
       activity.push({
         id: `payment-${payment.id}`,
         title: succeeded ? `${tenantName} paid rent` : `Payment ${payment.status.toLowerCase()}`,
-        description: `${formatUsd(toCents(payment.amount))}${payment.status === 'SUCCEEDED' ? ' · rent payment' : ''}`,
+        description: formatUsd(toCents(payment.amount)),
         propertyName,
         propertyHref,
         unitLabel,

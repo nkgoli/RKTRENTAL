@@ -40,8 +40,7 @@ export async function LeaseAgreementList({
   return (
     <section className={styles.panel} aria-label="Current, upcoming and previous agreements">
       <h2>Your agreements</h2>
-      <p className={styles.muted}>Current, upcoming and previous leases stay available here.</p>
-      {!leases.length && <p>No agreements are available yet.</p>}
+      {!leases.length && <p>No agreements yet.</p>}
       {leases.map((lease) => {
         const agreement = lease.agreements[0];
         return (

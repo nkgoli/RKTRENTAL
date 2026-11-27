@@ -77,13 +77,9 @@
   color: var(--design-text);
   background: var(--design-surface);
 }
-.basis {
-  font-size: 13px;
-  margin: 0;
-}
 .source {
   font-size: 12px;
-  margin: 10px 0 0;
+  margin: 8px 0 0;
 }
 .status {
   font-size: 12px;
@@ -91,65 +87,6 @@
 }
 .status:empty {
   display: none;
-}
-/* Summary-tab snapshot: a three-row actual/projected table and one action. */
-.snapshot {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.snapshot > * {
-  margin: 0;
-}
-.snapshot > button {
-  align-self: flex-start;
-  margin-top: auto;
-}
-.mini {
-  width: 100%;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-  font-size: 13px;
-}
-.mini th,
-.mini td {
-  padding: 9px 0 9px 12px;
-  border-bottom: 1px solid var(--rr-subtle);
-  text-align: right;
-  white-space: nowrap;
-}
-.mini th:first-child {
-  padding-left: 0;
-  text-align: left;
-  white-space: normal;
-}
-.mini thead th {
-  padding-top: 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--design-muted);
-}
-.mini thead th:nth-child(2) {
-  color: var(--rr-ok);
-}
-.mini thead th:nth-child(3) {
-  color: var(--design-primary);
-}
-.mini tbody th {
-  font-weight: 500;
-  color: var(--design-muted);
-}
-.mini td {
-  font-weight: 600;
-  color: var(--design-text);
-}
-.mini td[data-status='unavailable'] {
-  font-weight: 500;
-  color: var(--design-muted);
-}
-.mini td small {
-  font-weight: 500;
-  color: var(--rr-warn);
 }
 .categories {
   list-style: none;
@@ -209,38 +146,18 @@
   font-family: var(--design-heading-font);
   font-size: 15px;
 }
-.cell span,
-.cell small {
-  display: block;
-  font-size: 11px;
-  margin-top: 2px;
-}
-.cell small {
+.cell strong[data-status='unavailable'] {
+  font-family: var(--design-font);
+  font-size: 14px;
+  font-weight: 400;
   color: var(--design-muted);
-  max-width: 260px;
-  margin-left: auto;
-  line-height: 1.4;
-}
-.recorded,
-.zero,
-.partial,
-.unavailable,
-.projected {
-  font-size: 11px;
-  font-weight: 600;
-}
-.recorded,
-.zero {
-  color: var(--rr-ok);
 }
 .partial {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--rr-warn);
-}
-.unavailable {
-  color: var(--design-muted);
-}
-.projected {
-  color: var(--design-primary);
 }
 .better {
   color: var(--rr-ok);
@@ -412,9 +329,6 @@
   .value {
     min-width: 0;
     text-align: right;
-  }
-  .cell small {
-    max-width: none;
   }
   .needed li {
     flex-direction: column;

@@ -10,15 +10,14 @@ import {
 } from '@/lib/analysis/chart-data';
 import {
   ChartCard,
-  Chips,
   ComboChart,
   ExactTable,
   Icon,
   InfoTip,
   MoreDetail,
+  Segmented,
   Tiles,
-  chartColors,
-  type IconName,
+  entityColors,
 } from './RoiChart';
 import styles from './analysis.module.css';
 import chartStyles from './projections.module.css';
@@ -27,113 +26,69 @@ import d from './detail-charts.module.css';
 const share = (v: number | null) =>
   v == null || !Number.isFinite(v) ? 'Unavailable' : `${(v * 100).toFixed(0)}%`;
 const loanColors = {
-  balance: chartColors.bad,
-  principal: chartColors.accent,
-  interest: chartColors.warm,
+  balance: entityColors.balance,
+  principal: entityColors.principal,
+  interest: entityColors.interest,
 };
 
-/** C11 · Principal vs Interest Over Time (reference LoanAmortizationChart, annual). */
+/** C11 · Loan paydown: balance still owed and running principal and interest, full term. */
 function PrincipalVsInterest({ result }: { result: ProjectionResult }) {
   const rows = loanYears(result);
   const last = result.amortizationSchedule.at(-1);
   // The engine includes the maturity payoff in the actual final payment.
   const balloon = last && last.payment > result.summaryMetrics.monthlyDebtService + 1;
   const years = rows.map((r) => r.year);
-  const zero = rows.map(() => 0);
   return (
-    <ChartCard
-      title="Principal vs Interest Over Time"
-      subtitle="What is still owed, and how much principal and interest you have paid so far."
-      basis={['Scheduled loan', 'USD', 'Running totals', `Full ${rows.length}-year term`]}
-    >
+    <ChartCard title="Loan paydown" subtitle={`Full ${rows.length}-year loan term`}>
       <ComboChart
         label="Loan balance and cumulative principal and interest"
         xLabel="Loan year"
-        height={300}
         years={years}
         xFormat={(y) => `Year ${y}`}
         xTicks={amortizationTicks(years)}
         series={[
           {
-            label: 'Loan Balance',
+            label: 'Loan balance',
             values: rows.map((r) => r.balance),
             color: loanColors.balance,
-            width: 2.5,
-            dot: 0,
           },
           {
-            label: 'Principal Paid',
+            label: 'Principal paid',
             values: rows.map((r) => r.cumulativePrincipal),
             color: loanColors.principal,
-            width: 2.5,
-            dot: 0,
           },
           {
-            label: 'Interest Paid',
+            label: 'Interest paid',
             values: rows.map((r) => r.cumulativeInterest),
             color: loanColors.interest,
-            width: 2.5,
-            dot: 0,
           },
-        ]}
-        areas={[
-          {
-            upper: rows.map((r) => r.balance),
-            lower: zero,
-            color: loanColors.balance,
-            opacity: 0.15,
-          },
-          {
-            upper: rows.map((r) => r.cumulativePrincipal),
-            lower: zero,
-            color: loanColors.principal,
-            opacity: 0.15,
-          },
-          {
-            upper: rows.map((r) => r.cumulativeInterest),
-            lower: zero,
-            color: loanColors.interest,
-            opacity: 0.15,
-          },
-        ]}
-        legend={[
-          { label: 'Loan Balance', kind: 'dotLine', color: loanColors.balance },
-          { label: 'Principal Paid', kind: 'dotLine', color: loanColors.principal },
-          { label: 'Interest Paid', kind: 'dotLine', color: loanColors.interest },
         ]}
         tooltip={(i) => ({
           title: `Year ${rows[i].year}`,
           rows: [
             {
-              label: 'Remaining Balance:',
+              label: 'Balance',
               value: rows[i].balance,
-              swatch: { color: loanColors.balance },
+              swatch: { color: loanColors.balance, kind: 'line' },
             },
             {
-              label: 'Principal Paid:',
+              label: 'Principal paid',
               value: rows[i].cumulativePrincipal,
-              color: chartColors.accentDark,
-              swatch: { color: loanColors.principal },
+              swatch: { color: loanColors.principal, kind: 'line' },
             },
             {
-              label: 'Interest Paid:',
+              label: 'Interest paid',
               value: rows[i].cumulativeInterest,
-              color: chartColors.warn,
-              swatch: { color: loanColors.interest },
+              swatch: { color: loanColors.interest, kind: 'line' },
             },
           ],
         })}
       />
-      <p>
-        The chart covers the whole loan, including years after the planned sale. Until the principal
-        line rises above the interest line, you have paid more in interest than you have repaid.
-      </p>
       {balloon && (
         <p className={styles.notice}>
-          Balloon maturity · month {last.month}, year {last.year}
-          {last.date ? ` · ${last.date.toISOString().slice(0, 10)}` : ''}. Final payment including
-          remaining principal: {dollars(last.payment)}. This outflow is included in cash flow when
-          the hold reaches maturity.
+          Balloon payment of {dollars(last.payment)} in month {last.month} (year {last.year}
+          {last.date ? `, ${last.date.toISOString().slice(0, 10)}` : ''}), included in cash flow
+          when the hold reaches it.
         </p>
       )}
     </ChartCard>
@@ -141,15 +96,11 @@ function PrincipalVsInterest({ result }: { result: ProjectionResult }) {
 }
 
 function InsightCard({
-  icon,
-  tone,
   label,
   about,
   control,
   children,
 }: {
-  icon: IconName;
-  tone: 'slate' | 'teal' | 'amber';
   label: string;
   about: string;
   control?: ReactNode;
@@ -158,12 +109,7 @@ function InsightCard({
   return (
     <div className={d.insightCard}>
       <header>
-        <span>
-          <span className={d.chip} data-tone={tone} aria-hidden="true">
-            <Icon name={icon} size={12} />
-          </span>
-          {label}
-        </span>
+        <span>{label}</span>
         <span>
           <InfoTip label={label}>{about}</InfoTip>
           {control}
@@ -174,7 +120,7 @@ function InsightCard({
   );
 }
 
-/** C12 / C13 / C17 · Loan Amortization Schedule (reference AmortizationTable). */
+/** C12 / C13 / C17 · Loan schedule: totals, the yearly split and the payoff milestones. */
 function Schedule({ result, children }: { result: ProjectionResult; children?: ReactNode }) {
   const loan = result.summaryMetrics.loanAmount;
   const years = loanSummaries(loanYears(result), loan);
@@ -186,8 +132,6 @@ function Schedule({ result, children }: { result: ProjectionResult; children?: R
   const final = years.at(-1)!;
   const totalInterest = final.cumulativeInterest;
   const totalPaid = loan + totalInterest;
-  const principalShare = totalPaid > 0 ? loan / totalPaid : null;
-  const interestShare = totalPaid > 0 ? totalInterest / totalPaid : null;
   const early = years.slice(0, period).reduce((sum, r) => sum + r.interest, 0);
   const balanceAt = years.find((r) => r.year === at);
   const detailed = mode === 'detailed';
@@ -199,137 +143,44 @@ function Schedule({ result, children }: { result: ProjectionResult; children?: R
       return next;
     });
   return (
-    <ChartCard
-      title="Loan Amortization Schedule"
-      subtitle="How each year's payments split between principal and interest; choose Detailed to see every month."
-      basis={['Scheduled loan', 'USD, whole dollars', `${years.length}-year term`]}
-      controls={
-        <div className={d.dotKey} aria-hidden="true">
-          <span>
-            <i style={{ background: chartColors.primary }} />
-            Principal
-          </span>
-          <span>
-            <i style={{ background: chartColors.warm }} />
-            Interest
-          </span>
-        </div>
-      }
-    >
+    <ChartCard title="Loan schedule">
       <Tiles
         items={[
           {
-            label: 'Loan Amount',
+            label: 'Loan amount',
             value: wholeDollars(loan),
-            tone: 'card',
-            icon: { name: 'dollar' },
+            note: marks.half ? `50% paid off by Y${marks.half}` : undefined,
           },
           {
-            label: 'Monthly Payment',
+            label: 'Monthly payment',
             value: wholeDollars(result.summaryMetrics.monthlyDebtService),
-            valueTone: 'teal',
-            note: 'Scheduled; final payment may differ',
-            tone: 'card',
-            icon: { name: 'calendar', tone: 'teal' },
           },
           {
-            label: 'Total Interest',
+            label: 'Total interest',
             value: wholeDollars(totalInterest),
-            valueTone: 'amber',
             note: `${share(loan > 0 ? totalInterest / loan : null)} of principal`,
-            tone: 'card',
-            icon: { name: 'percent', tone: 'amber' },
           },
-          {
-            label: 'Total Paid',
-            value: wholeDollars(totalPaid),
-            note: `Over ${years.length} years`,
-            tone: 'card',
-            icon: { name: 'down' },
-          },
-        ]}
-      />
-      <section className={d.payoff} aria-labelledby="payoff-title">
-        <header>
-          <h3 id="payoff-title">Loan Payoff Breakdown</h3>
-          <span>Principal vs Interest over loan term</span>
-        </header>
-        <div
-          className={d.payoffBar}
-          role="img"
-          aria-label={`Principal ${share(principalShare)}, interest ${share(interestShare)} of total paid`}
-        >
-          <i
-            style={{ width: `${(principalShare ?? 0) * 100}%`, background: chartColors.primary }}
-          />
-          <i
-            style={{
-              left: `${(principalShare ?? 0) * 100}%`,
-              width: `${(interestShare ?? 0) * 100}%`,
-              background: chartColors.warm,
-            }}
-          />
-          <span aria-hidden="true">
-            Principal: {share(principalShare)} | Interest: {share(interestShare)}
-          </span>
-        </div>
-        <div className={d.payoffKey}>
-          <span>
-            <i style={{ background: chartColors.primary }} />
-            Principal ({wholeDollars(loan)})
-          </span>
-          <span>
-            <i style={{ background: chartColors.warm }} />
-            Interest ({wholeDollars(totalInterest)})
-          </span>
-        </div>
-      </section>
-      <Chips
-        size="sm"
-        label="Payoff milestones"
-        items={[
-          ...(marks.quarter
-            ? [{ icon: 'target' as const, text: `25% paid off by Y${marks.quarter}` }]
-            : []),
-          ...(marks.half
-            ? [
-                {
-                  icon: 'target' as const,
-                  tone: 'tealSoft' as const,
-                  text: `50% paid off by Y${marks.half}`,
-                },
-              ]
-            : []),
-          ...(marks.threeQuarter
-            ? [{ icon: 'target' as const, text: `75% paid off by Y${marks.threeQuarter}` }]
-            : []),
-          ...(marks.principalBeatsInterest
-            ? [
-                {
-                  icon: 'zap' as const,
-                  tone: 'amber' as const,
-                  text: `Principal > Interest from Y${marks.principalBeatsInterest}`,
-                },
-              ]
-            : []),
+          { label: 'Total paid', value: wholeDollars(totalPaid), note: `Over ${years.length} years` },
         ]}
       />
       <div className={d.tableBar}>
-        <div className={d.toggle} role="group" aria-label="Schedule view">
-          {(['summary', 'detailed'] as const).map((m) => (
-            <button key={m} type="button" aria-pressed={mode === m} onClick={() => setMode(m)}>
-              {m === 'summary' ? 'Summary' : 'Detailed'}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label="Schedule view"
+          options={[
+            { value: 'summary', label: 'Summary' },
+            { value: 'detailed', label: 'Detailed' },
+          ]}
+          value={mode}
+          onChange={setMode}
+        />
         {detailed && (
           <div className={d.links}>
             <button type="button" onClick={() => setOpen(new Set(years.map((r) => r.year)))}>
-              Expand All
+              Expand all
             </button>
             <span aria-hidden="true">|</span>
             <button type="button" onClick={() => setOpen(new Set())}>
-              Collapse All
+              Collapse all
             </button>
           </div>
         )}
@@ -346,20 +197,18 @@ function Schedule({ result, children }: { result: ProjectionResult; children?: R
               <th scope="col">Principal</th>
               <th scope="col">Interest</th>
               <th scope="col">Ending</th>
-              <th scope="col">Paid Off</th>
+              <th scope="col">Paid off</th>
             </tr>
           </thead>
           <tbody>
             {years.map((r) => {
               const expanded = detailed && open.has(r.year);
-              const milestone = r.year === marks.half || r.year === marks.principalBeatsInterest;
               const months = expanded
                 ? result.amortizationSchedule.filter((m) => m.year === r.year)
                 : [];
               return (
                 <Fragment key={r.year}>
                   <tr
-                    data-milestone={milestone || undefined}
                     data-expanded={expanded || undefined}
                     onClick={detailed ? () => toggle(r.year) : undefined}
                     className={detailed ? d.clickable : undefined}
@@ -381,14 +230,12 @@ function Schedule({ result, children }: { result: ProjectionResult; children?: R
                       Y{r.year}
                       {r.year === marks.half && <span className={d.badge}>50%</span>}
                       {r.year === marks.principalBeatsInterest && (
-                        <span className={d.badge} data-tone="amber">
-                          P{'>'} I
-                        </span>
+                        <span className={d.badge}>P{'>'} I</span>
                       )}
                     </th>
                     <td>{wholeDollars(r.beginning)}</td>
-                    <td data-tone="teal">{wholeDollars(r.principal)}</td>
-                    <td data-tone="amber">{wholeDollars(r.interest)}</td>
+                    <td>{wholeDollars(r.principal)}</td>
+                    <td>{wholeDollars(r.interest)}</td>
                     <td>{wholeDollars(r.balance)}</td>
                     <td>
                       <span className={d.paid}>
@@ -405,8 +252,8 @@ function Schedule({ result, children }: { result: ProjectionResult; children?: R
                     <tr key={`m-${m.month}`} className={d.month}>
                       <th scope="row">Month {m.month}</th>
                       <td>{wholeDollars(k === 0 ? r.beginning : months[k - 1].balance)}</td>
-                      <td data-tone="teal">{wholeDollars(m.principal)}</td>
-                      <td data-tone="amber">{wholeDollars(m.interest)}</td>
+                      <td>{wholeDollars(m.principal)}</td>
+                      <td>{wholeDollars(m.interest)}</td>
                       <td>{wholeDollars(m.balance)}</td>
                       <td>
                         {loan > 0
@@ -423,9 +270,7 @@ function Schedule({ result, children }: { result: ProjectionResult; children?: R
       </div>
       <div className={d.insightCards}>
         <InsightCard
-          icon="clock"
-          tone="amber"
-          label={`Interest (First ${period}y)`}
+          label={`Interest, first ${period} years`}
           about="Most interest is front-loaded in the early years. This shows the cost before principal paydown accelerates."
           control={
             <select
@@ -441,38 +286,27 @@ function Schedule({ result, children }: { result: ProjectionResult; children?: R
             </select>
           }
         >
-          <strong data-tone="amber">{wholeDollars(early)}</strong>
+          <strong>{wholeDollars(early)}</strong>
           <small>
             {share(totalInterest > 0 ? early / totalInterest : null)} of total interest
             {period > years.length && ` · the term is ${years.length} years`}
           </small>
         </InsightCard>
         <InsightCard
-          icon="zap"
-          tone="teal"
-          label="Principal > Interest"
+          label="Principal > interest"
           about="From this year onward, more of each year's payments reduce the loan balance than go to interest."
         >
           {marks.principalBeatsInterest ? (
             <>
-              <strong data-tone="teal">Y{marks.principalBeatsInterest}</strong>
-              <small>
-                {marks.principalBeatsInterest === 1
-                  ? 'Principal exceeds interest from the start'
-                  : 'More payment goes to principal from here'}
-              </small>
+              <strong>Y{marks.principalBeatsInterest}</strong>
+              {marks.principalBeatsInterest === 1 && <small>From the start</small>}
             </>
           ) : (
-            <>
-              <strong data-tone="slate">Not within term</strong>
-              <small>Interest exceeds principal in every year of the schedule</small>
-            </>
+            <strong data-size="sm">Not within term</strong>
           )}
         </InsightCard>
         <InsightCard
-          icon="piggy"
-          tone="slate"
-          label={`Balance at Y${at}`}
+          label={`Balance at year ${at}`}
           about="If you sell or refinance at this point, this is what's left on the loan. Interest saved is the scheduled interest after that year, avoided if the loan is repaid then."
           control={
             <select
@@ -492,8 +326,7 @@ function Schedule({ result, children }: { result: ProjectionResult; children?: R
             <>
               <strong>{wholeDollars(balanceAt.balance)}</strong>
               <small>
-                Interest saved:{' '}
-                <b data-tone="teal">{wholeDollars(totalInterest - balanceAt.cumulativeInterest)}</b>
+                Interest saved: <b>{wholeDollars(totalInterest - balanceAt.cumulativeInterest)}</b>
               </small>
             </>
           ) : (
@@ -517,15 +350,8 @@ export function Amortization({ result }: { result: ProjectionResult }) {
   if (result.summaryMetrics.loanAmount === 0 || !rows.length)
     return (
       <div className={chartStyles.stack}>
-        <ChartCard
-          title="Principal vs Interest Over Time"
-          subtitle="There is no loan to repay, so there is no schedule to chart."
-          basis={['All-cash purchase', 'USD']}
-        >
-          <p>
-            All-cash purchase · debt service $0.00. Debt coverage is not applicable; no loan
-            schedule is needed.
-          </p>
+        <ChartCard title="Loan paydown">
+          <p>All-cash purchase · debt service $0.00.</p>
         </ChartCard>
       </div>
     );
@@ -533,7 +359,7 @@ export function Amortization({ result }: { result: ProjectionResult }) {
     <div className={chartStyles.stack}>
       <PrincipalVsInterest result={result} />
       <Schedule result={result}>
-        <MoreDetail summary={`Exact annual payments, all ${rows.length} years`}>
+        <MoreDetail summary="View annual payments">
           <ExactTable
             caption="Annual loan payments · USD · full loan term"
             headers={['Year', 'Payment', 'Principal', 'Interest', 'Ending balance']}
@@ -543,7 +369,7 @@ export function Amortization({ result }: { result: ProjectionResult }) {
             ])}
           />
         </MoreDetail>
-        <MoreDetail summary="Exact monthly payments, by year">
+        <MoreDetail summary="View monthly payments">
           <label className={`${styles.field} ${d.yearPick}`}>
             Loan schedule year
             <select value={year} onChange={(e) => setYear(Number(e.target.value))}>

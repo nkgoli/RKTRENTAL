@@ -170,15 +170,9 @@ export async function LeasesPanel({
   return (
     <section className={`${styles.panel} ${ux.panel}`} aria-label="Leases">
       {toast && <NoticeToast message={toast} tone="success" />}
+      {/* Each section heading carries its own count. */}
       <div className={styles.pageHeader}>
-        <div>
-          <h2>Leases</h2>
-          <p className="muted">
-            {leases.length === 0
-              ? 'Start with a lease for this property or unit.'
-              : `${leases.length} lease${leases.length === 1 ? '' : 's'} for ${scope.unitId ? 'this unit' : 'this property'}. Continue a draft or review an agreement below.`}
-          </p>
-        </div>
+        <h2>Leases</h2>
         <div className={ux.actions}>
           <Button href="/leases/templates" variant="ghost" size="sm">
             Lease templates
@@ -191,10 +185,6 @@ export async function LeasesPanel({
       {leases.length === 0 && (
         <div className={`card ${styles.emptyCard}`}>
           <strong>No leases yet</strong>
-          <p className="muted">
-            Choose the unit, add tenants and review the agreement. You can save a draft before
-            sending.
-          </p>
         </div>
       )}
       {leases.length > 0 &&

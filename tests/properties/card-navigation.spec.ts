@@ -48,7 +48,7 @@ async function expectWorkspace(page: Page, card: CardInfo) {
   await expect(page.getByText(card.address, { exact: true }).first()).toBeVisible();
   // The workspace body streams in behind the property's loading boundary; it must finish.
   await expect(page.getByLabel('Loading page')).toHaveCount(0, { timeout: 15_000 });
-  await expect(page.getByText(/Units & lease terms|Lease timeline/).first()).toBeVisible();
+  await expect(page.getByText(/^Units$|Lease timeline/).first()).toBeVisible();
 }
 
 async function returnToDirectory(page: Page, query = '') {

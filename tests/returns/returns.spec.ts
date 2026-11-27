@@ -28,7 +28,7 @@ test('manager reviews returns, adds an expense and exports CSV', async ({ page }
   await expect(page.getByRole('heading', { name: 'NOI by property' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Returns by property' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Expense breakdown' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Export report' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Export report' })).toHaveCount(0);
   for (const name of [
     'Maple Court',
     'Harbor View Lofts',
@@ -60,7 +60,7 @@ test('manager reviews returns, adds an expense and exports CSV', async ({ page }
   await expenseForm.locator('input[name="occurredOn"]').fill(`${yyyy}-${mm}-15`);
   await expenseForm.locator('input[name="description"]').fill('Playwright verification repair');
   await page.getByRole('button', { name: 'Save expense' }).click();
-  await expect(page.getByText('Expense added. The returns below now include it.')).toBeVisible();
+  await expect(page.getByText('Expense added.')).toBeVisible();
   const noiAfter = await page
     .locator('.stat', { hasText: 'Net operating income' })
     .locator('.value')
@@ -70,7 +70,7 @@ test('manager reviews returns, adds an expense and exports CSV', async ({ page }
 
   // CSV export downloads a file with the per-property table.
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('link', { name: 'Export report (CSV)' }).click();
+  await page.getByRole('link', { name: 'Export report', exact: true }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toContain('returns-');
   const path = await download.path();

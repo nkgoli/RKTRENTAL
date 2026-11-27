@@ -105,22 +105,15 @@ export async function ApplicationsPanel({
           <div>{message.text}</div>
         </Alert>
       )}
-      <Link className="link-row" href="/integrations#screening-providers">
-        <span>
-          <strong>Application settings</strong>
-          <small className="muted">Organization-wide screening defaults</small>
-        </span>
-        <ApplicationArrow />
-      </Link>
-
       <div className={`${styles.pageHeader} ${ux.pageHeader}`}>
         <div>
           <h2>Applicants</h2>
-          <p className="muted">
-            {applications.length === 0
-              ? 'No applications yet.'
-              : `${visible.length} application${visible.length === 1 ? '' : 's'} in ${groups.size} group${groups.size === 1 ? '' : 's'}.`}
-          </p>
+          {visible.length > 0 && (
+            <p className="muted">
+              {visible.length} application{visible.length === 1 ? '' : 's'} · {groups.size}{' '}
+              household{groups.size === 1 ? '' : 's'}
+            </p>
+          )}
         </div>
         <div className={styles.headerActions}>
           {archivedCount > 0 && (
@@ -128,6 +121,9 @@ export async function ApplicationsPanel({
               {hideArchived ? 'Show archived' : 'Hide archived'}
             </Link>
           )}
+          <Link className="btn btn-ghost btn-sm" href="/integrations#screening-providers">
+            Application settings
+          </Link>
           <Button
             href={`/leases/new?${new URLSearchParams({ property: scope.propertyId!, ...(scope.unitId ? { unit: scope.unitId } : {}) })}`}
             variant="primary"
@@ -143,13 +139,9 @@ export async function ApplicationsPanel({
       {visible.length === 0 ? (
         <div className={`card ${styles.emptyCard}`}>
           <strong>{applications.length === 0 ? 'No applications yet' : 'Nothing active'}</strong>
-          <p className="muted">
-            {applications.length === 0
-              ? scope.unitId
-                ? 'Applications for this unit will appear here. Choose All units to review the whole property.'
-                : 'Applications for this property will appear here.'
-              : 'Only archived applications are left. Show archived to see them.'}
-          </p>
+          {applications.length > 0 && (
+            <p className="muted">Only archived applications remain.</p>
+          )}
         </div>
       ) : (
         <div className="card flush">

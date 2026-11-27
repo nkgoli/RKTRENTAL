@@ -17,11 +17,14 @@ test('manager reviews the rent roll, records a payment and applies a late fee', 
   await signIn(page);
   await page.goto('/payments');
   await expect(page.getByRole('heading', { name: 'Payments', level: 1 })).toBeVisible();
-  for (const label of ['Collected this month', 'Outstanding', 'Late'])
-    await expect(page.locator('.stat .label', { hasText: new RegExp(`^${label}$`) })).toBeVisible();
+  await expect(page.locator('.summary-band .eyebrow', { hasText: /^Collected · / })).toBeVisible();
+  for (const label of ['Outstanding', 'Late'])
+    await expect(
+      page.locator('.summary-stat-label', { hasText: new RegExp(`^${label}$`) }),
+    ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Rent roll' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Owner payouts' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Collection tools' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Collection tools' })).toHaveCount(0);
   await expect(page.locator('tbody tr').first()).toBeVisible();
   await page.screenshot({ path: 'test-results/payments-overview.png', fullPage: true });
 

@@ -38,7 +38,7 @@ export default async function InvitationsPage({
     <section className={styles.page} aria-label="Application invitations">
       <PageHeader
         title="Application invitations"
-        meta={`${total} ${total === 1 ? 'invitation' : 'invitations'} · newest first`}
+        meta={total ? `${total} ${total === 1 ? 'invitation' : 'invitations'}` : undefined}
         back={{ href: `/applications${params.size ? `?${params}` : ''}`, label: 'Applications' }}
         actions={[
           {
@@ -50,27 +50,30 @@ export default async function InvitationsPage({
         ]}
       />
       <div className={`card ${styles.invitationsCard}`}>
-        <ul className={styles.rows}>
-          {rows.map((row) => {
-            const delivery = invitationDeliveryState(row, row.attempts[0], now);
-            return (
-              <li key={row.id} className={styles.row}>
-                <div>
-                  <Link href={`/applications/invitations/${row.id}`}>
-                    <strong>{row.draftName ?? row.applicantName}</strong>
-                  </Link>
-                  <small>
-                    {row.applicantEmail} · {row.unit.property.name} ·{' '}
-                    {row.unit.isImplicit ? 'Whole property' : `Unit ${row.unit.number}`}
-                  </small>
-                  <small>{invitationStatus(row, now)}</small>
-                </div>
-                <Badge tone={delivery.tone}>{delivery.label}</Badge>
-              </li>
-            );
-          })}
-        </ul>
-        {!rows.length && <p className={styles.muted}>No invitations in this scope.</p>}
+        {rows.length ? (
+          <ul className={styles.rows}>
+            {rows.map((row) => {
+              const delivery = invitationDeliveryState(row, row.attempts[0], now);
+              return (
+                <li key={row.id} className={styles.row}>
+                  <div>
+                    <Link href={`/applications/invitations/${row.id}`}>
+                      <strong>{row.draftName ?? row.applicantName}</strong>
+                    </Link>
+                    <small>
+                      {row.applicantEmail} · {row.unit.property.name} ·{' '}
+                      {row.unit.isImplicit ? 'Whole property' : `Unit ${row.unit.number}`}
+                    </small>
+                    <small>{invitationStatus(row, now)}</small>
+                  </div>
+                  <Badge tone={delivery.tone}>{delivery.label}</Badge>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className={styles.muted}>No invitations yet.</p>
+        )}
         <Pagination
           page={page}
           total={total}

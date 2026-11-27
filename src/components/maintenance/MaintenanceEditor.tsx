@@ -334,7 +334,7 @@ export function MaintenanceEditor({
             <Alert tone="warning">
               <div>
                 <strong>No description yet</strong>
-                <p>Add the symptoms and access instructions so the vendor can prepare.</p>
+                <p>Add symptoms and access instructions for the vendor.</p>
               </div>
             </Alert>
           </div>
@@ -347,14 +347,13 @@ export function MaintenanceEditor({
             </div>
           ) : (
             <p className={styles.fieldHint}>
-              This request is cancelled. Its photos, comments and history remain available.
+              This request is cancelled. Its photos, comments and history are kept.
             </p>
           )}
           <div className={styles.location}>
             <strong>
               {record.property.name} · Unit {record.unit.number}
             </strong>
-            <small>Location stays with this request.</small>
           </div>
           <form
             id="repair-editor"
@@ -507,9 +506,7 @@ export function MaintenanceEditor({
                   />
                 </label>
               </div>
-              <span className={styles.fieldHint}>
-                JPG, PNG or HEIC · up to 25 MB · photos upload immediately and stay when you cancel
-              </span>
+              <span className={styles.fieldHint}>JPG, PNG or HEIC · up to 25 MB</span>
               {file && (
                 <div className={styles.selectedFile}>
                   {localPreview && (
@@ -556,11 +553,6 @@ export function MaintenanceEditor({
             )}
           </form>
           <div className={styles.actions}>
-            <p className={styles.fieldHint}>
-              {dirty
-                ? 'Details, status, priority and vendor are pending until you save.'
-                : 'Details, status, priority and vendor are up to date.'}
-            </p>
             <div className={styles.actionButtons}>
               <button
                 type="button"
@@ -608,7 +600,7 @@ export function MaintenanceEditor({
                 ))}
               </ol>
             ) : (
-              <p className={styles.fieldHint}>No activity recorded yet. Add the first update.</p>
+              <p className={styles.fieldHint}>No activity yet.</p>
             )}
             {activity.length > 8 && (
               <button
@@ -641,7 +633,6 @@ export function MaintenanceEditor({
                 />
               </label>
               <div className={styles.composerFooter}>
-                <p className={styles.fieldHint}>Comments post immediately.</p>
                 <button
                   className="btn btn-secondary btn-sm"
                   type="submit"
@@ -670,14 +661,6 @@ export function MaintenanceEditor({
                   </dd>
                 </div>
               )}
-              <div>
-                <dt>Saved status</dt>
-                <dd>{statusLabels[record.status]}</dd>
-              </div>
-              <div>
-                <dt>Saved vendor</dt>
-                <dd>{record.vendor?.name ?? record.vendorName ?? 'Unassigned'}</dd>
-              </div>
             </dl>
           </section>
         </div>

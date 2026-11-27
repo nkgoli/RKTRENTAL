@@ -84,12 +84,10 @@ export function PaymentsSummary({
             View payments
             <ActionGlyph name="arrow-right" />
           </Link>
-          {view && !payments?.hasCharges && <span className="muted">{view.meter}</span>}
           {view && view.overdueCents > 0 && (
-            <span className={styles.overdue}>
-              <strong className="danger">{formatMoney(view.overdueCents / 100)} overdue</strong>
-              <small>Total to date; includes older arrears and assessed fees</small>
-            </span>
+            <strong className={`danger ${styles.overdue}`}>
+              {formatMoney(view.overdueCents / 100)} overdue to date
+            </strong>
           )}
           <span className="action-group">
             {view && view.overdueCents > 0 && (
@@ -120,6 +118,7 @@ export type NextStep = {
   document?: boolean;
 };
 
+/** Rendered only when there is something to do; with nothing open the details card spans the row. */
 function NextSteps({ steps, className }: { steps: NextStep[]; className?: string }) {
   return (
     <Card className={`${styles.nextSteps} ${className ?? ''}`} aria-labelledby="next-steps-title">
@@ -129,26 +128,19 @@ function NextSteps({ steps, className }: { steps: NextStep[]; className?: string
         </span>
         Next steps
       </h3>
-      {steps.length ? (
-        <ul className={styles.steps}>
-          {steps.map((step) => (
-            <li key={step.eyebrow}>
-              <p className={`eyebrow ${styles[step.tone]}`}>{step.eyebrow}</p>
-              <h4>{step.heading}</h4>
-              {step.detail && <p className={styles.stepDetail}>{step.detail}</p>}
-              <Link className={styles.stepLink} href={step.href}>
-                {step.linkLabel}
-                <Arrow />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div className={styles.clearState}>
-          <p>All caught up</p>
-          <small>No urgent items need attention.</small>
-        </div>
-      )}
+      <ul className={styles.steps}>
+        {steps.map((step) => (
+          <li key={step.eyebrow}>
+            <p className={`eyebrow ${styles[step.tone]}`}>{step.eyebrow}</p>
+            <h4>{step.heading}</h4>
+            {step.detail && <p className={styles.stepDetail}>{step.detail}</p>}
+            <Link className={styles.stepLink} href={step.href}>
+              {step.linkLabel}
+              <Arrow />
+            </Link>
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }
@@ -283,12 +275,7 @@ function PropertyUnits({
   return (
     <Card flush id="units" className={styles.units}>
       <div className={styles.unitsHead}>
-        <div>
-          <h3>Units &amp; lease terms</h3>
-          <p className={styles.caption}>
-            {all.length} total · {property.stats.occupied} occupied · as of {formatDate(today)} UTC
-          </p>
-        </div>
+        <h3>Units</h3>
         <div className={styles.unitActions}>
           <Link className={styles.stepLink} href={`/properties/${property.id}/leases`}>
             Lease history
@@ -398,18 +385,11 @@ function PropertyUnits({
   );
 }
 
+/** The button is its own label; its confirmation dialog states the consequence. */
 function ArchiveRow({ property }: { property: PropertyDetail }) {
   const title = property.archived ? 'Restore property' : 'Archive property';
   return (
     <section className={styles.archiveRow} aria-label={title}>
-      <div>
-        <p className={styles.archiveTitle}>{title}</p>
-        <p className={styles.caption}>
-          {property.archived
-            ? `Returns ${property.name} to your active properties. Asks for confirmation first.`
-            : `Moves ${property.name} to the Archived filter on Properties. Asks for confirmation first.`}
-        </p>
-      </div>
       <ArchiveButton
         propertyId={property.id}
         propertyName={property.name}
@@ -439,7 +419,7 @@ export function propertyNextSteps(
     steps.push({
       eyebrow: 'Maintenance',
       tone: 'danger',
-      heading: `${plural(repairs, 'repair')} need${repairs === 1 ? 's' : ''} attention`,
+      heading: plural(repairs, 'open repair'),
       detail: first ? (urgent ? `${urgent} urgent · ${where}` : where) : undefined,
       linkLabel: 'Open maintenance',
       href: `${base}/maintenance`,
@@ -453,7 +433,7 @@ export function propertyNextSteps(
       tone: 'primary',
       heading: `${plural(expiring, 'lease')} expiring soon`,
       detail: first
-        ? `${first.tenant?.name ?? 'No tenant'}, ${unitName(first)}, ends ${expiring > 1 ? 'first ' : ''}on ${shortDate(first.leaseEnd)}`
+        ? `${first.tenant?.name ?? 'No tenant'}, ${unitName(first)} · ${shortDate(first.leaseEnd)}`
         : undefined,
       linkLabel: 'Review leases',
       href: `${base}/leases`,
@@ -469,19 +449,19 @@ export function propertyNextSteps(
     const heading =
       open.length === 1 ? `${unitName(unit)} · ${asking}` : `${open.length} units not occupied`;
     const appDetail = apps
-      ? `${apps.first.name} applied ${shortDate(apps.first.appliedAt)} · ${applicantStatus[apps.first.status] ?? 'open'}${apps.count > 1 ? ` · ${apps.count - 1} more` : ''}`
-      : 'No open applications yet';
+      ? `${plural(apps.count, 'applicant')} · ${applicantStatus[apps.first.status] ?? 'open'}`
+      : 'No applications yet';
     steps.push({
       eyebrow: 'Vacancy',
       tone: 'accent',
       heading,
-      detail: open.length === 1 ? appDetail : `${unitName(unit)} · ${asking} · ${appDetail}`,
+      detail: open.length === 1 ? appDetail : `${unitName(unit)} · ${appDetail}`,
       ...(apps
         ? {
             linkLabel: 'Review applicants',
             href: `${base}/applications?unit=${encodeURIComponent(unit.id)}`,
           }
-        : { linkLabel: 'Review vacant units and pricing', href: `${base}/listing` }),
+        : { linkLabel: 'Review pricing', href: `${base}/listing` }),
     });
   }
   return steps;
@@ -508,7 +488,6 @@ export function PropertyOverview({
   const multiUnit = live.some((unit) => !unit.isImplicit);
   const occupancyPct = live.length ? Math.round((property.stats.occupied / live.length) * 100) : 0;
   const steps = propertyNextSteps(property, today, signals);
-  const hasVacancy = live.some((unit) => unit.status !== 'OCCUPIED');
   const base = `/properties/${property.id}`;
 
   return (
@@ -534,8 +513,8 @@ export function PropertyOverview({
           ]}
         />
       </div>
-      <NextSteps steps={steps} className={styles.stepsArea} />
-      <div className={styles.detailsArea}>
+      {steps.length > 0 && <NextSteps steps={steps} className={styles.stepsArea} />}
+      <div className={`${styles.detailsArea} ${steps.length ? '' : styles.detailsWide}`}>
         <PropertyFactsCard
           propertyId={property.id}
           owners={owners}
@@ -559,7 +538,7 @@ export function PropertyOverview({
                 <Arrow />
               </a>
               <Link className={styles.stepLink} href={`${base}/listing`}>
-                {hasVacancy ? 'Review vacant units and pricing' : 'Review unit pricing'}
+                Market rent
                 <Arrow />
               </Link>
             </>
@@ -591,19 +570,19 @@ export function PropertyOverview({
   );
 }
 
-function UnitLeaseSummary({ unit, today }: { unit: UnitDetail; today: Date }) {
+function UnitLeaseSummary({ unit }: { unit: UnitDetail }) {
   const current = unit.currentLease;
   if (!current) {
     return (
       <div className={styles.emptyLease}>
         <strong>No active lease on this unit.</strong>
-        <p className="muted">Set up a lease to start collecting rent.</p>
         <Link className="btn btn-primary btn-sm" href={`/leases/new?unit=${unit.id}`}>
           Create lease
         </Link>
       </div>
     );
   }
+  // Time left is the band's "Lease ends" figure, so it is not repeated here.
   return (
     <>
       <dl className={styles.detailsList}>
@@ -620,10 +599,6 @@ function UnitLeaseSummary({ unit, today }: { unit: UnitDetail; today: Date }) {
         <div>
           <dt>Term</dt>
           <dd>{leaseTerm(current.startDate, current.endDate)}</dd>
-        </div>
-        <div>
-          <dt>Time left</dt>
-          <dd>{timeLeft(current.endDate, today)}</dd>
         </div>
         <div>
           <dt>Rent</dt>
@@ -662,7 +637,7 @@ export function unitNextSteps(
     steps.push({
       eyebrow: 'Maintenance',
       tone: 'danger',
-      heading: `${plural(unit.openRepairs, 'open maintenance request')}`,
+      heading: plural(unit.openRepairs, 'open repair'),
       detail: first ? (urgent ? `${urgent} urgent · ${first.title}` : first.title) : undefined,
       linkLabel: 'Open maintenance',
       href: `${base}/maintenance?unit=${unit.id}`,
@@ -673,16 +648,15 @@ export function unitNextSteps(
       eyebrow: 'Lease',
       tone: 'primary',
       heading: 'Create a lease for this unit',
-      detail: 'Set up a lease to start collecting rent.',
       linkLabel: 'Create lease',
       href: `/leases/new?unit=${unit.id}`,
     });
   } else if (daysBetween(today, lease.endDate) < RENEWAL_DUE_DAYS) {
+    // Time left is the band's "Lease ends" figure; the step only names the date.
     steps.push({
       eyebrow: 'Renewal',
       tone: 'primary',
       heading: `Lease ends ${formatDate(lease.endDate)}`,
-      detail: `${lease.tenant?.name ?? 'Tenant'} · ${timeLeft(lease.endDate, today)} left`,
       linkLabel: 'Review lease',
       href: `/leases/${lease.id}?propertyId=${unit.property.id}&unitId=${unit.id}`,
     });
@@ -728,33 +702,30 @@ export function UnitOverview({
   const today = timeline?.today ?? new Date();
   const currentLease = unit.currentLease;
   const base = `/properties/${unit.property.id}`;
+  const steps = unitNextSteps(unit, today, signals);
+  // Rent and deposit live in the Lease terms card; the band carries time left and repairs.
+  const repairs: SummaryStat = {
+    label: 'Open repairs',
+    value: unit.openRepairs,
+    href: `${base}/maintenance?unit=${unit.id}`,
+  };
   const stats: SummaryStat[] = currentLease
     ? [
         {
           label: 'Lease ends',
           value: timeLeft(currentLease.endDate, today),
-          detail: `${formatDate(currentLease.endDate)} · ${currentLease.tenant?.name ?? 'No tenant'}`,
+          detail: formatDate(currentLease.endDate),
           href: `${base}/leases?unit=${unit.id}`,
         },
-        {
-          label: 'Rent / month',
-          value: formatMoney(currentLease.monthlyRent),
-          detail: `Deposit ${formatMoney(currentLease.deposit)}`,
-        },
+        repairs,
       ]
     : [
         {
           label: 'Asking rent',
           value: formatMoney(unit.listedRent),
-          detail:
-            unit.marketRent != null ? `Market ${formatMoney(unit.marketRent)}` : 'No active lease',
+          detail: unit.marketRent != null ? `Market ${formatMoney(unit.marketRent)}` : undefined,
         },
-        {
-          label: 'Open repairs',
-          value: unit.openRepairs,
-          detail: unit.openRepairs ? 'Needs attention' : 'None open',
-          href: `${base}/maintenance?unit=${unit.id}`,
-        },
+        repairs,
       ];
 
   return (
@@ -768,11 +739,11 @@ export function UnitOverview({
           stats={stats}
         />
       </div>
-      <NextSteps steps={unitNextSteps(unit, today, signals)} className={styles.stepsArea} />
-      <div className={styles.detailsArea}>
+      {steps.length > 0 && <NextSteps steps={steps} className={styles.stepsArea} />}
+      <div className={`${styles.detailsArea} ${steps.length ? '' : styles.detailsWide}`}>
         <Card className={styles.detailsPanel} id="lease-terms">
           <CardHeader title="Lease terms" />
-          <UnitLeaseSummary unit={unit} today={today} />
+          <UnitLeaseSummary unit={unit} />
         </Card>
       </div>
       <div className={styles.unitsArea}>

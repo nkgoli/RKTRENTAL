@@ -22,7 +22,6 @@ export function UploadDialog({ children }: { children: ReactNode }) {
           window.history.replaceState(null, '', window.location.pathname + window.location.search);
       }}
       title="Upload files"
-      description="Choose a destination, then select files."
       size="lg"
     >
       {children}

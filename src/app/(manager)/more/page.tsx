@@ -4,18 +4,18 @@ import { managerNav } from '@/components/shell/nav';
 import { requireManagerRole } from '@/lib/auth/access';
 import { signOutAction } from '@/app/(auth)/sign-out/actions';
 
-/** One line under each section, saying what is found there without repeating live counts. */
+/** A few words under each section, without repeating live counts. */
 const descriptions: Record<string, string> = {
-  '/dashboard': 'Rent collection and what needs you today',
-  '/properties': 'Properties, units and occupancy',
-  '/tenants': 'Tenant directory and balances',
-  '/applications': 'Applications, screening and invitations',
-  '/leases': 'Active leases, drafts and renewals',
-  '/payments': 'Rent roll, ledgers and reminders',
-  '/maintenance': 'Repair requests, vendors and status',
-  '/documents': 'Lease and property files and photos',
-  '/roi-analysis': 'Projections beside property actuals',
-  '/rent-analysis': 'Unit rent against nearby comps',
+  '/dashboard': 'Collection and today’s tasks',
+  '/properties': 'Units and occupancy',
+  '/tenants': 'Tenants and balances',
+  '/applications': 'Screening and invitations',
+  '/leases': 'Agreements and renewals',
+  '/payments': 'Rent roll and ledgers',
+  '/maintenance': 'Repairs and vendors',
+  '/documents': 'Files and photos',
+  '/roi-analysis': 'Projections vs actuals',
+  '/rent-analysis': 'Rent vs nearby comps',
 };
 
 export default async function MorePage() {
@@ -26,7 +26,7 @@ export default async function MorePage() {
     .filter((group) => group.items.length);
   return (
     <>
-      <PageHeader title="All sections" meta="Every part of your workspace" />
+      <PageHeader title="All sections" />
       <div className="more-sections">
         {groups.map((group) => (
           <section className="card" key={group.label} aria-labelledby={`more-${group.label}`}>
@@ -59,7 +59,7 @@ export default async function MorePage() {
                 <Icon name="bell" />
                 <span>
                   <strong>Notifications</strong>
-                  <small>Reminders, signatures and payment updates</small>
+                  <small>Reminders and updates</small>
                 </span>
                 <Icon name="chevron-right" />
               </a>
@@ -69,7 +69,7 @@ export default async function MorePage() {
                 <Icon name="integrations" />
                 <span>
                   <strong>Integrations</strong>
-                  <small>Owner payout setup is coming soon</small>
+                  <small>Owner payouts coming soon</small>
                 </span>
                 <Icon name="chevron-right" />
               </a>

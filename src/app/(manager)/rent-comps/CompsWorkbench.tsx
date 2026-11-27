@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { unstable_rethrow } from 'next/navigation';
 import { useActionState, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Alert, Badge, Card, CardHeader } from '@/components/ui';
+import { Badge, Card, CardHeader } from '@/components/ui';
 import { SummaryBand } from '@/components/ui/SummaryBand';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/RouteStates';
@@ -26,6 +26,28 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 const sourceLabel = (source?: string) =>
   source ? (SOURCE_LABELS[source.toLowerCase()] ?? source) : '—';
+
+/** The one demo/source indicator for a comps result: provider, sync time and cache state. */
+export function CompsSource({
+  providerName,
+  syncedAt,
+  cached,
+}: {
+  providerName: string;
+  syncedAt: string;
+  cached: boolean;
+}) {
+  return (
+    <p className={styles.source}>
+      <Badge tone="neutral">Demo comps</Badge>
+      <span>
+        {sourceLabel(providerName)} · Synced {syncedAt}
+        {cached ? ' · Cached' : ''}
+      </span>
+      <Link href="/integrations#comps-providers">Manage source</Link>
+    </p>
+  );
+}
 
 export type WorkbenchProps = {
   unitId: string;
@@ -131,14 +153,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
   const leaseLabel = props.occupied ? 'Use for renewal' : 'Create lease';
 
   const sourceRow = (
-    <div className="row muted" style={{ flexWrap: 'wrap', gap: 8, fontSize: 12 }}>
-      <Badge tone="neutral">Demo comps</Badge>
-      <span>
-        {sourceLabel(props.providerName)} · Synced {props.syncedAt}
-        {props.cached ? ' · Cached' : ''}
-      </span>
-      <Link href="/integrations#comps-providers">Manage source</Link>
-    </div>
+    <CompsSource providerName={props.providerName} syncedAt={props.syncedAt} cached={props.cached} />
   );
 
   const map = (
@@ -164,24 +179,17 @@ export function CompsWorkbench(props: WorkbenchProps) {
           strokeDasharray="6 6"
         />
         {pins.map((pin) => (
+          // Rents sit in the list beside the map; a hover title keeps clustered pins legible.
           <g key={pin.id} data-testid="comp-pin" data-included={pin.included}>
+            <title>{pin.label}</title>
             <circle
               cx={pin.x}
               cy={pin.y}
-              r="9"
-              fill={pin.included ? 'var(--design-primary)' : 'var(--design-muted)'}
+              r="8"
+              fill={pin.included ? 'var(--chart-1)' : 'var(--design-muted)'}
               stroke="#fff"
               strokeWidth="2"
             />
-            <text
-              x={pin.x + 12}
-              y={pin.y - 10}
-              fontSize="11"
-              fontWeight="700"
-              fill="var(--design-text)"
-            >
-              {pin.label}
-            </text>
           </g>
         ))}
         <circle
@@ -204,15 +212,15 @@ export function CompsWorkbench(props: WorkbenchProps) {
       </svg>
       <div className={styles.legend}>
         <span>
-          <span style={{ color: 'var(--design-text)' }}>●</span> Subject {subjectKind}
+          <i style={{ background: 'var(--design-text)' }} /> Subject {subjectKind}
         </span>
         <span>
-          <span style={{ color: 'var(--design-primary)' }}>●</span> Included comp
+          <i style={{ background: 'var(--chart-1)' }} /> Included comp
         </span>
         <span>
-          <span style={{ color: 'var(--design-muted)' }}>●</span> Excluded comp
+          <i style={{ background: 'var(--design-muted)' }} /> Excluded comp
         </span>
-        <p>Schematic map: distance and direction from the {subjectKind}.</p>
+        <p>Schematic, not to scale.</p>
       </div>
     </>
   );
@@ -279,8 +287,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
         title="Comparable rentals"
         action={
           <span className="muted">
-            {rows.length} comps found · {included.length} included · Uncheck a comp to exclude it
-            from the summary
+            {rows.length} comps found · {included.length} included
           </span>
         }
       />
@@ -377,16 +384,10 @@ export function CompsWorkbench(props: WorkbenchProps) {
   );
 
   const fairHousing = (
-    <div className={styles.sources}>
-      <Alert tone="warning">
-        <div>
-          <strong>Fair housing</strong>
-          <br />
-          Rent suggestions use property features only (location, size, beds, baths, amenities,
-          condition), never tenant characteristics.
-        </div>
-      </Alert>
-    </div>
+    <p className={styles.fairHousing}>
+      <strong>Fair housing:</strong> suggestions use property features only, never tenant
+      characteristics.
+    </p>
   );
 
   if (props.variant === 'analysis') {
@@ -406,18 +407,14 @@ export function CompsWorkbench(props: WorkbenchProps) {
       <>
         {!summary || !suggestion ? (
           <section className={`card ${styles.noComps}`} aria-label="Suggested rent">
-            <p className="eyebrow">Suggested rent · estimate · {props.unitLabel}</p>
+            <p className="eyebrow">Suggested rent · {props.unitLabel}</p>
             <h2>No comps included</h2>
-            <p className="muted">
-              Widen the radius, time frame or square footage, or include at least one comp to see a
-              suggested rent.
-            </p>
-            <Badge tone="warning">No comps</Badge>
+            <p className="muted">Widen the filters or include at least one comp.</p>
           </section>
         ) : (
           <SummaryBand
             label="Suggested rent"
-            eyebrow={`Suggested rent · estimate · ${props.unitLabel}${props.subjectFacts ? ` · ${props.subjectFacts}` : ''}`}
+            eyebrow={`Suggested rent · ${props.unitLabel}${props.subjectFacts ? ` · ${props.subjectFacts}` : ''}`}
             value={
               <>
                 <span data-testid="suggested-rent">{usd(suggestion.rent)}</span>
@@ -431,14 +428,12 @@ export function CompsWorkbench(props: WorkbenchProps) {
                   : gap === 0
                     ? `Matches the ${usd(baseline!)} ${baselineLabel} · `
                     : ''}
-                range {usd(suggestion.rangeLow)} – {usd(suggestion.rangeHigh)} ·{' '}
-                {summary.medianPerSqft && subjectSqft
-                  ? 'median $/sqft applied to this unit’s size'
-                  : 'uses median comp rent, not adjusted for size'}
+                range {usd(suggestion.rangeLow)} – {usd(suggestion.rangeHigh)}
+                {summary.medianPerSqft && subjectSqft ? '' : ' · not adjusted for size'}
               </>
             }
             progress={{
-              label: `Confidence: ${suggestion.confidence} · ${summary.count} comps within ${radiusMiles} mi, ${summary.withinOneMile} within 1 mi`,
+              label: `Confidence: ${suggestion.confidence} · ${summary.count} comps within ${radiusMiles} mi`,
               value: CONFIDENCE[suggestion.confidence] ?? 0,
               valueText: `Confidence ${suggestion.confidence}`,
             }}
@@ -463,12 +458,12 @@ export function CompsWorkbench(props: WorkbenchProps) {
             stackDetails
             stats={[
               {
-                label: 'Comp median · estimate',
+                label: 'Comp median',
                 value: usd(summary.medianRent),
-                detail: `Low ${usd(summary.lowRent)} · high ${usd(summary.highRent)}${summary.medianPerSqft ? ` · $${summary.medianPerSqft.toFixed(2)} / sqft` : ''}`,
+                detail: `Low ${usd(summary.lowRent)} · high ${usd(summary.highRent)}`,
               },
               {
-                label: 'Listed rent · actual',
+                label: 'Listed rent',
                 value: listedRent === null ? 'Not set' : usd(listedRent),
                 detail: [
                   listedPosition,
@@ -491,7 +486,9 @@ export function CompsWorkbench(props: WorkbenchProps) {
                 detail:
                   savedRent === null
                     ? 'Not applied yet'
-                    : `${savedGap === null ? '' : `${money(savedGap)} vs listed rent · `}last applied value`,
+                    : savedGap === null
+                      ? undefined
+                      : `${money(savedGap)} vs listed rent`,
               },
             ]}
           />
@@ -501,10 +498,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
             <div className={styles.cardHead}>
               <div>
                 <h3>{props.unitLabel} against nearby comps</h3>
-                <p className={styles.caption}>
-                  Monthly rent · USD{props.filterSummary ? ` · ${props.filterSummary}` : ''} · exact
-                  values
-                </p>
+                {props.filterSummary && <p className={styles.caption}>{props.filterSummary}</p>}
               </div>
               <Badge tone={summary ? 'info' : 'warning'}>
                 {summary ? `${summary.count} comps` : 'No comps'}
@@ -519,9 +513,9 @@ export function CompsWorkbench(props: WorkbenchProps) {
               <table className={`table ${styles.compareTable}`}>
                 <thead>
                   <tr>
-                    <th scope="col">Comparison</th>
+                    <th scope="col">Rental</th>
                     <th scope="col" className="num">
-                      Monthly rent · USD
+                      Rent / month
                     </th>
                   </tr>
                 </thead>
@@ -540,17 +534,13 @@ export function CompsWorkbench(props: WorkbenchProps) {
                   ))}
                   {suggestion && (
                     <tr data-kind="suggested">
-                      <th scope="row">Suggested rent · estimate</th>
+                      <th scope="row">Suggested rent</th>
                       <td className="num">{usd(suggestion.rent)}</td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
-            <p className={styles.caption}>
-              Your listed rent comes first and the suggestion last; the {nearest.length} nearest
-              included comps by distance sit between.
-            </p>
             {props.filters}
           </Card>
           <Card className={styles.applyCard}>
@@ -560,9 +550,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
             </div>
             <p className="eyebrow">Applies to {props.scopeLabel ?? props.unitLabel} only</p>
             {suggestion ? (
-              applyForm(
-                `Updates the saved market rent for this ${subjectKind}. The listed rent and any lease stay unchanged.`,
-              )
+              applyForm('Lease and listed rent stay unchanged.')
             ) : (
               <p className="muted">Include at least one comp to apply a market rent.</p>
             )}
@@ -602,7 +590,6 @@ export function CompsWorkbench(props: WorkbenchProps) {
                 </li>
               ))}
             </ul>
-            {sourceRow}
           </div>
         </section>
         {distribution}
@@ -617,19 +604,13 @@ export function CompsWorkbench(props: WorkbenchProps) {
       {sourceRow}
       <div className={styles.comparison}>
         <Card flush>
-          <details className="disclosure">
-            <summary>
-              Comparable rentals map <Badge tone="neutral">Within {radiusMiles} mi</Badge>
-            </summary>
-            {map}
-          </details>
+          <div className={styles.mapHead}>
+            <h3>Comparable rentals map</h3>
+            <Badge tone="neutral">Within {radiusMiles} mi</Badge>
+          </div>
+          {map}
           <div className={styles.nearest}>
-            <div className="row between" style={{ marginBottom: 6 }}>
-              <strong style={{ fontSize: 14 }}>Nearest comps</strong>
-              <span className="muted" style={{ fontSize: 12 }}>
-                Closest included rentals
-              </span>
-            </div>
+            <strong className={styles.nearestTitle}>Nearest comps</strong>
             {nearest.length === 0 && <p className="muted">No included comps.</p>}
             {nearest.map((row) => (
               <div key={row.id} className={styles.nearestRow}>
@@ -651,42 +632,45 @@ export function CompsWorkbench(props: WorkbenchProps) {
             }
           />
           {!summary || !suggestion ? (
-            <p className="muted">
-              Widen the radius, time frame or square footage, or include at least one comp to see a
-              suggested rent.
-            </p>
+            <p className="muted">Widen the filters or include at least one comp.</p>
           ) : (
             <div className="stack">
-              <div>
-                <div className="row between muted" style={{ fontSize: 12 }}>
+              <div className={styles.range}>
+                <div className={styles.rangeLabels}>
                   <span>Low {usd(summary.lowRent)}</span>
                   <span>Median {usd(summary.medianRent)}</span>
                   <span>High {usd(summary.highRent)}</span>
                 </div>
-                <svg viewBox="0 0 300 40" width="100%" aria-hidden="true">
-                  <rect x="0" y="16" width="300" height="8" rx="4" fill="#cbd5e1" />
+                <svg viewBox="0 0 300 24" width="100%" aria-hidden="true">
+                  <rect x="0" y="9" width="300" height="6" rx="3" fill="var(--chart-grid)" />
                   <rect
-                    x={Math.max(0, Math.min(296, place(summary.medianRent) - 2))}
-                    y="12"
-                    width="4"
-                    height="16"
-                    fill="var(--design-primary)"
+                    x={Math.max(0, Math.min(298, place(summary.medianRent) - 1))}
+                    y="5"
+                    width="2"
+                    height="14"
+                    rx="1"
+                    fill="var(--chart-1)"
                   />
                   {listPct !== null && (
                     <circle
-                      cx={listPct}
-                      cy="20"
-                      r="7"
-                      fill="var(--design-text)"
+                      cx={Math.min(293, Math.max(7, listPct))}
+                      cy="12"
+                      r="6"
+                      fill="var(--chart-2)"
                       stroke="#fff"
                       strokeWidth="2"
                     />
                   )}
                 </svg>
                 {listedRent !== null && (
-                  <p className="muted" style={{ fontSize: 12 }}>
-                    Dark marker: current list price {usd(listedRent)}
-                  </p>
+                  <ul className={styles.rangeKey}>
+                    <li>
+                      <i data-kind="median" /> Median
+                    </li>
+                    <li>
+                      <i data-kind="listed" /> Listed rent {usd(listedRent)}
+                    </li>
+                  </ul>
                 )}
               </div>
               <dl className="kv" style={{ gridTemplateColumns: '130px 1fr' }}>
@@ -717,9 +701,7 @@ export function CompsWorkbench(props: WorkbenchProps) {
                   {savedRent !== null ? usd(savedRent) : 'Not set'}
                 </dd>
               </dl>
-              {!subjectSqft && (
-                <p className="muted">Not adjusted for size. Suggestion uses median rent.</p>
-              )}
+              {!subjectSqft && <p className="muted">Not adjusted for size.</p>}
               <div className={styles.suggestion}>
                 <p className="eyebrow">Suggested rent</p>
                 <div className={styles.suggestionValue} data-testid="suggested-rent">
@@ -733,13 +715,12 @@ export function CompsWorkbench(props: WorkbenchProps) {
                   </span>
                 )}
                 <p className="muted" style={{ marginTop: 8, fontSize: 13 }}>
-                  Range {usd(suggestion.rangeLow)} – {usd(suggestion.rangeHigh)}. Confidence:{' '}
-                  {suggestion.confidence} ({summary.count} comps within {radiusMiles} mi,{' '}
-                  {summary.withinOneMile} within 1 mi).
+                  Range {usd(suggestion.rangeLow)} – {usd(suggestion.rangeHigh)} · Confidence{' '}
+                  {suggestion.confidence}
                 </p>
               </div>
               {applyForm(
-                `Updates the saved market rent for this ${subjectKind}. Existing lease and listed rent stay unchanged.`,
+                `Updates the saved market rent for this ${subjectKind}. Lease and listed rent stay unchanged.`,
               )}
               {appliedNote}
               <Link className="btn btn-secondary btn-block" href={leaseHref}>

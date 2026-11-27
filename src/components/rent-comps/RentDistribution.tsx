@@ -1,20 +1,40 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { fixedDomainScale } from '@/lib/analysis/chart-data';
 import { rentDistribution } from '@/lib/comps/distribution';
-import { Basis, chartColors } from '@/components/analysis/RoiChart';
-import c from '@/components/analysis/roi-chart.module.css';
 import s from './rent-distribution.module.css';
 
 const usd = (v: number) => `$${Math.round(v).toLocaleString('en-US')}`;
-const k = (v: number) => `$${(v / 1000).toFixed(1)}k`;
+/** "$1.8K", "$2K": written out so server and browser render the same text (ICU differs). */
+const compact = (v: number) =>
+  Math.abs(v) >= 1000
+    ? `$${(v / 1000).toFixed(2).replace(/\.?0+$/, '')}K`
+    : `$${Math.round(v).toLocaleString('en-US')}`;
+
+/** Three to six round ticks inside the domain ($1.8K / $2K / $2.2K …), never at odd values. */
+export function rentTicks(min: number, max: number) {
+  const span = max - min;
+  if (!(span > 0)) return [Math.round(min)];
+  const raw = span / 5;
+  const power = 10 ** Math.floor(Math.log10(raw));
+  let step = [1, 2, 5, 10].find((n) => raw / power <= n)! * power;
+  const build = () => {
+    const ticks: number[] = [];
+    for (let t = Math.ceil(min / step) * step; t <= max + 1e-6; t += step) ticks.push(t);
+    return ticks;
+  };
+  let ticks = build();
+  if (ticks.length < 3) {
+    step /= 2;
+    ticks = build();
+  }
+  return ticks.map((t) => Math.round(t * 100) / 100);
+}
 
 /**
- * Rental Distribution (C25): a normal curve fitted to the included
- * comps, comps as dots on the curve, the subject's rent as an accent line and dot,
- * a dashed average and the suggested range as a band. It summarises the spread;
- * it is not a probability claim about this home's rent.
+ * Rent distribution (C25): a normal curve fitted to the included comps, comps as dots on the
+ * curve, the subject's rent as a marker line and dot, a dashed average and the suggested range
+ * as a band. It summarises the spread; it is not a probability claim about this home's rent.
  */
 export function RentDistribution({
   rents,
@@ -42,82 +62,47 @@ export function RentDistribution({
     return () => o.disconnect();
   }, []);
   const d = rentDistribution(rents, subjectRent);
-  const heading = (
-    <h2 id={`${id}-h`}>
-      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-        <path
-          d="M22 7 13.5 15.5 8.5 10.5 2 17M16 7h6v6"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-      Rental Distribution
-    </h2>
-  );
+  const heading = <h2 id={`${id}-h`}>Rent distribution</h2>;
   if (!d)
     return (
       <section className={s.card} aria-labelledby={`${id}-h`}>
-        <header className={s.head}>{heading}</header>
+        {heading}
         <p className={s.empty} role="status">
-          No comparable rents are included, so there is no distribution to show. Include at least
-          one comp in the table below.
+          No comparable rents are included.
         </p>
       </section>
     );
-  const h = 224;
-  const m = { top: 25, right: 30, bottom: 26, left: 30 };
+  const h = 200;
+  const m = { top: 12, right: 16, bottom: 28, left: 16 };
   const iw = Math.max(1, width - m.left - m.right);
   const ih = h - m.top - m.bottom;
   const round = (v: number) => Math.round(v * 100) / 100;
   const x = (v: number) => round(m.left + ((v - d.min) / (d.max - d.min || 1)) * iw);
-  const y = (v: number) => round(m.top + ih - (v / 120) * ih);
+  const y = (v: number) => round(m.top + ih - (v / 110) * ih);
   const line = d.curve
     .map((p, i) => `${i ? 'L' : 'M'}${x(p.rent).toFixed(1)},${y(p.density).toFixed(1)}`)
     .join('');
   const area = `${line}L${x(d.max)},${y(0)}L${x(d.min)},${y(0)}Z`;
-  // Recharts' ticks for the reference's [dataMin, dataMax] domain, minus a step tick
-  // that would print the same `$x.xk` as the closing one.
-  const ticks = fixedDomainScale(d.min, d.max).ticks.filter(
-    (t, i, all) => i === all.length - 1 || k(t) !== k(all.at(-1)!),
-  );
+  const ticks = rentTicks(d.min, d.max);
   const points = [
     ...d.comps.map((p) => ({ ...p, you: false })),
     ...(d.subject ? [{ ...d.subject, you: true }] : []),
   ].sort((a, b) => a.rent - b.rent);
   const point = active == null ? null : points[active];
-  const close = d.subject && Math.abs(d.subject.rent - d.mean) / d.mean < 0.08;
-  const left = d.subject ? d.subject.rent <= d.mean : true;
   const band =
     rangeLow && rangeHigh && rangeHigh > rangeLow
       ? { lo: Math.max(d.min, rangeLow), hi: Math.min(d.max, rangeHigh) }
       : null;
   return (
     <section className={s.card} aria-labelledby={`${id}-h`}>
-      <header className={s.head}>
-        {heading}
-        <p>
-          {d.subject ? `Your ${subjectLabel} compared to` : 'Spread of'} the {d.comps.length}{' '}
-          included comparable rental{d.comps.length === 1 ? '' : 's'}.
-        </p>
-        <Basis
-          items={[
-            'Comparable rents',
-            'USD per month',
-            `${d.comps.length} included`,
-            ...(d.subject ? ['Yours not in the statistics'] : []),
-          ]}
-        />
-      </header>
+      {heading}
       <div className={s.body}>
-        <dl className={s.stats} data-count={d.subject ? 4 : 3}>
+        <dl className={s.stats}>
           <div>
             <dt>Low</dt>
             <dd>{usd(d.low)}</dd>
           </div>
-          <div data-tone="teal">
+          <div>
             <dt>Average</dt>
             <dd>{usd(d.mean)}</dd>
           </div>
@@ -126,7 +111,7 @@ export function RentDistribution({
             <dd>{usd(d.high)}</dd>
           </div>
           {d.subject && (
-            <div data-tone="accent">
+            <div>
               <dt>Yours vs average</dt>
               <dd>
                 {Math.round(d.subject.rent) === Math.round(d.mean)
@@ -138,7 +123,7 @@ export function RentDistribution({
         </dl>
         <div
           ref={wrap}
-          className={c.plot}
+          className={s.plot}
           role="group"
           tabIndex={0}
           aria-label="Rental distribution. Use arrow keys to read each rent; the comps table lists every rent."
@@ -182,91 +167,48 @@ export function RentDistribution({
             <title id={`${id}-t`}>
               {`Rents from ${usd(d.low)} to ${usd(d.high)}, average ${usd(d.mean)}${subjectRent != null ? `; yours ${usd(subjectRent)}` : ''}`}
             </title>
-            <defs>
-              <linearGradient id={`${id}-g`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={chartColors.primary} stopOpacity={0.4} />
-                <stop offset="100%" stopColor={chartColors.primary} stopOpacity={0.05} />
-              </linearGradient>
-            </defs>
             {band && (
               <rect
+                className={s.bandFill}
                 x={x(band.lo)}
                 width={Math.max(0, x(band.hi) - x(band.lo))}
                 y={m.top}
                 height={ih}
-                fill={chartColors.primary}
-                fillOpacity={0.08}
-                stroke={chartColors.primary}
-                strokeOpacity={0.2}
-                strokeDasharray="3 3"
               />
             )}
-            <line x1={m.left} x2={m.left + iw} y1={y(0)} y2={y(0)} stroke={chartColors.border} />
+            <line className={s.baseline} x1={m.left} x2={m.left + iw} y1={y(0)} y2={y(0)} />
             {ticks.map((t) => (
-              <g key={t}>
-                <line x1={x(t)} x2={x(t)} y1={y(0)} y2={y(0) + 5} stroke={chartColors.border} />
-                <text x={x(t)} y={h - 6} textAnchor="middle" style={{ fontSize: 10 }}>
-                  {k(t)}
-                </text>
-              </g>
-            ))}
-            <g className={c.reveal}>
-              <path d={area} fill={`url(#${id}-g)`} />
-              <path d={line} fill="none" stroke={chartColors.primary} strokeWidth={2.5} />
-            </g>
-            <line
-              x1={x(d.mean)}
-              x2={x(d.mean)}
-              y1={m.top}
-              y2={y(0)}
-              stroke={chartColors.muted}
-              strokeDasharray="5 5"
-            />
-            {!close && (
-              <text
-                x={x(d.mean) - 4}
-                y={y(0) - 6}
-                textAnchor="end"
-                style={{ fontSize: 9, fontWeight: 600, fill: chartColors.muted }}
-              >
-                Avg {k(d.mean)}
+              <text key={t} className={s.tick} x={x(t)} y={h - 8} textAnchor="middle">
+                {compact(t)}
               </text>
-            )}
+            ))}
+            <g className={s.reveal}>
+              <path className={s.area} d={area} />
+              <path className={s.curve} d={line} />
+            </g>
+            <line className={s.mean} x1={x(d.mean)} x2={x(d.mean)} y1={m.top} y2={y(0)} />
             {d.subject && (
-              <g>
-                <line
-                  x1={x(d.subject.rent)}
-                  x2={x(d.subject.rent)}
-                  y1={m.top}
-                  y2={y(0)}
-                  stroke={chartColors.accent}
-                  strokeWidth={2.5}
-                />
-                <text
-                  x={x(d.subject.rent) + (left ? 6 : -6)}
-                  y={m.top + 10}
-                  textAnchor={left ? 'start' : 'end'}
-                  style={{ fontSize: 10, fontWeight: 700, fill: chartColors.accent }}
-                >
-                  {`You ${k(d.subject.rent)}${close ? ' ≈ Avg' : ''}`}
-                </text>
-              </g>
+              <line
+                className={s.subject}
+                x1={x(d.subject.rent)}
+                x2={x(d.subject.rent)}
+                y1={m.top}
+                y2={y(0)}
+              />
             )}
             {points.map((p, i) => (
               <circle
                 key={i}
+                className={p.you ? s.youDot : s.compDot}
                 cx={x(p.rent)}
                 cy={y(p.density)}
-                r={(p.you ? 7 : 5) + (active === i ? 2 : 0)}
-                fill={p.you ? chartColors.accent : chartColors.mutedLight}
-                stroke={p.you ? chartColors.accentDark : chartColors.muted}
-                strokeWidth={p.you ? 2 : 1.5}
+                r={(p.you ? 6 : 4) + (active === i ? 2 : 0)}
               />
             ))}
           </svg>
           {point && (
             <div
-              className={c.tooltip}
+              className={s.tooltip}
               aria-hidden="true"
               data-static={width < 480 || undefined}
               style={
@@ -283,17 +225,17 @@ export function RentDistribution({
               <strong>{point.you ? `Your ${subjectLabel}` : 'Comparable'}</strong>
               <span>
                 <em>Rent</em>
-                <b data-tone="teal">{usd(point.rent)}/mo</b>
+                <b>{usd(point.rent)}/mo</b>
               </span>
             </div>
           )}
         </div>
-        <p className={c.srOnly} aria-live="polite">
+        <p className={s.srOnly} aria-live="polite">
           {point
             ? `${point.you ? `Your ${subjectLabel}` : 'Comparable'}: ${usd(point.rent)} per month`
             : ''}
         </p>
-        <ul className={c.legend}>
+        <ul className={s.legend}>
           {d.subject && (
             <li>
               <i className={s.you} /> Your {subjectLabel} {usd(d.subject.rent)}
@@ -313,9 +255,8 @@ export function RentDistribution({
         </ul>
         <p className={s.note}>
           {d.low === d.high
-            ? `${d.comps.length === 1 ? 'Only one comparable is included' : 'All included comparables have the same rent'}, so the curve width is an assumed ±10% spread, not a measured one.`
-            : `Curve: a normal distribution with the comps' average and standard deviation (${usd(d.sd)}), scaled to its peak.`}{' '}
-          It describes the spread of these comps only, not the chance of renting at a price.
+            ? `${d.comps.length === 1 ? 'Only one comparable is included' : 'All comparables have the same rent'}, so the curve uses an assumed ±10% spread.`
+            : `Normal curve from the comps' average and standard deviation (${usd(d.sd)}).`}
         </p>
       </div>
     </section>

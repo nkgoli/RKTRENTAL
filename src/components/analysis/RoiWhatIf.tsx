@@ -324,10 +324,7 @@ export function WhatIfPanel({
         </button>
       </header>
       <div className={w.body}>
-        <p className={w.lead}>
-          Temporary. Saved assumptions, saved cases and recorded rent, lease, payment, expense and
-          market-rent records stay unchanged.
-        </p>
+        <p className={w.lead}>Temporary. Nothing here changes your saved analysis or records.</p>
         <label className={w.field}>
           <span>Start from</span>
           <select
@@ -338,7 +335,7 @@ export function WhatIfPanel({
             <option value="">
               {state.start || state.name === 'What if' ? 'Baseline' : state.name}
             </option>
-            <optgroup label="Illustrative presets">
+            <optgroup label="Presets">
               {scenarioExamples.map((preset) => (
                 <option key={preset.name} value={`preset:${preset.name}`}>
                   {preset.name}
@@ -346,7 +343,7 @@ export function WhatIfPanel({
               ))}
             </optgroup>
             {cases.length > 0 && (
-              <optgroup label="Saved cases (copied, not changed)">
+              <optgroup label="Saved cases (copied)">
                 {cases.map((c) => (
                   <option key={c.id} value={`case:${c.id}`}>
                     {c.name || 'Unnamed case'}
@@ -360,20 +357,12 @@ export function WhatIfPanel({
         <section className={w.section} aria-labelledby={`${titleId}-suggest`}>
           <h3 id={`${titleId}-suggest`}>Suggested changes</h3>
           {!baselineResult || !baselinePayload ? (
-            <p className={w.paused}>
-              Results paused until the flagged entries are corrected. Nothing is estimated for
-              missing or invalid inputs.
-            </p>
+            <p className={w.paused}>Paused until the flagged entries are corrected.</p>
           ) : (
             <>
-              <p className={w.hint}>
-                Drag or use the arrow keys; every view updates as you go. Back at the baseline mark,
-                a slider inherits the baseline.
-              </p>
               {precedence.map(([key, amount, name]) => (
                 <p key={key} className={w.paused}>
-                  Fixed {name} of {dollars(amount)} per year takes precedence. This {name}{' '}
-                  percentage will not change that amount, including when the fixed amount is zero.
+                  Fixed {name} of {dollars(amount)} per year overrides this percentage.
                 </p>
               ))}
               {generalErrors.map((e, i) => (
@@ -408,7 +397,7 @@ export function WhatIfPanel({
         <section className={w.section} aria-labelledby={`${titleId}-effect`} aria-live="polite">
           <h3 id={`${titleId}-effect`}>Effect</h3>
           {!baselineResult ? null : !simulation ? (
-            <p className={w.hint}>Showing the baseline. Move a slider to see the effect.</p>
+            <p className={w.hint}>Move a slider to see the effect.</p>
           ) : simulation.ok ? (
             <ul className={w.effects}>
               {effects.map((row) => (
@@ -421,8 +410,7 @@ export function WhatIfPanel({
             </ul>
           ) : (
             <p className={w.paused} role="status">
-              Simulation paused. Adjust the highlighted slider; the analysis keeps showing the
-              baseline.
+              Paused. Adjust the highlighted slider.
             </p>
           )}
         </section>
@@ -439,9 +427,8 @@ export function WhatIfPanel({
           Exit what if
         </button>
         <p className={w.hint}>
-          Nothing here is saved.{' '}
           <button type="button" className={w.linkButton} onClick={onManageCases}>
-            Manage saved cases on Compare
+            Manage saved cases
           </button>
         </p>
       </footer>

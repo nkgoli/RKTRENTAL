@@ -107,7 +107,6 @@ export default async function LeasesPage({
       {notice && <NoticeToast message={notice} tone="success" />}
       <ScopedWorkspace organizationId={session.organizationId} filter={scope} activeTab="leases" />
       <PageHeader
-        meta={`${counts.active} active · ${counts.drafts} ${counts.drafts === 1 ? 'draft' : 'drafts'} · ${counts.ended} ended`}
         actions={[
           { label: 'Review applications', href: '/applications' },
           { label: 'Lease templates', href: '/leases/templates' },
@@ -116,38 +115,17 @@ export default async function LeasesPage({
       />
       <SummaryBand
         label="Lease stats"
-        eyebrow="Lease portfolio · active leases"
-        value={`${counts.active} active`}
-        detail={`${counts.drafts} ${counts.drafts === 1 ? 'draft' : 'drafts'} · ${counts.ended} ended · ${counts.expiring} ending in the next 60 days`}
+        eyebrow="Active leases"
+        value={counts.active}
         stats={[
-          {
-            label: 'Active leases',
-            value: counts.active,
-            detail: 'Current leases in your portfolio',
-            href: '/leases',
-          },
-          {
-            label: 'Expiring in 60 days',
-            value: counts.expiring,
-            detail: 'Active leases ending in the next 60 days',
-            href: '/leases?tab=expiring',
-          },
-          {
-            label: 'Awaiting e-signature',
-            value: counts.awaiting,
-            detail: 'Pending signatures',
-          },
+          { label: 'Expiring in 60 days', value: counts.expiring, href: '/leases?tab=expiring' },
+          { label: 'Awaiting e-signature', value: counts.awaiting },
         ]}
       />
       <Card flush>
         <div className={styles.portfolioHeader}>
           <div className={styles.toolbar}>
-            <div>
-              <h2>Lease portfolio</h2>
-              <p className={styles.intro}>
-                Review current terms, continue a draft or prepare a renewal.
-              </p>
-            </div>
+            <h2>Lease portfolio</h2>
             <form className={styles.search} role="search" action="/leases" method="get">
               {tab !== 'active' && <input type="hidden" name="tab" value={tab} />}
               {scope.propertyId && (
@@ -177,10 +155,10 @@ export default async function LeasesPage({
           tabIndex={0}
         >
           <Table mobile="cards">
-            <caption className={styles.caption}>
+            <caption className={styles.srOnly}>
               {rows.length} {leaseStatusLabel} lease
               {rows.length === 1 ? '' : 's'}
-              {q && ` matching “${q}”`}. Open a lease to manage its agreement, files and payments.
+              {q && ` matching “${q}”`}
             </caption>
             <thead>
               <tr>
@@ -263,7 +241,11 @@ export default async function LeasesPage({
                       <small className="muted">/mo</small>
                     </td>
                     <td data-cell="status">
-                      {lease.eSignStatus !== 'SIGNED' && (
+                      {lease.eSignStatus === 'SIGNED' ? (
+                        <span className={`muted ${styles.signed}`} title="Signed">
+                          —
+                        </span>
+                      ) : (
                         <Badge tone={lease.eSignStatus === 'DECLINED' ? 'danger' : 'info'}>
                           {signLabel(lease.eSignStatus)}
                         </Badge>

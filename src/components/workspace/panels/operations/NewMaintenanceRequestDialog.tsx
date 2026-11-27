@@ -37,7 +37,7 @@ export function NewMaintenanceRequestDialog({
         {triggerLabel}
       </button>
       {units.length === 0 && (
-        <p className="muted">Add an active unit to this property before creating a request.</p>
+        <p className="muted">Add a unit first.</p>
       )}
       <Dialog open={open} onClose={() => setOpen(false)} title="New repair request">
         <div

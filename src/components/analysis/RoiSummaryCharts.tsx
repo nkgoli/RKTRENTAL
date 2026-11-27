@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useState } from 'react';
 import {
   calendarYear,
   equityYears,
@@ -19,7 +19,7 @@ import {
   MiniBar,
   MoreDetail,
   Segmented,
-  chartColors,
+  entityColors,
   useHorizon,
 } from './RoiChart';
 import s from './summary-charts.module.css';
@@ -28,7 +28,7 @@ const pct = (value: number | null, digits = 2) =>
   value == null || !Number.isFinite(value) ? 'Unavailable' : `${(value * 100).toFixed(digits)}%`;
 const signed = (value: number) => `${value > 0 ? '+' : ''}${wholeDollars(value)}`;
 
-/** C1 · Net Cash Flow by Year (reference CashFlowProjectionChart). */
+/** C1 · Net cash flow by year (bars; the Summary shows the same series as a table). */
 export function NetCashFlowCard({ result }: { result: ProjectionResult }) {
   const rows = projectionRows(result);
   const [shown, horizon] = useHorizon(rows.length, 'Net cash flow horizon', 5);
@@ -36,16 +36,10 @@ export function NetCashFlowCard({ result }: { result: ProjectionResult }) {
   const values = visible.map((r) => r.cashFlow);
   const turn = firstPositiveAfterNegative(values);
   return (
-    <ChartCard
-      title="Net Cash Flow by Year"
-      subtitle="What you keep (above zero) or contribute (below zero) each year after debt service and reserves."
-      basis={['Projected', 'USD per year', 'Before tax and sale proceeds']}
-      controls={horizon}
-    >
+    <ChartCard title="Net cash flow by year" controls={horizon}>
       <ComboChart
         label={`Net cash flow, years 1 to ${visible.length}`}
-        height={256}
-        barRadius="all"
+        height={240}
         xFormat={(y) => `Y${y}`}
         years={visible.map((r) => r.year)}
         series={[
@@ -53,28 +47,21 @@ export function NetCashFlowCard({ result }: { result: ProjectionResult }) {
             label: 'Net cash flow',
             kind: 'bar',
             values,
-            color: chartColors.primary,
-            negativeColor: chartColors.bad,
+            color: entityColors.cashFlow,
+            negativeColor: entityColors.negative,
           },
         ]}
         markers={
           turn == null
             ? []
-            : [
-                {
-                  index: turn,
-                  label: `Positive Y${visible[turn].year}`,
-                  color: chartColors.primaryDark,
-                  align: 'center',
-                },
-              ]
+            : [{ index: turn, label: `Positive Y${visible[turn].year}`, align: 'center' }]
         }
         legend={[
           ...(values.some((v) => v >= 0)
-            ? [{ label: 'Positive Cash Flow', kind: 'bar' as const, color: chartColors.primary }]
+            ? [{ label: 'Positive cash flow', kind: 'bar' as const, color: entityColors.cashFlow }]
             : []),
           ...(values.some((v) => v < 0)
-            ? [{ label: 'Negative Cash Flow', kind: 'bar' as const, color: chartColors.bad }]
+            ? [{ label: 'Negative cash flow', kind: 'bar' as const, color: entityColors.negative }]
             : []),
         ]}
         tooltip={(i) => {
@@ -88,12 +75,12 @@ export function NetCashFlowCard({ result }: { result: ProjectionResult }) {
               { label: 'NOI', op: '=', value: r.noi, total: true },
               { label: 'Debt service', op: '−', value: r.debtService, tone: 'muted' },
               { label: 'Capital reserves', op: '−', value: r.reserves, tone: 'muted' },
-              { label: 'Cash Flow', op: '=', value: r.cashFlow, tone: 'auto', total: true },
+              { label: 'Cash flow', op: '=', value: r.cashFlow, tone: 'auto', total: true },
             ],
           };
         }}
       />
-      <MoreDetail summary={`Exact annual cash flow, all ${rows.length} years`}>
+      <MoreDetail summary="View exact amounts">
         <ExactTable
           caption="Annual cash flow"
           headers={['Year', 'Cash flow', 'Cumulative']}
@@ -108,7 +95,7 @@ function quality(label: string, value: string, tone?: 'good' | 'bad') {
   return { label, value, tone };
 }
 
-/** C2 · Outcome: wealth created by a year, as a donut plus the Deal Quality list. */
+/** C2 · Wealth created by a year, as a ring of its three sources, with deal quality beside it. */
 export function OutcomeCard({ result }: { result: ProjectionResult }) {
   const length = result.annualCashflows.length;
   const [shown, horizon] = useHorizon(length, 'Outcome year', 1);
@@ -116,9 +103,9 @@ export function OutcomeCard({ result }: { result: ProjectionResult }) {
   const m = result.summaryMetrics;
   if (!w) return null;
   const parts = [
-    { label: 'Cash Flow', value: w.cashFlow, color: chartColors.primary },
-    { label: 'Principal', value: w.principal, color: chartColors.primaryLight },
-    { label: 'Appreciation', value: w.appreciation, color: chartColors.primaryPale },
+    { label: 'Cash flow', value: w.cashFlow, color: entityColors.cashFlow },
+    { label: 'Principal', value: w.principal, color: entityColors.principal },
+    { label: 'Appreciation', value: w.appreciation, color: entityColors.appreciation },
   ];
   const negative = parts.filter((p) => p.value < 0);
   // The public result reports undefined ratios (e.g. DSCR with no debt) as null.
@@ -134,40 +121,48 @@ export function OutcomeCard({ result }: { result: ProjectionResult }) {
           )
         : quality('DSCR', 'Unavailable'),
     quality('GRM', finite(m.grm) && m.grm > 0 ? m.grm.toFixed(1) : 'Unavailable'),
-    quality('Rent/Price', finite(m.rentToPrice) ? pct(m.rentToPrice) : 'Unavailable'),
+    quality('Rent to price', finite(m.rentToPrice) ? pct(m.rentToPrice) : 'Unavailable'),
     finite(m.profitabilityIndex)
       ? quality(
-          'Profit Index',
+          'Profit index',
           m.profitabilityIndex.toFixed(2),
           m.profitabilityIndex >= 1 ? 'good' : 'bad',
         )
-      : quality('Profit Index', 'Unavailable'),
+      : quality('Profit index', 'Unavailable'),
   ];
   return (
     <ChartCard
-      className={s.outcome}
-      title="Outcome"
+      title="Wealth created"
       subtitle={
         <>
-          Wealth Created (Year {w.year}){' '}
+          By year {w.year}{' '}
           <InfoTip label="wealth created">
             Included: cumulative operating cash flow, loan principal repaid and property value
             change (appreciation and after-repair value). Excluded: selling costs, taxes and sale
-            proceeds. Before sale, before tax.
+            proceeds.
           </InfoTip>
         </>
       }
-      basis={['Projected', `Cumulative to year ${w.year}`, 'Before sale and tax']}
+      controls={horizon}
     >
-      <p className={s.big} data-negative={w.total < 0 || undefined}>
-        {wholeDollars(w.total)}
-      </p>
       <div className={s.outcomeRow}>
         <Donut label={`Wealth created by year ${w.year}`} parts={parts} />
-        <div className={s.qualityBox}>
-          <p className={s.qualityTitle} id={`${w.year}-deal-quality`}>
-            Deal Quality
+        <div className={s.outcomeTotal}>
+          <p className={s.big} data-negative={w.total < 0 || undefined}>
+            {wholeDollars(w.total)}
           </p>
+          <ul className={s.parts} aria-label="Wealth created by source">
+            {parts.map((p) => (
+              <li key={p.label}>
+                <i style={{ background: p.color }} aria-hidden="true" />
+                {p.label}
+                <b data-negative={p.value < 0 || undefined}>{wholeDollars(p.value)}</b>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className={s.qualityBox}>
+          <p className={s.qualityTitle}>Deal quality</p>
           <dl className={s.quality} aria-label="Deal quality">
             {deal.map((d) => (
               <div key={d.label}>
@@ -178,22 +173,12 @@ export function OutcomeCard({ result }: { result: ProjectionResult }) {
           </dl>
         </div>
       </div>
-      <ul className={s.parts} aria-label="Wealth created by source">
-        {parts.map((p) => (
-          <li key={p.label}>
-            <i style={{ background: p.color }} aria-hidden="true" />
-            {p.label}
-            <b data-negative={p.value < 0 || undefined}>{wholeDollars(p.value)}</b>
-          </li>
-        ))}
-      </ul>
       {negative.length > 0 && (
         <p className={s.note}>
           {negative.map((p) => `${p.label} ${wholeDollars(p.value)}`).join(' and ')} reduces the
           total and is not drawn in the ring.
         </p>
       )}
-      <div className={s.centered}>{horizon}</div>
     </ChartCard>
   );
 }
@@ -207,22 +192,9 @@ type Line = {
   tone?: 'auto' | 'gain' | 'loss';
   info?: string;
 };
-type Section = { id: string; title: string; icon: ReactNode; tone: string; lines: Line[] };
+type Section = { id: string; title: string; lines: Line[] };
 
-const glyph = (d: string) => (
-  <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-    <path
-      d={d}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-/** C5 · Cash Flow & Equity Projections at milestone years, with inline rate bars. */
+/** C5 · Cash flow and equity at milestone years, with inline rate bars. */
 export function ProjectionMilestones({ result }: { result: ProjectionResult }) {
   const rows = projectionRows(result);
   const equity = equityYears(result);
@@ -236,14 +208,12 @@ export function ProjectionMilestones({ result }: { result: ProjectionResult }) {
   const sections: Section[] = [
     {
       id: 'income',
-      title: 'Income Analysis',
-      tone: chartColors.primary,
-      icon: glyph('M22 7 13.5 15.5 8.5 10.5 2 17M16 7h6v6'),
+      title: 'Income',
       lines: [
         { label: 'Scheduled rent', values: col((y) => at(y).grossRent) },
         { label: 'Other income', values: col((y) => at(y).otherIncome) },
         {
-          label: 'Less vacancy',
+          label: 'Vacancy',
           values: col((y) => -at(y).vacancyLoss),
           format: 'signed',
           tone: 'loss',
@@ -258,9 +228,7 @@ export function ProjectionMilestones({ result }: { result: ProjectionResult }) {
     },
     {
       id: 'expenses',
-      title: 'Operating Expenses',
-      tone: chartColors.mutedMid,
-      icon: glyph('M22 17 13.5 8.5 8.5 13.5 2 7M16 17h6v-6'),
+      title: 'Operating expenses',
       lines: [
         { label: 'Operating expenses', values: col((y) => at(y).operatingExpenses) },
         { label: 'Net operating income', values: col((y) => at(y).noi), strong: true },
@@ -273,24 +241,22 @@ export function ProjectionMilestones({ result }: { result: ProjectionResult }) {
     },
     {
       id: 'cash',
-      title: 'Cash Flow',
-      tone: chartColors.primaryDark,
-      icon: glyph('M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'),
+      title: 'Cash flow',
       lines: [
         {
-          label: 'Less Mortgage Expense',
+          label: 'Debt service',
           values: col((y) => at(y).debtService),
-          info: 'Annual debt service (principal and interest)',
+          info: 'Annual principal and interest',
         },
         {
-          label: 'Annual Cash Flow',
+          label: 'Annual cash flow',
           values: col((y) => at(y).cashFlow),
           strong: true,
           tone: 'auto',
           info: 'After operating costs, debt service and reserves',
         },
         {
-          label: 'Cash on Cash Return',
+          label: 'Cash-on-cash',
           values: col((y) =>
             m.totalCashRequired > 0 ? at(y).cashFlow / m.totalCashRequired : null,
           ),
@@ -303,29 +269,27 @@ export function ProjectionMilestones({ result }: { result: ProjectionResult }) {
     },
     {
       id: 'equity',
-      title: 'Equity Analysis',
-      tone: chartColors.ink,
-      icon: glyph('M3 10.5 12 3l9 7.5V21H3zM9 21v-6h6v6'),
+      title: 'Equity',
       lines: [
         {
-          label: 'Property Value',
+          label: 'Property value',
           values: col((y) => eq(y).propertyValue),
           info: 'Projected year-end value',
         },
         {
-          label: 'Plus Appreciation',
+          label: 'Appreciation',
           values: col((y) => eq(y).propertyValue - m.purchasePrice),
           format: 'signed',
           tone: 'gain',
           info: 'Property value − purchase price',
         },
         {
-          label: 'Less Mortgage Balance',
+          label: 'Mortgage balance',
           values: col((y) => -eq(y).loanBalance),
           format: 'signed',
           tone: 'loss',
         },
-        { label: 'Total Equity', values: col((y) => eq(y).equity), strong: true, tone: 'auto' },
+        { label: 'Equity', values: col((y) => eq(y).equity), strong: true, tone: 'auto' },
         {
           label: 'Equity %',
           values: col((y) => (eq(y).propertyValue > 0 ? eq(y).equity / eq(y).propertyValue : null)),
@@ -344,42 +308,29 @@ export function ProjectionMilestones({ result }: { result: ProjectionResult }) {
     if (line.format === 'signed') return v === 0 ? wholeDollars(0) : signed(v);
     return wholeDollars(v);
   };
+  // Only losses are coloured; gains read from their sign.
   const tone = (line: Line, v: number | null) =>
     v == null || v === 0
       ? undefined
-      : line.tone === 'gain'
-        ? v > 0
-          ? 'gain'
-          : 'loss'
-        : line.tone === 'loss'
-          ? 'loss'
-          : line.tone === 'auto' && v < 0
-            ? 'loss'
-            : undefined;
+      : (line.tone === 'gain' || line.tone === 'auto') && v < 0
+        ? 'loss'
+        : undefined;
   return (
     <ChartCard
-      title="Cash Flow & Equity Projections"
-      subtitle="Income, costs, cash flow and equity at milestone years."
-      basis={['Projected', 'USD, whole dollars', 'Before tax']}
+      title="Milestone years"
       controls={
-        <div className={s.tableControls}>
-          <Segmented
-            size="md"
-            label="Projection rows"
-            options={[
-              { value: 'key', label: 'Key Rows' },
-              { value: 'full', label: 'Full Table' },
-            ]}
-            value={full ? 'full' : 'key'}
-            onChange={(value) => {
-              setFull(value === 'full');
-              setOpen({});
-            }}
-          />
-          <span className={s.key}>
-            <i data-tone="gain" /> Positive <i data-tone="loss" /> Negative
-          </span>
-        </div>
+        <Segmented
+          label="Projection rows"
+          options={[
+            { value: 'key', label: 'Key rows' },
+            { value: 'full', label: 'All rows' },
+          ]}
+          value={full ? 'full' : 'key'}
+          onChange={(value) => {
+            setFull(value === 'full');
+            setOpen({});
+          }}
+        />
       }
     >
       <div className={s.scroll} role="region" tabIndex={0} aria-label="Milestone projections">
@@ -405,9 +356,6 @@ export function ProjectionMilestones({ result }: { result: ProjectionResult }) {
                     aria-expanded={isOpen(section.id)}
                     onClick={() => setOpen({ ...open, [section.id]: !isOpen(section.id) })}
                   >
-                    <span className={s.icon} style={{ background: section.tone }}>
-                      {section.icon}
-                    </span>
                     {section.title}
                     <span className={s.chevron} aria-hidden="true" />
                   </button>
@@ -432,7 +380,6 @@ export function ProjectionMilestones({ result }: { result: ProjectionResult }) {
           ))}
         </table>
       </div>
-      <p className={s.foot}>Showing milestone years: {years.map((y) => `Y${y}`).join(', ')}</p>
     </ChartCard>
   );
 }
@@ -452,10 +399,7 @@ export function SummaryMilestones({ result }: { result: ProjectionResult }) {
   return (
     <section className={`card ${s.plainCard}`} aria-labelledby={`${id}-title`}>
       <div className={s.plainHead}>
-        <div>
-          <h2 id={`${id}-title`}>Milestones</h2>
-          <p className={s.caption}>Projected annual amounts · USD · before tax</p>
-        </div>
+        <h2 id={`${id}-title`}>Milestones</h2>
         <span className="badge info">Projected</span>
       </div>
       <div className="table-region" role="region" tabIndex={0} aria-label="Milestones">
@@ -504,21 +448,12 @@ export function NetCashFlowYears({ result }: { result: ProjectionResult }) {
       : turn != null
         ? { text: `Break-even Y${rows[turn].year}`, tone: 'info' }
         : { text: `Below $0 through Y${rows.length}`, tone: 'danger' };
-  const against = (value: number) =>
-    Math.round(value) < 0
-      ? 'Below $0 · you add cash'
-      : Math.round(value) > 0
-        ? 'Above $0 · cash kept'
-        : 'At $0 · break-even';
   return (
     <section className={`card ${s.plainCard}`} aria-labelledby={`${id}-title`}>
       <div className={s.plainHead}>
         <h2 id={`${id}-title`}>Net cash flow by year</h2>
         {badge && <span className={`badge ${badge.tone}`}>{badge.text}</span>}
       </div>
-      <p className={s.caption}>
-        Projected · USD per year · before tax and sale proceeds · exact amounts
-      </p>
       <div
         className="table-region"
         role="region"
@@ -532,7 +467,6 @@ export function NetCashFlowYears({ result }: { result: ProjectionResult }) {
               <th scope="col" className="num">
                 Net cash flow
               </th>
-              <th scope="col">Against $0</th>
             </tr>
           </thead>
           <tbody>
@@ -542,14 +476,12 @@ export function NetCashFlowYears({ result }: { result: ProjectionResult }) {
                 <td className="num" data-tone={Math.round(r.cashFlow) < 0 ? 'loss' : undefined}>
                   {signed(r.cashFlow)}
                 </td>
-                <td>{against(r.cashFlow)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {rows.length >= 5 && <p className={s.yearsNote}>Years 1 and 5 match Milestones.</p>}
-      <MoreDetail summary={`Exact annual cash flow, all ${rows.length} years`}>
+      <MoreDetail summary={`View all ${rows.length} years`}>
         <ExactTable
           caption="Annual cash flow"
           headers={[

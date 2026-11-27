@@ -15,7 +15,6 @@ import {
 } from '@/lib/analysis/actuals';
 import type { ActualAmount, ActualReturns, Coverage, Estimate } from '@/lib/returns/actual';
 import { monthBucket } from '@/lib/returns/period';
-import { Basis, MoreDetail } from './RoiChart';
 import styles from './actuals.module.css';
 
 export type ActualsState =
@@ -35,15 +34,6 @@ export const signed = (cents: number) =>
   `${cents > 0 ? '+' : cents < 0 ? '−' : ''}${usd(Math.abs(cents))}`;
 export const pct = (value: number | null) => (value == null ? '—' : `${(value * 100).toFixed(1)}%`);
 
-const excludedLabels: Record<string, string> = {
-  appreciation: 'appreciation',
-  projectedRent: 'projected rent',
-  listedOrMarketRent: 'listed or market rent',
-  vacancyAllowance: 'vacancy allowance',
-  assumedDebtService: 'assumed debt service',
-  inferredZeroExpenses: 'zero-filled expenses',
-};
-
 export const actualFailure = (code: string) =>
   ({
     NOT_FOUND: 'This property is unavailable or archived. Choose another property.',
@@ -55,16 +45,14 @@ function ActualValue({ row }: { row: ComparisonRow }) {
   const { actual } = row;
   return (
     <>
-      <strong>{actual.status === 'unavailable' ? 'Not recorded' : usd(actual.cents)}</strong>
-      <span className={styles[actual.status]} title={actual.notes.join(' ')}>
-        {actual.status === 'recorded'
-          ? 'Recorded'
-          : actual.status === 'zero'
-            ? 'Recorded $0'
-            : actual.status === 'partial'
-              ? 'Partial'
-              : 'Unavailable'}
-      </span>
+      <strong data-status={actual.status === 'unavailable' ? 'unavailable' : undefined}>
+        {actual.status === 'unavailable' ? 'Not recorded' : usd(actual.cents)}
+      </strong>
+      {actual.status === 'partial' && (
+        <span className={styles.partial} title={actual.notes.join(' ')}>
+          Partial
+        </span>
+      )}
     </>
   );
 }
@@ -188,7 +176,7 @@ function Needed({
   if (!items.length) return null;
   return (
     <section className={styles.needed} aria-label="Needed to complete this comparison">
-      <h3>Needed to complete this comparison</h3>
+      <h3>To complete this comparison</h3>
       <ul>
         {items.map((item) => (
           <li key={item.id}>
@@ -267,17 +255,9 @@ export function RoiActuals({
           <div>
             <h2 id="actuals-heading">Actual vs projected</h2>
             <p>
-              {propertyName} · Whole property · {range.label}
-              {range.throughToday ? ' (through today)' : ''}
+              Whole property · {range.label}
+              {comparison ? ` · ${comparison.scaleLabel}` : ''}
             </p>
-            <Basis
-              items={[
-                'Recorded cash',
-                stale ? 'No projection' : 'Projected Year 1, scaled',
-                'USD',
-                ...(comparison ? [comparison.scaleLabel] : []),
-              ]}
-            />
           </div>
           <ActualPeriodPicker
             key={`${choice.key}-${choice.from}-${choice.to}`}
@@ -287,17 +267,12 @@ export function RoiActuals({
             disabled={state.status === 'loading'}
           />
         </div>
-        <p className={styles.source}>
-          Projection source: {stale ? 'none until assumptions are complete' : projectionBasis}
-        </p>
         <p role="status" aria-live="polite" className={styles.status}>
           {state.status === 'loading'
             ? 'Loading recorded returns…'
             : state.status === 'error'
               ? state.message
-              : stale
-                ? 'Showing recorded actuals. The projection column needs complete, current assumptions.'
-                : ''}
+              : ''}
         </p>
         {state.status === 'error' && (
           <button type="button" onClick={onRetry}>
@@ -318,8 +293,8 @@ export function RoiActuals({
               <thead>
                 <tr>
                   <th scope="col">Line</th>
-                  <th scope="col">Actual (recorded)</th>
-                  <th scope="col">Projected (ROI assumptions)</th>
+                  <th scope="col">Actual</th>
+                  <th scope="col">Projected</th>
                   <th scope="col">Difference</th>
                 </tr>
               </thead>
@@ -327,27 +302,31 @@ export function RoiActuals({
                 {comparison.rows.map((row) => (
                   <tr key={row.key}>
                     <th scope="row">{row.label}</th>
-                    <td data-label="Actual (recorded)" className={styles.cell}>
+                    <td data-label="Actual" className={styles.cell}>
                       <div className={styles.value}>
                         <ActualValue row={row} />
                       </div>
                     </td>
-                    <td data-label="Projected (ROI assumptions)" className={styles.cell}>
+                    <td data-label="Projected" className={styles.cell}>
                       <div className={styles.value}>
-                        <strong>
+                        <strong
+                          data-status={
+                            row.projected.status === 'projected' ? undefined : 'unavailable'
+                          }
+                        >
                           {row.projected.status === 'projected'
                             ? usd(row.projected.cents)
                             : 'No projection'}
                         </strong>
-                        {row.projected.status === 'projected' && (
-                          <span className={styles.projected}>Projected</span>
-                        )}
                       </div>
                     </td>
                     <td data-label="Difference" className={styles.cell}>
                       <div className={styles.value}>
                         {row.difference.cents == null ? (
-                          <small>{row.difference.reason}</small>
+                          <strong data-status="unavailable">
+                            <span aria-hidden="true">—</span>
+                            <span className={styles.caption}>{row.difference.reason}</span>
+                          </strong>
                         ) : (
                           <strong
                             className={
@@ -369,49 +348,42 @@ export function RoiActuals({
             </table>
           </div>
         )}
-        <Needed items={needed} onReviewAssumptions={onReviewAssumptions} />
-        <MoreDetail summary="How actual and projected are compared">
-          <p className={styles.basis}>
-            <strong>Actual</strong> is recorded cash: settled rent payments by paid date and
-            expenses by date, in USD. <strong>Projected</strong> is your ROI assumptions at the
-            Year-1 rate, scaled to the same period
-            {comparison ? ` (${comparison.scaleLabel})` : ''}. Neither side fills in the other: a
-            missing actual stays <em>Not recorded</em>, never $0, and a missing projection stays{' '}
-            <em>No projection</em>. Difference is actual minus projected; green is better than
-            projected.
+        {comparison && (
+          <p className={styles.source}>
+            Projection source: {stale ? 'none until assumptions are complete' : projectionBasis}
           </p>
-        </MoreDetail>
+        )}
+        <Needed items={needed} onReviewAssumptions={onReviewAssumptions} />
       </section>
       {data && (
         <div className={styles.grid}>
           <section className={styles.card} aria-labelledby="actuals-estimates">
             <h2 id="actuals-estimates">Scheduled and estimated</h2>
-            <p>What was billed or scheduled, not what was paid. Never counted as actual.</p>
             <dl className={styles.list}>
               <div>
-                <dt>Rent billed (scheduled)</dt>
+                <dt>Rent billed</dt>
                 <dd>{estimateValue(data.scheduled.billedRent)}</dd>
               </div>
               <div>
-                <dt>Debt service (scheduled)</dt>
+                <dt>Debt service</dt>
                 <dd>{estimateValue(data.scheduled.debtService)}</dd>
               </div>
               <div>
-                <dt>Cash flow after scheduled debt (estimate)</dt>
+                <dt>Cash flow after debt</dt>
                 <dd>{estimateValue(data.estimates.cashFlowAfterScheduledDebt)}</dd>
               </div>
               <div>
-                <dt>NOI annualized from actuals (estimate)</dt>
+                <dt>Annualized NOI</dt>
                 <dd>{estimateValue(data.estimates.annualizedNoi)}</dd>
               </div>
               <div>
-                <dt>Projected Year-1 NOI</dt>
+                <dt>Projected NOI · Year 1</dt>
                 <dd>
                   {projection && !stale ? usd(Math.round(projection.noi * 100)) : 'No projection'}
                 </dd>
               </div>
               <div>
-                <dt>Actual cap rate for the period</dt>
+                <dt>Actual cap rate</dt>
                 <dd>
                   {data.actual.periodCapRate.status === 'unavailable'
                     ? 'Unavailable'
@@ -459,13 +431,9 @@ export function RoiActuals({
                 </dd>
               </div>
             </dl>
-            <p>
-              Actuals never include{' '}
-              {data.excludedAssumptions.map((a) => excludedLabels[a] ?? a).join(', ')}.
-            </p>
             <p className={styles.links}>
               <button type="button" onClick={exportComparison}>
-                Export this comparison (CSV)
+                Export CSV
               </button>
               <a
                 href={`/returns?${new URLSearchParams({ property: propertyId, ...periodChoiceParams(choice) })}`}
@@ -478,88 +446,9 @@ export function RoiActuals({
                 {exported}
               </p>
             )}
-            <MoreDetail summary="About the export and portfolio returns">
-              <p className={styles.fine}>
-                The export matches this table: {propertyName}, {data.period.from} to{' '}
-                {data.period.to}, with unavailable and partial values kept as shown. Portfolio
-                returns are month-based summaries that use scheduled debt service and 3% assumed
-                appreciation; they are estimates, not recorded results.
-              </p>
-            </MoreDetail>
           </details>
         </div>
       )}
     </div>
-  );
-}
-
-/** Compact Summary-tab card: recorded NOI beside the projected NOI for the shared period. */
-export function ActualSnapshot({
-  window: range,
-  state,
-  projection,
-  stale,
-  onOpen,
-}: {
-  window: ActualWindow;
-  state: ActualsState;
-  projection: ProjectionYear | null;
-  stale: boolean;
-  onOpen: () => void;
-}) {
-  const data = state.status === 'ready' ? state.data : null;
-  const rows = data ? compareActualToProjection(data, stale ? null : projection).rows : [];
-  const pick = (key: ComparisonRow['key']) => rows.find((r) => r.key === key);
-  const partial = rows.some(
-    (r) => ['income', 'expenses', 'noi'].includes(r.key) && r.actual.status === 'partial',
-  );
-  return (
-    <section className={`${styles.card} ${styles.snapshot}`} aria-labelledby="actual-snapshot">
-      <div>
-        <h2 id="actual-snapshot">Actual vs projected</h2>
-        <Basis items={['Recorded cash', 'Projected', range.label, 'USD']} />
-      </div>
-      {state.status === 'loading' && <p role="status">Loading recorded returns…</p>}
-      {state.status === 'error' && <p role="status">{state.message}</p>}
-      {data && (
-        <table className={styles.mini}>
-          <caption className={styles.caption}>
-            Recorded and projected amounts, {range.label}
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">Line</th>
-              <th scope="col">Actual</th>
-              <th scope="col">Projected</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(['income', 'expenses', 'noi'] as const).map((key) => {
-              const row = pick(key)!;
-              return (
-                <tr key={key}>
-                  <th scope="row">{row.label}</th>
-                  <td data-status={row.actual.status}>
-                    {row.actual.status === 'unavailable' ? 'Not recorded' : usd(row.actual.cents)}
-                    {row.actual.status === 'partial' && <small> (partial)</small>}
-                  </td>
-                  <td data-status={row.projected.cents == null ? 'unavailable' : undefined}>
-                    {row.projected.cents == null ? 'No projection' : usd(row.projected.cents)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
-      {partial && (
-        <p className={styles.fine}>
-          Partial: some days in this period have no rent or expense records yet.
-        </p>
-      )}
-      <button type="button" onClick={onOpen}>
-        Open actual vs projected
-      </button>
-    </section>
   );
 }

@@ -73,7 +73,11 @@ describe('property and unit form validation', () => {
     fireEvent.change(screen.getByRole('combobox', { name: 'Type' }), {
       target: { value: 'SINGLE_UNIT' },
     });
-    expect(screen.getByText('A single-unit home has one unit.')).toBeTruthy();
+    // A single-unit home has one unit: the count is fixed at 1 (no explanatory hint).
+    const units = screen.getByRole('textbox', { name: 'Units' }) as HTMLInputElement;
+    expect(units.value).toBe('1');
+    expect(units.disabled).toBe(true);
+    expect(screen.queryByText('A single-unit home has one unit.')).toBeNull();
     const input = screen.getByRole('textbox', { name: 'Property name' });
     fireEvent.change(screen.getByRole('textbox', { name: 'City' }), {
       target: { value: 'Retained city' },

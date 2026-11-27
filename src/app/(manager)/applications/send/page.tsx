@@ -5,8 +5,7 @@ import { requireManagerWriteRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
 import { invitationLinkConfigurationError } from '@/lib/applications/link-config';
 import { CreateInvitationForm } from '@/components/applications/InvitationForms';
-import { INVITATION_STEPS } from '@/components/applications/InvitationList';
-import { Alert, Steps } from '@/components/ui';
+import { Alert } from '@/components/ui';
 import styles from '@/components/applications/invitations.module.css';
 
 export default async function SendApplicationPage({
@@ -38,20 +37,10 @@ export default async function SendApplicationPage({
   const backHref = `/applications${selected ? `?${new URLSearchParams({ propertyId: selected.id, ...(query.unitId ? { unitId: query.unitId } : {}) })}` : ''}`;
   return (
     <section className={styles.page} aria-label="Send application">
-      <PageHeader
-        title="Send application"
-        meta="Invite someone to apply for a property · nothing is emailed until you review and send"
-        back={{ href: backHref, label: 'Applications' }}
-      />
+      <PageHeader title="Send application" back={{ href: backHref, label: 'Applications' }} />
       {configurationError && (
         <Alert tone="warning">
-          <div>
-            <strong>Secure application links are unavailable</strong>
-            <p>
-              Secure application links must be configured before an invitation can be created.
-              Nothing has been emailed. Ask your administrator to configure application invitations.
-            </p>
-          </div>
+          Secure application links are unavailable. Ask your administrator to set them up.
         </Alert>
       )}
       {!properties.length && (
@@ -59,13 +48,6 @@ export default async function SendApplicationPage({
           Add an active property and unit before creating an invitation.
         </p>
       )}
-      <div className={styles.stepsWrap}>
-        <Steps steps={INVITATION_STEPS} current={0} />
-      </div>
-      <p className={styles.caption}>
-        Step 1 of 4 · The private link stays valid for seven days. A submitted application appears
-        in Applications for review; screening authorization remains a separate step.
-      </p>
       <div className={styles.grid}>
         <CreateInvitationForm
           properties={properties}

@@ -56,7 +56,7 @@ describe('dashboard presentation', () => {
     expect(html).toContain('No rent is late');
     expect(html).toContain('No urgent repairs');
     expect(html).toContain('Add your first property');
-    expect(html).toContain('New payments and lease updates will appear here');
+    expect(html).toContain('No recent activity');
     expect(html).not.toContain('NaN');
   });
 
@@ -100,10 +100,11 @@ describe('dashboard presentation', () => {
     });
     const html = renderToStaticMarkup(await DashboardPage({ searchParams: Promise.resolve({}) }));
     expect(html).toContain('75% collected');
-    expect(html).toContain('$300 open across 2 leases · 1 late past grace');
+    expect(html).toContain('$300 open across 2 leases · 1 late');
     expect(html).toContain('1 lease late · $250');
     expect(html).toContain('Chloe Fisher');
-    expect(html).toContain('1 awaiting consent · 2 ready for decision');
+    expect(html).not.toContain('Review each ledger');
+    expect(html).toContain('1 awaiting consent · 2 ready');
     expect(html).toContain('Kitchen sink leak · Maple Court 4B');
     expect(html).toContain('href="/maintenance/req-1/edit"');
     expect(html).toContain('href="/leases/lease-a"');

@@ -9,65 +9,6 @@
     overflow: visible;
   }
 }
-.pulse {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding: 14px 0;
-  margin-bottom: 20px;
-  border-block: 1px solid var(--rr-border);
-}
-.stat {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 20px;
-  border-left: 1px solid var(--rr-border);
-}
-.stat:first-child {
-  border: 0;
-  padding-left: 0;
-}
-.stat p {
-  margin: 0;
-  color: var(--design-muted);
-  font-size: 11px;
-}
-.stat strong {
-  font: 600 27px/1.2 var(--design-heading-font);
-  letter-spacing: -1px;
-}
-.stat small {
-  display: block;
-  color: var(--design-muted);
-  font-size: 11px;
-}
-.icon {
-  display: grid;
-  place-items: center;
-  width: 35px;
-  height: 35px;
-  border-radius: 9px;
-  color: var(--design-primary);
-  background: #eef0fd;
-  flex: none;
-}
-.icon svg {
-  width: 18px;
-  height: 18px;
-}
-.stat:nth-child(2) .icon {
-  background: #eef0fd;
-  color: #5c58ab;
-}
-.stat:nth-child(3) .icon {
-  background: #edf7fa;
-  color: var(--design-accent);
-}
-.intro {
-  margin: 0;
-  color: var(--design-muted);
-  font-size: 12px;
-}
 .portfolioHeader {
   padding: 18px 20px 0;
 }
@@ -83,7 +24,7 @@
   margin-bottom: 12px;
 }
 .toolbar h2 {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 18px;
 }
 .search {
@@ -130,33 +71,16 @@
   gap: 4px;
   white-space: nowrap;
 }
-.caption {
-  padding: 11px 20px;
-  text-align: left;
-  color: var(--design-muted);
-  font-size: 11px;
-  border-bottom: 1px solid var(--rr-border);
+/* The table caption names the results for screen readers; the tabs show the count. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 @media (max-width: 700px) {
-  .pulse {
-    padding: 12px 0;
-    margin-bottom: 17px;
-  }
-  .stat {
-    display: block;
-    padding: 0 10px;
-  }
-  .stat p {
-    font-size: 10px;
-    min-height: 30px;
-  }
-  .stat strong {
-    font-size: 25px;
-  }
-  .stat small,
-  .icon {
-    display: none;
-  }
   .portfolioHeader {
     padding: 16px 14px 0;
   }
@@ -192,10 +116,6 @@
   .actions {
     justify-content: flex-end;
   }
-  .caption {
-    display: block;
-    padding: 10px 14px;
-  }
 }
 
 .scroll td {
@@ -210,7 +130,9 @@
     gap: 4px 8px;
     padding: 12px 14px;
   }
+  /* Cards size to their content, not the 44px desktop row height. */
   .scroll :global(.table[data-mobile='cards'] td) {
+    height: auto;
     padding: 0;
   }
   .scroll :global(.table[data-mobile='cards'] td[data-cell='actions']) {
@@ -224,6 +146,10 @@
   }
   .scroll td[data-cell='status'] {
     margin-right: 30px;
+  }
+  /* Phone cards only flag leases that still need a signature. */
+  .scroll td[data-cell='status']:has(.signed) {
+    display: none;
   }
   .scroll :global(.avatar) {
     display: none;

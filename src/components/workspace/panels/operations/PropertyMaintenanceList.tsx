@@ -15,11 +15,10 @@ import {
 import { workspaceTabHref } from '@/components/workspace/routes';
 import styles from './operations.module.css';
 
+/** Sentence case, as everywhere else: "In progress". */
 function statusLabel(status: MaintenanceBoardRequest['status']) {
-  return status
-    .replaceAll('_', ' ')
-    .toLowerCase()
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  const words = status.replaceAll('_', ' ').toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 function statusTone(status: MaintenanceBoardRequest['status']) {
@@ -74,10 +73,6 @@ export function PropertyMaintenanceList({
           +
         </span>
         <h2 id="repair-requests-heading">No repair requests yet</h2>
-        <p className="muted">
-          When something needs fixing, log it here and track it from new to done. Start with your
-          first request.
-        </p>
         {createRequestControl}
       </section>
     );

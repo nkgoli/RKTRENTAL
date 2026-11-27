@@ -98,11 +98,11 @@ export function MaintenanceListFooter({
     <nav className="pager" aria-label="Request pagination">
       <p className="muted" style={{ fontSize: 13 }}>
         {usesRecentWindow(query)
-          ? `Showing open requests and requests completed in the last ${RECENT_DONE_DAYS} days. `
+          ? `Open + done in the last ${RECENT_DONE_DAYS} days · `
           : query.allHistory
-            ? 'Showing all history. '
+            ? 'All history · '
             : ''}
-        {total === 0 ? 'No matching requests.' : `${first}\u2013${last} of ${total}`}
+        {total === 0 ? 'No matching requests' : `${first}\u2013${last} of ${total}`}
       </p>
       {usesRecentWindow(query) && (
         <Link className="btn btn-ghost btn-sm" href={href({ allHistory: true, page: 1 })}>

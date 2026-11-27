@@ -88,11 +88,6 @@
   font-weight: 500;
 }
 
-.location small {
-  color: var(--design-muted);
-  font-size: 13px;
-}
-
 /* ---------- Fields ---------- */
 .editForm {
   min-width: 0;
@@ -424,7 +419,7 @@
 .composerFooter {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 8px 12px;
 }

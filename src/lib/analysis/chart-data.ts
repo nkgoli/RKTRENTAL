@@ -154,6 +154,24 @@ export function thousands(value: number, step: number) {
   return `${value < 0 ? '-' : ''}$${text}${divisor === 1_000_000 ? 'M' : 'k'}`;
 }
 
+/**
+ * Dollar axis ticks in the shared chart style: in full below $10,000 ($2,500), compact on an
+ * axis that reaches it ($50K, $1.2M), with just enough decimals that neighbouring ticks differ.
+ */
+export function axisDollars(value: number, step: number, compact: boolean) {
+  const sign = value < 0 ? '-' : '';
+  const size = Math.abs(value);
+  if (size < 1e-9) return '$0';
+  if (!compact)
+    return `${sign}$${size.toLocaleString('en-US', { maximumFractionDigits: step < 1 ? 2 : 0 })}`;
+  const divisor = size >= 1_000_000 ? 1_000_000 : 1000;
+  const unit = Math.abs(step) / divisor;
+  const digits =
+    [0, 1, 2].find((d) => Math.abs(unit * 10 ** d - Math.round(unit * 10 ** d)) < 1e-6) ?? 2;
+  const text = (size / divisor).toFixed(digits).replace(/\.0+$|(\.\d*?)0+$/, '$1');
+  return `${sign}$${text}${divisor === 1_000_000 ? 'M' : 'K'}`;
+}
+
 /** Whole dollars for chart readouts; tables keep cents. */
 export const wholeDollars = (value: ChartValue | undefined) =>
   value == null || !Number.isFinite(value)
@@ -407,48 +425,35 @@ type Breakdown = {
 };
 
 /**
- * C10 categories in a categorical palette drawn from the app tokens. RocketRental also has utilities and
- * leasing; capital reserves (CapEx) sit below NOI, so they are not operating costs.
+ * C10 categories. Each bar is labelled, so they share one colour in the chart. RocketRental
+ * also has utilities and leasing; capital reserves (CapEx) sit below NOI, so they are not
+ * operating costs.
  */
 export const expenseCategories = [
   {
     key: 'propertyTax',
-    name: 'Property Tax',
-    color: '#3e4fe5',
+    name: 'Property tax',
     about: 'Annual property taxes paid to local government',
   },
   {
     key: 'propertyManagement',
     name: 'Management',
-    color: '#17233a',
     about: 'Property management fees (a fixed amount, or a percentage of effective income)',
   },
-  {
-    key: 'insurance',
-    name: 'Insurance',
-    color: '#007f7a',
-    about: 'Landlord/hazard insurance premium',
-  },
+  { key: 'insurance', name: 'Insurance', about: 'Landlord/hazard insurance premium' },
   {
     key: 'maintenance',
     name: 'Maintenance',
-    color: '#cf8a68',
     about: 'Recurring repairs and upkeep (small/medium fixes)',
   },
-  { key: 'hoa', name: 'HOA', color: '#9d174d', about: 'Homeowners Association fees' },
-  { key: 'utilities', name: 'Utilities', color: '#6383e6', about: 'Owner-paid utilities' },
-  {
-    key: 'leasing',
-    name: 'Leasing',
-    color: '#946200',
-    about: 'Leasing and tenant-placement costs',
-  },
-  { key: 'other', name: 'Misc', color: '#a3aebf', about: 'Other operating costs you entered' },
+  { key: 'hoa', name: 'HOA', about: 'Homeowners Association fees' },
+  { key: 'utilities', name: 'Utilities', about: 'Owner-paid utilities' },
+  { key: 'leasing', name: 'Leasing', about: 'Leasing and tenant-placement costs' },
+  { key: 'other', name: 'Misc', about: 'Other operating costs you entered' },
 ] as const;
 export const capexCategory = {
   key: 'capex',
   name: 'CapEx',
-  color: '#4f7a2b',
   about:
     'Savings for major replacements (roof, HVAC, appliances). Deducted below NOI, so not part of operating expenses.',
 } as const;
@@ -595,8 +600,8 @@ export function exitLandmarks(rows: ExitRow[]) {
 }
 
 export type HeatPalette = { low: string; mid: string; high: string };
-/** App danger → sand → accent teal. */
-export const heatPalette: HeatPalette = { low: '#b4233f', mid: '#f1d9a7', high: '#007f7a' };
+/** Chart negative red → neutral grey → chart teal. */
+export const heatPalette: HeatPalette = { low: '#b4233f', mid: '#f1f3f6', high: '#0e9384' };
 /**
  * Colour-blind-safe diverging palette (RdBu). The reference maps losses to blue
  * and the best returns to red; here losses stay on the red end so the meaning of
@@ -615,13 +620,14 @@ function mix(a: string, b: string, t: number) {
     .join('')}`;
 }
 
-/** Reference 3-stop scale over the grid's own min…max (midpoint = mid colour). */
+/**
+ * Diverging scale centred on zero (break-even = the neutral mid colour): losses run to `low`
+ * at the grid's own minimum, gains to `high` at its maximum.
+ */
 export function heatColor(min: number, max: number, value: number, palette: HeatPalette) {
-  if (max === min) return palette.mid;
-  const t = Math.max(0, Math.min(1, (value - min) / (max - min)));
-  return t <= 0.5
-    ? mix(palette.low, palette.mid, t * 2)
-    : mix(palette.mid, palette.high, (t - 0.5) * 2);
+  if (value < 0 && min < 0) return mix(palette.mid, palette.low, Math.min(1, value / min));
+  if (value > 0 && max > 0) return mix(palette.mid, palette.high, Math.min(1, value / max));
+  return palette.mid;
 }
 
 /**

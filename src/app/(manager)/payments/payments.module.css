@@ -1,19 +1,34 @@
+/* Month stepper: ‹ November 2026 › on the card header line, "This month" when away. */
 .period {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
   gap: 6px;
 }
-.filters {
-  display: grid;
-  gap: 10px;
-  padding: 0 var(--rr-card-pad) 14px;
+.step {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
 }
-.filters p {
-  margin: 0;
-  color: var(--design-muted);
-  font-size: 13px;
-  line-height: 1.5;
-  max-width: 78ch;
+.month {
+  min-width: 8.5em;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 14px var(--rr-card-pad);
 }
 .tableScroll {
   max-width: 100%;
@@ -30,9 +45,6 @@
   font-variant-numeric: tabular-nums;
 }
 .table th {
-  white-space: nowrap;
-}
-.date {
   white-space: nowrap;
 }
 .tableScroll {
@@ -54,6 +66,70 @@
   padding: 6px;
   border: 1px solid var(--rr-border);
   border-radius: 6px;
+}
+/* Owner payouts: one total line, then the per-property amounts in two columns on wide screens. */
+.payoutHead {
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.payoutTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.payoutTotal {
+  margin: 0 0 12px;
+  color: var(--design-muted);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.payouts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  columns: 2 280px;
+  column-gap: 48px;
+}
+.payouts li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--rr-border);
+  break-inside: avoid;
+}
+.payouts li > span {
+  display: grid;
+  min-width: 0;
+}
+.payouts a {
+  color: var(--design-text);
+  font-weight: 500;
+}
+.payouts small {
+  color: var(--design-muted);
+  font-size: 12px;
+}
+.payouts strong {
+  font-variant-numeric: tabular-nums;
+}
+.idle {
+  margin-top: 12px;
+  color: var(--design-muted);
+  font-size: 13px;
+}
+.idle summary {
+  width: fit-content;
+  cursor: pointer;
+}
+.idle ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+.recent {
+  margin-top: 16px;
 }
 .payoutHistory {
   list-style: none;

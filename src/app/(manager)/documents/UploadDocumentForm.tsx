@@ -121,16 +121,12 @@ export function UploadDocumentForm({
       ) : (
         <p className="muted">
           {availableTargets.length
-            ? 'Choose where these files belong. Files upload as soon as you select them.'
-            : 'No destinations of this type. Choose another type, or add a lease, property or unit first.'}
+            ? 'Choose a destination first.'
+            : 'No destinations of this type yet.'}
         </p>
       )}
       {targetId && (
-        <p className={styles.uploadHint}>
-          Files upload immediately to{' '}
-          {availableTargets.find((target) => target.id === targetId)?.label}. To rename, share or
-          delete a file, open its lease or property.
-        </p>
+        <p className={styles.uploadHint}>Files upload as soon as you select them.</p>
       )}
     </div>
   );

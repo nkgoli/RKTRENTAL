@@ -12,15 +12,15 @@ import {
 import { exitLandmarks, exitRows, wholeDollars, type ExitRow } from '@/lib/analysis/chart-data';
 import {
   ChartCard,
-  Chips,
   ComboChart,
   ExactTable,
+  Figure,
   Icon,
-  InfoTip,
+  Insight,
   MoreDetail,
-  Segmented,
   Statement,
-  chartColors,
+  Tiles,
+  entityColors,
 } from './RoiChart';
 import styles from './analysis.module.css';
 import chartStyles from './projections.module.css';
@@ -28,29 +28,22 @@ import d from './detail-charts.module.css';
 
 const pct = (v: number | null, digits = 2) =>
   v == null || !Number.isFinite(v) ? 'Unavailable' : `${(v * 100).toFixed(digits)}%`;
-const exitColors = {
-  proceeds: chartColors.accent,
-  proceedsActive: chartColors.accentDark,
-  cash: chartColors.primary,
-  cashActive: chartColors.primaryDark,
-  initial: chartColors.plum,
-};
 /** Reference default: Year 10 is selected; otherwise the final compared year. */
 const defaultYear = (rows: { year: number }[] | null) =>
   rows?.some((r) => r.year === 10) ? 10 : (rows?.at(-1)?.year ?? null);
 
 function Comparison({
   data,
-  basis,
+  probing,
   children,
 }: {
   data: ExitRow[];
-  basis: string[];
+  /** The figures come from a temporary probe, not the saved exit. */
+  probing: boolean;
   children: ReactNode;
 }) {
   const [selected, setSelected] = useState<number | null>(() => defaultYear(data));
   const [hovered, setHovered] = useState<number | null>(null);
-  const [view, setView] = useState<'profit' | 'cashBack'>('profit');
   const marks = exitLandmarks(data);
   const current = data.find((r) => r.year === selected) ?? null;
   const index = (year: number | null) => {
@@ -59,138 +52,66 @@ function Comparison({
   };
   const toggle = (year: number) => setSelected(selected === year ? null : year);
   const invested = data[0]?.invested ?? 0;
-  const tone = (v: number | null) => (v != null && v < 0 ? 'red' : 'teal');
+  const red = (v: number | null) => (v != null && v < 0 ? 'red' : undefined);
+  const anyLoss = data.some((r) => r.netProceeds < 0 || r.cashFlow < 0);
   return (
     <ChartCard
-      title="Exit Analysis & Comparison"
-      subtitle="What you would get back if you sold at the end of each compared year."
-      basis={basis}
+      title="Exit comparison"
+      tag={probing ? 'Probe' : undefined}
       controls={
-        <div className={d.view}>
-          <span>View:</span>
-          <Segmented
-            label="Exit summary view"
-            options={[
-              { value: 'profit', label: 'Profit' },
-              { value: 'cashBack', label: 'Total Cash Back' },
-            ]}
-            value={view}
-            onChange={setView}
-          />
-          <InfoTip label="this view">
-            {view === 'profit'
-              ? 'Shows how much you made (Total Cash Back − Initial Investment)'
-              : 'Shows total cash received at exit (Net Proceeds + Cash Flow)'}
-          </InfoTip>
-        </div>
-      }
-    >
-      <Chips
-        label="Best exit landmarks"
-        items={[
-          ...(marks.bestIrr
-            ? [
-                {
-                  icon: 'up' as const,
-                  tone: 'teal' as const,
-                  text: `Best IRR: Year ${marks.bestIrr.year} (${pct(marks.bestIrr.irr)})`,
-                  pressed: selected === marks.bestIrr.year,
-                  onClick: () => toggle(marks.bestIrr!.year),
-                },
-              ]
-            : []),
-          ...(marks.bestProfit
-            ? [
-                {
-                  icon: 'dollar' as const,
-                  text: `Best Profit: Year ${marks.bestProfit.year} (${wholeDollars(marks.bestProfit.profit)})`,
-                  pressed: selected === marks.bestProfit.year,
-                  onClick: () => toggle(marks.bestProfit!.year),
-                },
-              ]
-            : []),
-          ...(marks.breakeven
-            ? [
-                {
-                  icon: 'clock' as const,
-                  tone: 'amber' as const,
-                  text: `Breakeven: Year ${marks.breakeven.year}`,
-                  pressed: selected === marks.breakeven.year,
-                  onClick: () => toggle(marks.breakeven!.year),
-                },
-              ]
-            : []),
-        ]}
-      />
-      <p className={d.initial}>
-        <i aria-hidden="true" />
-        <span>
-          Initial Cash Invested: <b>{wholeDollars(invested)}</b>
-        </span>
-        <InfoTip label="initial cash invested">
-          Your total cash required at closing: down payment, closing costs, financing fees and
-          improvements.
-        </InfoTip>
-      </p>
-      <div className={d.years}>
-        <p id="exit-year-label">Select Exit Year</p>
-        <div role="group" aria-labelledby="exit-year-label">
-          {data.map((r) => (
-            <button
-              key={r.year}
-              type="button"
-              aria-pressed={selected === r.year}
-              data-hover={hovered === r.year || undefined}
-              onClick={() => toggle(r.year)}
-              onPointerEnter={() => setHovered(r.year)}
-              onPointerLeave={() => setHovered(null)}
-            >
-              {r.year}y
-            </button>
-          ))}
+        <div className={d.years}>
+          <span id="exit-year-label">Exit year</span>
+          <div role="group" aria-labelledby="exit-year-label">
+            {data.map((r) => (
+              <button
+                key={r.year}
+                type="button"
+                aria-pressed={selected === r.year}
+                data-hover={hovered === r.year || undefined}
+                onClick={() => toggle(r.year)}
+                onPointerEnter={() => setHovered(r.year)}
+                onPointerLeave={() => setHovered(null)}
+              >
+                {r.year}y
+              </button>
+            ))}
+          </div>
           {selected != null && (
             <button type="button" className={d.clear} onClick={() => setSelected(null)}>
               Clear
             </button>
           )}
         </div>
-      </div>
+      }
+    >
       {current && (
         <section className={d.summary} aria-labelledby="exit-summary-title">
-          <header>
-            <h3 id="exit-summary-title">
-              <span aria-hidden="true">
-                <Icon name="zap" size={12} />
-              </span>
-              Year {current.year} Exit Summary
-            </h3>
-            <p>
-              <small>{view === 'profit' ? 'Profit' : 'Total Cash Back'}</small>
-              <b data-tone={view === 'profit' ? tone(current.profit) : 'slate'}>
-                {wholeDollars(view === 'profit' ? current.profit : current.totalCashBack)}
-              </b>
-            </p>
-          </header>
-          <dl>
-            {(
-              [
-                ['Net Proceeds', wholeDollars(current.netProceeds), tone(current.netProceeds)],
-                [
-                  'Cash Flow',
-                  wholeDollars(current.cashFlow),
-                  current.cashFlow < 0 ? 'red' : 'slate',
-                ],
-                ['Total Cash Back', wholeDollars(current.totalCashBack), 'dark'],
-                ['Profit', wholeDollars(current.profit), tone(current.profit)],
-                ['IRR', pct(current.irr), tone(current.irr)],
-              ] as const
-            ).map(([label, value, t]) => (
-              <div key={label}>
-                <dt>{label}</dt>
-                <dd data-tone={t}>{value}</dd>
-              </div>
-            ))}
-          </dl>
+          <h3 id="exit-summary-title">Year {current.year} exit</h3>
+          <Tiles
+            items={[
+              {
+                label: 'Net proceeds',
+                value: wholeDollars(current.netProceeds),
+                negative: current.netProceeds < 0,
+              },
+              {
+                label: 'Cash flow',
+                value: wholeDollars(current.cashFlow),
+                negative: current.cashFlow < 0,
+              },
+              { label: 'Total cash back', value: wholeDollars(current.totalCashBack) },
+              {
+                label: 'Profit',
+                value: wholeDollars(current.profit),
+                negative: current.profit < 0,
+              },
+              {
+                label: 'IRR',
+                value: pct(current.irr),
+                negative: current.irr != null && current.irr < 0,
+              },
+            ]}
+          />
         </section>
       )}
       <ComboChart
@@ -200,87 +121,64 @@ function Comparison({
         xFormat={(y) => `Year ${y}`}
         series={[
           {
-            label: 'Net Proceeds',
+            label: 'Net proceeds',
             kind: 'bar',
             stack: true,
             values: data.map((r) => r.netProceeds),
-            color: exitColors.proceeds,
-            activeColor: exitColors.proceedsActive,
-            activeStroke: '#044b57',
+            color: entityColors.netProceeds,
+            negativeColor: entityColors.negative,
           },
           {
-            label: 'Cash Flow',
+            label: 'Cash flow',
             kind: 'bar',
             stack: true,
             values: data.map((r) => r.cashFlow),
-            color: exitColors.cash,
-            activeColor: exitColors.cashActive,
-            activeStroke: chartColors.navy,
+            color: entityColors.cashFlow,
+            negativeColor: entityColors.negative,
           },
         ]}
-        refLines={[
-          {
-            value: invested,
-            label: `Initial: ${wholeDollars(invested)}`,
-            color: exitColors.initial,
-          },
-        ]}
-        markers={
-          index(selected) == null
-            ? []
-            : [{ index: index(selected)!, label: '', color: exitColors.initial }]
-        }
+        refLines={[{ value: invested, label: `Initial: ${wholeDollars(invested)}` }]}
         emphasis={index(selected) ?? index(hovered)}
         emphasizeHover
         onSelect={(i) => toggle(data[i].year)}
         legend={[
-          { label: 'Net Proceeds (Sale − Costs − Loan)', kind: 'bar', color: exitColors.proceeds },
-          { label: 'Cumulative Cash Flow', kind: 'bar', color: exitColors.cash },
+          { label: 'Net proceeds', kind: 'bar', color: entityColors.netProceeds },
+          { label: 'Cash flow', kind: 'bar', color: entityColors.cashFlow },
+          ...(anyLoss
+            ? [{ label: 'Loss', kind: 'bar' as const, color: entityColors.negative }]
+            : []),
         ]}
         tooltip={(i) => {
           const r = data[i];
           return {
-            title: `Year ${r.year} Exit`,
+            title: `Year ${r.year}`,
             rows: [
-              { label: 'Sale Price', value: r.salePrice },
-              { label: 'Selling Costs', op: '−', value: r.sellingCosts, color: chartColors.warn },
-              { label: 'Loan Payoff', op: '−', value: r.loanPayoff, color: chartColors.bad },
+              { label: 'Sale price', value: r.salePrice },
+              { label: 'Selling costs', op: '−', value: r.sellingCosts, tone: 'muted' },
+              { label: 'Loan payoff', op: '−', value: r.loanPayoff, tone: 'muted' },
               {
-                label: 'Net Proceeds',
+                label: 'Net proceeds',
                 op: '=',
                 value: r.netProceeds,
                 total: true,
-                color: chartColors.accentDark,
+                tone: 'auto',
+                swatch: { color: entityColors.netProceeds },
               },
               {
-                label: 'Cash Flow Received',
+                label: 'Cash flow received',
                 op: '+',
                 value: r.cashFlow,
-                color: exitColors.cashActive,
+                tone: 'auto',
+                swatch: { color: entityColors.cashFlow },
               },
-              {
-                label: 'Total Cash Back',
-                op: '=',
-                value: r.totalCashBack,
-                total: true,
-                color: chartColors.plum,
-              },
-              { label: 'Initial Cash Invested', op: '−', value: r.invested, tone: 'muted' },
+              { label: 'Total cash back', op: '=', value: r.totalCashBack, total: true },
+              { label: 'Initial cash', op: '−', value: r.invested, tone: 'muted' },
               { label: 'Profit', op: '=', value: r.profit, total: true, tone: 'auto' },
               { note: `ROI ${pct(r.roi, 1)} · IRR (leveraged) ${pct(r.irr)}` },
-              {
-                note:
-                  r.invested > 0
-                    ? `Profit vs Initial: ${r.profit >= 0 ? '+' : ''}${((r.profit / r.invested) * 100).toFixed(0)}% of your cash invested`
-                    : 'No initial cash is recorded',
-              },
             ],
           };
         }}
       />
-      <p className={chartStyles.footnote}>
-        <i>Bar height = Total Cash Back (Net Proceeds + Cash Flow)</i>
-      </p>
       <div className={d.exitTable} role="region" tabIndex={0} aria-label="Exit years compared">
         <table>
           <caption className={d.srOnly}>
@@ -288,24 +186,26 @@ function Comparison({
           </caption>
           <thead>
             <tr>
-              <th scope="col">Exit Year</th>
-              <th scope="col">Net Proceeds</th>
-              <th scope="col">Cash Flow</th>
-              <th scope="col">Total Back</th>
+              <th scope="col">Exit year</th>
+              <th scope="col">Net proceeds</th>
+              <th scope="col">Cash flow</th>
+              <th scope="col">Total back</th>
               <th scope="col">Profit</th>
               <th scope="col">IRR</th>
-              <th scope="col">View</th>
+              <th scope="col">
+                <span className={d.srOnly}>View</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             {data.map((r) => {
               const badge =
                 marks.bestIrr?.year === r.year
-                  ? ['Best IRR', 'teal']
+                  ? 'Best IRR'
                   : marks.bestProfit?.year === r.year
-                    ? ['Best Profit', 'slate']
+                    ? 'Best profit'
                     : marks.breakeven?.year === r.year
-                      ? ['Breakeven', 'amber']
+                      ? 'Breakeven'
                       : null;
               return (
                 <tr
@@ -318,19 +218,15 @@ function Comparison({
                 >
                   <th scope="row">
                     Year {r.year}
-                    {badge && (
-                      <span className={d.badge} data-tone={badge[1]}>
-                        {badge[0]}
-                      </span>
-                    )}
+                    {badge && <span className={d.badge}>{badge}</span>}
                   </th>
-                  <td data-tone={tone(r.netProceeds)}>{wholeDollars(r.netProceeds)}</td>
-                  <td>{wholeDollars(r.cashFlow)}</td>
-                  <td data-tone="dark">{wholeDollars(r.totalCashBack)}</td>
-                  <td data-tone={tone(r.profit)} data-strong>
+                  <td data-tone={red(r.netProceeds)}>{wholeDollars(r.netProceeds)}</td>
+                  <td data-tone={red(r.cashFlow)}>{wholeDollars(r.cashFlow)}</td>
+                  <td>{wholeDollars(r.totalCashBack)}</td>
+                  <td data-tone={red(r.profit)} data-strong>
                     {wholeDollars(r.profit)}
                   </td>
-                  <td data-tone={tone(r.irr)}>{pct(r.irr)}</td>
+                  <td data-tone={red(r.irr)}>{pct(r.irr)}</td>
                   <td>
                     <button
                       type="button"
@@ -352,48 +248,39 @@ function Comparison({
         </table>
       </div>
       {marks.bestIrr && marks.bestProfit && (
-        <p className={d.exitInsight}>
-          <strong>Insight:</strong>{' '}
+        <Insight>
           {marks.bestIrr.year === marks.bestProfit.year ? (
             <>
-              Year {marks.bestIrr.year} has both the highest IRR{' '}
-              <b data-tone={tone(marks.bestIrr.irr)}>({pct(marks.bestIrr.irr)})</b> and the highest
-              profit{' '}
-              <b data-tone={tone(marks.bestProfit.profit)}>
-                ({wholeDollars(marks.bestProfit.profit)})
-              </b>{' '}
-              of the compared years.
+              Year {marks.bestIrr.year} has the highest IRR (
+              <Figure tone={red(marks.bestIrr.irr)}>{pct(marks.bestIrr.irr)}</Figure>) and profit (
+              <Figure tone={red(marks.bestProfit.profit)}>
+                {wholeDollars(marks.bestProfit.profit)}
+              </Figure>
+              ).
             </>
           ) : (
             <>
-              Trade-off: Year {marks.bestIrr.year} has the highest IRR{' '}
-              <b data-tone={tone(marks.bestIrr.irr)}>({pct(marks.bestIrr.irr)})</b>, but Year{' '}
-              {marks.bestProfit.year} has the highest profit{' '}
-              <b data-tone={tone(marks.bestProfit.profit)}>
-                ({wholeDollars(marks.bestProfit.profit)})
-              </b>
-              .
+              Year {marks.bestIrr.year} has the highest IRR (
+              <Figure tone={red(marks.bestIrr.irr)}>{pct(marks.bestIrr.irr)}</Figure>); year{' '}
+              {marks.bestProfit.year} the highest profit (
+              <Figure tone={red(marks.bestProfit.profit)}>
+                {wholeDollars(marks.bestProfit.profit)}
+              </Figure>
+              ).
             </>
           )}
           {marks.bestProfit.profit < 0 && (
-            <>
-              {' '}
-              No compared exit year gets back the cash you put in; these are the smallest losses.
-            </>
+            <> No compared exit year gets back the cash you put in.</>
           )}
-          {marks.breakeven && marks.breakeven.year !== marks.bestIrr.year && (
-            <> Breakeven at Year {marks.breakeven.year}.</>
-          )}
-        </p>
+        </Insight>
       )}
       {!marks.bestIrr && (
-        <p className={d.exitInsight}>
-          <strong>Insight:</strong> IRR is unavailable for every compared exit year, so no best IRR
-          is shown.
+        <Insight>
+          IRR is unavailable for every compared exit year.
           {marks.bestProfit && marks.bestProfit.profit < 0 && (
             <> No compared exit year gets back the cash you put in.</>
           )}
-        </p>
+        </Insight>
       )}
       {children}
     </ChartCard>
@@ -476,34 +363,21 @@ export function Exit({
     }
   };
   const fields: [keyof ExitControls, string, string][] = [
-    ['years', 'Probe exit year', 'Whole years, 1–50.'],
-    ['sellingCosts', 'Probe selling costs (%)', '0–30% of sale price.'],
-    [
-      'salePrice',
-      'Probe sale price override ($)',
-      'Optional; blank uses appreciated value. Applies to every compared horizon.',
-    ],
+    ['years', 'Probe exit year', 'Whole years, 1–50'],
+    ['sellingCosts', 'Probe selling costs (%)', '0–30% of sale price'],
+    ['salePrice', 'Probe sale price override ($)', 'Blank uses the appreciated value'],
   ];
   const paused = stale
     ? 'Exit comparison is paused until the assumptions flagged above are corrected.'
     : changed
-      ? 'Not applied yet. Press Update exit comparison to see results for these probe values.'
+      ? 'Not applied yet. Press Update exit comparison to see these probe values.'
       : 'No exit comparison for these values. Correct the probe and update again.';
   return (
     <div className={chartStyles.stack}>
       {data && rows ? (
-        <Comparison
-          key={version}
-          data={data}
-          basis={[
-            probing ? 'Projected with probe' : 'Projected',
-            'USD',
-            'Each exit year recalculated',
-            'Before tax',
-          ]}
-        >
+        <Comparison key={version} data={data} probing={probing}>
           {result && sale && selected && (
-            <MoreDetail summary={`Exact sale statement, year ${selected.year}`}>
+            <MoreDetail summary={`View sale statement, year ${selected.year}`}>
               <Statement
                 rows={[
                   ['Projected sale price', dollars(sale.grossSalePrice)],
@@ -531,7 +405,7 @@ export function Exit({
               )}
             </MoreDetail>
           )}
-          <MoreDetail summary={`Exact exit comparison, ${rows.length} exit years`}>
+          <MoreDetail summary="View exact amounts">
             <ExactTable
               caption="Exit horizon comparison · USD · before tax"
               headers={[
@@ -551,29 +425,16 @@ export function Exit({
                 rate(r.summaryMetrics.irrLeveraged),
               ])}
             />
-            <p className={d.detailText}>
-              Each horizon is recalculated with the public model. Cash returned includes operating
-              cash flow and net sale proceeds; profit also deducts initial cash.
-            </p>
           </MoreDetail>
         </Comparison>
       ) : (
-        <ChartCard
-          title="Exit Analysis & Comparison"
-          subtitle="What you would get back if you sold at the end of each compared year."
-          basis={['Not calculated']}
-        >
+        <ChartCard title="Exit comparison">
           <p className={d.paused}>{paused}</p>
         </ChartCard>
       )}
       <details className="disclosure">
         <summary>Try another exit</summary>
-        <ChartCard
-          title="Exit probe"
-          subtitle="Try another exit year, selling cost or sale price. Probes are temporary and never saved."
-          basis={[probing ? 'Temporary probe' : 'Saved assumptions', 'Before tax']}
-          label="Exit probe"
-        >
+        <ChartCard title="Exit probe" subtitle="Temporary; not saved" label="Exit probe">
           <div className={d.probeState} data-probe={probing || undefined} role="status">
             <p>
               <b>Saved:</b> {describeControls(saved)}

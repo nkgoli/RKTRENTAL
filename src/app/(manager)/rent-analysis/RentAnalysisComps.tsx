@@ -11,7 +11,7 @@ import {
 } from '@/lib/comps/navigation';
 import { compsSettings, fetchComps, listPricingUnits, subjectFacts } from '@/lib/comps/service';
 import { bedBath, formatDate } from '@/lib/properties/format';
-import { CompsWorkbench } from '../rent-comps/CompsWorkbench';
+import { CompsSource, CompsWorkbench } from '../rent-comps/CompsWorkbench';
 import { FilterBar } from '../rent-comps/FilterBar';
 import { refreshCompsAction } from '../rent-comps/actions';
 import styles from './rent.module.css';
@@ -33,7 +33,7 @@ export function filterSummary(filters: CompFilters) {
 }
 
 /**
- * The selected unit's comp result on Rent analysis (Designs/redisgn): sandbox notice with
+ * The selected unit's comp result on Rent analysis (Designs/redisgn): the demo/source line with
  * refresh, then the analysis workbench (suggested rent band, comparison with filters, apply card,
  * map, distribution and every comparable rental). Uses the same comps service, filters and
  * apply action as the property Listing.
@@ -112,15 +112,11 @@ export async function RentAnalysisComps({
     <div className={styles.result}>
       <div className={styles.notice}>
         {result ? (
-          <Alert tone="warning">
-            <div>
-              <strong>Demo comps · not live market data</strong>
-              <br />
-              Sandbox response · synced {syncedAt}
-              {result.cached ? ' · cached for this unit' : ' · newly fetched'} · treat every market
-              figure below as an estimate.
-            </div>
-          </Alert>
+          <CompsSource
+            providerName={result.providerName}
+            syncedAt={syncedAt ?? ''}
+            cached={result.cached}
+          />
         ) : (
           <Alert tone="warning">
             <div>

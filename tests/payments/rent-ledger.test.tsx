@@ -568,7 +568,7 @@ describe('payment-only and ended-only history stays discoverable', () => {
       '1 occupied unit · 1 with ended leases only',
     );
     expect(screen.getByTestId('ended-balance').textContent).toContain(
-      'listed on each unit’s Rent ledger',
+      'not included in Balance due',
     );
   });
 });

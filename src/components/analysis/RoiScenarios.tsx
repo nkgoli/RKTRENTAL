@@ -108,10 +108,10 @@ export function CaseComparison({
           <h3>{scenarioError ? 'Case comparison paused' : 'No case comparison yet'}</h3>
           <p role="status">
             {scenarioError
-              ? 'A saved case has an invalid assumption. Correct the highlighted field in Saved cases below; your entries are kept and results return automatically.'
+              ? 'Correct the highlighted field in Saved cases below.'
               : snapshot
-                ? 'Case results are out of date. Correct the assumptions flagged above to compare your current edits.'
-                : 'No projection yet. Complete or correct the base assumptions flagged above to compare cases.'}
+                ? 'Correct the flagged assumptions to compare cases.'
+                : 'No projection yet. Complete the assumptions to compare cases.'}
           </p>
         </section>
       ) : (
@@ -132,7 +132,7 @@ export function CaseComparison({
             aria-label="Exact scenario figures"
           >
             <h3>Exact figures</h3>
-            <MoreDetail summary="Year 1 cash flow and IRR by case, to the cent">
+            <MoreDetail summary="Year 1 cash flow and IRR">
               <div
                 className={styles.table}
                 tabIndex={0}
@@ -140,7 +140,7 @@ export function CaseComparison({
                 aria-label="Scenario metrics"
               >
                 <table>
-                  <caption>Key metrics - amounts and deltas</caption>
+                  <caption className={styles.srOnly}>Year 1 cash flow and IRR by case</caption>
                   <thead>
                     <tr>
                       <th>Metric</th>
@@ -185,7 +185,7 @@ export function CaseComparison({
             {(['equity', 'cashFlow'] as const).map((metric) => (
               <MoreDetail
                 key={metric}
-                summary={`Exact ${metric === 'equity' ? 'equity' : 'cash flow'} by case · years 1–${years}`}
+                summary={`${metric === 'equity' ? 'Equity' : 'Cash flow'} by year · 1–${years}`}
               >
                 <div
                   className={styles.table}
@@ -194,9 +194,8 @@ export function CaseComparison({
                   aria-label={`${metric} exact values`}
                 >
                   <table>
-                    <caption>
-                      Exact annual {metric === 'equity' ? 'equity' : 'cash flow'} - shorter holds
-                      remain unavailable
+                    <caption className={styles.srOnly}>
+                      Annual {metric === 'equity' ? 'equity' : 'cash flow'} by case
                     </caption>
                     <thead>
                       <tr>
@@ -228,7 +227,7 @@ export function CaseComparison({
               </MoreDetail>
             ))}
             {shownDrafts.length > 0 && (
-              <MoreDetail summary="Overrides side by side">
+              <MoreDetail summary="Overrides by case">
                 <div
                   className={styles.table}
                   role="region"
@@ -236,7 +235,7 @@ export function CaseComparison({
                   aria-label="Scenario assumption comparison"
                 >
                   <table>
-                    <caption>Overridden assumptions - blank fields inherit base</caption>
+                    <caption className={styles.srOnly}>Overridden assumptions by case</caption>
                     <thead>
                       <tr>
                         <th>Assumption</th>

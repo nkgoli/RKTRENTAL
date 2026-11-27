@@ -83,10 +83,10 @@ describe('overview model', () => {
       },
       today,
     );
-    expect(paid.eyebrow).toBe('October 2026 · Payments this month');
+    expect(paid.eyebrow).toBe('October 2026 · Payments');
     expect(paid.value).toBe('$21,400');
     expect(paid.detail).toBe('collected of $21,400 due · all paid');
-    expect(paid.meter).toBe('100% collected · no overdue balance');
+    expect(paid.meter).toBe('100% collected');
 
     const owed = paymentsView(
       {
@@ -100,6 +100,7 @@ describe('overview model', () => {
       today,
     );
     expect(owed.detail).toBe('collected of $2,000 due · $500 outstanding · 1 late');
-    expect(owed.meter).toBe('75% collected · $500 overdue to date');
+    expect(owed.meter).toBe('75% collected');
+    expect(owed.overdueCents).toBe(50_000);
   });
 });

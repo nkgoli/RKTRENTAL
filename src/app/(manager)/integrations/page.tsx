@@ -12,7 +12,6 @@ import {
   SCREENING_PACKAGES,
 } from '@/lib/integrations/settings';
 import { Badge, Button, ConfirmButton, NoticeToast } from '@/components/ui';
-import { KpiCard } from '@/components/dashboard/KpiCard';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { providerActivityAt, providerSyncState } from '@/components/integrations/sync-state';
 import styles from '@/components/integrations/integrations.module.css';
@@ -87,13 +86,6 @@ function ProviderCard({ provider }: { provider: ProviderView }) {
               )}
             </dd>
           </dl>
-          {!provider.health.outage && (
-            <p className={styles.hint}>
-              {provider.mode === 'mock'
-                ? 'Simulated activity only. No live provider transactions.'
-                : 'Activity includes connection setup and provider updates. It does not verify current availability.'}
-            </p>
-          )}
           <details className={styles.configure}>
             <summary className="btn btn-secondary btn-sm">Configure {provider.name}</summary>
             <dl className="kv" style={{ marginTop: 12 }}>
@@ -117,17 +109,12 @@ function ProviderCard({ provider }: { provider: ProviderView }) {
           </details>
         </>
       ) : (
-        <>
-          <p className="muted" style={{ marginTop: 18 }}>
-            {provider.availableText}
-          </p>
-          <form action={connectAction} className="row" style={{ marginTop: 18 }}>
-            <Hidden provider={provider} />
-            <Button type="submit" variant="primary" size="sm">
-              Connect {provider.name}
-            </Button>
-          </form>
-        </>
+        <form action={connectAction} className="row">
+          <Hidden provider={provider} />
+          <Button type="submit" variant="secondary" size="sm">
+            Connect {provider.name}
+          </Button>
+        </form>
       )}
     </article>
   );
@@ -138,13 +125,11 @@ function SelectField({
   name,
   options,
   value,
-  hint,
 }: {
   label: string;
   name: string;
   options: Options;
   value: string;
-  hint?: string;
 }) {
   return (
     <label className="field">
@@ -156,22 +141,11 @@ function SelectField({
           </option>
         ))}
       </select>
-      {hint && <span className="hint">{hint}</span>}
     </label>
   );
 }
 
-function Section({
-  eyebrow,
-  title,
-  description,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section
       className={styles.section}
@@ -183,11 +157,7 @@ function Section({
             : 'comps-providers'
       }
     >
-      <div>
-        <p className="eyebrow">{eyebrow}</p>
-        <h2>{title}</h2>
-        <p className="muted">{description}</p>
-      </div>
+      <h2>{title}</h2>
       {children}
     </section>
   );
@@ -207,13 +177,18 @@ export default async function Page({
   const { payments, screening, comps } = view.settings;
   const providers = [...view.groups.payments, ...view.groups.screening, ...view.groups.comps];
   const connected = providers.filter((provider) => provider.connected);
-  const attention = providers.filter((provider) => provider.connected && provider.health.outage);
 
   return (
     <div className={styles.page}>
-      <PageHeader title="Integrations" actions={[]} />
-      <ReminderSetup channels={reminderChannels} />
-      <nav className={styles.jumpLinks} aria-label="Provider groups">
+      <PageHeader
+        title="Integrations"
+        meta={`${connected.length} of ${providers.length} providers connected`}
+        actions={[]}
+      />
+      <nav className={styles.jumpLinks} aria-label="Integration groups">
+        <a className="chip" href="#payment-reminders">
+          Reminders
+        </a>
         <a className="chip" href="#payments-providers">
           Payments
         </a>
@@ -224,23 +199,6 @@ export default async function Page({
           Rent comps
         </a>
       </nav>
-      <section className="kpis" aria-label="Integration status">
-        <KpiCard
-          label="Connected providers"
-          value={connected.length}
-          note={`of ${providers.length} available`}
-        />
-        <KpiCard
-          label="Activity recorded"
-          value={connected.filter((provider) => providerSyncState(provider).recorded).length}
-          note="Live connections with setup or provider activity"
-        />
-        <KpiCard
-          label="Needs attention"
-          value={attention.length}
-          note={attention.length ? 'Check sync errors below' : 'No reported errors'}
-        />
-      </section>
       {error && <NoticeToast message={error} tone="error" />}
       {notice && <NoticeToast message={notice} />}
       {view.outages.map((provider) => (
@@ -258,48 +216,35 @@ export default async function Page({
             </strong>
             <br />
             {provider.details.lastError ??
-              'The last provider event could not be processed; it will retry automatically.'}{' '}
-            Status will update when the connection recovers.
+              'The last provider event could not be processed; it will retry automatically.'}
           </div>
         </div>
       ))}
+      <ReminderSetup channels={reminderChannels} />
 
-      <Section
-        eyebrow="Collect and disburse"
-        title="Payment providers"
-        description="Cards, bank transfers, owner payouts and refunds in one ledger."
-      >
+      <Section title="Payment providers">
         <div className="grid-2">
           {view.groups.payments.map((provider) => (
             <ProviderCard key={provider.provider} provider={provider} />
           ))}
         </div>
-        <AutoSaveSettings
-          group="payments"
-          title="Payment settings"
-          description="Applied to connected payment providers."
-        >
+        <AutoSaveSettings group="payments" title="Payment settings">
           <div className="form-row">
             <SelectField
               label="Payout account"
               name="payoutAccount"
               options={PAYOUT_ACCOUNTS}
               value={payments.payoutAccount}
-              hint="Owner payouts run on the schedule below."
             />
             <SelectField
               label="Payout schedule"
               name="payoutSchedule"
               options={PAYOUT_SCHEDULES}
               value={payments.payoutSchedule}
-              hint="Changes apply to upcoming batches."
             />
           </div>
           <div className="row between">
-            <div>
-              <strong>Pass processing fees to tenant</strong>
-              <p className="muted">Shown before a tenant confirms payment.</p>
-            </div>
+            <strong>Pass processing fees to tenant</strong>
             <FeeSwitch
               name="passProcessingFees"
               initial={payments.passProcessingFees}
@@ -309,21 +254,13 @@ export default async function Page({
         </AutoSaveSettings>
       </Section>
 
-      <Section
-        eyebrow="Screen with confidence"
-        title="Tenant screening providers"
-        description="Consent and report results stay with each application."
-      >
+      <Section title="Tenant screening providers">
         <div className="grid-2">
           {view.groups.screening.map((provider) => (
             <ProviderCard key={provider.provider} provider={provider} />
           ))}
         </div>
-        <AutoSaveSettings
-          group="screening"
-          title="Screening settings"
-          description="Choose the package for new applications."
-        >
+        <AutoSaveSettings group="screening" title="Screening settings">
           <div className="form-row">
             <SelectField
               label="Default screening package"
@@ -336,27 +273,18 @@ export default async function Page({
               name="applicantConsent"
               options={CONSENT_MODES}
               value={screening.applicantConsent}
-              hint="Reports are requested only after consent."
             />
           </div>
         </AutoSaveSettings>
       </Section>
 
-      <Section
-        eyebrow="Price with confidence"
-        title="Rent comps data providers"
-        description="Comparable rental listings and lease data for pricing decisions."
-      >
+      <Section title="Rent comps data providers">
         <div className="grid-2">
           {view.groups.comps.map((provider) => (
             <ProviderCard key={provider.provider} provider={provider} />
           ))}
         </div>
-        <AutoSaveSettings
-          group="comps"
-          title="Rent comps settings"
-          description="Defaults for rental comparisons."
-        >
+        <AutoSaveSettings group="comps" title="Rent comps settings">
           <div className="form-row">
             <SelectField
               label="Default search radius"

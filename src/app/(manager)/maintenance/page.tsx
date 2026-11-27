@@ -79,13 +79,13 @@ function RequestTicket({
           ) : (
             <>
               <span className={styles.unassigned} aria-hidden="true" />
-              <span>Unassigned · Assign</span>
+              <span>Unassigned</span>
             </>
           )}
         </div>
         {request.photos.length > 0 && (
           <span className="muted" style={{ fontSize: 12 }}>
-            {request.photos.length} {request.photos.length === 1 ? 'photo' : 'photos'} attached
+            {request.photos.length} {request.photos.length === 1 ? 'photo' : 'photos'}
           </span>
         )}
       </article>
@@ -118,43 +118,31 @@ export default async function MaintenancePage({
       />
       <PageHeader
         title="Maintenance"
-        meta="Repair requests across your properties"
         actions={[{ label: 'New request', href: createHref, primary: true, icon: 'plus' }]}
       />
       <SummaryBand
         label="Repair request summary"
         eyebrow="Open repair requests"
         value={`${summary.open} open`}
-        detail={`Across ${summary.openProperties} ${summary.openProperties === 1 ? 'property' : 'properties'} · ${summary.urgent} urgent`}
+        detail={`Across ${summary.openProperties} ${summary.openProperties === 1 ? 'property' : 'properties'}`}
         stats={[
-          { label: 'Open requests', value: summary.open, detail: 'New, assigned or in progress' },
           {
-            label: 'Urgent attention',
+            label: 'Urgent',
             value: summary.urgent,
             detail: summary.firstUrgent
               ? `${summary.firstUrgent.title} · ${summary.firstUrgent.property.name}`
-              : 'No urgent requests',
+              : undefined,
           },
-          {
-            label: 'Completed this week',
-            value: summary.completedThisWeek,
-            detail: 'Requests resolved',
-          },
+          { label: 'Completed this week', value: summary.completedThisWeek },
         ]}
-      />{' '}
+      />
       <MaintenanceFilters action="/maintenance" hidden={hidden} query={query} />
       {list.isEmpty && (
-        <EmptyState
-          title="No repair requests yet"
-          description="Create a repair request to track work from start to finish."
-          action="Create a request"
-          href={createHref}
-        />
+        <EmptyState title="No repair requests yet" action="Create a request" href={createHref} />
       )}
       {!list.isEmpty && list.total === 0 && (
         <EmptyState
           title="No repair requests match this view"
-          description="Clear the filters or show all history to find older requests."
           action="Show all requests"
           href={`/maintenance${maintenanceQueryString({ allHistory: true, page: 1 }, hidden)}`}
         />

@@ -49,9 +49,10 @@ export function RangePicker({
             {key === 'ALL' ? 'All' : key}
           </a>
         ))}
-      </div>
-      <details open={period.key === 'CUSTOM'}>
-        <summary className="chip">Custom dates</summary>
+        <details className={styles.customRange} open={period.key === 'CUSTOM'}>
+          <summary className={`chip${period.key === 'CUSTOM' ? ' active' : ''}`}>
+            Custom dates
+          </summary>
         <form
           onSubmit={(event) => event.preventDefault()}
           onBlur={(event) => {
@@ -91,8 +92,9 @@ export function RangePicker({
               required
             />
           </Field>
-        </form>
-      </details>
+          </form>
+        </details>
+      </div>
       <span className={styles.period}>
         {period.label} · by {period.granularity}
       </span>

@@ -33,6 +33,12 @@
   min-width: 0;
   max-width: 280px;
 }
+/* Comp filters share the subject card, under a hairline. */
+.subjectFilters {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rr-border);
+}
 .filterFields {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -75,21 +81,100 @@
   gap: 16px;
   align-items: start;
 }
+/* The one demo/source line above a comps result. */
+.source {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--design-muted);
+}
 .legend {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px 16px;
   padding: 12px 16px;
   font-size: 12px;
+  color: var(--design-muted);
+}
+.legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
 .legend p {
-  flex-basis: 100%;
-  margin: 0;
+  margin: 0 0 0 auto;
   color: var(--design-muted);
+}
+.mapHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--rr-border);
+}
+.mapHead h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
 }
 .nearest {
   border-top: 1px solid var(--rr-border);
   padding: 12px 16px;
+}
+.nearestTitle {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+/* Low / median / high range with the listed rent marked on it. */
+.range {
+  display: grid;
+  gap: 6px;
+}
+.rangeLabels {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--chart-axis);
+  font-variant-numeric: tabular-nums;
+}
+.rangeKey {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--design-muted);
+}
+.rangeKey li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rangeKey i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--chart-2);
+}
+.rangeKey i[data-kind='median'] {
+  width: 2px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--chart-1);
 }
 .nearestRow {
   display: grid;
@@ -138,10 +223,15 @@
   font-size: 12px;
   color: var(--design-muted);
 }
-.sources {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+/* Manager-facing compliance note: one quiet line under the comps. */
+.fairHousing {
+  margin: 0;
+  font-size: 13px;
+  color: var(--design-muted);
+}
+.fairHousing strong {
+  font-weight: 600;
+  color: var(--design-text);
 }
 @media (max-width: 900px) {
   .filterFields {
@@ -164,9 +254,6 @@
   }
   .filterFooter > button {
     width: 100%;
-  }
-  .sources {
-    grid-template-columns: minmax(0, 1fr);
   }
   .nearestRow {
     grid-template-columns: minmax(0, 1fr) auto;

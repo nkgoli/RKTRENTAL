@@ -51,6 +51,10 @@ export type SignatureSummary = {
   state: 'done' | 'pending' | 'attention';
   headline: string;
   caption: string;
+  /** The header e-sign pill: Signed / Awaiting signatures / Declined / Not sent. */
+  badge: { tone: BadgeTone; label: string };
+  /** When every party signed (or the lease was marked signed), if known. */
+  signedOn: Date | null;
   /** Stored signed PDF, when there is one. */
   signedFileId: string | null;
   /** The signed PDF should exist but does not: offer the retry path. */
@@ -65,6 +69,8 @@ export type SignatureSummary = {
 };
 
 const roleLabel = (role: string) => (role === 'OWNER' ? 'Owner / lessor' : 'Tenant');
+const SIGNED_BADGE = { tone: 'success', label: 'Signed' } as const;
+const AWAITING_BADGE = { tone: 'warning', label: 'Awaiting signatures' } as const;
 
 /**
  * The signature panel's state from the stored lease fields and its latest signing version. Reads
@@ -90,31 +96,32 @@ export function signatureSummary(input: {
     const archived = current.files.find((f) => f.slot === 'LEASE')?.documentId ?? null;
     if (current.signedAt) {
       const when = `All parties signed ${formatDate(current.signedAt)} · version ${current.version}`;
+      const signed = { badge: SIGNED_BADGE, signedOn: current.signedAt, signers };
       if (current.archiveStatus === 'ARCHIVED' && archived)
         return {
+          ...signed,
           state: 'done',
           headline: 'Signed agreement on file',
           caption: `${when} · Signed lease agreement.pdf`,
           signedFileId: archived,
           pdfMissing: false,
-          signers,
         };
       if (current.archiveStatus === 'PDF_FAILED')
         return {
+          ...signed,
           state: 'attention',
           headline: 'Signed PDF unavailable',
           caption: `${when}. ${current.archiveError || 'The signed PDF could not be stored yet.'} Signatures are saved; no one signs again.`,
           signedFileId: null,
           pdfMissing: true,
-          signers,
         };
       return {
+        ...signed,
         state: 'pending',
         headline: 'Signed · preparing the PDF',
         caption: `${when}. The final PDF is processing.`,
         signedFileId: null,
         pdfMissing: false,
-        signers,
       };
     }
     const signedCount = signers.filter((s) => s.signed).length;
@@ -122,6 +129,8 @@ export function signatureSummary(input: {
       state: 'pending',
       headline: 'Awaiting signatures',
       caption: `${signedCount} of ${signers.length} signed · version ${current.version}. Each person signs from their own account.`,
+      badge: AWAITING_BADGE,
+      signedOn: null,
       signedFileId: null,
       pdfMissing: false,
       signers,
@@ -143,24 +152,28 @@ export function signatureSummary(input: {
     const when = input.signedAt
       ? `Historical status: signed ${formatDate(input.signedAt)}`
       : 'Historical status: marked signed';
+    const historical = {
+      badge: SIGNED_BADGE,
+      signedOn: input.signedAt,
+      historical: true,
+      signers,
+    };
     return leaseFile
       ? {
+          ...historical,
           state: 'done',
           headline: 'Signed agreement on file',
           caption: `${when} · ${leaseFile.name} is on file · the signed agreement is locked; changes go in an addendum`,
           signedFileId: leaseFile.id,
           pdfMissing: false,
-          historical: true,
-          signers,
         }
       : {
+          ...historical,
           state: 'attention',
           headline: 'Signed PDF unavailable',
           caption: `${when}. Verify it against the original agreement; no signed PDF is stored on this lease yet.`,
           signedFileId: null,
           pdfMissing: true,
-          historical: true,
-          signers,
         };
   }
   if (eSignStatus === 'DECLINED')
@@ -168,6 +181,8 @@ export function signatureSummary(input: {
       state: 'attention',
       headline: 'Signature declined',
       caption: 'Review the agreement and prepare a new signing version.',
+      badge: { tone: 'danger', label: 'Declined' },
+      signedOn: null,
       signedFileId: null,
       pdfMissing: false,
       signers: tenantSigners(false),
@@ -177,6 +192,8 @@ export function signatureSummary(input: {
       state: 'pending',
       headline: 'Awaiting signatures',
       caption: 'Sent for signature. Each person signs from their own account.',
+      badge: AWAITING_BADGE,
+      signedOn: null,
       signedFileId: null,
       pdfMissing: false,
       signers: tenantSigners(false),
@@ -185,10 +202,133 @@ export function signatureSummary(input: {
     state: 'attention',
     headline: 'Agreement not sent for signature',
     caption: 'Prepare the agreement from the Agreement tab, then share the signing page.',
+    badge: { tone: 'neutral', label: 'Not sent' },
+    signedOn: null,
     signedFileId: null,
     pdfMissing: false,
     signers: [],
   };
+}
+
+export type SignatureBanner = {
+  title: string;
+  detail: string;
+  /** At most one action; `tab` is the lease section it opens. */
+  action: { label: string; tab: 'agreement' | 'documents'; ariaLabel: string } | null;
+};
+
+/**
+ * The one-row banner above the lease tabs, shown only when someone has to act: a missing signed
+ * PDF, outstanding or declined signatures, or an active lease that was never sent.
+ */
+export function signatureBanner(
+  summary: SignatureSummary,
+  lease: { status: string; eSignStatus: string },
+  formatDate: (date: Date) => string,
+): SignatureBanner | null {
+  const open = lease.status === 'ACTIVE' || lease.status === 'DRAFT';
+  const signed = summary.signedOn ? `Signed ${formatDate(summary.signedOn)}` : 'Marked signed';
+  if (summary.pdfMissing)
+    return {
+      title: 'Signed PDF unavailable',
+      detail: `${signed} · PDF not stored`,
+      // A historical lease has no signing record to archive: the signed copy is uploaded instead.
+      action: summary.historical
+        ? {
+            label: 'Upload PDF',
+            tab: 'documents',
+            ariaLabel: 'Upload PDF: add the signed agreement to the lease documents',
+          }
+        : {
+            label: 'Retry PDF',
+            tab: 'agreement',
+            ariaLabel: 'Retry PDF: check the signed PDF again from the agreement',
+          },
+    };
+  if (!open || summary.state === 'done') return null;
+  if (lease.eSignStatus === 'DECLINED')
+    return {
+      title: 'Signature declined',
+      detail: '',
+      action: {
+        label: 'Review agreement',
+        tab: 'agreement',
+        ariaLabel: 'Review agreement and prepare a new signing version',
+      },
+    };
+  if (summary.headline === 'Awaiting signatures') {
+    const signers = summary.signers.filter((s) => !s.note);
+    const signedCount = signers.filter((s) => s.signed).length;
+    return {
+      title: 'Awaiting signatures',
+      detail: signers.length ? `${signedCount} of ${signers.length} signed` : 'Sent for signature',
+      action: {
+        label: 'Review signatures',
+        tab: 'agreement',
+        ariaLabel: 'Review signatures on the lease agreement',
+      },
+    };
+  }
+  // A draft is finished and sent from the lease wizard, which the header already offers.
+  if (lease.eSignStatus === 'NOT_SENT' && lease.status === 'ACTIVE')
+    return {
+      title: 'Not sent for signature',
+      detail: '',
+      action: {
+        label: 'Send for signature',
+        tab: 'agreement',
+        ariaLabel: 'Send for signature from the lease agreement',
+      },
+    };
+  return null;
+}
+
+const MONTH_DAYS = 30.44;
+const utcDay = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+
+export type TermProgress = {
+  /** "Month 3 of 12", "Starts Dec 1, 2026" or "Ended Oct 31, 2027". */
+  label: string;
+  /** "ends Oct 31, 2027" or "11-month term". */
+  detail: string;
+  /** Elapsed share of the term while it runs; null before it starts and after it ends. */
+  percent: number | null;
+};
+
+/** Where today falls in the lease term, from the stored start and end dates. */
+export function termProgress(
+  lease: { status: string; startDate: Date; endDate: Date; moveOutDate?: Date | null },
+  now: Date,
+  formatDate: (date: Date) => string,
+): TermProgress {
+  const start = utcDay(lease.startDate);
+  const end = utcDay(lease.endDate) + DAY;
+  const months = Math.max(1, Math.round((end - start) / DAY / MONTH_DAYS));
+  const today = utcDay(now);
+  if (lease.status === 'DRAFT' || today < start)
+    return { label: `Starts ${formatDate(lease.startDate)}`, detail: `${months}-month term`, percent: null };
+  if (lease.status === 'ENDED' || lease.status === 'TERMINATED' || today >= end) {
+    const moveOut = lease.status === 'TERMINATED' ? lease.moveOutDate : null;
+    const ended = moveOut && moveOut < lease.endDate ? moveOut : lease.endDate;
+    return { label: `Ended ${formatDate(ended)}`, detail: `${months}-month term`, percent: null };
+  }
+  const s = lease.startDate;
+  const month =
+    (now.getUTCFullYear() - s.getUTCFullYear()) * 12 +
+    (now.getUTCMonth() - s.getUTCMonth()) +
+    (now.getUTCDate() >= s.getUTCDate() ? 1 : 0);
+  return {
+    label: `Month ${Math.min(Math.max(month, 1), months)} of ${months}`,
+    detail: `ends ${formatDate(lease.endDate)}`,
+    percent: Math.min(100, Math.max(0, Math.round(((today - start) / (end - start)) * 100))),
+  };
+}
+
+/** "1st", "2nd", "23rd", "11th". */
+export function ordinal(day: number): string {
+  const tens = day % 100;
+  if (tens >= 11 && tens <= 13) return `${day}th`;
+  return `${day}${{ 1: 'st', 2: 'nd', 3: 'rd' }[day % 10] ?? 'th'}`;
 }
 
 export type DocumentGroupKey = 'signed' | 'addendums' | 'inspections' | 'other';

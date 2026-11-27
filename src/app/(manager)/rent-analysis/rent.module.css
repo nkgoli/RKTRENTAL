@@ -3,28 +3,39 @@
   gap: 16px;
   min-width: 0;
 }
-.selection {
-  display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(240px, 1fr);
-  gap: 16px;
-  align-items: flex-start;
-}
 .search {
   display: flex;
   align-items: flex-end;
   gap: 8px;
-  margin: 16px 0;
+  margin: 0 0 8px;
 }
-.search label {
-  flex: 1;
+.search > :global(.search) {
+  width: min(100%, 360px);
+  min-width: 0;
 }
 .property {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  border-top: 1px solid #e1e6ee;
-  padding: 16px 0;
+  border-top: 1px solid var(--rr-border);
+  padding: 14px 0;
+}
+.property:last-of-type {
+  padding-bottom: 0;
+}
+.property h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.property p {
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+/* Cell prefixes the phone card layout needs once the column headers are hidden. */
+.cellLabel {
+  display: none;
 }
 .table {
   max-width: 100%;
@@ -40,15 +51,16 @@
     white-space: normal;
   }
 }
-@media (max-width: 800px) {
-  .selection {
-    grid-template-columns: 1fr;
+@media (max-width: 640px) {
+  .cellLabel {
+    display: inline;
   }
 }
 @media (max-width: 600px) {
   .property {
     align-items: flex-start;
     flex-direction: column;
+    gap: 8px;
   }
   .workspace input,
   .workspace select {
@@ -106,7 +118,7 @@
 }
 .notice {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
 }
 .notice > :first-child {
@@ -114,18 +126,15 @@
   min-width: 0;
 }
 .unitsHead {
-  display: grid;
-  gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
   margin-bottom: 8px;
 }
 .unitsHead h2 {
   margin: 0;
-}
-.caption {
-  margin: 2px 0 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--design-muted);
 }
 .badges {
   display: flex;
@@ -135,17 +144,11 @@
 .selectedRow {
   background: var(--rr-primary-tint);
 }
-.selectedTag {
-  color: var(--design-primary);
-  font-weight: 600;
-}
 .textLink {
   display: inline-block;
   margin-top: 16px;
   color: var(--design-primary);
   font-weight: 500;
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 @media (max-width: 640px) {
   .toolbar {

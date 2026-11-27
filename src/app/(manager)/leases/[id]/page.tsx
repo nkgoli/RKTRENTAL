@@ -7,7 +7,7 @@ import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/shell/PageHeader';
 import type { ReactNode } from 'react';
 import { workspaceTabHref } from '@/components/workspace/routes';
-import { ActionGlyph, Alert, Avatar, Badge } from '@/components/ui';
+import { ActionGlyph, Alert, Avatar, Badge, cx } from '@/components/ui';
 import { Icon } from '@/components/shell/Icons';
 import { requireManagerRole } from '@/lib/auth/access';
 import { db } from '@/lib/db/client';
@@ -20,7 +20,7 @@ import { EVENT_LABEL } from '@/lib/leases/events';
 import { money, signLabel, term } from '@/lib/leases/format';
 import { leasesDb } from '@/lib/leases/queries';
 import { formatAddress, formatDate, initials } from '@/lib/properties/format';
-import { EditTermsForm, LeaseStatusActions, NoticeForm } from '../LeaseForms';
+import { EditTermsForm, FormDisclosure, LeaseStatusActions, NoticeForm } from '../LeaseForms';
 import type { TemplateItem } from '@/lib/lease-create/templates';
 import { RentLedger, RentLedgerRows } from '@/components/payments/RentLedger';
 import {
@@ -29,19 +29,36 @@ import {
   toLedgerRows,
   toPaymentViews,
 } from '@/components/payments/ledger-view';
-import { ensureRentCharges, leaseLedger, periodLabel } from '@/lib/ledger';
-import { formatFileSize, lateLine, leaseStatusBadge, signatureSummary } from './lease-view';
+import {
+  ensureRentCharges,
+  formatMoney,
+  leaseLedger,
+  periodLabel,
+  previewScheduledCharges,
+} from '@/lib/ledger';
+import {
+  formatFileSize,
+  lateLine,
+  leaseStatusBadge,
+  ordinal,
+  signatureBanner,
+  signatureSummary,
+  termProgress,
+  type SignatureSummary,
+} from './lease-view';
 
+/** Unfilled blanks in saved wording read as a small chip naming the field. */
 const showSignedBody = (body: string) =>
-  body
-    .split(/(\{\{[a-z_]+\}\})/g)
-    .map((part, index) =>
-      /^\{\{[a-z_]+\}\}$/.test(part) ? (
-        <mark key={index}>________ ({part.slice(2, -2).replaceAll('_', ' ')})</mark>
-      ) : (
-        part
-      ),
-    );
+  body.split(/(\{\{[a-z_]+\}\})/g).map((part, index) =>
+    /^\{\{[a-z_]+\}\}$/.test(part) ? (
+      <mark key={index}>
+        <span className={styles.srOnly}>Blank: </span>
+        {part.slice(2, -2).replaceAll('_', ' ')}
+      </mark>
+    ) : (
+      part
+    ),
+  );
 
 const LEASE_TABS = [
   { key: 'overview', label: 'Overview' },
@@ -51,21 +68,60 @@ const LEASE_TABS = [
   { key: 'activity', label: 'Activity' },
 ] as const;
 
-function SectionHeader({ title, id, action }: { title: string; id?: string; action?: ReactNode }) {
+const SECTION_LABEL = { CLAUSE: 'Clauses', RULE: 'Rules', DISCLOSURE: 'Disclosures' } as const;
+const SECTION_NOUN = {
+  CLAUSE: ['clause', 'clauses'],
+  RULE: ['rule', 'rules'],
+  DISCLOSURE: ['disclosure', 'disclosures'],
+} as const;
+
+/** Whole cents from a stored decimal; missing or invalid values count as zero. */
+const toCents = (value: { toString(): string } | null | undefined) =>
+  Math.round((Number(value?.toString() ?? 0) || 0) * 100);
+
+/** "$1,855" with the cents in a quieter ".00", so the figures line up without shouting. */
+function Amount({ cents }: { cents: number }) {
+  const [whole, fraction] = formatMoney(cents).split('.');
   return (
-    <div className={styles.sectionHeading}>
+    <>
+      {whole}
+      <span className={styles.cents}>.{fraction}</span>
+    </>
+  );
+}
+
+function CardHead({ title, id, children }: { title: string; id: string; children?: ReactNode }) {
+  return (
+    <div className={styles.cardHead}>
       <h2 id={id}>{title}</h2>
-      {action}
+      {children}
     </div>
   );
 }
 
-/** A quiet text link with a trailing arrow, e.g. "Payments →". */
+/** A quiet text link with a trailing arrow, e.g. "View rent ledger →". */
 function GoLink({ href, children, label }: { href: string; children: string; label?: string }) {
   return (
     <a className={styles.goLink} href={href} aria-label={label}>
       {children} <span aria-hidden="true">→</span>
     </a>
+  );
+}
+
+/** Each signer with a Signed / Awaiting pill (or what to verify on a historical lease). */
+function SignerList({ signers }: { signers: SignatureSummary['signers'] }) {
+  if (!signers.length) return null;
+  return (
+    <ul className={styles.signers} aria-label="Signers">
+      {signers.map((signer) => (
+        <li key={signer.key}>
+          <span>{signer.label}</span>
+          <Badge tone={signer.note ? 'info' : signer.signed ? 'success' : 'neutral'}>
+            {signer.note ?? (signer.signed ? 'Signed' : 'Awaiting')}
+          </Badge>
+        </li>
+      ))}
+    </ul>
   );
 }
 

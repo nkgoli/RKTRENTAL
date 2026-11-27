@@ -42,7 +42,6 @@ export function UnitSwitcher({
 
   return (
     <label className={styles.switcher}>
-      <span>View</span>
       <select
         aria-label="Switch unit"
         value={selectable.some((unit) => unit.id === current) ? current : ''}

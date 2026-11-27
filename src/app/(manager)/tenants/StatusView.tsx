@@ -72,10 +72,7 @@ export function StatusView({
   return (
     <section className={styles.status} aria-labelledby="tenant-status-title">
       <div className={styles.sectionHead}>
-        <div>
-          <h2 id="tenant-status-title">Payment setup</h2>
-          <p>Payment methods and autopay for your tenants.</p>
-        </div>
+        <h2 id="tenant-status-title">Payment setup</h2>
       </div>
       <div className={styles.period} role="group" aria-label="Lease period">
         {(['current', 'upcoming'] as const).map((value) => (
@@ -122,7 +119,7 @@ export function StatusView({
       </form>
       <div className={styles.actions} style={{ justifyContent: 'space-between' }}>
         <p className={styles.meta}>
-          {shown.length} {shown.length === 1 ? 'tenant' : 'tenants'} in this view
+          {shown.length} {shown.length === 1 ? 'tenant' : 'tenants'}
         </p>
         <Link
           className={cx(styles.chip, needsPaymentMethod && styles.chipActive)}
@@ -137,7 +134,6 @@ export function StatusView({
           {paged.length === 0 ? (
             <div className={styles.empty}>
               <h3>No tenants match this view</h3>
-              <p>Try another property, tenant, or lease period.</p>
               <Link href={href()}>View current tenants</Link>
             </div>
           ) : (

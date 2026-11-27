@@ -186,11 +186,9 @@ export default async function TenantDetailPage({
 
   return (
     <div className={styles.scope}>
-      <Link className={styles.backLink} href={returnTo}>
-        ← Back to tenants
-      </Link>
       <PageHeader
         title={tenant.name}
+        back={{ href: returnTo, label: 'Tenants' }}
         actions={[
           { label: 'Edit profile', href: `${profileHref}&edit=1#edit-profile` },
           ...(currentLease ? [{ label: 'View lease', href: `/leases/${currentLease.id}` }] : []),
@@ -312,7 +310,6 @@ export default async function TenantDetailPage({
                     <span>
                       <strong>{unitLabel(currentLease)}</strong>
                       <small>
-                        {tenant.name} ·{' '}
                         {currentLease.unit.property.type === 'MULTI_UNIT'
                           ? 'Multi-unit'
                           : 'Single-unit'}
@@ -391,9 +388,7 @@ export default async function TenantDetailPage({
                 </dl>
               </>
             ) : (
-              <p className={styles.muted}>
-                No lease yet. Create a lease to assign a unit and record the rental terms.
-              </p>
+              <p className={styles.muted}>No lease yet.</p>
             )}
           </Card>
 
@@ -466,13 +461,13 @@ export default async function TenantDetailPage({
           <Card id="tenant-documents" className={cx(styles.pad, styles.stack)}>
             <div className={styles.sectionHead}>
               <h2>Documents</h2>
-              <span className={styles.meta}>
-                {documentCount} {documentCount === 1 ? 'file' : 'files'}
-              </span>
+              {documentCount > 0 && (
+                <span className={styles.meta}>
+                  {documentCount} {documentCount === 1 ? 'file' : 'files'}
+                </span>
+              )}
             </div>
-            {docLeases.length === 0 && (
-              <p className={styles.muted}>No documents on this tenant’s leases.</p>
-            )}
+            {docLeases.length === 0 && <p className={styles.muted}>No documents.</p>}
             {docLeases.map((lease) => (
               <section key={lease.id} aria-label={`Documents for ${unitLabel(lease)}`}>
                 <Link className={styles.meta} href={`/leases/${lease.id}`}>
@@ -585,9 +580,7 @@ export default async function TenantDetailPage({
             )}
             {!draftLease && !activeLease && (
               <p className={styles.muted}>
-                {leases.length
-                  ? 'This tenant has moved out.'
-                  : 'Add a unit to this tenant to move them in.'}
+                {leases.length ? 'This tenant has moved out.' : 'No move-in to record.'}
               </p>
             )}
           </Card>

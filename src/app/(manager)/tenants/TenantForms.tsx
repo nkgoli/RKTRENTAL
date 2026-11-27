@@ -95,9 +95,7 @@ export function EditTenantForm({
       <div className="card-header">
         <h2>Edit profile</h2>
       </div>
-      <p className={styles.formHint}>
-        Full name is required. Contact and emergency details are optional.
-      </p>
+      <p className={styles.formHint}>Only full name is required.</p>
       <form ref={formRef} className="form" action={formAction} noValidate aria-busy={pending}>
         <input type="hidden" name="returnTo" value={returnTo ?? ''} />
         {state.message && !Object.keys(state.errors).length && (
@@ -221,7 +219,7 @@ export function MoveOutDialog({
       label="Record move-out"
       title={`Move ${tenantName} out?`}
       eyebrow={unitLabel}
-      description={`This ends the active lease today for everyone on it and marks ${unitLabel} vacant unless another active lease holds it. Tenant details, notes and payment history remain available.`}
+      description={`This ends the active lease today for everyone on it and marks ${unitLabel} vacant unless another active lease holds it. Tenant details, notes and payments are kept.`}
       confirmLabel="Record move-out"
       action={action}
       fields={{ leaseId, returnTo }}

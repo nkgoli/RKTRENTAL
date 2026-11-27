@@ -251,14 +251,7 @@ export function PaymentsBoard({
             )}
             {endedBalanceCents !== 0 && (
               <p className={styles.note} data-testid="ended-balance">
-                Ended leases carry {formatMoney(endedBalanceCents)},{' '}
-                {summary ? 'listed on each unit’s Rent ledger' : 'shown in their own groups'} and
-                not included in Balance due.
-              </p>
-            )}
-            {!summary && groups.length > 0 && (
-              <p className={styles.note}>
-                Late charges are past the lease’s grace period. Scheduled charges are upcoming.
+                Ended leases carry {formatMoney(endedBalanceCents)}, not included in Balance due.
               </p>
             )}
           </div>
@@ -320,10 +313,11 @@ export function PaymentsBoard({
                       </td>
                       <td>
                         {u.tenantNames || '—'}
-                        {u.endedLeaseCount > 0 && (
+                        {/* Only a unit with no active lease says whose leases these were. */}
+                        {u.status === 'ENDED' && u.endedLeaseCount > 0 && (
                           <small className={styles.note}>
-                            {u.status === 'ENDED' ? 'Previous tenant · ' : ''}
-                            {u.endedLeaseCount} ended {u.endedLeaseCount === 1 ? 'lease' : 'leases'}
+                            Previous tenant · {u.endedLeaseCount} ended{' '}
+                            {u.endedLeaseCount === 1 ? 'lease' : 'leases'}
                           </small>
                         )}
                       </td>
@@ -469,10 +463,7 @@ export function PaymentsBoard({
             </p>
           )}
           {leasePicker}
-          <Field
-            label="Amount"
-            hint="Cash, check or money order received outside the app. Applied to the oldest charges first."
-          >
+          <Field label="Amount" hint="Applied to the oldest charges first.">
             <Input
               name="amount"
               inputMode="decimal"

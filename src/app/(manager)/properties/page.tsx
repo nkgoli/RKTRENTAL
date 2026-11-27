@@ -78,7 +78,6 @@ export default async function PropertiesPage({
       {notice === 'property-archived' && <NoticeToast message="Property archived" />}
       <PageHeader
         title="Properties"
-        eyebrow="Portfolio"
         meta={`${properties.length} ${properties.length === 1 ? 'property' : 'properties'} · ${totals.units} ${totals.units === 1 ? 'unit' : 'units'}`}
         actions={[
           {

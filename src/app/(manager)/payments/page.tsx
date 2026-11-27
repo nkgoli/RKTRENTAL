@@ -148,7 +148,6 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         activeTab="payments"
       />
       <PageHeader
-        eyebrow="Money"
         title="Payments"
         meta={`Rent roll · ${overview.rows.length} active ${overview.rows.length === 1 ? 'lease' : 'leases'}`}
         actions={[

@@ -312,7 +312,6 @@ export function MaintenanceEditor({
     <div className={styles.editor}>
       <PageHeader
         title="Edit request"
-        eyebrow="Operations"
         meta={requestMeta(record)}
         back={{ href: returnTo, label: 'Maintenance' }}
         actions={[]}

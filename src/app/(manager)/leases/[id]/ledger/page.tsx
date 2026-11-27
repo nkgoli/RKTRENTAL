@@ -77,7 +77,6 @@ export default async function LeaseLedgerPage({
   return (
     <>
       <PageHeader
-        eyebrow="Rent ledger"
         title={tenantNames ? `${title} · ${tenantNames}` : title}
         back={{ href: unitPayments, label: 'Payments' }}
         // The Leases section's "Create lease" shortcut does not belong on a ledger.

@@ -243,7 +243,6 @@ export default async function ApplicationsPage({
       />
       <PageHeader
         title="Applications & invitations"
-        eyebrow={scope.propertyId ? 'Leasing · Property applications' : 'Leasing'}
         meta={`${scope.propertyId ? 'Applications for this property' : 'All properties'} · ${providerStatus.label}`}
         actions={[
           { label: 'Screening provider', href: '/integrations#screening-providers' },

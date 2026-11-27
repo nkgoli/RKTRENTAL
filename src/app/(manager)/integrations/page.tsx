@@ -211,7 +211,7 @@ export default async function Page({
 
   return (
     <div className={styles.page}>
-      <PageHeader eyebrow="Settings" title="Integrations" actions={[]} />
+      <PageHeader title="Integrations" actions={[]} />
       <ReminderSetup channels={reminderChannels} />
       <nav className={styles.jumpLinks} aria-label="Provider groups">
         <a className="chip" href="#payments-providers">

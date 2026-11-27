@@ -48,6 +48,15 @@
   --rr-bad: #b4233f;
   --rr-bad-bg: #fdecef;
   --rr-ink-muted: #b9c2d3;
+  /* Chart palette, validated for colour-blind separation and 3:1 contrast on white, in this
+     fixed order: indigo, teal, orange, violet. Grid and axis stay one step off the surface. */
+  --chart-1: #3e4fe5;
+  --chart-2: #0e9384;
+  --chart-3: #d9732f;
+  --chart-4: #a855c7;
+  --chart-negative: #b4233f;
+  --chart-grid: #eceff4;
+  --chart-axis: #6b778a;
   /* Layout system: one content width, one card (1px border, 16px radius, no shadow), one heading scale. */
   --rr-page-max: 1120px;
   --rr-gutter: 48px;
@@ -107,9 +116,9 @@ p {
 .eyebrow {
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--design-primary);
+  color: var(--design-muted);
   margin-bottom: 4px;
 }
 .row {
@@ -1703,22 +1712,24 @@ h4 {
 .field [aria-invalid='true'] {
   border: 2px solid var(--design-danger);
 }
+/* Notices: a soft tint and dark ink, no outline; the tone colours only the background. */
 .alert {
-  color: var(--design-primary);
-  border-color: var(--rr-border);
+  border-color: transparent;
+  border-radius: 12px;
+  color: #2c39b3;
 }
 .alert.success {
-  color: var(--rr-ok);
-  border-color: var(--rr-ok);
+  color: #05603a;
+  border-color: transparent;
 }
 .alert.warning {
-  color: var(--rr-warn);
-  border-color: var(--rr-warn);
+  color: #6b3a07;
+  border-color: transparent;
 }
 .alert.error {
-  color: var(--design-danger);
+  color: #8f1c31;
   background: var(--rr-bad-bg);
-  border-color: var(--design-danger);
+  border-color: transparent;
 }
 .table-region {
   max-width: 100%;

@@ -39,7 +39,6 @@ export default async function SendApplicationPage({
   return (
     <section className={styles.page} aria-label="Send application">
       <PageHeader
-        eyebrow="Leasing"
         title="Send application"
         meta="Invite someone to apply for a property · nothing is emailed until you review and send"
         back={{ href: backHref, label: 'Applications' }}

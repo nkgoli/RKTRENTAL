@@ -378,9 +378,8 @@ export default async function LeaseDetailPage({
     <>
       <PageHeader
         title={title}
-        eyebrow={`Lease · ${formatDate(lease.startDate)} → ${formatDate(lease.endDate)}`}
         back={{ href: backHref, label: scoped ? `${property.name} leases` : 'Leases' }}
-        meta={`${placeText} · ${money(lease.monthlyRent)}/mo · Online payments ${onlinePaymentsEnabled ? 'enabled' : 'not connected'}`}
+        meta={`${placeText} · ${formatDate(lease.startDate)} – ${formatDate(lease.endDate)} · ${money(lease.monthlyRent)}/mo${onlinePaymentsEnabled ? '' : ' · Online payments not connected'}`}
         actions={[
           ...(lease.status === 'DRAFT'
             ? [

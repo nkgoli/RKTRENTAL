@@ -24,7 +24,6 @@ export default async function LeaseTemplatesPage() {
   return (
     <div className={styles.page}>
       <PageHeader
-        eyebrow="Workspace / Leasing"
         title="Lease templates"
         actions={[
           { label: 'All leases', href: '/leases' },

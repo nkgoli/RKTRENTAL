@@ -30,7 +30,6 @@ export default async function NewRequestPage({
     <>
       <PageHeader
         title="New repair request"
-        eyebrow="Operations"
         meta="Saved requests join the request board as New."
         back={{ href: returnTo, label: 'Maintenance' }}
       />

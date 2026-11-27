@@ -34,18 +34,9 @@ vi.mock('@/lib/ledger', async (original) => ({
   ensureRentCharges: vi.fn(),
 }));
 vi.mock('@/components/shell/PageHeader', () => ({
-  PageHeader: ({
-    eyebrow,
-    meta,
-    back,
-  }: {
-    eyebrow?: string;
-    meta?: string;
-    back?: { href: string; label: string };
-  }) => (
+  PageHeader: ({ meta, back }: { meta?: string; back?: { href: string; label: string } }) => (
     <header data-testid="page-header">
       {back && <a href={back.href}>{back.label}</a>}
-      <p>{eyebrow}</p>
       <p>{meta}</p>
     </header>
   ),
@@ -138,8 +129,8 @@ describe('lease workspace', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-10-22T12:00:00Z'));
     const html = await render().finally(() => vi.useRealTimers());
-    expect(html).toContain('Lease · Dec 1, 2025 → Nov 30, 2026');
-    expect(html).toContain('Unit 4B · $1,850/mo · Online payments enabled');
+    expect(html).toContain('Unit 4B · Dec 1, 2025 – Nov 30, 2026 · $1,850/mo');
+    expect(html).not.toContain('Online payments');
     expect(html).toContain('href="/leases"');
     expect(html).toContain('Active · ends in 39 days');
     expect(html).toContain('href="/tenants/tenant-1"');

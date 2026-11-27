@@ -353,7 +353,6 @@ describe('PageHeader meta and back link in the manager shell', () => {
     render(
       <ManagerShell>
         <PageHeader
-          eyebrow="Returns & ROI"
           title="Maple Court"
           meta="Whole property · Revision 0"
           back={{ href: '/properties/1', label: 'Maple Court' }}

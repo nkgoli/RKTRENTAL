@@ -90,7 +90,6 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
   return (
     <>
       <PageHeader
-        eyebrow="Returns & ROI"
         title="Portfolio returns"
         actions={[
           { label: 'Owner payouts', href: '/payments' },

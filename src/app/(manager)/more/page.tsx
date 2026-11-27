@@ -26,7 +26,7 @@ export default async function MorePage() {
     .filter((group) => group.items.length);
   return (
     <>
-      <PageHeader eyebrow="Menu" title="All sections" meta="Every part of your workspace" />
+      <PageHeader title="All sections" meta="Every part of your workspace" />
       <div className="more-sections">
         {groups.map((group) => (
           <section className="card" key={group.label} aria-labelledby={`more-${group.label}`}>

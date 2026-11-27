@@ -365,7 +365,6 @@ export default async function DocumentsPage({
       />
       <PageHeader
         title="Documents"
-        eyebrow="Operations"
         meta="Documents and photos · open a lease or property to rename, share or delete its files"
         actions={[{ label: 'Upload files', href: '#upload', primary: true }]}
       />

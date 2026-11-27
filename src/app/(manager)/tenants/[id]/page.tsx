@@ -190,7 +190,6 @@ export default async function TenantDetailPage({
         ← Back to tenants
       </Link>
       <PageHeader
-        eyebrow="People / Tenant"
         title={tenant.name}
         actions={[
           { label: 'Edit profile', href: `${profileHref}&edit=1#edit-profile` },

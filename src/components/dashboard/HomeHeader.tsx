@@ -49,7 +49,6 @@ export function HomeHeader({
     .join(' · ');
   return (
     <PageHeader
-      eyebrow="Home"
       title={firstName ? `${greeting}, ${firstName}` : greeting}
       meta={meta}
       actions={actions}

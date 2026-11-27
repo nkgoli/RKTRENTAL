@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Icon } from '@/components/shell/Icons';
 import { loadDashboardView, initialsOf } from '@/components/dashboard/assemble';
-import { CollectionChart } from '@/components/dashboard/CollectionChart';
+import { CollectionChart, CollectionRangeChips } from '@/components/dashboard/CollectionChart';
 import { HomeHeader } from '@/components/dashboard/HomeHeader';
 import { Avatar, Badge, type BadgeTone } from '@/components/ui';
 import { SummaryBand } from '@/components/ui/SummaryBand';
@@ -224,15 +224,10 @@ export default async function DashboardPage({
         <div className={styles.sideColumn}>
           <section className="card" aria-labelledby="history-heading">
             <div className={styles.cardHead}>
-              <div>
-                <h2 id="history-heading">Collection history</h2>
-                <p className={styles.caption}>
-                  Collected against rent due · USD ·{' '}
-                  {dashboard.monthLabel.split(' ')[0]?.slice(0, 3)} is month to date
-                </p>
-              </div>
+              <h2 id="history-heading">Collection history</h2>
+              <CollectionRangeChips range={range} />
             </div>
-            <CollectionChart months={dashboard.collection} range={range} />
+            <CollectionChart months={dashboard.collection} />
           </section>
 
           <section className="card" aria-labelledby="occupancy-heading">

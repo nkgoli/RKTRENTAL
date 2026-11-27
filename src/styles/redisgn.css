@@ -57,10 +57,10 @@ body {
 .scope .nav-label {
   height: auto;
   padding: 0 0 4px;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
+  color: var(--rr-ink-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
 }
 .nav a {
   min-height: 36px;
@@ -69,7 +69,7 @@ body {
   border-radius: 999px;
   color: #fff;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
 }
 .nav a svg {
   width: 16px;
@@ -234,22 +234,25 @@ body {
   gap: 2px;
   min-height: 52px;
   padding: 4px 2px;
-  border: 1px solid var(--rr-border);
+  border: 0;
   border-radius: 14px;
-  color: var(--design-text);
+  color: var(--design-muted);
   font-size: 12px;
   font-weight: 500;
   line-height: 1.2;
   text-align: center;
 }
+.tabbar a::before {
+  display: none;
+}
 .tabbar a svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 .tabbar a.active {
-  background: var(--design-primary);
-  border-color: var(--design-primary);
-  color: #fff;
+  background: var(--rr-primary-tint);
+  color: var(--design-primary);
+  font-weight: 600;
 }
 .tabbar a span {
   max-width: 100%;
@@ -323,7 +326,7 @@ body {
     padding: 48px var(--rr-gutter) 32px;
   }
   .topbar h1 {
-    font-size: 34px;
+    font-size: 30px;
   }
   .topbar-sub,
   .topbar .topbar-sub {
@@ -353,7 +356,7 @@ body {
 }
 @media (min-width: 1024px) {
   .card {
-    padding: 32px;
+    padding: var(--rr-card-pad);
   }
   .card.flush {
     padding: 0;
@@ -378,10 +381,14 @@ body {
 .card-header > a:not(.btn, .action),
 .section-link {
   color: var(--design-primary);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
-  text-decoration: underline;
+  text-decoration: none;
   text-underline-offset: 3px;
+}
+.card-header > a:not(.btn, .action):hover,
+.section-link:hover {
+  text-decoration: underline;
 }
 .stat .label,
 .kpi .label {
@@ -442,9 +449,9 @@ body {
 }
 .summary-band-progress .bar {
   display: block;
-  height: 8px;
+  height: 6px;
   border-radius: 999px;
-  background: #d9dde5;
+  background: #e7eaf0;
   overflow: hidden;
 }
 .summary-band-progress .bar > span {
@@ -626,11 +633,11 @@ a.summary-stat:hover {
 
 .table thead th {
   background: transparent;
-  color: var(--design-text);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  color: var(--design-muted);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
 }
 .table th,
 .table td {
@@ -770,7 +777,7 @@ h3.eyebrow,
   font-size: 12px;
   font-weight: 600;
   line-height: 1.4;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.06em;
 }
 /* The pill search wrapper owns the border; its input stays borderless inside forms too. */
 .search input,

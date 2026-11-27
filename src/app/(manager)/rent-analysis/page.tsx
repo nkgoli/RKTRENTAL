@@ -36,7 +36,7 @@ export default async function RentAnalysisPage({
   if (resolved.kind === 'invalid')
     return (
       <>
-        <PageHeader title="Rent analysis" eyebrow="Rent analysis" />
+        <PageHeader title="Rent analysis" />
         <EmptyState
           title="Property or unit unavailable"
           description="It may have been archived or your access changed. Choose another property."
@@ -52,7 +52,7 @@ export default async function RentAnalysisPage({
     );
     return (
       <>
-        <PageHeader title="Choose a property" eyebrow="Rent analysis" />
+        <PageHeader title="Choose a property" />
         <div className={styles.workspace}>
           <p className="muted">Start with a property, then compare rent at the unit level.</p>
           <div className={styles.selection}>
@@ -168,7 +168,6 @@ export default async function RentAnalysisPage({
   return (
     <>
       <PageHeader
-        eyebrow="Rent analysis"
         title={unitName && !implicit ? `${property.name} · ${unitName}` : property.name}
         meta={meta}
         back={{ href: `/properties/${property.id}`, label: property.name }}

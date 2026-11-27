@@ -85,7 +85,6 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
   return (
     <div className={styles.scope}>
       <PageHeader
-        eyebrow="People"
         title="Tenant directory"
         meta={`${stats.activeTenants} active ${stats.activeTenants === 1 ? 'tenant' : 'tenants'}`}
         actions={[

@@ -192,7 +192,6 @@ export function TemplateEditor({
   return (
     <div className={styles.page}>
       <PageHeader
-        eyebrow="Lease templates"
         title={initial ? 'Edit lease template' : 'Create lease template'}
         actions={[{ label: 'All templates', href: '/leases/templates' }]}
       />

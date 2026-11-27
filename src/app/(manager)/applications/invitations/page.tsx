@@ -37,7 +37,6 @@ export default async function InvitationsPage({
   return (
     <section className={styles.page} aria-label="Application invitations">
       <PageHeader
-        eyebrow="Leasing"
         title="Application invitations"
         meta={`${total} ${total === 1 ? 'invitation' : 'invitations'} · newest first`}
         back={{ href: `/applications${params.size ? `?${params}` : ''}`, label: 'Applications' }}

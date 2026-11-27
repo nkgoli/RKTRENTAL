@@ -47,7 +47,6 @@ export default async function RemindersPage({
         <span>Payment reminders</span>
       </nav>
       <PageHeader
-        eyebrow="Collections"
         title="Payment reminders"
         meta="Preview, edit and send · recorded recipient outcomes"
         actions={[{ label: 'Payment reminder setup', href: '/integrations#payment-reminders' }]}

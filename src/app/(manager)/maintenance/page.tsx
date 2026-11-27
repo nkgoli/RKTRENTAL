@@ -117,7 +117,6 @@ export default async function MaintenancePage({
         activeTab="maintenance"
       />
       <PageHeader
-        eyebrow="Operations"
         title="Maintenance"
         meta="Repair requests across your properties"
         actions={[{ label: 'New request', href: createHref, primary: true, icon: 'plus' }]}

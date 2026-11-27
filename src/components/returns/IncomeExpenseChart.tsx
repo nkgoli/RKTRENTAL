@@ -1,86 +1,44 @@
 import { bucketLabel, type SeriesPoint } from '@/lib/returns/period';
+import { ColumnChart } from '@/components/charts/ColumnChart';
 import styles from './returns.module.css';
 
 const money = (cents: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
+const compactUsd = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  notation: 'compact',
+  maximumFractionDigits: 0,
+});
+/** Show the year on axis labels when the range crosses a calendar year. */
+const withYear = (rows: SeriesPoint[]) =>
+  new Set(rows.map((row) => row.month.slice(0, 4))).size > 1;
 
 /** A readable chart and an equivalent, keyboard-accessible table of exact ledger amounts. */
 export function IncomeExpenseChart({ rows, label }: { rows: SeriesPoint[]; label: string }) {
-  const max = Math.max(1, ...rows.flatMap((row) => [row.incomeCents, row.expensesCents]));
   const hasActivity = rows.some((row) => row.incomeCents !== 0 || row.expensesCents !== 0);
-  const step = 680 / Math.max(1, rows.length);
-  const bar = Math.min(15, step * 0.32);
-  const labelEvery = Math.max(1, Math.ceil(rows.length / 8));
   return (
     <div>
       {!hasActivity && (
-        <p className={styles.empty}>
-          No recorded income or expenses in this period. Choose another range to review earlier
-          activity.
-        </p>
+        <p className={styles.empty}>No recorded income or expenses in this period.</p>
       )}
       {hasActivity && (
-        <>
-          <div
-            className={styles.chartScroll}
-            role="region"
-            aria-label={`${label} chart`}
-            tabIndex={0}
-          >
-            <svg viewBox="0 0 720 220" className={styles.chart} role="img" aria-label={label}>
-              {[40, 105, 170].map((y) => (
-                <line key={y} x1="20" x2="700" y1={y} y2={y} stroke="var(--rr-border)" />
-              ))}
-              {rows.map((row, index) => {
-                const x = 20 + index * step + step / 2;
-                const income = (row.incomeCents / max) * 140;
-                const expenses = (row.expensesCents / max) * 140;
-                return (
-                  <g key={row.month}>
-                    <title>{`${bucketLabel(row.month, true)}: income ${money(row.incomeCents)}, expenses ${money(row.expensesCents)}`}</title>
-                    <rect
-                      x={x - bar - 2}
-                      y={170 - income}
-                      width={bar}
-                      height={income}
-                      rx="2"
-                      fill="var(--design-primary)"
-                    />
-                    <rect
-                      x={x + 2}
-                      y={170 - expenses}
-                      width={bar}
-                      height={expenses}
-                      rx="2"
-                      fill="var(--design-accent)"
-                    />
-                    {index % labelEvery === 0 && (
-                      <text
-                        x={x}
-                        y="200"
-                        textAnchor="middle"
-                        fill="var(--design-muted)"
-                        fontSize="14"
-                      >
-                        {bucketLabel(row.month, true)}
-                      </text>
-                    )}
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-          <div className={styles.legend}>
-            <span>
-              <i />
-              Income
-            </span>
-            <span>
-              <i />
-              Expenses
-            </span>
-          </div>
-        </>
+        <ColumnChart
+          label={label}
+          series={[
+            { key: 'income', label: 'Income', color: 'var(--chart-1)' },
+            { key: 'expenses', label: 'Expenses', color: 'var(--chart-2)' },
+          ]}
+          data={rows.map((row) => ({
+            key: row.month,
+            label: bucketLabel(row.month, withYear(rows)),
+            title: bucketLabel(row.month, true),
+            values: { income: row.incomeCents, expenses: row.expensesCents },
+          }))}
+          format={money}
+          axisFormat={(cents) => compactUsd.format(cents / 100)}
+          height={200}
+        />
       )}
       <details className={styles.exact}>
         <summary>View exact amounts</summary>

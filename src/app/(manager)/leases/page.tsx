@@ -107,7 +107,6 @@ export default async function LeasesPage({
       {notice && <NoticeToast message={notice} tone="success" />}
       <ScopedWorkspace organizationId={session.organizationId} filter={scope} activeTab="leases" />
       <PageHeader
-        eyebrow="Leasing"
         meta={`${counts.active} active · ${counts.drafts} ${counts.drafts === 1 ? 'draft' : 'drafts'} · ${counts.ended} ended`}
         actions={[
           { label: 'Review applications', href: '/applications' },

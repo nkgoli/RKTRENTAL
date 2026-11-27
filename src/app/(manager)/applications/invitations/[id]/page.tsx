@@ -63,7 +63,6 @@ export default async function InvitationPage({ params }: { params: Promise<{ id:
   return (
     <section className={styles.page} aria-label="Application invitation">
       <PageHeader
-        eyebrow="Leasing · Application invitation"
         title={row.applicantName}
         meta={`${row.applicantEmail} · ${home}`}
         back={{ href: `/applications?${scope}`, label: 'Applications' }}

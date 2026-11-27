@@ -24,7 +24,8 @@
   --design-surface: #ffffff;
   --design-text: #17233a;
   --design-muted: #58677d;
-  --design-accent: #007f7a;
+  /* Teal text clears 4.5:1 on white, the page background and the light success tints. */
+  --design-accent: #007770;
   --design-danger: #b4233f;
   --design-radius: 16px;
   --design-heading-font: Outfit, var(--design-font);
@@ -41,7 +42,7 @@
   --rr-coral-tint: #fbf3ee;
   --rr-ring-track: #e8e6f5;
   --rr-warm: #cf8a68;
-  --rr-ok: #007f7a;
+  --rr-ok: #007770;
   --rr-ok-bg: #e6f4f2;
   --rr-warn: #8a4b09;
   --rr-warn-bg: #fff3e0;

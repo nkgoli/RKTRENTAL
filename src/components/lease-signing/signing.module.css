@@ -4,7 +4,7 @@
   --design-surface: #fff;
   --design-text: #17233a;
   --design-muted: #58677d;
-  --design-accent: #007f7a;
+  --design-accent: #007770;
   --design-danger: #b4233f;
   min-height: 100vh;
   background: var(--design-background);
@@ -90,7 +90,7 @@
   color: #58677d;
 }
 .signed {
-  color: #007f7a;
+  color: #007770;
 }
 .waiting {
   color: #58677d;

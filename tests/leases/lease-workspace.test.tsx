@@ -34,14 +34,33 @@ vi.mock('@/lib/ledger', async (original) => ({
   ensureRentCharges: vi.fn(),
 }));
 vi.mock('@/components/shell/PageHeader', () => ({
-  PageHeader: ({ meta, back }: { meta?: string; back?: { href: string; label: string } }) => (
+  PageHeader: ({
+    meta,
+    back,
+    actions,
+  }: {
+    meta?: string;
+    back?: { href: string; label: string };
+    actions?: { label: string; href: string }[];
+  }) => (
     <header data-testid="page-header">
       {back && <a href={back.href}>{back.label}</a>}
       <p>{meta}</p>
+      {actions?.map((action) => (
+        <a key={action.label} href={action.href}>
+          {action.label}
+        </a>
+      ))}
     </header>
   ),
 }));
 vi.mock('@/app/(manager)/leases/LeaseForms', () => ({
+  FormDisclosure: ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <details>
+      <summary>{label}</summary>
+      {children}
+    </details>
+  ),
   EditTermsForm: () => <form aria-label="Edit lease terms" />,
   NoticeForm: () => <form aria-label="Record lease notice" />,
   LeaseStatusActions: ({ status }: { status: string }) => (
@@ -110,8 +129,8 @@ describe('lease workspace', () => {
     const html = await render({ tab: 'unknown' });
     expect(html).toMatch(/aria-current="page"[^>]*>Overview/);
     for (const value of [
-      'Leased premises',
-      'Tenants on this lease',
+      'id="lease-unit"',
+      'id="lease-tenants"',
       'Dec 1, 2025',
       'Nov 30, 2026',
       '$1,850',
@@ -129,25 +148,30 @@ describe('lease workspace', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-10-22T12:00:00Z'));
     const html = await render().finally(() => vi.useRealTimers());
-    expect(html).toContain('Unit 4B · Dec 1, 2025 – Nov 30, 2026 · $1,850/mo');
+    expect(html).toContain('Alex Rivera · Dec 1, 2025 – Nov 30, 2026 · $1,850/mo');
     expect(html).not.toContain('Online payments');
     expect(html).toContain('href="/leases"');
     expect(html).toContain('Active · ends in 39 days');
+    expect(html).toContain('Month 11 of 12');
     expect(html).toContain('href="/tenants/tenant-1"');
   });
 
-  it('shows a state-aware signature panel from stored signing records', async () => {
-    // Marked signed without a stored PDF: the panel says so and offers the retry path.
+  it('shows a state-aware signature banner only when signing needs action', async () => {
+    // Marked signed without a stored PDF or signing record: the banner offers the upload path.
     let html = await render();
     expect(html).toContain('aria-label="Agreement signing"');
     expect(html).toContain('data-state="attention"');
     expect(html).toContain('Signed PDF unavailable');
-    expect(html).toContain('<span>Alex Rivera</span><span class="badge info">Named tenant</span>');
-    expect(html).toContain('<span class="badge info">Review in PDF</span>');
-    expect(html).toContain('href="/sign/leases/lease-1"');
-    expect(html).toContain('Review lease files');
-    expect(html).toContain('aria-label="Retry: check the signed PDF again from the agreement"');
-    // A stored signed lease file makes the agreement "on file" with a download.
+    expect(html).toContain('Signed Nov 18, 2025 · PDF not stored');
+    expect(html).toMatch(
+      /aria-label="Upload PDF: add the signed agreement to the lease documents"[^>]*>Upload PDF<\/a>/,
+    );
+    // Signer details live with the agreement.
+    const agreement = await render({ tab: 'agreement' });
+    expect(agreement).toContain('Named tenant');
+    expect(agreement).toContain('Review in PDF');
+    expect(agreement).toContain('href="/sign/leases/lease-1"');
+    // A stored signed lease file needs no banner; its download stays one click away.
     fixture.lease.documents = [
       {
         id: 'doc-signed',
@@ -159,8 +183,7 @@ describe('lease workspace', () => {
       },
     ];
     html = await render();
-    expect(html).toContain('data-state="done"');
-    expect(html).toContain('Signed agreement on file');
+    expect(html).not.toContain('aria-label="Agreement signing"');
     expect(html).toContain('/api/files/doc-signed/download');
     // The latest signing version wins: awaiting the owner.
     fixture.agreement = {
@@ -178,44 +201,46 @@ describe('lease workspace', () => {
     html = await render();
     expect(html).toContain('data-state="pending"');
     expect(html).toContain('Awaiting signatures');
-    expect(html).toContain('1 of 2 signed · version 2');
+    expect(html).toContain('1 of 2 signed');
     expect(html).toContain('Owner / lessor · Morgan Owner');
     fixture.agreement = null;
     fixture.lease.documents = [];
     fixture.lease.eSignStatus = 'NOT_SENT';
     html = await render();
-    expect(html).toContain('Agreement not sent for signature');
+    expect(html).toContain('Not sent for signature');
     // The visible words lead the accessible name, which keeps the agreement context.
     expect(html).toMatch(
-      /class="btn btn-sm btn-primary"[^>]*aria-label="Review signatures on the lease agreement"[^>]*>Review signatures<\/a>/,
+      /aria-label="Send for signature from the lease agreement"[^>]*>Send for signature<\/a>/,
     );
-    // The agreement tab already holds the signer panel, so the bar keeps only the signing link.
+    // The agreement tab already holds the signer panel, so no banner repeats it there.
     html = await render({ tab: 'agreement' });
-    expect(html).not.toContain('Review signatures on the lease agreement');
+    expect(html).not.toContain('aria-label="Agreement signing"');
     expect(html).toContain('href="/sign/leases/lease-1"');
   });
 
-  it('puts terms, documents and activity beside the ledger on overview and payments', async () => {
-    for (const tab of ['overview', 'payments']) {
-      const html = await render({ tab });
-      for (const value of [
-        'Rent ledger',
-        'id="lease-terms-card"',
-        'Manage agreement &amp; notice',
-        'id="lease-documents-card"',
-        'Add addendum',
-        'Portfolio documents',
-        'id="lease-activity-card"',
-        'Lease created',
-        tab === 'payments'
-          ? 'Full ledger &amp; reminder review'
-          : 'Review balance before any reminder',
-        '/leases/lease-1/ledger',
-        'Notice: none given · Move-out: not scheduled',
-        '$75 after a 5-day grace period',
-      ])
-        expect(html, `${tab}: ${value}`).toContain(value);
-    }
+  it('puts terms, documents and activity beside the charges, and the full ledger on payments', async () => {
+    const overview = await render({ tab: 'overview' });
+    for (const value of [
+      'id="lease-charges"',
+      'View rent ledger',
+      'id="lease-terms-card"',
+      'Manage agreement',
+      'id="lease-documents-card"',
+      'id="lease-activity-card"',
+      'Lease created',
+      'No notice given',
+      '$75 after a 5-day grace period',
+    ])
+      expect(overview, `overview: ${value}`).toContain(value);
+    const payments = await render({ tab: 'payments' });
+    for (const value of [
+      'Rent ledger',
+      'Full ledger &amp; reminder review',
+      '/leases/lease-1/ledger',
+      'Payment terms',
+      '$75 after a 5-day grace period',
+    ])
+      expect(payments, `payments: ${value}`).toContain(value);
   });
 
   it('includes the visible text in every labelled link’s accessible name', async () => {
@@ -256,7 +281,7 @@ describe('lease workspace', () => {
     }
   });
 
-  it('groups lease documents beside the terms', async () => {
+  it('groups lease documents with the signed agreement', async () => {
     fixture.lease.documents = [
       {
         id: 'doc-signed',
@@ -269,8 +294,8 @@ describe('lease workspace', () => {
     ];
     const html = await render({ tab: 'documents' });
     expect(html).toContain('Lease documents');
-    expect(html).toContain('Files owned by this lease · 1 file');
-    expect(html).toContain('id="lease-terms-card"');
+    expect(html).toContain('Signed agreement');
+    expect(html).toContain('/api/files/doc-signed/download');
     expect(html).not.toContain('id="lease-activity-card"');
   });
 
@@ -304,13 +329,13 @@ describe('lease workspace', () => {
     const html = await render({ tab: 'agreement' });
     for (const value of [
       'Prepared lease terms',
-      'Saved terms',
       'Standard residential lease',
       'v2',
       'Security deposit',
-      '________ (security deposit)',
     ])
       expect(html).toContain(value);
+    // An unfilled blank shows as a marked field name, announced as a blank.
+    expect(html).toMatch(/<mark>.*?Blank: <\/span>security deposit<\/mark>/);
   });
 
   it('keeps draft activation and ended lease restrictions', async () => {
@@ -395,7 +420,7 @@ describe('lease workspace', () => {
     vi.setSystemTime(new Date('2026-10-15T12:00:00Z'));
     const html = await render({ tab: 'payments' }).finally(() => vi.useRealTimers());
     expect(html).toContain('Rent ledger');
-    expect(html).toContain('This lease only · 4B');
+    expect(html).toContain('data-testid="ledger-scope">Jul 2026 – Nov 2026<');
     // 4 × 1,850 + 75 due, minus 3 × 1,850 + 500 settled; the failed attempt never counts.
     expect(html).toContain('$1,425.00');
     expect(html).toMatch(/Last payment<\/dt><dd[^>]*>Oct 3, 2026<small>\$500\.00/);
@@ -419,8 +444,11 @@ describe('lease workspace', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-10-15T12:00:00Z'));
     const overview = await render().finally(() => vi.useRealTimers());
-    expect(overview).toContain('$1,425.00');
-    expect(overview).toContain('Oct 3, 2026');
+    // Stat tiles set the cents apart, so compare the visible text.
+    const visible = overview.replace(/<[^>]+>/g, '');
+    expect(visible).toContain('$1,425.00');
+    // A late balance leads with that state rather than the last payment date.
+    expect(visible).toContain('Past due');
   });
 
   it('shows payment-only history and credit on an ended lease without inventing charges', async () => {

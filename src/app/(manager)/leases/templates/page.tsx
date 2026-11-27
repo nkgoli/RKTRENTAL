@@ -1,125 +1,112 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { Icon } from '@/components/shell/Icons';
 import { requireManagerRole } from '@/lib/auth/access';
 import { listTemplates } from '@/lib/lease-create/template-service';
+import type { TemplateSection } from '@/lib/lease-create/templates';
+import { TemplateMenu } from './TemplateMenu';
 import styles from './templates.module.css';
-import { TemplateIcon } from './TemplateIcons';
 
 export const dynamic = 'force-dynamic';
+
+const SECTIONS: [TemplateSection, string, string][] = [
+  ['CLAUSE', 'clause', 'clauses'],
+  ['RULE', 'rule', 'rules'],
+  ['DISCLOSURE', 'disclosure', 'disclosures'],
+];
+const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 export default async function LeaseTemplatesPage() {
   const session = await requireManagerRole();
   const { templates, properties } = await listTemplates(session.organizationId);
-  const defaults = (id: string) =>
-    properties
-      .filter((p) => p.defaultLeaseTemplateId === id)
-      .map((p) => p.name)
-      .join(', ');
-  const editLink = (id: string) => (
-    <Link className={`btn ${styles['lt-edit-link']}`} href={`/leases/templates/${id}`}>
-      Edit template <TemplateIcon name="arrow" />
-    </Link>
-  );
+  const defaultsFor = (id: string) =>
+    properties.filter((p) => p.defaultLeaseTemplateId === id).map((p) => p.name);
   return (
     <div className={styles.page}>
       <PageHeader
         title="Lease templates"
+        meta={plural(templates.length, 'template', 'templates')}
         actions={[
           { label: 'All leases', href: '/leases' },
-          { label: 'Create template', href: '/leases/templates/new', primary: true },
+          { label: 'Create template', href: '/leases/templates/new', primary: true, icon: 'plus' },
         ]}
       />
-      <p className={styles['lt-intro']}>
-        Start each lease with wording and fees suited to its property. Review templates with a local
-        attorney before use.
-      </p>
-      <section className={styles['lt-band']} aria-label="How template updates work">
-        <span className={styles['lt-band-icon']}>
-          <Icon name="leases" />
-        </span>
-        <div>
-          <h2>Reusable rental agreement terms</h2>
-          <p>
-            Template changes apply to future drafts.
-            <br />
-            Sent and signed wording stays with each lease.
-          </p>
-        </div>
-        <span className={styles['lt-count']}>
-          {templates.length} {templates.length === 1 ? 'template' : 'templates'}
-        </span>
-      </section>
       {!templates.length ? (
-        <section className={`${styles['lt-panel']} ${styles['lt-state-card']}`}>
+        <section className={styles.empty}>
+          <span className={styles.docIcon}>
+            <Icon name="leases" />
+          </span>
           <h2>No templates yet</h2>
-          <p>Create a template to reuse wording and fees across your properties.</p>
           <Link className="btn btn-primary" href="/leases/templates/new">
             Create template
           </Link>
         </section>
       ) : (
-        <>
-          <section className={styles['lt-table-card']}>
-            <div className={styles['lt-table-title']}>
-              <h2>Your templates</h2>
-            </div>
-            <table>
-              <caption className={styles['lt-sr']}>
-                Lease templates, versions and property defaults.
-              </caption>
-              <thead>
-                <tr>
-                  {['Template', 'Version', 'Property defaults', 'Actions'].map((label) => (
-                    <th key={label} scope="col">
-                      {label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {templates.map((template) => (
-                  <tr key={template.id}>
-                    <th scope="row">
-                      <div className={styles['lt-template-name']}>
-                        <span className={styles['lt-doc-icon']}>
-                          <Icon name="leases" />
-                        </span>
-                        <strong>{template.name}</strong>
-                      </div>
-                    </th>
-                    <td>
-                      <span className={styles['lt-badge']}>v{template.version}</span>
-                    </td>
-                    <td className={styles['lt-defaults']}>{defaults(template.id) || '—'}</td>
-                    <td>{editLink(template.id)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-          <section className={styles['lt-mobile-list']} aria-label="Lease templates">
-            {templates.map((template) => (
-              <article key={template.id} className={styles['lt-library-card']}>
-                <div className={styles['lt-card-heading']}>
-                  <span className={styles['lt-doc-icon']}>
+        <ul className={styles.grid} aria-label="Lease templates">
+          {templates.map((template) => {
+            const defaults = defaultsFor(template.id);
+            const href = `/leases/templates/${template.id}`;
+            return (
+              <li key={template.id} className={styles.card}>
+                <div className={styles.cardTop}>
+                  <span className={styles.docIcon}>
                     <Icon name="leases" />
                   </span>
-                  <h2>{template.name}</h2>
-                  <span className={styles['lt-badge']}>v{template.version}</span>
+                  <TemplateMenu
+                    template={template}
+                    canDelete={!template.usageCount && !defaults.length}
+                  />
                 </div>
-                <dl>
-                  <div>
-                    <dt>Property defaults</dt>
-                    <dd>{defaults(template.id) || 'None'}</dd>
-                  </div>
-                </dl>
-                {editLink(template.id)}
-              </article>
-            ))}
-          </section>
-        </>
+                <h2 className={styles.name}>
+                  <Link href={href}>{template.name}</Link>
+                </h2>
+                <p className={styles.meta}>
+                  <span className={styles.version}>v{template.version}</span>
+                  {plural(template.usageCount, 'lease', 'leases')}
+                </p>
+                <ul className={styles.counts} aria-label="Contents">
+                  {SECTIONS.map(([section, one, many]) => (
+                    <li key={section}>
+                      {plural(
+                        template.items.filter((item) => item.section === section).length,
+                        one,
+                        many,
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <div className={styles.defaults}>
+                  {defaults.length ? (
+                    <>
+                      <span className={styles.defaultsLabel}>
+                        Default for {plural(defaults.length, 'property', 'properties')}
+                      </span>
+                      <span className={styles.chips}>
+                        {defaults.slice(0, 3).map((name) => (
+                          <span key={name} className={styles.chip}>
+                            {name}
+                          </span>
+                        ))}
+                        {defaults.length > 3 && (
+                          <span className={styles.chip} title={defaults.slice(3).join(', ')}>
+                            +{defaults.length - 3}
+                          </span>
+                        )}
+                      </span>
+                    </>
+                  ) : (
+                    <span className={styles.defaultsLabel}>Not a property default</span>
+                  )}
+                </div>
+                <Link className={`btn btn-secondary btn-sm ${styles.edit}`} href={href}>
+                  Edit template
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       )}
+      <p className={styles.footnote}>Review templates with a local attorney before use.</p>
     </div>
   );
 }

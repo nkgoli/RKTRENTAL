@@ -191,16 +191,15 @@ test('manager builds a lease in the wizard, resumes it, and sends it for signing
 test('standard v2 template editor expands full paragraphs', async ({ page }) => {
   await signIn(page);
   await page.goto('/leases/templates');
-  const row = page.getByRole('row', { name: /Standard residential lease/ });
-  await expect(row).toContainText('v2');
-  await row.getByRole('link', { name: 'Edit template' }).click();
+  const card = page
+    .getByRole('listitem')
+    .filter({ has: page.getByRole('heading', { name: 'Standard residential lease' }) });
+  await expect(card).toContainText('v2');
+  await card.getByRole('link', { name: 'Edit template' }).click();
   await page.getByRole('button', { name: 'Expand all' }).click();
-  await expect(
-    page.locator('p[class*="itemFull"]', {
-      hasText: 'Rent is not considered paid until Lessor actually receives cleared funds.',
-    }),
-  ).toBeVisible();
-  await expect(page.getByRole('textbox', { name: 'Rent wording' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Rent wording' })).toHaveValue(
+    /Rent is not considered paid until Lessor actually receives cleared funds\./,
+  );
   await page.screenshot({ path: 'tests/lease-create/evidence/v2-template-editor-expanded.png' });
 });
 

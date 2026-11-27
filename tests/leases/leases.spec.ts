@@ -102,7 +102,7 @@ test('lease workspace supports keyboard navigation and phone layouts', async ({ 
   await expect(page.getByRole('heading', { name: 'Lease terms', exact: true })).toBeVisible();
   await page.getByText('Edit terms', { exact: true }).click();
   await expect(page.getByRole('button', { name: 'Save terms' })).toBeVisible();
-  await page.getByText('Record notice or move-out', { exact: true }).click();
+  await page.getByText('Record notice', { exact: true }).click();
   await expect(page.getByLabel('Planned move-out')).toBeVisible();
   // Termination asks in a confirmation dialog; cancelling records nothing.
   await page.getByRole('button', { name: 'Terminate', exact: true }).click();

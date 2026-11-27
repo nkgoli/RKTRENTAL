@@ -162,13 +162,16 @@ export default async function RentAnalysisPage({
       />
       <div className={styles.workspace}>
         <div className={styles.toolbar}>
+          {!subject && (
+            <p className={styles.prompt}>Choose a unit to compare it with nearby rentals.</p>
+          )}
           {!implicit && (
             <form action="/rent-analysis" className={styles.unitForm}>
               <input type="hidden" name="property" value={property.id} />
               {Object.entries(filterQuery).map(([name, value]) => (
                 <input key={name} type="hidden" name={name} value={value} />
               ))}
-              <Field label="Unit">
+              <Field label="Unit" className={styles.unitField}>
                 <AutoSubmitSelect name="unit" defaultValue={subject?.id ?? ''}>
                   {!subject && (
                     <option value="" disabled>
@@ -187,11 +190,11 @@ export default async function RentAnalysisPage({
               </noscript>
             </form>
           )}
-          <Link className="btn btn-secondary" href="/rent-analysis">
+          <Link className="btn btn-secondary btn-sm" href="/rent-analysis">
             Change property
           </Link>
         </div>
-        {subject && unitName ? (
+        {subject && unitName && (
           <RentAnalysisComps
             organizationId={session.organizationId}
             unitId={subject.id}
@@ -202,8 +205,6 @@ export default async function RentAnalysisPage({
             unitName={unitName}
             currentLeaseRent={currentRent(subject.id)}
           />
-        ) : (
-          <p className={styles.prompt}>Choose a unit to compare it with nearby rentals.</p>
         )}
         {!implicit && (
           <Card>

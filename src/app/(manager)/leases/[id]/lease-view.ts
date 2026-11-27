@@ -293,6 +293,8 @@ export type TermProgress = {
   detail: string;
   /** Elapsed share of the term while it runs; null before it starts and after it ends. */
   percent: number | null;
+  /** Length of the term in (rounded) months. */
+  months: number;
 };
 
 /** Where today falls in the lease term, from the stored start and end dates. */
@@ -306,11 +308,16 @@ export function termProgress(
   const months = Math.max(1, Math.round((end - start) / DAY / MONTH_DAYS));
   const today = utcDay(now);
   if (lease.status === 'DRAFT' || today < start)
-    return { label: `Starts ${formatDate(lease.startDate)}`, detail: `${months}-month term`, percent: null };
+    return {
+      label: `Starts ${formatDate(lease.startDate)}`,
+      detail: `${months}-month term`,
+      percent: null,
+      months,
+    };
   if (lease.status === 'ENDED' || lease.status === 'TERMINATED' || today >= end) {
     const moveOut = lease.status === 'TERMINATED' ? lease.moveOutDate : null;
     const ended = moveOut && moveOut < lease.endDate ? moveOut : lease.endDate;
-    return { label: `Ended ${formatDate(ended)}`, detail: `${months}-month term`, percent: null };
+    return { label: `Ended ${formatDate(ended)}`, detail: `${months}-month term`, percent: null, months };
   }
   const s = lease.startDate;
   const month =
@@ -321,6 +328,7 @@ export function termProgress(
     label: `Month ${Math.min(Math.max(month, 1), months)} of ${months}`,
     detail: `ends ${formatDate(lease.endDate)}`,
     percent: Math.min(100, Math.max(0, Math.round(((today - start) / (end - start)) * 100))),
+    months,
   };
 }
 

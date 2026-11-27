@@ -6,7 +6,6 @@ import { scenarioSeries, wholeDollars, type ChartValue } from '@/lib/analysis/ch
 import { scenarioColors, scenarioDifferences, type ScenarioDraft } from '@/lib/analysis/scenarios';
 import type { AnalysisPayload } from '@/lib/analysis/contract';
 import {
-  Basis,
   ChartCard,
   ComboChart,
   Figure,
@@ -31,16 +30,14 @@ function recoveryYear(r: ProjectionResult) {
 type Metric = {
   key: string;
   label: string;
-  impact: 1 | 2 | 3;
   value: (r: ProjectionResult, h: number) => number | null;
   format: (v: number) => string;
 };
 
 /**
- * C18 Scenario comparison visuals: preset-coloured chips (Base fixed, others
- * shown or hidden), Key Differences vs Base, focusable KPI tiles, the Key
- * Metrics table with a horizon, and Equity Growth by Scenario with breakeven
- * pills. Years past a case's hold stay gaps, never $0.
+ * C18 Scenario comparison: preset-coloured chips (Base fixed, others shown or hidden),
+ * differences from Base, focusable case tiles, the key metrics table with a horizon,
+ * and equity and cash flow by case. Years past a case's hold stay gaps, never $0.
  */
 export function ScenarioCharts({
   cases,
@@ -66,17 +63,15 @@ export function ScenarioCharts({
   const longest = Math.max(1, ...cases.map((c) => c.result.annualCashflows.length));
   const [years, horizon] = useHorizon(Math.min(50, longest), 'Scenario horizon', 30);
   const shown = Math.max(1, years);
-  const base = visible[0];
   const focused = focus && visible.some((c) => c.id === focus) ? focus : null;
 
   const metrics: { group: string; rows: Metric[] }[] = [
     {
-      group: 'Year 1 Stability',
+      group: 'Year 1',
       rows: [
         {
           key: 'coc',
-          label: 'Cash-on-Cash',
-          impact: 3,
+          label: 'Cash-on-cash',
           value: (r) =>
             r.summaryMetrics.cashOnCash == null ? null : r.summaryMetrics.cashOnCash * 100,
           format: (v) => `${v.toFixed(2)}%`,
@@ -84,62 +79,54 @@ export function ScenarioCharts({
         {
           key: 'dscr',
           label: 'DSCR',
-          impact: 3,
           value: (r) => (r.summaryMetrics.loanAmount > 0 ? r.summaryMetrics.dscr : null),
           format: (v) => v.toFixed(2),
         },
         {
           key: 'noi',
           label: 'NOI',
-          impact: 2,
           value: (r) => r.summaryMetrics.noi,
           format: wholeDollars,
         },
         {
           key: 'cap',
-          label: 'Cap Rate',
-          impact: 2,
+          label: 'Cap rate',
           value: (r) => r.summaryMetrics.capRate * 100,
           format: (v) => `${v.toFixed(2)}%`,
         },
         {
           key: 'cf',
-          label: 'Annual Cash Flow',
-          impact: 3,
+          label: 'Cash flow',
           value: (r) => r.summaryMetrics.annualCashFlow,
           format: wholeDollars,
         },
       ],
     },
     {
-      group: `Hold Period Returns (${shown}Y)`,
+      group: `Through year ${shown}`,
       rows: [
         {
           key: 'equity',
-          label: `Equity (Year ${shown})`,
-          impact: 3,
+          label: `Equity, year ${shown}`,
           value: (r, h) => r.equityTimeline.find((e) => e.month === h * 12)?.equity ?? null,
           format: wholeDollars,
         },
         {
           key: 'cum',
-          label: `Cumulative Cash Flow (Year ${shown})`,
-          impact: 3,
+          label: 'Cumulative cash flow',
           value: (r, h) => r.annualCashflows[h - 1]?.cumulativeCashFlow ?? null,
           format: wholeDollars,
         },
         {
           key: 'irr',
           label: 'Leveraged IRR (full hold)',
-          impact: 3,
           value: (r) =>
             r.summaryMetrics.irrLeveraged == null ? null : r.summaryMetrics.irrLeveraged * 100,
           format: (v) => `${v.toFixed(2)}%`,
         },
         {
           key: 'em',
-          label: 'Equity Multiple (full hold)',
-          impact: 3,
+          label: 'Equity multiple (full hold)',
           value: (r) => r.summaryMetrics.equityMultiple,
           format: (v) => `${v.toFixed(2)}x`,
         },
@@ -170,86 +157,75 @@ export function ScenarioCharts({
   );
   const signed = (v: number, f: (n: number) => string) =>
     `${v > 0 ? '+' : v < 0 ? '−' : ''}${f(Math.abs(v))}`;
-  const tone = (v: number | null, good: number, ok: number) =>
-    v == null ? 'muted' : v >= good ? 'teal' : v >= ok ? 'amber' : 'red';
+  const red = (v: number | null | undefined) => (v != null && v < 0 ? 'red' : undefined);
 
   const series = (metric: 'equity' | 'cashFlow') =>
     visible.map((c) => ({
       label: c.name,
       color: c.color,
       values: scenarioSeries(c, shown, metric) as ChartValue[],
-      width: focused === c.id ? 3 : 2,
-      dot: 0,
-      opacity: focused && focused !== c.id ? 0.3 : 1,
+      width: focused === c.id ? 2.5 : 2,
+      opacity: focused && focused !== c.id ? 0.25 : 1,
     }));
 
   return (
     <div className={s.wrap}>
       <section className={s.card} aria-label="Scenario selection">
         <div className={s.cardHead}>
-          <div>
-            <h3>Saved cases</h3>
-            <p>
-              Choose which cases to show. The Base Case is your saved assumptions; cases change only
-              the assumptions they override.
-            </p>
-            <Basis items={['Projected', 'USD', 'Before tax']} />
-          </div>
-          <div className={s.view}>
-            <span>View:</span>
-            <Segmented
-              label="Scenario view"
-              value={view}
-              onChange={setView}
-              options={[
-                { value: 'absolute', label: 'Absolute' },
-                { value: 'delta', label: 'Δ vs Base' },
-              ]}
-            />
-          </div>
+          <h3>Compare cases</h3>
+          <Segmented
+            label="Scenario view"
+            value={view}
+            onChange={setView}
+            options={[
+              { value: 'absolute', label: 'Absolute' },
+              { value: 'delta', label: 'Δ vs Base' },
+            ]}
+          />
         </div>
-        <ul className={s.chips} aria-label="Scenarios shown">
-          {cases.map((c, i) => {
-            const on = i === 0 || !hidden.includes(c.id);
-            return (
-              <li key={c.id}>
-                <button
-                  type="button"
-                  aria-pressed={on}
-                  disabled={i === 0}
-                  title={
-                    i === 0 ? 'Base Case is always shown' : on ? `Hide ${c.name}` : `Show ${c.name}`
-                  }
-                  style={on ? { background: colors[i] } : undefined}
-                  onClick={() =>
-                    setHidden((list) =>
-                      list.includes(c.id) ? list.filter((x) => x !== c.id) : [...list, c.id],
-                    )
-                  }
-                >
-                  {c.name}
-                  {i > 0 && <span aria-hidden="true">{on ? '×' : '+'}</span>}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-        {onOpenWhatIf && (
-          <div className={s.addRow}>
-            <button type="button" onClick={onOpenWhatIf}>
+        <div className={s.addRow}>
+          <ul className={s.chips} aria-label="Scenarios shown">
+            {cases.map((c, i) => {
+              const on = i === 0 || !hidden.includes(c.id);
+              return (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    aria-pressed={on}
+                    disabled={i === 0}
+                    title={
+                      i === 0 ? 'Base Case is always shown' : on ? `Hide ${c.name}` : `Show ${c.name}`
+                    }
+                    onClick={() =>
+                      setHidden((list) =>
+                        list.includes(c.id) ? list.filter((x) => x !== c.id) : [...list, c.id],
+                      )
+                    }
+                  >
+                    <i style={{ background: colors[i] }} aria-hidden="true" />
+                    {c.name}
+                    {i > 0 && <span aria-hidden="true">{on ? '×' : '+'}</span>}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          {onOpenWhatIf && (
+            <button type="button" className={s.whatIf} onClick={onOpenWhatIf}>
               Try changes in What if
             </button>
-          </div>
-        )}
+          )}
+        </div>
         {visible.length > 1 && (
           <div className={s.diffs}>
-            <p>Key Differences vs Base</p>
+            <p>Differences from Base</p>
             {visible.slice(1).map((c) => {
               const draft = drafts.find((d) => d.id === c.id);
               const diffs = draft ? scenarioDifferences(draft, baseInput, label) : [];
               return (
                 <div key={c.id} className={s.diffRow}>
-                  <span className={s.diffName} style={{ background: c.color }}>
+                  <span className={s.diffName}>
+                    <i style={{ background: c.color }} aria-hidden="true" />
                     {c.name}
                   </span>
                   {diffs.some((d) => d.delta !== 0) ? (
@@ -283,109 +259,74 @@ export function ScenarioCharts({
             })}
           </div>
         )}
+        <div className={s.kpis}>
+          {kpis.map((k, i) => {
+            const isFocus = focused === k.id;
+            const delta = view === 'delta' && i > 0;
+            return (
+              <button
+                key={k.id}
+                type="button"
+                className={s.kpi}
+                aria-pressed={isFocus}
+                data-base={i === 0 || undefined}
+                onClick={() => setFocus(isFocus ? null : k.id)}
+              >
+                <span className={s.kpiHead}>
+                  <i style={{ background: k.color }} aria-hidden="true" />
+                  <b>{k.name}</b>
+                </span>
+                <dl>
+                  <div>
+                    <dt>DSCR</dt>
+                    <dd data-tone={k.dscr != null && k.dscr < 1 ? 'red' : undefined}>
+                      {k.dscr == null ? 'No debt' : `${k.dscr.toFixed(2)}x`}
+                    </dd>
+                    {delta && k.dscr != null && baseKpi.dscr != null && (
+                      <small data-tone={k.dscr < baseKpi.dscr ? 'red' : undefined}>
+                        {signed(k.dscr - baseKpi.dscr, (n) => n.toFixed(2))}
+                      </small>
+                    )}
+                  </div>
+                  <div>
+                    <dt>Year 1 cash flow</dt>
+                    <dd data-tone={red(k.y1)}>{wholeDollars(k.y1)}</dd>
+                    {delta && k.y1 != null && baseKpi.y1 != null && (
+                      <small data-tone={k.y1 < baseKpi.y1 ? 'red' : undefined}>
+                        {signed(k.y1 - baseKpi.y1, (n) => wholeDollars(n))}
+                      </small>
+                    )}
+                  </div>
+                  <div>
+                    <dt>IRR</dt>
+                    <dd data-tone={red(k.irr)}>{pct(k.irr)}</dd>
+                    {delta && k.irr != null && baseKpi.irr != null && (
+                      <small data-tone={k.irr < baseKpi.irr ? 'red' : undefined}>
+                        {signed((k.irr - baseKpi.irr) * 100, (n) => `${n.toFixed(2)}%`)}
+                      </small>
+                    )}
+                  </div>
+                  <div>
+                    <dt>Worst year</dt>
+                    <dd data-tone={red(k.worst?.cashFlow)}>{wholeDollars(k.worst?.cashFlow)}</dd>
+                    <small>Year {k.worst?.year}</small>
+                  </div>
+                </dl>
+              </button>
+            );
+          })}
+        </div>
       </section>
 
-      <p className={s.hint}>
-        Year 1 figures and hold-period IRR for each case
-        {view === 'delta' ? ', with the change from the Base Case below each value' : ''}. Select a
-        case to highlight its lines in the charts below.
-      </p>
-      <div className={s.kpis}>
-        {kpis.map((k, i) => {
-          const isFocus = focused === k.id;
-          const delta = view === 'delta' && i > 0;
-          return (
-            <button
-              key={k.id}
-              type="button"
-              className={s.kpi}
-              aria-pressed={isFocus}
-              data-base={i === 0 || undefined}
-              style={{
-                borderColor: k.color,
-                ...(isFocus ? { boxShadow: `0 0 0 2px white, 0 0 0 4px ${k.color}` } : {}),
-              }}
-              onClick={() => setFocus(isFocus ? null : k.id)}
-            >
-              <span className={s.kpiHead}>
-                <b>{k.name}</b>
-                {isFocus && (
-                  <span style={{ color: k.color }}>
-                    <Icon name="target" size={16} />
-                  </span>
-                )}
-              </span>
-              <dl>
-                <div>
-                  <dt>DSCR</dt>
-                  <dd data-tone={k.dscr == null ? 'muted' : tone(k.dscr, 1.25, 1)}>
-                    {k.dscr == null ? 'No debt' : `${k.dscr.toFixed(2)}x`}
-                  </dd>
-                  {delta && k.dscr != null && baseKpi.dscr != null && (
-                    <small data-tone={k.dscr >= baseKpi.dscr ? 'teal' : 'red'}>
-                      {signed(k.dscr - baseKpi.dscr, (n) => n.toFixed(2))}
-                    </small>
-                  )}
-                </div>
-                <div>
-                  <dt>Year 1 CF</dt>
-                  <dd data-tone={k.y1 == null ? 'muted' : k.y1 >= 0 ? 'teal' : 'red'}>
-                    {wholeDollars(k.y1)}
-                  </dd>
-                  {delta && k.y1 != null && baseKpi.y1 != null && (
-                    <small data-tone={k.y1 >= baseKpi.y1 ? 'teal' : 'red'}>
-                      {signed(k.y1 - baseKpi.y1, (n) => wholeDollars(n))}
-                    </small>
-                  )}
-                </div>
-                <div>
-                  <dt>IRR</dt>
-                  <dd>{pct(k.irr)}</dd>
-                  {delta && k.irr != null && baseKpi.irr != null && (
-                    <small data-tone={k.irr >= baseKpi.irr ? 'teal' : 'red'}>
-                      {signed((k.irr - baseKpi.irr) * 100, (n) => `${n.toFixed(2)}%`)}
-                    </small>
-                  )}
-                </div>
-                <div>
-                  <dt>Worst Year</dt>
-                  <dd data-tone={k.worst && k.worst.cashFlow >= 0 ? 'amber' : 'red'} data-size="sm">
-                    {wholeDollars(k.worst?.cashFlow)}
-                  </dd>
-                  <small>Year {k.worst?.year}</small>
-                </div>
-              </dl>
-            </button>
-          );
-        })}
-      </div>
-
-      <ChartCard
-        title="Key Metrics Comparison"
-        subtitle="Which case does best on each measure, for Year 1 and over the chosen horizon."
-        basis={[
-          'Projected',
-          `Year 1 and ${shown}-year horizon`,
-          'IRR over the full hold',
-          'Before tax',
-        ]}
-        controls={
-          <div className={s.view}>
-            <span>Horizon:</span>
-            {horizon}
-          </div>
-        }
-      >
+      <ChartCard title="Key metrics" controls={horizon}>
         <div className={s.tableWrap} role="region" tabIndex={0} aria-label="Key metrics comparison">
           <table className={`${s.table} ${s.metricsTable}`}>
             <thead>
               <tr>
-                <th scope="col">
-                  <span className={s.srOnly}>Impact</span>
-                </th>
                 <th scope="col">Metric</th>
                 {visible.map((c) => (
-                  <th scope="col" key={c.id} style={{ color: c.color }}>
+                  <th scope="col" key={c.id}>
+                    <i className={s.swatch} style={{ background: c.color }} aria-hidden="true" />
                     {c.name}
                   </th>
                 ))}
@@ -395,7 +336,7 @@ export function ScenarioCharts({
               {metrics.map((g) => (
                 <Fragment key={g.group}>
                   <tr className={s.group}>
-                    <th colSpan={2 + visible.length} scope="colgroup">
+                    <th colSpan={1 + visible.length} scope="colgroup">
                       {g.group}
                     </th>
                   </tr>
@@ -407,13 +348,6 @@ export function ScenarioCharts({
                     const unique = (v: number) => known.filter((x) => x === v).length === 1;
                     return (
                       <tr key={m.key}>
-                        <td
-                          className={s.impact}
-                          data-level={m.impact}
-                          aria-label={`Impact ${m.impact} of 3`}
-                        >
-                          {'●'.repeat(m.impact)}
-                        </td>
                         <th scope="row">{m.label}</th>
                         {values.map((v, i) => {
                           const b = values[0];
@@ -429,7 +363,7 @@ export function ScenarioCharts({
                               {v == null ? (
                                 <span className={s.na}>Unavailable</span>
                               ) : view === 'delta' && i > 0 && d ? (
-                                <span data-tone={d > 0 ? 'teal' : 'red'}>
+                                <span data-tone={d < 0 ? 'red' : undefined}>
                                   {signed(d, m.format)}
                                 </span>
                               ) : (
@@ -438,7 +372,7 @@ export function ScenarioCharts({
                                   {i > 0 && d != null && (
                                     <span
                                       className={s.trend}
-                                      data-tone={d > 0 ? 'teal' : d < 0 ? 'red' : 'muted'}
+                                      data-tone={d < 0 ? 'red' : d > 0 ? 'up' : undefined}
                                     >
                                       <Icon
                                         name={d > 0 ? 'up' : d < 0 ? 'down' : 'chevronRight'}
@@ -462,30 +396,16 @@ export function ScenarioCharts({
         {visible.length > 1 && (
           <ul className={s.key} aria-label="Table key">
             <li>
-              <i data-kind="best" aria-hidden="true" /> Highest among shown cases
+              <i data-kind="best" aria-hidden="true" /> Highest
             </li>
             <li>
-              <i data-kind="worst" aria-hidden="true" /> Lowest among shown cases
+              <i data-kind="worst" aria-hidden="true" /> Lowest
             </li>
-            <li>
-              <span aria-hidden="true">●●●</span> Impact rating (three dots highest)
-            </li>
-            {view === 'delta' && <li>Δ view: other cases show the change from the Base Case</li>}
           </ul>
         )}
       </ChartCard>
 
-      <ChartCard
-        title="Equity Growth by Scenario"
-        subtitle="How much equity each case builds, year by year."
-        basis={[
-          'Projected',
-          'USD, year-end',
-          `${shown}-year horizon`,
-          'Before selling costs',
-          'Before tax',
-        ]}
-      >
+      <ChartCard title="Equity by case">
         <div className={s.breakevens} role="group" aria-labelledby="scenario-recovery-label">
           <span className={s.label} id="scenario-recovery-label">
             Initial cash recovered:
@@ -493,11 +413,10 @@ export function ScenarioCharts({
           {visible.map((c) => {
             const y = recoveryYear(c.result);
             return (
-              <span key={c.id} style={{ background: `${c.color}1f`, color: c.color }}>
+              <span key={c.id}>
+                <i style={{ background: c.color }} aria-hidden="true" />
                 <b>{c.name}:</b>{' '}
-                <code>
-                  {y ? `Year ${y}` : `Not within ${c.result.annualCashflows.length} years`}
-                </code>
+                {y ? `Year ${y}` : `Not within ${c.result.annualCashflows.length} years`}
               </span>
             );
           })}
@@ -508,49 +427,28 @@ export function ScenarioCharts({
           xFormat={(y) => `Y${y}`}
           series={series('equity')}
         />
-        <Insight>
-          {visible.length < 2 ? (
-            <>
-              Only the Base Case is shown
-              {bestIrr && (
-                <>
-                  {' '}
-                  (leveraged IRR <Figure>{pct(bestIrr.irr)}</Figure>)
-                </>
-              )}
-              . Save a case from What if, such as the Optimistic or Conservative preset, to compare
-              outcomes.
-            </>
-          ) : bestIrr && worstIrr ? (
-            <>
-              IRR ranges from <Figure tone="red">{pct(worstIrr.irr)}</Figure> ({worstIrr.name}) to{' '}
-              <Figure>{pct(bestIrr.irr)}</Figure> ({bestIrr.name}) — a{' '}
-              <b>{((bestIrr.irr! - worstIrr.irr!) * 100).toFixed(1)} percentage-point</b> spread.
-              {worstIrr.dscr != null && worstIrr.dscr < 1 && (
-                <>
-                  {' '}
-                  <b className={s.warn}>Warning:</b> {worstIrr.name} has DSCR below 1.0.
-                </>
-              )}
-            </>
-          ) : (
-            'Leveraged IRR is unavailable for these scenarios.'
-          )}{' '}
-          Initial cash is recovered in the first year that cumulative cash flow reaches the cash
-          invested.
-        </Insight>
-        <p className={s.foot}>
-          Holding period: {base.result.annualCashflows.length} years · Selling costs:{' '}
-          {baseInput.appreciationExit?.sellingCostsPercent ?? 'Not set'}% · Years past a shorter
-          hold are gaps, not $0
-        </p>
+        {visible.length > 1 && (
+          <Insight>
+            {bestIrr && worstIrr ? (
+              <>
+                IRR ranges from <Figure tone={red(worstIrr.irr)}>{pct(worstIrr.irr)}</Figure> (
+                {worstIrr.name}) to <Figure tone={red(bestIrr.irr)}>{pct(bestIrr.irr)}</Figure> (
+                {bestIrr.name}).
+                {worstIrr.dscr != null && worstIrr.dscr < 1 && (
+                  <>
+                    {' '}
+                    <b className={s.warn}>{worstIrr.name} has DSCR below 1.0.</b>
+                  </>
+                )}
+              </>
+            ) : (
+              'Leveraged IRR is unavailable for these scenarios.'
+            )}
+          </Insight>
+        )}
       </ChartCard>
 
-      <ChartCard
-        title="Cash Flow by Scenario"
-        subtitle="Each case's operating cash flow, year by year."
-        basis={['Projected', 'USD per year', `Years 1–${shown}`, 'Before tax']}
-      >
+      <ChartCard title="Cash flow by case">
         <ComboChart
           label="Annual operating cash flow by scenario"
           years={Array.from({ length: shown }, (_, i) => i + 1)}

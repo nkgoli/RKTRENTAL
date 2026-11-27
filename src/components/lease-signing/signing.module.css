@@ -73,6 +73,18 @@
   padding: 16px 0;
   border-bottom: 1px solid #dce3ed;
 }
+/* Dividers separate rows; none trails the last one. */
+.party:last-child,
+.file:last-child {
+  border-bottom: 0;
+}
+.quietLink {
+  display: inline-flex;
+  align-items: center;
+  color: var(--design-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
 .party small {
   display: block;
   color: #58677d;

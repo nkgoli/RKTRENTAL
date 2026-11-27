@@ -24,10 +24,7 @@ import {
   chartColors,
   ComboChart,
   ExactTable,
-  Figure,
-  Icon,
   InfoTip,
-  Insight,
   MoreDetail,
   Segmented,
   Tiles,
@@ -38,15 +35,15 @@ import s from './scenario-charts.module.css';
 import b from './benchmark-charts.module.css';
 
 const presets = getAllBenchmarks();
-const PROPERTY_COLOR = chartColors.accent;
-/** Reference assets drawn in app-palette hues (each 4.5:1 on white, so labels stay legible). */
+const PROPERTY_COLOR = chartColors.indigo;
+/** Reference assets in the chart palette; each asset keeps its colour on every chart. */
 const ASSET_COLORS: Record<string, string> = {
-  sp500: chartColors.primary,
-  nasdaq100: chartColors.plum,
-  bonds: '#4f7a2b',
-  reits: '#b04a1c',
-  savings: chartColors.muted,
-  custom: '#8a4526',
+  sp500: chartColors.teal,
+  nasdaq100: chartColors.orange,
+  bonds: chartColors.violet,
+  reits: '#9d174d',
+  savings: '#4b5567',
+  custom: '#8a6d00',
 };
 const assetColor = (type: string, fallback: string) => ASSET_COLORS[type] ?? fallback;
 const markets = MARKET_TYPES.map((t) => presets.find((p) => p.type === t)!).filter(Boolean);
@@ -95,75 +92,84 @@ function assetsOf(
   });
 }
 
-/** Growth lines (property solid w3, references dashed `5 5`), USD or indexed to 100. */
+/**
+ * Growth of the same starting cash in each asset, in USD or indexed to 100. With `onFocus`
+ * the legend is a row of toggles that highlight one line.
+ */
 function GrowthChart({
   assets,
   initial,
   indexed,
   focus,
+  onFocus,
   label,
 }: {
   assets: Asset[];
   initial: number;
   indexed: boolean;
   focus: string | null;
+  onFocus?: (id: string | null) => void;
   label: string;
 }) {
   const years = assets[0].projections.map((p) => p.year);
-  const milestones = years.flatMap((y, i) => (y % 5 === 0 ? [i] : []));
   return (
-    <ComboChart
-      label={label}
-      unit={indexed ? 'Index' : 'USD'}
-      years={years}
-      xFormat={(y) => `Y${y}`}
-      xTicks={milestones.length ? milestones : undefined}
-      refLines={
-        indexed
-          ? [{ value: 100, label: '100 = start', color: chartColors.mutedLight, dash: '3 3' }]
-          : []
-      }
-      format={indexed ? (v) => v.toFixed(4) : undefined}
-      series={assets.map((a) => ({
-        label: a.name,
-        color: a.color,
-        values: a.projections.map((p) => (indexed ? (100 * p.value) / initial : p.value)),
-        width:
-          a.id === 'property' ? (focus && focus !== a.id ? 1 : 3) : focus && focus !== a.id ? 1 : 2,
-        dash: a.id === 'property' ? undefined : '5 5',
-        dot: 0,
-        opacity: focus && focus !== a.id ? 0.3 : 1,
-      }))}
-      legend={assets.map((a) => ({
-        label: a.name,
-        kind: a.id === 'property' ? 'line' : 'dashed',
-        color: a.color,
-      }))}
-      tooltip={(i) => ({
-        title: `Year ${years[i]}`,
-        rows: assets.map((a) => {
-          const v = a.projections[i]?.value;
-          return indexed
-            ? {
-                label: a.name,
-                text:
-                  v == null
-                    ? 'Unavailable'
-                    : `${((100 * v) / initial).toFixed(1)} (${((100 * v) / initial - 100).toFixed(1)}%)`,
-                swatch: { color: a.color, kind: 'line' as const },
-              }
-            : {
-                label: a.name,
-                value: v ?? null,
-                swatch: { color: a.color, kind: 'line' as const },
-              };
-        }),
-      })}
-    />
+    <div className={b.growth}>
+      {onFocus && (
+        <div className={b.focus} role="group" aria-label="Highlight an investment">
+          {assets.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              aria-pressed={focus === a.id}
+              onClick={() => onFocus(focus === a.id ? null : a.id)}
+            >
+              <i style={{ background: a.color }} aria-hidden="true" />
+              {a.name}
+            </button>
+          ))}
+        </div>
+      )}
+      <ComboChart
+        label={label}
+        unit={indexed ? 'Index' : 'USD'}
+        years={years}
+        xFormat={(y) => `Y${y}`}
+        refLines={indexed ? [{ value: 100, label: '100 = start' }] : []}
+        format={indexed ? (v) => v.toFixed(4) : undefined}
+        series={assets.map((a) => ({
+          label: a.name,
+          color: a.color,
+          values: a.projections.map((p) => (indexed ? (100 * p.value) / initial : p.value)),
+          width: focus === a.id ? 2.5 : 2,
+          opacity: focus && focus !== a.id ? 0.25 : 1,
+        }))}
+        legend={onFocus ? [] : assets.map((a) => ({ label: a.name, kind: 'line', color: a.color }))}
+        tooltip={(i) => ({
+          title: `Year ${years[i]}`,
+          rows: assets.map((a) => {
+            const v = a.projections[i]?.value;
+            return indexed
+              ? {
+                  label: a.name,
+                  text:
+                    v == null
+                      ? 'Unavailable'
+                      : `${((100 * v) / initial).toFixed(1)} (${((100 * v) / initial - 100).toFixed(1)}%)`,
+                  swatch: { color: a.color, kind: 'line' as const },
+                }
+              : {
+                  label: a.name,
+                  value: v ?? null,
+                  swatch: { color: a.color, kind: 'line' as const },
+                };
+          }),
+        })}
+      />
+    </div>
   );
 }
 
-/** Missing-comparison card: says what is missing and how it appears, never a blank panel. */
+/** Missing-comparison card: says what is missing, never a blank panel. */
 function Empty({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className={`${styles.card} ${b.empty}`} role="status">
@@ -222,10 +228,10 @@ export function RoiBenchmarks({
   }, [compare, stale, snapshot]);
   const cocYield = (r: { summaryMetrics: { cashOnCash: number | null } } | undefined) =>
     r?.summaryMetrics.cashOnCash == null ? null : r.summaryMetrics.cashOnCash * 100;
-  const basis = ['Projected property', 'Hypothetical markets', 'USD', 'Lump sum', 'Before tax'];
   const noProjection = snapshot
-    ? 'The current assumptions have issues, so there is no up-to-date projection. Fix them in the Assumptions band above and this updates automatically.'
-    : 'The property has no projection yet. Complete the missing assumptions (Edit assumptions above) and this appears automatically.';
+    ? 'The current assumptions have issues. Fix them above and this updates automatically.'
+    : 'No projection yet. Complete the missing assumptions (Edit assumptions above).';
+  const limit = 'Selection limit: remove a reference asset before choosing another. Maximum two.';
 
   const picker = (
     <fieldset disabled={saving} className={b.picker}>
@@ -239,27 +245,13 @@ export function RoiBenchmarks({
       {[...presets, ...selected.filter((x) => x.type === 'custom')].map((x) => {
         const on = selected.some((y) => y.type === x.type);
         return (
-          <label
-            className={b.assetChip}
-            key={x.type}
-            data-on={on || undefined}
-            style={
-              on
-                ? {
-                    background: assetColor(x.type, x.color),
-                    borderColor: assetColor(x.type, x.color),
-                  }
-                : undefined
-            }
-          >
+          <label className={b.assetChip} key={x.type} data-on={on || undefined}>
             <input
               type="checkbox"
               checked={on}
               onChange={(e) => {
                 if (e.target.checked && selected.length === 2) {
-                  setFeedback(
-                    'Selection limit: remove a reference asset before choosing another. Maximum two.',
-                  );
+                  setFeedback(limit);
                   return;
                 }
                 setFeedback('');
@@ -270,6 +262,7 @@ export function RoiBenchmarks({
                 );
               }}
             />
+            {on && <i style={{ background: assetColor(x.type, x.color) }} aria-hidden="true" />}
             {x.name}
             <span aria-hidden="true">{on ? '×' : '+'}</span>
           </label>
@@ -281,9 +274,7 @@ export function RoiBenchmarks({
           className={b.addCustom}
           onClick={() => {
             if (selected.length === 2) {
-              setFeedback(
-                'Selection limit: remove a reference asset before choosing another. Maximum two.',
-              );
+              setFeedback(limit);
               return;
             }
             onChange([
@@ -296,7 +287,7 @@ export function RoiBenchmarks({
                 averageYield: 0,
                 volatility: 0,
                 source: 'Manager-entered; period required',
-                color: '#8a4526',
+                color: '#8a6d00',
               },
             ]);
           }}
@@ -310,33 +301,16 @@ export function RoiBenchmarks({
   return (
     <div className={s.wrap}>
       <section className={`${styles.card} ${b.intro}`}>
-        <h2>{compare ? 'Asset Comparison' : 'Benchmarks'}</h2>
-        <p>
-          {compare
-            ? `How the cash you put into ${propertyName} compares with investing it in up to two assets you choose, for the same hold.`
-            : `How the cash you put into ${propertyName} compares with investing it in the S&P 500, Nasdaq 100 or US Bonds for the same hold.`}
-        </p>
-        <Basis items={basis} />
-        <p className={b.caveat}>
-          Market figures are fixed historical assumptions supplied by RealROI, not live or verified
-          data.
-          {!compare && ' This set is fixed; choose your own references on Compare.'}
-        </p>
-        {compare && (
-          <>
-            {picker}
-            <p className={b.hint}>
-              {propertyName} is always included. To pick another reference, remove one first.
-            </p>
-          </>
-        )}
+        <div className={b.introHead}>
+          <h2>{compare ? 'Asset comparison' : 'Benchmarks'}</h2>
+          <Basis items={['Hypothetical markets']} />
+        </div>
+        <p className={b.caveat}>Historical averages, not live or verified data.</p>
+        {compare && picker}
         {compare && selected.some((x) => x.type === 'custom') && (
-          <fieldset disabled={saving}>
-            <legend>Custom reference assumptions</legend>
-            <p>
-              Explicit assumptions only. CAGR already includes reinvested distributions. Enter
-              source and period; a volatility assumption is not measured property risk.
-            </p>
+          <fieldset disabled={saving} className={b.custom}>
+            <legend>Custom reference</legend>
+            <p>Total return includes reinvested distributions.</p>
             {customFields.map((field) => {
               const path = `benchmarks.${selected.findIndex((x) => x.type === 'custom')}.${field}`;
               const label = {
@@ -371,7 +345,7 @@ export function RoiBenchmarks({
         <p role="status" aria-live="polite" className={b.feedback}>
           {feedback}
         </p>
-        <MoreDetail summary="Where the market figures come from, and how they are compared">
+        <MoreDetail summary="Sources and method">
           <div
             className={styles.table}
             role="region"
@@ -402,35 +376,11 @@ export function RoiBenchmarks({
               </tbody>
             </table>
           </div>
-          <ul className={b.method}>
-            <li>
-              <b>Same start, same hold.</b> Each reference starts with the property&apos;s initial
-              cash as a lump sum and grows at its annual total return for the modeled hold.
-            </li>
-            <li>
-              <b>Property wealth.</b> Equity plus cumulative cash flow (held, not reinvested); the
-              final year deducts selling costs and the loan payoff. Leverage is included.
-            </li>
-            <li>
-              <b>Before tax.</b> No income or capital-gains tax on either side, and no fund fees or
-              trading costs on the market side. Liquidity and tax treatment differ in practice.
-            </li>
-            <li>
-              <b>Yield.</b> Total returns already include reinvested distributions, so yield is
-              shown for reference and never added again.
-            </li>
-            <li>
-              <b>Risk.</b> Reference volatility is source metadata, not a forecast. The
-              property&apos;s volatility is not measured, so it never gets a volatility position or
-              a risk-adjusted score.
-            </li>
-            <li>
-              <b>Custom references</b> keep the source and period you enter. Add or edit one on
-              Compare; the results update as you type, and Save draft or Save ready keeps it for
-              this property.
-            </li>
-          </ul>
-          <button disabled>Match cash flows - unavailable</button>
+          <p className={b.method}>
+            Each market starts with the property&apos;s initial cash and grows at its annual total
+            return for the same hold, before tax and fees. Property wealth is equity plus cash flow
+            received; the final year deducts selling costs and the loan payoff.
+          </p>
         </MoreDetail>
       </section>
 
@@ -455,8 +405,7 @@ export function RoiBenchmarks({
           <Empty title="No projection to compare">{noProjection}</Empty>
         ) : !snapshot.benchmarks.length ? (
           <Empty title="No reference selected">
-            Choose at least one reference asset above to compare with {propertyName}. The comparison
-            appears as soon as you pick one.
+            Choose at least one reference asset to compare with {propertyName}.
           </Empty>
         ) : !comparison ? (
           <Empty title="Comparison unavailable">{error}</Empty>
@@ -508,122 +457,79 @@ function BenchmarksView({
   const m = baseResult.summaryMetrics;
   const financed = m.loanAmount > 0;
   const dscr = financed ? m.dscr : null;
-  const milestones = [5, 10, 15, 20, 25, 30].filter((y) => y <= hold);
+  const top = Math.max(...assets.map((x) => x.finalValue));
   return (
     <>
-      <section
-        className={b.banner}
-        data-tone={propertyBest ? 'good' : 'warn'}
-        aria-label="Benchmark summary"
-      >
-        <div>
+      <section className={`${styles.card} ${b.summary}`} aria-label="Benchmark summary">
+        <div className={b.summaryHead}>
           <h3>
-            <Icon name={propertyBest ? 'sparkles' : 'target'} size={22} />
-            {propertyBest
-              ? `Property outperforms markets (${hold}-year hold)`
-              : `Markets outperform this deal (${hold}-year hold)`}
+            {propertyBest ? 'Property outperforms the markets' : 'Markets outperform this deal'}
           </h3>
-          <dl className={b.bannerRows}>
-            <div>
-              <dt>Property final value:</dt>
-              <dd>{wholeDollars(property.finalValue)}</dd>
-            </div>
-            <div>
-              <dt>{best.name}:</dt>
-              <dd>{wholeDollars(best.finalValue)}</dd>
-            </div>
-            <div data-total>
-              <dt>Difference:</dt>
-              <dd data-tone={diff >= 0 ? 'good' : 'bad'}>
-                {signedMoney(diff)} <Icon name={diff >= 0 ? 'up' : 'down'} size={16} />
-              </dd>
-            </div>
-          </dl>
-          <p className={b.disclaimer}>
-            Property value is the sale after selling costs and the loan payoff, plus cumulative cash
-            flow. Market values grow at historical average returns, which are not guaranteed.
-          </p>
+          <span>{hold}-year hold</span>
         </div>
-        <dl className={b.bannerKpis}>
-          <div>
-            <dt>Property growth</dt>
-            <dd>{pct(property.annualizedReturn)}</dd>
-            <small>annualized wealth growth, not IRR</small>
-          </div>
-          <div>
-            <dt>Best Market</dt>
-            <dd>{pct(best.annualizedReturn)}</dd>
-            <small>{best.name}</small>
-          </div>
-        </dl>
+        <Tiles
+          items={[
+            {
+              label: 'Property',
+              value: wholeDollars(property.finalValue),
+              note: `${pct(property.annualizedReturn)} a year · not IRR`,
+            },
+            {
+              label: best.name,
+              value: wholeDollars(best.finalValue),
+              note: `${pct(best.annualizedReturn)} a year`,
+            },
+            { label: 'Difference', value: signedMoney(diff), negative: diff < 0 },
+          ]}
+        />
+        <Tiles
+          items={[
+            {
+              label: 'DSCR · Y1',
+              value: financed ? (dscr == null ? 'Unavailable' : `${dscr.toFixed(2)}x`) : 'No debt',
+              note: !financed
+                ? undefined
+                : dscr == null
+                  ? undefined
+                  : dscr >= 1.25
+                    ? 'Safe'
+                    : dscr >= 1
+                      ? 'Tight'
+                      : 'At risk',
+              negative: dscr != null && dscr < 1,
+              info: 'Debt Service Coverage Ratio. Above 1.25 is safe; below 1.0 NOI does not cover the loan.',
+            },
+            {
+              label: 'Worst year',
+              value: wholeDollars(worst.cashFlow),
+              note: `Year ${worst.year}`,
+              negative: worst.cashFlow < 0,
+            },
+            {
+              label: 'Cash recovered',
+              value: recovery ? `Year ${recovery}` : `>${hold}y`,
+              info: 'Year when cumulative cash flow equals the initial cash invested.',
+            },
+            {
+              label: 'Negative years',
+              value: `${negatives} / ${rows.length}`,
+              negative: negatives > 0,
+            },
+          ]}
+        />
       </section>
 
-      <Tiles
-        size="sm"
-        items={[
-          {
-            label: 'DSCR (Y1)',
-            value: financed ? (dscr == null ? 'Unavailable' : `${dscr.toFixed(2)}x`) : 'No debt',
-            note: !financed
-              ? 'No loan modeled'
-              : dscr == null
-                ? ''
-                : dscr >= 1.25
-                  ? 'Safe'
-                  : dscr >= 1
-                    ? 'Tight'
-                    : 'At risk',
-            tone:
-              !financed || (dscr != null && dscr >= 1.25)
-                ? 'teal'
-                : dscr != null && dscr >= 1
-                  ? 'amber'
-                  : 'red',
-            info: 'Debt Service Coverage Ratio. Above 1.25 is safe; below 1.0 NOI does not cover the loan.',
-          },
-          {
-            label: 'Worst Year CF',
-            value: wholeDollars(worst.cashFlow),
-            note: `Year ${worst.year}`,
-            tone: worst.cashFlow >= 0 ? 'teal' : 'red',
-            info: 'The lowest annual cash flow across the holding period.',
-          },
-          {
-            label: 'Breakeven',
-            value: recovery ? `Year ${recovery}` : `>${hold}y`,
-            note: 'Cash flow recovery',
-            tone: 'teal',
-            info: 'Year when cumulative cash flow equals the initial cash invested.',
-          },
-          {
-            label: 'Negative CF Years',
-            value: `${negatives} / ${rows.length}`,
-            note: negatives === 0 ? 'Always positive' : 'Capital calls needed',
-            tone: negatives === 0 ? 'teal' : 'amber',
-            info: 'Years with negative cash flow, which need added capital.',
-          },
-        ]}
-      />
-
       <ChartCard
-        title={`Investment Comparison (${hold}-Year Hold)`}
-        subtitle={`What ${wholeDollars(initial)} becomes in each investment by the end of the hold.`}
-        basis={[
-          'Projected property',
-          'Hypothetical markets',
-          'USD',
-          `${hold}-year hold`,
-          'Before tax',
-        ]}
+        title="Investment comparison"
+        subtitle={`${wholeDollars(initial)} invested for ${hold} years`}
       >
         <div className={s.tableWrap} role="region" tabIndex={0} aria-label="Investment comparison">
           <table className={s.table}>
             <thead>
               <tr>
                 <th scope="col">Investment</th>
-                <th scope="col">Initial</th>
-                <th scope="col">Final Value</th>
-                <th scope="col">Total Growth</th>
+                <th scope="col">Final value</th>
+                <th scope="col">Growth</th>
                 <th scope="col">vs Property</th>
                 <th scope="col">Annualized</th>
                 <th scope="col">Volatility</th>
@@ -637,28 +543,17 @@ function BenchmarksView({
                     <th scope="row">
                       <span className={b.dot} style={{ background: a.color }} />
                       {a.name}
-                      {a.finalValue === Math.max(...assets.map((x) => x.finalValue)) && (
+                      {a.finalValue === top && (
                         <span className={b.trophy} aria-label="Best performer">
                           ★
                         </span>
                       )}
                     </th>
-                    <td>{wholeDollars(initial)}</td>
                     <td>{wholeDollars(a.finalValue)}</td>
-                    <td data-tone={a.finalValue >= initial ? 'teal' : 'red'}>
+                    <td data-tone={a.finalValue < initial ? 'red' : undefined}>
                       {signedMoney(a.finalValue - initial)}
                     </td>
-                    <td
-                      data-tone={
-                        a.id === 'property'
-                          ? undefined
-                          : vs > 0
-                            ? 'teal'
-                            : vs < 0
-                              ? 'red'
-                              : undefined
-                      }
-                    >
+                    <td data-tone={a.id !== 'property' && vs < 0 ? 'red' : undefined}>
                       {a.id === 'property' ? '—' : signedMoney(vs)}
                     </td>
                     <td>{pct(a.annualizedReturn)}</td>
@@ -672,31 +567,18 @@ function BenchmarksView({
       </ChartCard>
 
       <ChartCard
-        title="Investment Growth Over Time"
-        subtitle={
-          indexed
-            ? 'Each investment indexed to 100 at the start, so 200 means it doubled.'
-            : 'Value of each investment at the end of every year.'
-        }
-        basis={[
-          'Projected property',
-          'Hypothetical markets',
-          indexed ? 'Index, start = 100' : 'USD',
-        ]}
+        title="Growth over time"
+        subtitle={indexed ? 'Indexed, start = 100' : undefined}
         controls={
-          <div>
-            <span className={s.label}>Scale:</span>
-            <Segmented
-              label="Growth scale"
-              size="md"
-              value={indexed ? 'index' : 'dollars'}
-              onChange={(v) => setIndexed(v === 'index')}
-              options={[
-                { value: 'index', label: 'Index (100)' },
-                { value: 'dollars', label: 'Dollars' },
-              ]}
-            />
-          </div>
+          <Segmented
+            label="Growth scale"
+            value={indexed ? 'index' : 'dollars'}
+            onChange={(v) => setIndexed(v === 'index')}
+            options={[
+              { value: 'index', label: 'Index' },
+              { value: 'dollars', label: 'Dollars' },
+            ]}
+          />
         }
       >
         <GrowthChart
@@ -704,101 +586,27 @@ function BenchmarksView({
           initial={initial}
           indexed={indexed}
           focus={focus}
+          onFocus={setFocus}
           label={
             indexed ? 'Investment growth indexed to 100 at start' : 'Investment growth in dollars'
           }
         />
-        <div
-          className={b.milestones}
-          role="region"
-          tabIndex={0}
-          aria-label="Growth at milestone years"
-        >
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Investment</th>
-                {milestones.map((y) => (
-                  <th scope="col" key={y}>
-                    Y{y}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {assets.map((a) => (
-                <tr key={a.id}>
-                  <th
-                    scope="row"
-                    style={{ color: a.id === 'property' ? chartColors.accent : a.color }}
-                  >
-                    {a.name}
-                  </th>
-                  {milestones.map((y) => {
-                    const v = a.projections.find((p) => p.year === y)?.value;
-                    return (
-                      <td key={y}>
-                        {v == null
-                          ? '—'
-                          : indexed
-                            ? ((100 * v) / initial).toFixed(0)
-                            : wholeDollars(v)}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className={b.hint}>Select a market to highlight it in the chart.</p>
-        <div className={b.cards}>
-          {refs.map((a) => {
-            const on = focus === a.id;
-            const vs = property.finalValue - a.finalValue;
-            const ref = markets.find((x) => x.type === a.id);
-            return (
-              <button
-                key={a.id}
-                type="button"
-                className={b.assetCard}
-                aria-pressed={on}
-                style={{
-                  borderTopColor: a.color,
-                  ...(on ? { boxShadow: `0 0 0 2px white, 0 0 0 4px ${a.color}` } : {}),
-                }}
-                onClick={() => setFocus(on ? null : a.id)}
-              >
-                <b>{a.name}</b>
-                <small>{a.description}</small>
-                <dl>
-                  <div>
-                    <dt>Annual return used:</dt>
-                    <dd>{ref == null ? 'Unavailable' : `${ref.historicalCAGR}%`}</dd>
-                  </div>
-                  <div>
-                    <dt>Volatility:</dt>
-                    <dd>{a.volatility == null ? 'Not measured' : `${a.volatility}%`}</dd>
-                  </div>
-                  <div>
-                    <dt>Property vs this:</dt>
-                    <dd data-tone={vs > 0 ? 'good' : 'bad'}>{signedMoney(vs)}</dd>
-                  </div>
-                </dl>
-                <span className={s.srOnly}>
-                  {on ? 'Focused in the growth chart' : 'Focus in the growth chart'}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <MoreDetail summary="View exact amounts">
+          <ExactTable
+            caption="Exact growth - interim equity + cash; final net liquidation + cash"
+            headers={['Year', ...assets.map((a) => `${a.name} (USD / index)`)]}
+            rows={assets[0].projections.map((p, i) => [
+              p.year,
+              ...assets.map(
+                (a) =>
+                  `${dollars(a.projections[i]?.value)} / ${a.projections[i] ? ((100 * a.projections[i].value) / initial).toFixed(4) : '—'}`,
+              ),
+            ])}
+          />
+        </MoreDetail>
       </ChartCard>
 
-      <ChartCard
-        title="Risk vs Return"
-        subtitle="Higher return with lower volatility is better, so top-left is best."
-        basis={['Hypothetical markets', '% per year', 'Property volatility not measured']}
-      >
+      <ChartCard title="Risk vs return" subtitle="Property volatility is not measured">
         <ScatterChart
           label="Reference volatility against annualized return"
           points={refs
@@ -808,7 +616,6 @@ function BenchmarksView({
               x: a.volatility!,
               y: a.annualizedReturn!,
               color: a.color,
-              r: 9,
             }))}
           refLines={
             property.annualizedReturn == null
@@ -816,65 +623,13 @@ function BenchmarksView({
               : [
                   {
                     value: property.annualizedReturn,
-                    label: `${propertyName} ${property.annualizedReturn.toFixed(2)}% · volatility not measured`,
-                    color: chartColors.accent,
+                    label: `Property ${property.annualizedReturn.toFixed(1)}%`,
+                    color: PROPERTY_COLOR,
                   },
                 ]
           }
         />
-        <ul className={b.scatterKey}>
-          {assets.map((a) => (
-            <li key={a.id}>
-              <i style={{ background: a.color }} data-line={a.id === 'property' || undefined} />
-              {a.name} <b>{pct(a.annualizedReturn, 1)}</b>
-            </li>
-          ))}
-        </ul>
-        <p className={s.foot}>
-          The property has a projected return but no measured volatility, so it is drawn as a return
-          line instead of a point. Reference volatility is source metadata, not a forecast.
-        </p>
       </ChartCard>
-
-      <Insight>
-        {propertyBest ? (
-          <>
-            Property beats {best.name} by <Figure>{wholeDollars(diff)}</Figure> over {hold} years.
-            {negatives > 0 && (
-              <>
-                {' '}
-                However, you&apos;ll need to fund <b>{negatives}</b> negative cash flow years.
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            {best.name} would outperform by{' '}
-            <Figure tone="red">{wholeDollars(Math.abs(diff))}</Figure>.
-            {dscr != null && dscr >= 1.25 && (
-              <>
-                {' '}
-                But the property has stable cash flow (DSCR {dscr.toFixed(2)}x) vs market
-                volatility.
-              </>
-            )}
-          </>
-        )}
-      </Insight>
-      <details className={styles.card}>
-        <summary>Exact growth by year (USD / index)</summary>
-        <ExactTable
-          caption="Exact growth - interim equity + cash; final net liquidation + cash"
-          headers={['Year', ...assets.map((a) => `${a.name} (USD / index)`)]}
-          rows={assets[0].projections.map((p, i) => [
-            p.year,
-            ...assets.map(
-              (a) =>
-                `${dollars(a.projections[i]?.value)} / ${a.projections[i] ? ((100 * a.projections[i].value) / initial).toFixed(4) : '—'}`,
-            ),
-          ])}
-        />
-      </details>
     </>
   );
 }
@@ -883,9 +638,8 @@ const compareMetrics = [
   {
     group: 'Returns',
     key: 'annualized',
-    label: 'Annualized Return',
+    label: 'Annualized return',
     info: 'Average yearly growth (CAGR). For the property: annualized wealth growth, not IRR.',
-    impact: 3,
     higher: true,
     get: (a: Asset) => a.annualizedReturn,
     fmt: (v: number) => pct(v),
@@ -893,9 +647,8 @@ const compareMetrics = [
   {
     group: 'Returns',
     key: 'total',
-    label: 'Total Return',
+    label: 'Total return',
     info: 'Percentage gain over the hold.',
-    impact: 3,
     higher: true,
     get: (a: Asset) => a.totalReturn,
     fmt: (v: number) => pct(v),
@@ -903,9 +656,8 @@ const compareMetrics = [
   {
     group: 'Growth',
     key: 'final',
-    label: 'Final Value',
+    label: 'Final value',
     info: 'Value at the end of the hold (property: net sale proceeds plus cumulative cash flow).',
-    impact: 3,
     higher: true,
     get: (a: Asset) => a.finalValue,
     fmt: wholeDollars,
@@ -913,9 +665,8 @@ const compareMetrics = [
   {
     group: 'Growth',
     key: 'growth',
-    label: 'Total Growth',
+    label: 'Total growth',
     info: 'Dollars gained over the hold.',
-    impact: 2,
     higher: true,
     get: (a: Asset, initial: number) => a.finalValue - initial,
     fmt: wholeDollars,
@@ -925,10 +676,18 @@ const compareMetrics = [
     key: 'vol',
     label: 'Volatility',
     info: 'Reference standard deviation of returns; not measured for the property.',
-    impact: 2,
     higher: false,
     get: (a: Asset) => a.volatility,
     fmt: (v: number) => pct(v, 1),
+  },
+  {
+    group: 'Risk',
+    key: 'riskAdj',
+    label: 'Risk-adjusted',
+    info: 'Return above a 4% risk-free rate per point of volatility; not measured for the property.',
+    higher: true,
+    get: (a: Asset) => riskAdjusted(a),
+    fmt: (v: number) => v.toFixed(2),
   },
 ] as const;
 
@@ -972,50 +731,32 @@ function CompareView({
   const radar = radarScores(radarAssets);
   return (
     <>
-      <div className={b.winners}>
-        {[
-          { title: 'Best Total Return', icon: 'sparkles' as const, winner: bestTotal },
-          { title: 'Best CAGR', icon: 'up' as const, winner: bestCagr },
-          {
-            title: 'Most Stable',
-            icon: 'target' as const,
-            winner: stable,
-            note: 'Among assets with a measured volatility',
-          },
-        ].map((w) => (
-          <section
-            key={w.title}
-            className={b.winner}
-            data-property={w.winner?.id === 'property' || undefined}
-          >
-            <p>
-              <Icon name={w.icon} size={18} /> {w.title}
-            </p>
-            <b>{w.winner?.name ?? 'Unavailable'}</b>
-            {w.note && <small>{w.note}</small>}
-          </section>
-        ))}
-      </div>
-
       <ChartCard
-        title="Side-by-Side Comparison"
-        subtitle={`Every metric for the same ${wholeDollars(initial)} start; Best and Worst mark each row's leader and laggard.`}
-        basis={['Projected property', 'Hypothetical references', `${hold}-year hold`, 'Before tax']}
+        title="Side by side"
+        subtitle={`${wholeDollars(initial)} invested for ${hold} years`}
         controls={
-          <div>
-            <span className={s.label}>View:</span>
-            <Segmented
-              label="Comparison view"
-              value={delta ? 'delta' : 'absolute'}
-              onChange={(v) => setDelta(v === 'delta')}
-              options={[
-                { value: 'absolute', label: 'Absolute' },
-                { value: 'delta', label: 'vs Property' },
-              ]}
-            />
-          </div>
+          <Segmented
+            label="Comparison view"
+            value={delta ? 'delta' : 'absolute'}
+            onChange={(v) => setDelta(v === 'delta')}
+            options={[
+              { value: 'absolute', label: 'Absolute' },
+              { value: 'delta', label: 'vs Property' },
+            ]}
+          />
         }
       >
+        <Tiles
+          items={[
+            { label: 'Best total return', value: bestTotal?.name ?? 'Unavailable' },
+            { label: 'Best CAGR', value: bestCagr?.name ?? 'Unavailable' },
+            {
+              label: 'Most stable',
+              value: stable?.name ?? 'Unavailable',
+              info: 'Among assets with a measured volatility.',
+            },
+          ]}
+        />
         <div
           className={s.tableWrap}
           role="region"
@@ -1027,11 +768,7 @@ function CompareView({
               <tr>
                 <th scope="col">Metric</th>
                 {assets.map((a) => (
-                  <th
-                    scope="col"
-                    key={a.id}
-                    style={{ color: a.id === 'property' ? chartColors.accent : a.color }}
-                  >
+                  <th scope="col" key={a.id}>
                     <span className={b.dot} style={{ background: a.color }} />
                     {a.name}
                     {a.id === bestTotal?.id && (
@@ -1047,7 +784,7 @@ function CompareView({
               {['Returns', 'Growth', 'Risk'].map((group) => (
                 <Fragment key={group}>
                   <tr className={s.group}>
-                    <th colSpan={assets.length + 1} scope="colgroup" className={b.groupTitle}>
+                    <th colSpan={assets.length + 1} scope="colgroup">
                       {group}
                     </th>
                   </tr>
@@ -1073,10 +810,6 @@ function CompareView({
                         <tr key={m.key}>
                           <th scope="row">
                             {m.label} <InfoTip label={m.label}>{m.info}</InfoTip>
-                            <span className={b.impact} aria-label={`Impact ${m.impact} of 3`}>
-                              {'●'.repeat(m.impact)}
-                              {'○'.repeat(3 - m.impact)}
-                            </span>
                           </th>
                           {values.map((v, i) => {
                             const d = v != null && pv != null ? v - pv : null;
@@ -1097,22 +830,17 @@ function CompareView({
                                         Worst
                                       </em>
                                     )}
-                                    <span
-                                      data-tone={
-                                        v === best ? 'teal' : v === worst ? 'red' : undefined
-                                      }
-                                    >
-                                      {m.fmt(v)}
-                                    </span>
+                                    {m.fmt(v)}
                                   </span>
                                 )}
                                 {delta && i > 0 && d != null && d !== 0 && (
-                                  <small className={b.delta} data-tone={better ? 'teal' : 'red'}>
-                                    <Icon name={better ? 'up' : 'down'} size={12} />
+                                  <small className={b.delta} data-tone={better ? undefined : 'red'}>
                                     {d > 0 ? '+' : '−'}
                                     {m.key === 'final' || m.key === 'growth'
                                       ? wholeDollars(Math.abs(d))
-                                      : `${Math.abs(d).toFixed(1)} pp`}
+                                      : m.key === 'riskAdj'
+                                        ? Math.abs(d).toFixed(2)
+                                        : `${Math.abs(d).toFixed(1)} pp`}
                                   </small>
                                 )}
                               </td>
@@ -1126,28 +854,67 @@ function CompareView({
             </tbody>
           </table>
         </div>
-        <p className={b.tableFoot}>
-          <span>
-            <i data-tone="best" /> Best in category
-          </span>
-          <span>
-            <i data-tone="worst" /> Worst in category
-          </span>
-          <span>●●● = High impact metric</span>
-        </p>
-        {delta && (
-          <p className={s.foot}>
-            Arrows show each reference against {propertyName}; percentage differences are in
-            percentage points (pp).
-          </p>
-        )}
+        <MoreDetail summary="View exact amounts">
+          <div
+            className={styles.table}
+            role="region"
+            tabIndex={0}
+            aria-label="Same-capital asset comparison"
+          >
+            <table>
+              <thead>
+                <tr>
+                  <th>Metric</th>
+                  {assets.map((a) => (
+                    <th key={a.id}>{a.name}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ['Initial cash', ...assets.map(() => dollars(initial))],
+                  ['Final net liquidation + cash', ...assets.map((a) => dollars(a.finalValue))],
+                  ['Total growth', ...assets.map((a) => dollars(a.finalValue - initial))],
+                  [
+                    'Annualized wealth growth',
+                    ...assets.map((a) =>
+                      rate(a.annualizedReturn === null ? null : a.annualizedReturn / 100),
+                    ),
+                  ],
+                  ['Total growth (%)', ...assets.map((a) => rate(a.totalReturn / 100))],
+                  [
+                    'Rank by final value',
+                    ...assets.map((a) =>
+                      String(1 + assets.filter((x) => x.finalValue > a.finalValue).length),
+                    ),
+                  ],
+                  [
+                    'Final value delta from property',
+                    ...assets.map((a) => dollars(a.finalValue - property.finalValue)),
+                  ],
+                  [
+                    'Annualized growth delta (pp)',
+                    ...assets.map((a) =>
+                      a.annualizedReturn === null || property.annualizedReturn === null
+                        ? 'Unavailable'
+                        : `${(a.annualizedReturn - property.annualizedReturn).toFixed(4)} pp`,
+                    ),
+                  ],
+                ].map((row) => (
+                  <tr key={row[0]}>
+                    <th scope="row">{row[0]}</th>
+                    {row.slice(1).map((v, i) => (
+                      <td key={i}>{v}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </MoreDetail>
       </ChartCard>
 
-      <ChartCard
-        title="Investment Growth Over Time"
-        subtitle="Value of the same starting cash in each asset at the end of every year."
-        basis={['Projected property', 'Hypothetical references', 'USD']}
-      >
+      <ChartCard title="Growth over time">
         <GrowthChart
           assets={assets}
           initial={initial}
@@ -1157,44 +924,33 @@ function CompareView({
         />
       </ChartCard>
 
-      <ChartCard
-        title="Annualized Returns Comparison"
-        subtitle="Average yearly growth of each asset over the whole hold."
-        basis={['Projected property', 'Hypothetical references', '% per year', `${hold}-year hold`]}
-      >
+      <ChartCard title="Annualized return" subtitle="Property: wealth growth, not IRR">
         <ComboChart
           label="Annualized return by asset"
           unit="Percent"
           xLabel="Asset"
-          height={256}
+          height={240}
           years={assets.map((a) => a.name)}
           tickFormat={(v) => `${v.toFixed(1)}%`}
           format={(v) => `${v.toFixed(4)}%`}
           series={[
             {
-              label: 'Annualized Return',
+              label: 'Annualized return',
               kind: 'bar',
               color: PROPERTY_COLOR,
               colors: assets.map((a) => a.color),
               values: assets.map((a) => a.annualizedReturn),
             },
           ]}
-          legend={assets.map((a) => ({ label: a.name, kind: 'bar', color: a.color }))}
+          legend={[]}
           tooltip={(i) => ({
             title: assets[i].name,
-            rows: [{ label: 'Annualized Return', text: pct(assets[i].annualizedReturn) }],
+            rows: [{ label: 'Annualized return', text: pct(assets[i].annualizedReturn) }],
           })}
         />
-        <p className={s.foot}>
-          The property figure is annualized wealth growth (final value ÷ initial cash), not IRR.
-        </p>
       </ChartCard>
 
-      <ChartCard
-        title="Multi-Dimensional Comparison"
-        subtitle="Each dimension scored 0–100 against the best selected asset; a bigger shape is stronger."
-        basis={['Projected property', 'Hypothetical references', 'Relative score']}
-      >
+      <ChartCard title="Relative scores" subtitle="0–100 against the best asset">
         <RadarChart
           label="Normalized comparison scores"
           axes={radar.map((r) => r.metric)}
@@ -1204,14 +960,9 @@ function CompareView({
             values: radar.map((r) => r.values[i]),
           }))}
         />
-        <p className={s.foot}>
-          {propertyName}&apos;s Stability and Risk-Adj are not measured, so its shape stays open
-          (dashed) there instead of showing an invented score.
-        </p>
-        <MoreDetail summary="Radar scores and how they are calculated">
+        <MoreDetail summary="View scores">
           <p className={s.foot}>
-            RealROI method with a 4% risk-free rate. Reference return, yield and volatility are
-            unverified source metadata; the property&apos;s Yield is its projected Year-1
+            Risk-adjusted uses a 4% risk-free rate; the property&apos;s yield is its Year 1
             cash-on-cash.
           </p>
           <ExactTable
@@ -1222,116 +973,6 @@ function CompareView({
               ...r.values.map((v) => (v == null ? 'Not measured' : v.toFixed(1))),
             ])}
           />
-        </MoreDetail>
-      </ChartCard>
-
-      <div className={b.cards}>
-        {assets.map((a) => (
-          <section key={a.id} className={b.assetCard} style={{ borderTopColor: a.color }}>
-            <b>{a.name}</b>
-            <small>{a.description}</small>
-            <dl>
-              <div>
-                <dt>Final Value:</dt>
-                <dd>{wholeDollars(a.finalValue)}</dd>
-              </div>
-              <div>
-                <dt>Total Return:</dt>
-                <dd data-tone={a.totalReturn >= 0 ? 'good' : 'bad'}>
-                  {a.totalReturn >= 0 ? '+' : ''}
-                  {pct(a.totalReturn)}
-                </dd>
-              </div>
-              <div>
-                <dt>Annualized:</dt>
-                <dd>{pct(a.annualizedReturn)}</dd>
-              </div>
-              <div>
-                <dt>Volatility:</dt>
-                <dd>{a.volatility == null ? 'Not measured' : pct(a.volatility, 1)}</dd>
-              </div>
-              <div>
-                <dt>Risk-Adj:</dt>
-                <dd>{riskAdjusted(a)?.toFixed(2) ?? 'Not measured'}</dd>
-              </div>
-            </dl>
-          </section>
-        ))}
-      </div>
-
-      <ChartCard
-        title="Exact comparison"
-        subtitle="The same results to the cent, for checking or copying."
-        basis={[
-          'Projected property',
-          'Hypothetical references',
-          `Same ${dollars(initial)} start`,
-          `${hold}-year hold`,
-          'Before tax',
-        ]}
-      >
-        <div
-          className={styles.table}
-          role="region"
-          tabIndex={0}
-          aria-label="Same-capital asset comparison"
-        >
-          <table>
-            <thead>
-              <tr>
-                <th>Metric</th>
-                {assets.map((a) => (
-                  <th key={a.id}>{a.name}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                ['Initial cash', ...assets.map(() => dollars(initial))],
-                ['Final net liquidation + cash', ...assets.map((a) => dollars(a.finalValue))],
-                ['Total growth', ...assets.map((a) => dollars(a.finalValue - initial))],
-                [
-                  'Annualized wealth growth',
-                  ...assets.map((a) =>
-                    rate(a.annualizedReturn === null ? null : a.annualizedReturn / 100),
-                  ),
-                ],
-                ['Total growth (%)', ...assets.map((a) => rate(a.totalReturn / 100))],
-                [
-                  'Rank by final value',
-                  ...assets.map((a) =>
-                    String(1 + assets.filter((x) => x.finalValue > a.finalValue).length),
-                  ),
-                ],
-                [
-                  'Final value delta from property',
-                  ...assets.map((a) => dollars(a.finalValue - property.finalValue)),
-                ],
-                [
-                  'Annualized growth delta (pp)',
-                  ...assets.map((a) =>
-                    a.annualizedReturn === null || property.annualizedReturn === null
-                      ? 'Unavailable'
-                      : `${(a.annualizedReturn - property.annualizedReturn).toFixed(4)} pp`,
-                  ),
-                ],
-              ].map((row) => (
-                <tr key={row[0]}>
-                  <th scope="row">{row[0]}</th>
-                  {row.slice(1).map((v, i) => (
-                    <td key={i}>{v}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <MoreDetail summary="How property wealth and growth are measured">
-          <p className={s.foot}>
-            Interim property values are equity + accumulated cash; final wealth deducts selling
-            costs and debt payoff. Annualized wealth growth differs from timing-aware Summary IRR.
-            Negative final wealth has no annualized growth rate.
-          </p>
         </MoreDetail>
       </ChartCard>
     </>

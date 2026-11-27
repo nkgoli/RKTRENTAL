@@ -1,5 +1,5 @@
 import { bucketLabel, type SeriesPoint } from '@/lib/returns/period';
-import { ColumnChart } from '@/components/charts/ColumnChart';
+import { ColumnChart, labelIndexes } from '@/components/charts/ColumnChart';
 import styles from './returns.module.css';
 
 const money = (cents: number) =>
@@ -10,9 +10,20 @@ const compactUsd = new Intl.NumberFormat('en-US', {
   notation: 'compact',
   maximumFractionDigits: 0,
 });
-/** Show the year on axis labels when the range crosses a calendar year. */
-const withYear = (rows: SeriesPoint[]) =>
-  new Set(rows.map((row) => row.month.slice(0, 4))).size > 1;
+/**
+ * Short axis labels for the columns the chart labels: "Jan ’26, Mar, May…". The year shows on
+ * the first label and wherever it changes, so labels stay short enough not to collide on phones.
+ */
+function axisLabels(rows: SeriesPoint[]) {
+  const labels = rows.map(() => '');
+  let year = '';
+  for (const index of [...labelIndexes(rows.length)].sort((a, b) => a - b)) {
+    const next = rows[index].month.slice(0, 4);
+    labels[index] = bucketLabel(rows[index].month, next !== year);
+    year = next;
+  }
+  return labels;
+}
 
 /** A readable chart and an equivalent, keyboard-accessible table of exact ledger amounts. */
 export function IncomeExpenseChart({
@@ -26,6 +37,7 @@ export function IncomeExpenseChart({
   height?: number;
 }) {
   const hasActivity = rows.some((row) => row.incomeCents !== 0 || row.expensesCents !== 0);
+  const labels = axisLabels(rows);
   return (
     <div>
       {!hasActivity && (
@@ -38,9 +50,9 @@ export function IncomeExpenseChart({
             { key: 'income', label: 'Income', color: 'var(--chart-1)' },
             { key: 'expenses', label: 'Expenses', color: 'var(--chart-2)' },
           ]}
-          data={rows.map((row) => ({
+          data={rows.map((row, index) => ({
             key: row.month,
-            label: bucketLabel(row.month, withYear(rows)),
+            label: labels[index],
             title: bucketLabel(row.month, true),
             values: { income: row.incomeCents, expenses: row.expensesCents },
           }))}

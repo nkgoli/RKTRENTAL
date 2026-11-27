@@ -19,9 +19,14 @@ export default async function TenantLeasePage({
   searchParams?: Promise<{ lease?: string }>;
 }) {
   const session = await requireTenantRole();
-  const agreements = await LeaseAgreementList({ session, tenantPortal: true });
   const selected = (await searchParams)?.lease;
   const view = await loadTenantLease(session, { leaseId: selected });
+  // The lease shown below needs no "View documents" link in its own agreement row.
+  const agreements = await LeaseAgreementList({
+    session,
+    tenantPortal: true,
+    currentLeaseId: view?.leaseId,
+  });
 
   if (!view) {
     return (

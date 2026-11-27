@@ -1,4 +1,78 @@
-/* Benchmarks and Compare in app style: summary alert, chip pickers, winner and asset cards. */
+/* Benchmarks and Compare in the shared chart style: one intro card with a single
+   "Hypothetical" marker, a calm summary card, chip pickers and toggle legends. */
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.intro > * {
+  min-width: 0;
+  margin: 0 !important;
+}
+.introHead {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+}
+.introHead h2 {
+  margin: 0;
+  font-size: var(--rr-h3);
+  font-weight: 500;
+}
+.introHead ul {
+  margin: 0;
+}
+.caveat {
+  font-size: 13px !important;
+  color: var(--design-muted) !important;
+}
+.feedback:empty {
+  display: none;
+}
+.feedback {
+  font-size: 13px !important;
+  color: var(--rr-warn) !important;
+  font-weight: 500;
+}
+.method {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--design-muted);
+}
+.custom {
+  display: grid;
+  gap: 12px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.custom legend {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.custom p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--design-muted);
+}
+.empty {
+  display: grid;
+  gap: 4px;
+}
+.empty h3 {
+  margin: 0;
+  font-size: var(--rr-h3);
+  font-weight: 500;
+  color: var(--design-text);
+}
+.empty p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--design-muted);
+}
+/* Reference picker: the property is always in; references toggle as chips. */
 .picker {
   display: flex;
   flex-wrap: wrap;
@@ -12,64 +86,12 @@
   width: 100%;
   margin-bottom: 8px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--design-text);
 }
 .picker legend span {
   margin-left: 8px;
   font-weight: 400;
-  color: var(--design-muted);
-}
-/* Intro card: one sentence, basis tags, a short caveat, then the picker and its disclosure. */
-.intro {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
-}
-.intro > * {
-  min-width: 0;
-  margin: 0 !important;
-}
-.caveat,
-.hint {
-  font-size: 12px !important;
-  color: var(--design-muted) !important;
-}
-.hint {
-  margin: 0 !important;
-}
-.feedback:empty {
-  display: none;
-}
-.feedback {
-  font-size: 13px !important;
-  color: var(--rr-warn) !important;
-  font-weight: 600;
-}
-.method {
-  display: grid;
-  gap: 6px;
-  margin: 8px 0;
-  padding-left: 18px;
-  font-size: 13px;
-  color: var(--design-text);
-}
-.method b {
-  font-weight: 600;
-}
-.empty {
-  display: grid;
-  gap: 4px;
-}
-.empty h3 {
-  margin: 0;
-  font-size: var(--rr-h3);
-  font-weight: 600;
-  color: var(--design-text);
-}
-.empty p {
-  margin: 0;
-  font-size: 14px;
   color: var(--design-muted);
 }
 .propertyChip,
@@ -79,24 +101,27 @@
   align-items: center;
   gap: 8px;
   min-height: 32px;
-  padding: 5px 12px;
+  padding: 4px 12px;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
 }
 .propertyChip {
-  background: var(--rr-ok);
-  color: white;
+  background: var(--rr-primary-tint);
+  color: var(--design-text);
 }
-.propertyChip i {
+.propertyChip i,
+.assetChip i {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: white;
+}
+.propertyChip i {
+  background: var(--chart-1);
 }
 .assetChip {
   position: relative;
-  border: 1px solid var(--rr-border-strong);
+  border: 1px solid var(--rr-border);
   background: var(--design-surface);
   color: var(--design-text);
   cursor: pointer;
@@ -105,9 +130,11 @@
   background: var(--rr-hover);
 }
 .assetChip[data-on] {
-  border-color: transparent;
-  color: #fff;
-  text-shadow: 0 1px 1px rgb(23 36 59 / 0.4);
+  border-color: var(--design-primary);
+  background: var(--rr-primary-tint);
+}
+.assetChip > span {
+  color: var(--design-muted);
 }
 .assetChip input {
   position: absolute;
@@ -124,113 +151,32 @@
   border: 1px dashed var(--rr-border-strong);
   background: var(--design-surface);
   color: var(--design-muted);
-  font-size: 13px;
 }
-.banner {
+/* Benchmark summary: a headline and two quiet rows of figures. */
+.summary {
+  display: grid;
+  gap: 20px;
+}
+.summaryHead {
   display: flex;
-  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 16px;
-  padding: var(--rr-card-pad);
-  border-radius: 8px;
-  border: 1px solid var(--rr-warn);
-  background: var(--rr-warn-bg);
+  align-items: baseline;
+  gap: 8px 16px;
+  flex-wrap: wrap;
 }
-.banner[data-tone='good'] {
-  border-color: var(--rr-ok);
-  background: var(--rr-ok-bg);
-}
-.banner > div {
-  flex: 1 1 300px;
-  min-width: 0;
-}
-.banner h3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 8px !important;
-  font-size: var(--rr-h3) !important;
-  font-weight: 600;
+.summaryHead h3 {
+  margin: 0;
+  font-size: var(--rr-h3);
+  font-weight: 500;
   color: var(--design-text);
 }
-.banner[data-tone='good'] h3 svg {
-  color: var(--rr-ok);
+.summaryHead span {
+  font-size: 13px;
+  color: var(--design-muted);
 }
-.banner[data-tone='warn'] h3 svg {
-  color: var(--rr-warn);
-}
-.bannerRows {
-  margin: 0;
-  display: grid;
-  gap: 4px;
-  font-size: 14px;
-}
-.bannerRows > div {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.bannerRows > div[data-total] {
-  margin-top: 8px;
-  padding-top: 4px;
+.summary > dl + dl {
+  padding-top: 16px;
   border-top: 1px solid var(--rr-border);
-}
-.bannerRows dt {
-  color: var(--design-muted);
-}
-.bannerRows dd {
-  margin: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-weight: 700;
-  color: var(--design-text);
-}
-.bannerRows dd[data-tone='good'] {
-  color: var(--rr-ok);
-}
-.bannerRows dd[data-tone='bad'] {
-  color: var(--rr-bad);
-}
-.disclaimer {
-  margin: 12px 0 0 !important;
-  padding: 6px 8px;
-  border-radius: 6px;
-  background: rgb(255 255 255 / 0.6);
-  font-size: 12px !important;
-  color: var(--design-muted) !important;
-}
-.bannerKpis {
-  flex: 0 1 256px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin: 0;
-  align-content: start;
-}
-.bannerKpis > div {
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: var(--design-surface);
-}
-.bannerKpis dt {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--design-muted);
-}
-.bannerKpis dd {
-  margin: 0;
-  font-family: var(--design-heading-font);
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--design-text);
-}
-.bannerKpis small {
-  font-size: 12px;
-  color: var(--design-muted);
-}
-.propertyRow {
-  background: var(--rr-ok-bg);
 }
 .propertyRow th,
 .propertyRow td {
@@ -238,179 +184,54 @@
 }
 .dot {
   display: inline-block;
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   margin-right: 8px;
   border-radius: 50%;
-  vertical-align: -1px;
+  vertical-align: 1px;
 }
 .trophy {
   margin-left: 6px;
-  color: var(--rr-warm);
-}
-.milestones {
-  overflow-x: auto;
-}
-.milestones table {
-  width: 100%;
-  min-width: 380px;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-.milestones th,
-.milestones td {
-  padding: 4px 6px;
-  text-align: right;
-  font-weight: 500;
-}
-.milestones thead th {
   color: var(--design-muted);
 }
-.milestones th:first-child {
-  text-align: left;
+.growth {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
 }
-.milestones tbody tr {
-  border-top: 1px solid var(--rr-subtle);
-}
-.milestones td {
-  font-family: var(--design-font);
-  color: var(--design-text);
-}
-.scatterKey {
+/* The growth chart's legend doubles as the highlight toggle. */
+.focus {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 4px 16px;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  font-size: 12px;
-  color: var(--design-muted);
+  gap: 4px 6px;
 }
-.scatterKey li {
+.focus button[type] {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-.scatterKey i {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-.scatterKey i[data-line] {
-  height: 0;
-  width: 16px;
-  border-radius: 0;
-  border-top: 2px dashed var(--rr-ok);
-  background: none !important;
-}
-.scatterKey b {
-  font-family: var(--design-font);
-  color: var(--design-text);
-}
-.cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-}
-.assetCard {
-  display: grid;
-  gap: 4px;
-  align-content: start;
-  min-width: 0;
-  padding: 16px;
-  border: 1px solid var(--rr-border);
-  border-top: 4px solid;
-  border-radius: 8px;
-  background: var(--design-surface);
+  min-height: 28px;
+  padding: 2px 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: none;
+  font-size: 13px;
   font-weight: 400;
-  color: var(--design-text);
-  text-align: left;
-}
-button.assetCard.assetCard {
+  color: var(--design-muted);
   cursor: pointer;
 }
-button.assetCard.assetCard:hover {
-  box-shadow: var(--rr-shadow-lift);
+.focus button[type]:hover {
+  background: var(--rr-hover);
 }
-.assetCard > small {
-  font-size: 12px;
-  color: var(--design-muted);
-}
-.assetCard dl {
-  margin: 8px 0 0;
-  display: grid;
-  gap: 4px;
-  font-size: 14px;
-}
-.assetCard dl > div {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-.assetCard dt {
-  color: var(--design-muted);
-}
-.assetCard dd {
-  margin: 0;
-  font-weight: 600;
-}
-.assetCard dd[data-tone='good'] {
-  color: var(--rr-ok);
-}
-.assetCard dd[data-tone='bad'] {
-  color: var(--rr-bad);
-}
-.winners {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-}
-.winner {
-  padding: 12px var(--rr-card-pad);
-  border: 1px solid var(--rr-border);
-  border-radius: 8px;
+.focus button[type][aria-pressed='true'] {
+  border-color: var(--rr-border);
   background: var(--design-surface);
-}
-.winner[data-property] {
-  border-color: var(--rr-ok);
-  background: var(--rr-ok-bg);
-}
-.winner p {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 !important;
-  font-size: 13px !important;
-  font-weight: 500;
-  color: var(--design-muted) !important;
-}
-.winner[data-property] p svg {
-  color: var(--rr-ok);
-}
-.winner b {
-  display: block;
-  margin-top: 6px;
-  font-family: var(--design-heading-font);
-  font-size: 18px;
-  font-weight: 700;
   color: var(--design-text);
+  font-weight: 500;
 }
-.winner small {
-  font-size: 12px;
-  color: var(--design-muted);
-}
-.groupTitle {
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--design-muted) !important;
-}
-.impact {
-  margin-left: 4px;
-  font-size: 12px;
-  color: var(--rr-border-strong);
+.focus i {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
 }
 .cell {
   display: inline-flex;
@@ -422,59 +243,26 @@ button.assetCard.assetCard:hover {
   border-radius: 6px;
   font-size: 11px;
   font-style: normal;
-  font-weight: 600;
+  font-weight: 500;
 }
 .badge[data-tone='best'] {
   background: var(--rr-ok-bg);
   color: var(--rr-ok);
 }
 .badge[data-tone='worst'] {
-  background: var(--rr-bad-bg);
-  color: var(--rr-bad);
+  background: var(--rr-subtle);
+  color: var(--design-muted);
 }
 .delta {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
+  display: block;
   font-size: 12px;
-}
-.delta[data-tone='teal'] {
-  color: var(--rr-ok);
+  color: var(--design-muted);
 }
 .delta[data-tone='red'] {
-  color: var(--rr-bad);
+  color: var(--design-danger);
 }
-.tableFoot {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  margin: 0 !important;
-  font-size: 12px !important;
-  color: var(--design-muted) !important;
-}
-.tableFoot span {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.tableFoot span:last-child {
-  margin-left: auto;
-}
-.tableFoot i {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--rr-ok);
-}
-.tableFoot i[data-tone='worst'] {
-  background: var(--rr-bad);
-}
-@media (max-width: 640px) {
-  .banner {
-    padding: 16px;
-  }
-  .tableFoot span:last-child {
-    margin-left: 0;
+@media (pointer: coarse) {
+  .focus button[type] {
+    min-height: 40px;
   }
 }

@@ -38,7 +38,8 @@ export function KpiCard({
 }: KpiCardProps) {
   return (
     <article className="card kpi stat">
-      <div className="kpi-top">
+      {/* Wraps so a trend chip drops under a long label in narrow tiles instead of squeezing it. */}
+      <div className="kpi-top" style={{ flexWrap: 'wrap', gap: '4px 8px' }}>
         <div className="label">{label}</div>
         {trend !== undefined && <TrendChip warm={trendWarm}>{trend}</TrendChip>}
       </div>

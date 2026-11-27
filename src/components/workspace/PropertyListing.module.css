@@ -9,4 +9,8 @@
 .negative { color: var(--design-danger); }
 @media (max-width: 640px) {
   .tableWrap table { min-width: 0; }
+  /* Card lines size to their text; the hidden column headers become short inline labels. */
+  .tableWrap table td { height: auto; }
+  .market::before { content: 'Market '; color: var(--design-muted); font-weight: 400; }
+  .gap::before { content: 'Gap '; color: var(--design-muted); }
 }

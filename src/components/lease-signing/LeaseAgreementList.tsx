@@ -8,9 +8,12 @@ import { DocumentLinks } from './AgreementContent';
 export async function LeaseAgreementList({
   session,
   tenantPortal = false,
+  currentLeaseId,
 }: {
   session: AuthSession;
   tenantPortal?: boolean;
+  /** Tenant portal: the lease whose documents the page already shows; its row links nowhere. */
+  currentLeaseId?: string;
 }) {
   if (session.role !== 'OWNER' && session.role !== 'TENANT') return null;
   if (session.role === 'TENANT' && !session.tenantId) return null;
@@ -84,14 +87,21 @@ export async function LeaseAgreementList({
                 ))}
             </div>
             <div className={styles.actions}>
-              {agreement && (
-                <a className="btn btn-secondary" href={`/sign/leases/${lease.id}`}>
-                  Review &amp; sign
+              {tenantPortal && lease.id !== currentLeaseId && (
+                <a className={styles.quietLink} href={`/lease?lease=${lease.id}#documents`}>
+                  View documents
                 </a>
               )}
-              {tenantPortal && (
-                <a className="btn btn-secondary" href={`/lease?lease=${lease.id}#documents`}>
-                  Lease &amp; documents
+              {agreement && (
+                <a
+                  className={
+                    !agreement.signedAt && !agreement.supersededAt
+                      ? 'btn btn-primary'
+                      : 'btn btn-secondary'
+                  }
+                  href={`/sign/leases/${lease.id}`}
+                >
+                  Review &amp; sign
                 </a>
               )}
             </div>

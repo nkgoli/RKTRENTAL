@@ -100,4 +100,8 @@
   .tableWrap table {
     min-width: 0;
   }
+  /* Card lines size to their text, not the 44px desktop row height. */
+  .tableWrap table td {
+    height: auto;
+  }
 }

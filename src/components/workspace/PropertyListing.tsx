@@ -46,8 +46,8 @@ export async function PropertyListing({
               <td data-cell="title"><Link className="row-anchor" href={`/properties/${property.id}/listing?unit=${unit.id}`}><strong>{unit.number}</strong></Link></td>
               {hasConfiguration && <td data-cell="sub">{unit.bedrooms == null && unit.bathrooms == null ? 'Add beds / baths' : `${unit.bedrooms ?? '—'} bd · ${unit.bathrooms ?? '—'} ba`}{unit.squareFeet ? ` · ${unit.squareFeet.toLocaleString('en-US')} sqft` : ''}</td>}
               <td className="num" data-cell="amount">{formatMoney(comparisonRent)}<small className={styles.rentKind}>{unit.currentRent == null ? 'Listed' : 'Current lease'}</small></td>
-              <td className="num" data-cell="meta">{unit.marketRent == null ? <span className="muted">Not set</span> : formatMoney(unit.marketRent)}</td>
-              <td className={`num ${gap && gap > 0 ? styles.positive : gap && gap < 0 ? styles.negative : ''}`} data-cell="sub">{gap == null || gap === 0 ? '—' : `${gap > 0 ? '+' : '−'}${formatMoney(Math.abs(gap))}`}</td>
+              <td className={`num ${styles.market}`} data-cell="meta">{unit.marketRent == null ? <span className="muted">Not set</span> : formatMoney(unit.marketRent)}</td>
+              <td className={`num ${styles.gap} ${gap && gap > 0 ? styles.positive : gap && gap < 0 ? styles.negative : ''}`} data-cell="sub">{gap == null || gap === 0 ? '—' : `${gap > 0 ? '+' : '−'}${formatMoney(Math.abs(gap))}`}</td>
               <td data-cell="status"><Badge tone={unit.status === 'OCCUPIED' ? 'success' : unit.status === 'VACANT' ? 'info' : 'warning'}>{statusLabel}</Badge></td>
               <td data-cell="hide"><Link className="btn btn-ghost btn-sm" aria-label={`See comps for unit ${unit.number}`} href={`/properties/${property.id}/listing?unit=${unit.id}`}>→</Link></td>
             </tr>;

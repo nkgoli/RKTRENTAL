@@ -1,6 +1,7 @@
 'use client';
 import type { MouseEvent } from 'react';
 import type { ValidationIssue } from '@/lib/analysis';
+import { fieldLabel } from './fields';
 import styles from './analysis.module.css';
 
 /** Baseline assumptions live on the property; tax options and scenarios stay in the analysis. */
@@ -52,6 +53,12 @@ export function AssumptionsSummary({
               ? 'assumption to review'
               : 'assumptions to review'}
           .{' '}
+          {/* Missing inputs only need the count; an invalid or incalculable one needs its reason. */}
+          {!incomplete && missing[0]?.message && (
+            <>
+              {fieldLabel(missing[0].path)}: {missing[0].message}{' '}
+            </>
+          )}
           <a
             id="roi-complete-assumptions"
             href={completeHref}

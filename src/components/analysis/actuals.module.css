@@ -141,6 +141,9 @@
 .table th:first-child {
   text-align: left;
 }
+.cell {
+  position: relative;
+}
 .cell strong {
   display: block;
   font-family: var(--design-heading-font);

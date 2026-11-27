@@ -76,7 +76,7 @@ it('renders live balances, pending funds, notices, repair progress and ledger ac
   for (const text of [
     '$2,310.47',
     '$123.45 bank payment pending',
-    'Live Tenant',
+    'Live House · Unit 7',
     'Recorded move-out',
     'Source notice body',
     'Live repair',
@@ -107,7 +107,7 @@ it('renders settled balance and omits absent repair and renewal content', async 
   expect(html).toContain('All paid up');
   expect(html).toContain('View payments &amp; receipts');
   expect(html).toContain('Autopay is on.');
-  expect(html).toContain('Payments and notices will show up here.');
+  expect(html).toContain('No announcements yet.');
   expect(html).not.toContain('Open repair request');
   expect(html).not.toContain('Pay now');
 });
@@ -119,7 +119,7 @@ it('preserves MIME-gated authenticated document links and conditional photo/occu
   expect(html).toContain('href="/api/files/other/download"');
   expect(html).not.toContain('id="photos"');
   expect(html).not.toContain('<dt>Occupants</dt>');
-  expect(html).toContain('Live House — Unit 7');
+  expect(html).toContain('Live House · Unit 7');
   expect(html).toContain('$2,310.47');
   expect(html).toContain('Your lease');
 });
@@ -144,7 +144,7 @@ it('retains move-out dates, enabled autopay, empty documents and authenticated p
     'Notice given',
     'Move-out soon',
     'Recorded notice',
-    'Your lease and notices will appear here',
+    'No documents yet.',
     '/lease/photos/photo',
     'id="photos"',
   ])

@@ -22,9 +22,9 @@ it('renders the shared error state with retry and a boundary-specific return lin
     <RouteError error={error} reset={reset} homeHref="/dashboard" homeLabel="Back to dashboard" />,
   );
   expect(html).toContain('role="alert"');
-  expect(html).toContain('Page unavailable');
+  expect(html).not.toContain('Page unavailable');
   expect(html).toContain('<h2>Something went wrong</h2>');
-  expect(html).toContain('We couldn’t load this page. Please try again.');
+  expect(html).toContain('We couldn’t load this page.');
   expect(html).toContain('Try again');
   expect(html).toContain('href="/dashboard"');
   expect(html).toContain('Back to dashboard');

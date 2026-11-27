@@ -20,22 +20,17 @@ export default async function ApplyPage({ params }: { params: Promise<{ token: s
         <section className={styles.card}>
           <h1 className={styles.title}>This invitation is unavailable</h1>
           <p>
-            The private link is invalid, expired, or no longer active. Ask the property manager for
-            a current invitation.
+            The link is invalid, expired or no longer active. Ask the property manager for a new
+            invitation.
           </p>
         </section>
       ) : row.submittedAt ? (
         <section className={styles.card}>
-          <p className={styles.eyebrow}>Application received</p>
-          <h1 className={styles.title}>You’re all set</h1>
+          <h1 className={styles.title}>Application received</h1>
           <p>
             Your application for {row.unit.property.name} ·{' '}
-            {row.unit.isImplicit ? 'Whole property' : `Unit ${row.unit.number}`} has been submitted
-            to the property manager.
-          </p>
-          <p>
-            They will contact you about next steps. Opening this link again will not create another
-            application.
+            {row.unit.isImplicit ? 'Whole property' : `Unit ${row.unit.number}`} was sent to the
+            property manager. They will contact you about next steps.
           </p>
           <p className={styles.muted}>
             This submission does not authorize screening or guarantee approval.
@@ -43,12 +38,9 @@ export default async function ApplyPage({ params }: { params: Promise<{ token: s
         </section>
       ) : (
         <>
-          <p className={styles.eyebrow}>Rental application</p>
-          <h1 className={styles.title}>Make your next move</h1>
-          <p className={styles.intro}>
-            Review your details and submit your application. You can save a draft and return before
-            your invitation expires.
-          </p>
+          <h1 className={styles.title} style={{ marginBottom: 20 }}>
+            Rental application
+          </h1>
           <section className={styles.card}>
             <h2>{row.unit.property.name}</h2>
             <p>
@@ -56,7 +48,7 @@ export default async function ApplyPage({ params }: { params: Promise<{ token: s
               {row.unit.property.street}, {row.unit.property.city}
             </p>
             <p className={styles.muted}>
-              Invited by {row.unit.property.name}. Link expires{' '}
+              Link expires{' '}
               {row.expiresAt.toLocaleDateString('en-US', {
                 timeZone: 'UTC',
                 month: 'long',

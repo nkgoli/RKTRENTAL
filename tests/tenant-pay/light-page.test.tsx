@@ -78,5 +78,5 @@ it('keeps no-active-lease recovery and all-paid method setup', async () => {
   const html = renderToStaticMarkup(await Pay({ searchParams: Promise.resolve({}) }));
   expect(html).toContain('all paid up');
   expect(html).toContain('Add methods');
-  expect(html).toContain('Your receipts will appear here');
+  expect(html).toContain('No receipts yet.');
 });

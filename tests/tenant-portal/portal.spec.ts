@@ -86,7 +86,7 @@ test('tenant home and lease require a tenant session', async ({ page }) => {
 test('Alex Rivera sees home with amount due, quick actions and links', async ({ page }) => {
   await signIn(page);
   await expect(page.getByRole('heading', { name: 'Welcome home', level: 1 })).toBeVisible();
-  await expect(page.getByText(/Hi Alex Rivera · Maple Court · Unit 4B/)).toBeVisible();
+  await expect(page.getByText('Maple Court · Unit 4B', { exact: true })).toBeVisible();
   await expect(page.getByText(/^Rent due/)).toBeVisible();
   await expect(page.getByRole('region', { name: /^Rent due/ }).locator('.amount')).toHaveText(
     '$1,850',

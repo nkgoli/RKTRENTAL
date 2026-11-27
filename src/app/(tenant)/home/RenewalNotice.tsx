@@ -65,9 +65,7 @@ export function RenewalNotice({
           Dismiss
         </button>
       </div>
-      {contactOpen && (
-        <p>Contact {managerName} using the contact details in your lease to ask about renewal.</p>
-      )}
+      {contactOpen && <p>Contact {managerName} using the details in your lease.</p>}
     </section>
   );
 }

@@ -30,7 +30,7 @@ export default async function TenantLeasePage({
         {agreements}
         <EmptyState
           title="No active lease yet"
-          description="Your property manager will add it here once it is set up."
+          description="Your property manager will add it here."
           action="Check again"
           href="/lease"
         />
@@ -43,44 +43,26 @@ export default async function TenantLeasePage({
   return (
     <div className={styles.homeLease}>
       <div>
-        <h1 style={{ fontSize: 'var(--rr-h1)' }}>
-          Your lease
-          <span className={styles.spark} aria-hidden="true">
-            ✳
-          </span>
-        </h1>
-        <p className="muted" style={{ fontSize: 13, marginTop: 2 }}>
+        <h1 style={{ fontSize: 'var(--rr-h1)' }}>Your lease</h1>
+        <p className={styles.subline}>
           {view.premises} · Managed by {view.managerName}
         </p>
       </div>
 
+      {/* Signing lives in the agreements list: it offers Review & sign only once one is sent. */}
       {agreements}
-      <a className="btn btn-primary" href={`/sign/leases/${view.leaseId}`}>
-        Review agreement & signatures
-      </a>
       <section
         className={`card ${styles.currentLease}`}
         id="overview"
         aria-labelledby="current-lease"
       >
-        <div className={styles.currentHeader}>
-          <div className="card-header">
-            <h2 id="current-lease" style={{ fontSize: 18 }}>
-              {selected ? 'Selected lease' : 'Current lease'}
-            </h2>
-            <Badge tone={view.status === 'ACTIVE' ? 'success' : 'neutral'}>
-              {statusLabel(view.status)}
-            </Badge>
-          </div>
-          <div className={styles.property}>
-            <span className={styles.building}>
-              <PortalIcon name="building" />
-            </span>
-            <div>
-              <small>Property</small>
-              <strong>{view.premises.replace(' · ', ' — ')}</strong>
-            </div>
-          </div>
+        <div className="card-header">
+          <h2 id="current-lease" style={{ fontSize: 18 }}>
+            {selected ? 'Selected lease' : 'Current lease'}
+          </h2>
+          <Badge tone={view.status === 'ACTIVE' ? 'success' : 'neutral'}>
+            {statusLabel(view.status)}
+          </Badge>
         </div>
         <dl className="kv" style={{ gridTemplateColumns: '88px minmax(0, 1fr)' }}>
           {others.length > 0 && (
@@ -124,10 +106,7 @@ export default async function TenantLeasePage({
       </section>
 
       {view.notice?.kind === 'move-out' && (
-        <section
-          className={view.notice.kind === 'move-out' ? 'alert warning' : 'alert'}
-          role="status"
-        >
+        <section className="alert warning" role="status">
           <p>
             <strong>{view.notice.title}</strong>
             <br />
@@ -145,15 +124,13 @@ export default async function TenantLeasePage({
           <h2 id="lease-documents" style={{ fontSize: 18 }}>
             Lease &amp; documents
           </h2>
-          <span className="muted" style={{ fontSize: 13 }}>
-            {view.documents.length} {view.documents.length === 1 ? 'file' : 'files'}
-          </span>
+          {view.documents.length > 0 && (
+            <span className="muted" style={{ fontSize: 13 }}>
+              {view.documents.length} {view.documents.length === 1 ? 'file' : 'files'}
+            </span>
+          )}
         </div>
-        {view.documents.length === 0 && (
-          <p className="muted">
-            Your lease and notices will appear here when your manager adds them.
-          </p>
-        )}
+        {view.documents.length === 0 && <p className={styles.emptyNote}>No documents yet.</p>}
         {view.documents.map((doc) => {
           const badge = fileBadge(doc.mimeType);
           return (
@@ -207,9 +184,6 @@ export default async function TenantLeasePage({
               />
             ))}
           </div>
-          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-            Photos of your unit from {view.managerName}.
-          </p>
         </section>
       )}
     </div>

@@ -149,6 +149,10 @@
   .navigation {
     display: none;
   }
+  /* The active top tab directly below already names the page. */
+  .header :global(.title) {
+    display: none;
+  }
   .topTabs {
     display: flex;
     gap: 28px;

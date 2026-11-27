@@ -25,9 +25,8 @@ export function RouteError({
 
   return (
     <section className={styles.error} role="alert">
-      <p className={styles.eyebrow}>Page unavailable</p>
       <Heading>Something went wrong</Heading>
-      <p>We couldn’t load this page. Please try again.</p>
+      <p>We couldn’t load this page.</p>
       <div className={styles.actions}>
         <button className="btn btn-primary" onClick={reset} type="button">
           Try again

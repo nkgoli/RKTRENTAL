@@ -35,12 +35,10 @@ export function RequestRecoveryForm() {
         <div className={styles.confirmation} ref={notice} tabIndex={-1} role="status">
           <h2>Check your inbox</h2>
           <p>
-            If an account uses <strong>{state.email}</strong>, you’ll receive a link to reset your
-            password. The link expires in 15 minutes.
+            If an account uses <strong>{state.email}</strong>, you’ll get a reset link. It expires
+            in 15 minutes.
           </p>
-          <p>
-            If it does not arrive, check your spam folder or ask your property manager for help.
-          </p>
+          <p>Not there? Check spam or ask your property manager.</p>
         </div>
         <Button href="/sign-in" variant="primary" block>
           Back to sign in

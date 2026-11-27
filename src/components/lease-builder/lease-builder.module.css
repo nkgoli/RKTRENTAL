@@ -2459,12 +2459,14 @@ label.applicantName {
     padding: 0 12px;
     font-size: 13px;
   }
-  /* Full-bleed step that fills the screen, so the action bar always sits at the bottom. */
+  /* Full-bleed step that fills the screen, so the action bar always sits at the bottom.
+     Items stretch: shrink-to-fit would size the rail to its scrolling chip row. */
   .layout,
   .layoutWide {
     display: flex;
     flex: 1 0 auto;
     flex-direction: column;
+    align-items: stretch;
     gap: 12px;
     padding: 14px 0 0;
   }

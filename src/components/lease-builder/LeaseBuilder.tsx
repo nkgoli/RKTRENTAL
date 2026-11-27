@@ -491,7 +491,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
                         <span className={styles.marker}>
                           {done ? <Glyph name="check" /> : index + 1}
                         </span>
-                        <span className={styles.stepLabel}>{label}</span>
+                        <span>{label}</span>
                         {done && <span className={styles.srOnly}>, completed</span>}
                       </>
                     );

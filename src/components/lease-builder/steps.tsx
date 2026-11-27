@@ -132,7 +132,7 @@ function ToggleRow({
 }) {
   const id = useId();
   return (
-    <div className={cx(styles.row, checked && styles.rowOn)}>
+    <div className={styles.row}>
       <div className={styles.rowHead}>
         <span className={styles.rowText}>
           <label className={styles.rowLabel} htmlFor={id}>
@@ -412,7 +412,7 @@ export function TermStep({ draft, update, errors }: StepProps) {
                   </label>
                   <input
                     id="custom-end-date"
-                    className={cx(styles.input, styles.dateInput)}
+                    className={styles.input}
                     type="date"
                     aria-invalid={Boolean(errors.endDate)}
                     aria-describedby={errors.endDate ? 'custom-end-date-error' : undefined}
@@ -1070,7 +1070,7 @@ export function AttachmentsStep({
   const [savingType, setSavingType] = useState<string | null>(null);
   if (!leaseId) return <p className={styles.emptyRow}>Save the draft first to add files.</p>;
   return (
-    <div className={cx(styles.fields, styles.attachments)}>
+    <div className={styles.fields}>
       {typeError && (
         <p className={styles.inlineAlert} role="alert">
           {typeError}

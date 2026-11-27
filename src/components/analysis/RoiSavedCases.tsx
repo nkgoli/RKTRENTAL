@@ -122,7 +122,6 @@ export function SavedCases({
               inputMode={spec.kind === 'date' ? undefined : 'decimal'}
               value={draft.values[path] ?? ''}
               disabled={locked}
-              placeholder={`Baseline ${baseText(base, path)}`}
               aria-invalid={!!error}
               aria-describedby={error ? `${id}-error` : undefined}
               onChange={(e) => setValues({ ...draft.values, [path]: e.target.value })}

@@ -51,6 +51,7 @@
 }
 .big.big {
   margin: 0;
+  color: var(--design-text);
   font-family: var(--design-heading-font);
   font-size: 28px;
   font-weight: 600;

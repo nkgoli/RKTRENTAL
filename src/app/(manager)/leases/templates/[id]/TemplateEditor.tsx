@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { Icon } from '@/components/shell/Icons';
-import { useEffect, useRef, useState } from 'react';
+import { Switch, cx } from '@/components/ui';
+import { useEffect, useId, useRef, useState } from 'react';
 import {
   deleteLeaseTemplateAction,
   saveLeaseTemplateAction,
@@ -13,16 +14,54 @@ import {
   CONDITION_LABELS,
   INCLUDE_WHEN,
   STANDARD_FEES,
+  contextFromDraft,
   type TemplateDefinition,
   type TemplateItem,
   type TemplateSection,
 } from '@/lib/lease-create/templates';
-import styles from '../templates.module.css';
+import styles from './template-editor.module.css';
 import { TemplateIcon } from '../TemplateIcons';
 
 type PropertyChoice = { id: string; name: string; defaultLeaseTemplateId: string | null };
 const sections: TemplateSection[] = ['CLAUSE', 'RULE', 'DISCLOSURE'];
 const labels = { CLAUSE: 'Clauses', RULE: 'Rules', DISCLOSURE: 'Disclosures' };
+const FEE_FIELDS = [
+  { key: 'lateFee', label: 'Late fee' },
+  { key: 'graceDays', label: 'Grace days' },
+  { key: 'moveInFee', label: 'Move-in fee' },
+  { key: 'petDeposit', label: 'Pet deposit' },
+  { key: 'returnedPaymentFee', label: 'Returned payment fee' },
+  { key: 'keyFee', label: 'Key replacement fee' },
+] as const;
+/** Blanks each lease fills from its own terms, listed under the wording for reference. */
+const AUTO_FIELDS = Object.keys(
+  contextFromDraft({
+    leaseType: 'fixed',
+    options: [],
+    petDepositEnabled: false,
+    assignedParking: false,
+    propertyType: 'MULTI_UNIT',
+    tenantUtilities: [],
+    yearBuilt: null,
+  }).values ?? {},
+);
+
+/** Wording with each {{field}} blank shown as a small chip naming the field. */
+function Wording({ body }: { body: string }) {
+  return (
+    <>
+      {body.split(/(\{\{[a-z_]+\}\})/g).map((part, index) =>
+        /^\{\{[a-z_]+\}\}$/.test(part) ? (
+          <span key={index} className={styles.blank}>
+            {part.slice(2, -2).replaceAll('_', ' ')}
+          </span>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
 
 export function TemplateEditor({
   initial,

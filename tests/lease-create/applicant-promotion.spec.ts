@@ -1,6 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import { applicantWizardFixture } from '../applications/wizard-fixture';
 
+/** The primary tenant is a radio on each selected tenant's row; its value is the tenant ID. */
+const primaryTenant = (page: Page) => page.locator('input[name="primary-tenant"]:checked');
+
 async function tenantsStep(page: Page, url: string) {
   await page.goto(url);
   await expect(page.getByRole('heading', { name: 'Lease term', exact: true })).toBeVisible();
@@ -33,9 +36,7 @@ for (const width of [1280, 390]) {
       await tenantsStep(page, `/leases/new?unit=${fixture.unitId}&fresh=1`);
       const applicants = page.getByRole('region', { name: 'Applicants for this unit' });
       await applicants.getByRole('checkbox', { name: fixture.name, exact: true }).check();
-      await expect(page.getByRole('combobox', { name: 'Primary tenant', exact: true })).toHaveValue(
-        fixture.tenantId,
-      );
+      await expect(primaryTenant(page)).toHaveValue(fixture.tenantId);
       await expect(
         page.getByRole('button', { name: `Remove ${fixture.tenantName}`, exact: true }),
       ).toBeVisible();
@@ -88,16 +89,12 @@ for (const width of [1280, 390]) {
       });
       await page.goto(`/leases/new?draft=${drafts[0].leaseId}`);
       await expect(page.getByRole('heading', { name: 'Tenants', exact: true })).toBeVisible();
-      await expect(page.getByRole('combobox', { name: 'Primary tenant', exact: true })).toHaveValue(
-        fixture.tenantId,
-      );
+      await expect(primaryTenant(page)).toHaveValue(fixture.tenantId);
       await expect(page.getByRole('status')).toHaveText('Draft saved');
 
       // Legacy applicant links retain the same association after the contact email edit.
       await tenantsStep(page, `/leases/new?applicant=${fixture.applicationId}&fresh=1`);
-      await expect(page.getByRole('combobox', { name: 'Primary tenant', exact: true })).toHaveValue(
-        fixture.tenantId,
-      );
+      await expect(primaryTenant(page)).toHaveValue(fixture.tenantId);
       await page.screenshot({
         path: `${shots}/applicant-promotion-legacy-${width}.png`,
         fullPage: true,
@@ -105,11 +102,9 @@ for (const width of [1280, 390]) {
 
       // A legacy unpromoted link cannot select the same-email tenant; its notice routes to review.
       await tenantsStep(page, `/leases/new?applicant=${unpromoted.id}&fresh=1`);
-      await expect(page.getByRole('combobox', { name: 'Primary tenant', exact: true })).toHaveValue(
-        '',
-      );
+      await expect(primaryTenant(page)).toHaveCount(0);
       await expect(
-        page.getByText(/needs an approved application and explicit promotion/),
+        page.getByText(/isn’t a tenant yet\. Approve and promote their application first\./),
       ).toBeVisible();
       const noticeLink = page.getByRole('link', { name: 'Review application', exact: true });
       await noticeLink.focus();

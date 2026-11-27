@@ -147,7 +147,7 @@ describe('property autofill and calculation sufficiency', () => {
     await open();
     expect(glance().getByText('$10,800')).toBeTruthy();
     const card = within(screen.getByRole('region', { name: 'Deal Snapshot' }));
-    expect(card.getByText('Year 1 · Projected estimate · before tax · USD')).toBeTruthy();
+    expect(card.getByText('Projected cash flow · Year 1')).toBeTruthy();
     expect(card.getByRole('button', { name: 'Annual' }).getAttribute('aria-pressed')).toBe('true');
     expect(card.getByText('/ year')).toBeTruthy();
     expect(
@@ -159,10 +159,13 @@ describe('property autofill and calculation sufficiency', () => {
         'Annual cash flow',
       ),
     ).toBeTruthy();
-    fireEvent.click(screen.getByText(/^Exact annual cash flow, all \d+ years$/));
+    const annualDetails = [...document.querySelectorAll('details')].find((details) =>
+      details.querySelector('[aria-label="Annual cash flow"]'),
+    )!;
+    fireEvent.click(annualDetails.querySelector('summary')!);
     expect(screen.getByRole('region', { name: 'Annual cash flow' })).toBeTruthy();
-    expect(summaryCard().getByText('Assumptions from property details')).toBeTruthy();
-    expect(screen.getByText('Revision 0')).toBeTruthy();
+    expect(summaryCard().queryByText('Assumptions from property details')).toBeNull();
+    expect(screen.queryByText('Revision 0')).toBeNull();
     expect(summaryCard().queryByRole('definition')).toBeNull();
     // No inline baseline editor remains on the dashboard.
     expect(document.getElementById('input.income.monthlyRent')).toBeNull();
@@ -298,7 +301,7 @@ describe('property autofill and calculation sufficiency', () => {
     });
     await open();
     expect(summaryCard().queryByText('$0/mo')).toBeNull();
-    expect(screen.getByText('Saved draft · revision 3')).toBeTruthy();
+    expect(screen.getByText('Revision 3')).toBeTruthy();
     expect(screen.getByText('Loaded draft - revision 3').className).toMatch(/srOnly/);
     expect(
       href(summaryCard().getByRole('link', { name: 'Complete assumptions' })).searchParams.get(
@@ -725,7 +728,7 @@ describe('ROI projection interactions', () => {
     const equity = screen.getByRole('tab', { name: 'Equity' });
     expect(equity.getAttribute('aria-selected')).toBe('true');
     equity.focus();
-    const expected = ['Cash Flow', 'Expenses', 'Amortization', 'Exit Analysis', 'Sensitivity'];
+    const expected = ['Cash flow', 'Expenses', 'Amortization', 'Exit', 'Sensitivity'];
     for (const name of expected) {
       fireEvent.keyDown(document.activeElement!, { key: 'ArrowRight' });
       expect(document.activeElement).toBe(screen.getByRole('tab', { name }));
@@ -733,8 +736,8 @@ describe('ROI projection interactions', () => {
     }
     fireEvent.keyDown(document.activeElement!, { key: 'Home' });
     expect(document.activeElement).toBe(equity);
-    tab('Cash Flow');
-    const cash = screen.getByRole('tab', { name: 'Cash Flow' });
+    tab('Cash flow');
+    const cash = screen.getByRole('tab', { name: 'Cash flow' });
     const annual = screen.getByRole('table', { name: /Projection amounts/ });
     expect(within(annual).getAllByRole('row')).toHaveLength(2);
     expect(within(annual).getAllByText('$10,800.00')).toHaveLength(3);
@@ -766,7 +769,7 @@ describe('ROI projection interactions', () => {
       'true',
     );
     expect(screen.getByRole('table', { name: /Year 1 cash-on-cash/ })).toBeTruthy();
-    tab('Cash Flow');
+    tab('Cash flow');
     const table = screen.getByRole('table', { name: /Projection amounts/ });
     expect(within(table).getAllByText('$10,800.00')).toHaveLength(3);
   });
@@ -774,9 +777,9 @@ describe('ROI projection interactions', () => {
     await open();
     tab('Charts');
     tab('Sensitivity');
-    // Reference layout: the range form sits behind "Customize Ranges".
+    // Reference layout: the range form sits behind "Customize ranges".
     expect(screen.queryByRole('button', { name: 'Update sensitivity' })).toBeNull();
-    const customize = screen.getByRole('button', { name: 'Customize Ranges' });
+    const customize = screen.getByRole('button', { name: 'Customize ranges' });
     fireEvent.click(customize);
     expect(customize.getAttribute('aria-expanded')).toBe('true');
     change('Minimum rent ($ / month)', 'bad');
@@ -799,7 +802,7 @@ describe('ROI projection interactions', () => {
     expect((screen.getByLabelText('Show values') as HTMLInputElement).checked).toBe(
       !initialShowValues,
     );
-    tab('Exit Analysis');
+    tab('Exit');
     change('Probe exit year', '2.5');
     fireEvent.click(screen.getByRole('button', { name: 'Update exit comparison', hidden: true }));
     expect(screen.getByRole('alert').textContent).toMatch(/whole number/);
@@ -822,7 +825,7 @@ describe('ROI projection interactions', () => {
         make().input.income,
       );
     }
-    expect(screen.getByRole('tab', { name: 'Exit Analysis' }).getAttribute('aria-selected')).toBe(
+    expect(screen.getByRole('tab', { name: 'Exit' }).getAttribute('aria-selected')).toBe(
       'true',
     );
     fireEvent.click(toolbarButton('Reload saved analysis'));
@@ -842,7 +845,7 @@ describe('ROI projection interactions', () => {
     });
     await open();
     tab('Charts');
-    tab('Exit Analysis');
+    tab('Exit');
     expect(
       screen.getByRole('heading', { name: 'Complete your assumptions to see charts' }),
     ).toBeTruthy();
@@ -893,7 +896,7 @@ describe('ROI projection interactions', () => {
     await screen.findByLabelText('Save analysis');
     tab('Charts');
     expect(screen.getByRole('tab', { name: 'Equity' }).getAttribute('aria-selected')).toBe('true');
-    tab('Cash Flow');
+    tab('Cash flow');
     const table = screen.getByRole('table', { name: /Projection amounts/ });
     expect(within(table).getAllByText('$10,800.00')).toHaveLength(3);
   });
@@ -1080,7 +1083,7 @@ describe('scenario examples and merged failure recovery', () => {
     });
     await open();
     showCase(p.scenarios[0].name);
-    fireEvent.click(screen.getByText('Explicit scenario calculation options'));
+    fireEvent.click(screen.getByText('Calculation options'));
     expect(screen.getByText('Federal income tax (%)', { selector: 'dt' })).toBeTruthy();
     expect(screen.getByText('Discount rate', { selector: 'dt' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Saved cases' }).querySelector('pre')).toBeNull();
@@ -1379,7 +1382,7 @@ describe('What if: one shared, scoped simulation across views', () => {
     const baseline = snapshot().textContent;
     const panel = openWhatIf();
     expect(
-      panel.getByText(/Temporary\. Saved assumptions, saved cases and recorded rent/),
+      panel.getByText(/Temporary\. Nothing here changes your saved analysis or records/),
     ).toBeTruthy();
     // Sliders sit directly under Suggested changes; there is no text-entry form or save step.
     const suggested = within(panel.getByRole('region', { name: 'Suggested changes' }));
@@ -1615,7 +1618,7 @@ describe('What if: one shared, scoped simulation across views', () => {
         .closest('tr')!
         .querySelector('th')!.textContent;
     const baselineExit = exitPanel().textContent;
-    expect(baselineExit).toContain('Exact sale statement, year 1');
+    expect(baselineExit).toContain('View sale statement, year 1');
     expect(baseRent()).toBe('$1,000.00');
     // A local exit probe never outlives the assumptions it ran against.
     fireEvent.click(screen.getByText('Try another exit', { selector: 'summary' }));
@@ -1626,7 +1629,7 @@ describe('What if: one shared, scoped simulation across views', () => {
     openWhatIf();
     fireEvent.change(holdField(), { target: { value: '3' } });
     fireEvent.change(rentField(), { target: { value: '1500' } });
-    expect(exitPanel().textContent).toContain('Exact sale statement, year 3');
+    expect(exitPanel().textContent).toContain('View sale statement, year 3');
     expect(exitPanel().textContent).not.toContain('Showing probe');
     expect(baseRent()).toBe('$1,500.00');
     fireEvent.change(rentField(), { target: { value: '1200' } });

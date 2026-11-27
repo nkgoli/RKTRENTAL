@@ -34,7 +34,6 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           </div>
           <div className={styles.heading}>
             <h1 id="sign-in-title">Welcome back</h1>
-            <p className={styles.description}>Sign in to manage your rental account.</p>
           </div>
         </div>
         <div className={styles.cardBody}>

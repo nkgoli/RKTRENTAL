@@ -3,21 +3,21 @@
   gap: 12px;
   min-width: 0;
 }
-.promotion h4,
 .promotion p {
   margin: 0;
-}
-.promotion h4 {
-  font-family: var(--design-heading-font);
-  font-size: 18px;
-  font-weight: 500;
-}
-.promotion p {
   line-height: 1.55;
 }
-.caption {
+/* One status line with its actions beside it; wraps under on narrow cards. */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+}
+.row > p {
   color: var(--design-muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 .error {
   color: var(--design-danger);

@@ -6,7 +6,26 @@
 .presets {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 6px;
+}
+/* "Custom dates" sits in the preset row; open, it takes a full row for its From/To fields. */
+.customRange > summary {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+}
+.customRange > summary::-webkit-details-marker {
+  display: none;
+}
+.customRange[open] {
+  display: grid;
+  flex-basis: 100%;
+  gap: 12px;
+}
+.customRange[open] > summary {
+  width: fit-content;
 }
 .custom {
   display: flex;
@@ -39,7 +58,6 @@
   width: 100%;
   min-width: 0;
 }
-.chartScroll,
 .tableScroll {
   max-width: 100%;
   min-width: 0;
@@ -62,33 +80,6 @@
   color: var(--design-text);
   background: transparent;
   text-transform: none;
-}
-.chart {
-  display: block;
-  width: 100%;
-  min-width: 520px;
-  max-height: 240px;
-}
-.legend {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  color: var(--design-muted);
-  font-size: 13px;
-}
-.legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.legend i {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  background: var(--design-primary);
-}
-.legend span + span i {
-  background: var(--design-accent);
 }
 .exact {
   margin-top: 14px;
@@ -119,7 +110,7 @@
 }
 .barList {
   display: grid;
-  gap: 16px;
+  gap: 14px;
   list-style: none;
   padding: 0;
   margin: 0;
@@ -127,34 +118,73 @@
 .barList li {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+  align-items: baseline;
   gap: 6px 12px;
 }
-.barList a {
+.barList a,
+.barList li > span:first-child {
   color: var(--design-text);
   font-size: 14px;
   font-weight: 500;
 }
 .barList strong {
   font-size: 14px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.barList .track {
+.barList strong :global(.muted) {
+  font-weight: 400;
+}
+/* Thin horizontal bars: rounded at the data end, square at the baseline, no track. NOI is the
+   third series on this page (after income and expenses), so it takes the third chart colour. */
+.bar {
   grid-column: 1 / -1;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--rr-subtle);
-  overflow: hidden;
-}
-.fill {
   display: block;
-  height: 100%;
-  background: var(--design-primary);
+  height: 8px;
+  min-width: 2px;
+  border-radius: 0 4px 4px 0;
+  background: var(--chart-3);
 }
-.context {
+.bar[data-negative] {
+  background: var(--chart-negative);
+}
+.expenseBar {
+  background: var(--chart-2);
+}
+.barNote {
+  margin: 14px 0 0;
   color: var(--design-muted);
   font-size: 13px;
-  line-height: 1.6;
+}
+.twoColumns {
+  display: block;
+  columns: 2 260px;
+  column-gap: 48px;
+  margin-bottom: -14px;
+}
+.twoColumns li {
+  break-inside: avoid;
+  padding-bottom: 14px;
+}
+.headTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+.headTitle :global(.muted) {
+  font-size: 13px;
+}
+.expenseHead {
+  flex-wrap: wrap;
+}
+.footnote {
+  margin: 0;
+  padding: 12px var(--rr-card-pad);
+  border-top: 1px solid var(--rr-border);
+  color: var(--design-muted);
+  font-size: 12px;
 }
 @media (max-width: 700px) {
   .toolbar {
@@ -170,22 +200,6 @@
   }
 }
 
-.method {
-  font-size: 12px;
-  color: var(--design-muted);
-}
-.method summary {
-  width: fit-content;
-  cursor: pointer;
-  padding: 4px 0;
-}
-.method p {
-  max-width: 85ch;
-  line-height: 1.6;
-}
-.chart {
-  min-width: 0;
-}
 @media (max-width: 640px) {
   .tableScroll {
     width: 100%;
@@ -253,13 +267,13 @@
     content: 'Cap rate';
   }
   .mobileReturns td:nth-child(6)::before {
-    content: 'Cash-on-cash (estimate)';
+    content: 'Cash-on-cash';
   }
   .mobileReturns td:nth-child(7)::before {
-    content: 'ROI (estimate)';
+    content: 'ROI';
   }
   .mobileReturns td:nth-child(8)::before {
-    content: 'Yield (scheduled)';
+    content: 'Yield';
   }
   .mobileYearly td:nth-child(5)::before {
     content: 'Year-over-year change';

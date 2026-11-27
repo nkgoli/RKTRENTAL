@@ -131,17 +131,13 @@ export function paymentsView(payments: PaymentsMonth, today: Date): PaymentsView
     : payments.outstandingCents
       ? `collected of ${dollars(payments.dueCents)} due · ${dollars(payments.outstandingCents)} outstanding${payments.lateCount ? ` · ${payments.lateCount} late` : ''}`
       : `collected of ${dollars(payments.dueCents)} due · all paid`;
-  const overdueText = overdueCents
-    ? `${dollars(overdueCents)} overdue to date`
-    : 'no overdue balance';
+  // The overdue total to date is shown once, beside the band's reminder action.
   return {
-    eyebrow: `${monthLabel(today)} · Payments this month`,
+    eyebrow: `${monthLabel(today)} · Payments`,
     value: dollars(payments.paidCents),
     detail,
     percent,
-    meter: payments.hasCharges
-      ? `${percent}% collected · ${overdueText}`
-      : `No charges · ${overdueText}`,
+    meter: `${percent}% collected`,
     overdueCents,
   };
 }

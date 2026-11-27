@@ -43,7 +43,8 @@ for (const width of [1280, 390]) {
             await expect(returns).toHaveAttribute('aria-current', 'page');
             await expect(nav.locator('[aria-current="page"]')).toHaveCount(1);
             await expect(page.getByLabel('Switch unit')).toHaveValue(unit);
-            await expect(page.getByText(unit ? /Unit income follows settled payments/ : /Income follows settled payments\. Expenses/)).toBeVisible();
+            if (unit) await expect(page.getByText(/Unit income follows settled payments/)).toBeVisible();
+            else await expect(page.getByText(/Income follows settled payments\. Expenses/)).toHaveCount(0);
             await page.goBack();
             await expect(page).toHaveURL(new URL(from, page.url()).href);
             await expect(nav.getByRole('link', { name: source, exact: true })).toHaveAttribute('aria-current', 'page');

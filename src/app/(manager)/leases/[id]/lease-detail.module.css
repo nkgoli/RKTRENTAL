@@ -1,8 +1,9 @@
-/* Lease workspace (Designs/redisgn r172): status row, signature panel, tabs, 2:1 card grid. */
+/* Lease detail: status strip, signing banner, tabs, then white 16px cards on the page background. */
 .workspace {
   display: grid;
-  gap: 16px;
+  gap: 20px;
   min-width: 0;
+  margin-top: -8px;
   font-size: 14px;
   line-height: 1.5;
   overflow-wrap: anywhere;
@@ -14,113 +15,110 @@
   outline: 3px solid var(--design-primary);
   outline-offset: 3px;
 }
-.metaItem svg,
-.section :global(.list-item) > svg {
-  width: 16px;
-  height: 16px;
-  flex: none;
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
-.summaryLine {
+
+/* Status strip: lease and e-sign pills, then where today falls in the term. */
+.strip {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
-  gap: 8px 16px;
-  color: var(--design-muted);
+  align-items: center;
+  gap: 12px 24px;
+  min-width: 0;
 }
-/* Draft-only destructive action, kept at the end of the summary row. */
-.summaryAction {
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
   margin-left: auto;
+  color: var(--design-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
-.metaItem {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.metaItem a {
-  color: var(--design-primary);
+.progress strong {
+  color: var(--design-text);
   font-weight: 600;
 }
-/* Signature status: a bordered white panel; the icon tile carries the state colour. */
-.signing {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 12px 16px;
-  padding: 20px;
+.meter {
+  position: relative;
+  width: 180px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e4e7ee;
+}
+.meter > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--design-primary);
+}
+
+/* Signing banner: one row, only when someone has to act. */
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  min-width: 0;
+  padding: 12px 14px 12px 12px;
   border: 1px solid var(--rr-border);
-  border-radius: var(--rr-card-radius);
+  border-radius: 14px;
   background: var(--design-surface);
 }
-.signingIcon {
+.bannerIcon {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   background: var(--rr-primary-tint);
   color: var(--design-primary);
 }
-.signing[data-state='done'] .signingIcon {
-  background: #e3f3ea;
-  color: #1f6b43;
-}
-.signing[data-state='attention'] .signingIcon {
+.banner[data-state='attention'] .bannerIcon {
   background: #fff1d9;
   color: #7a4206;
 }
-.signingIcon svg {
-  width: 20px;
-  height: 20px;
+.bannerIcon svg {
+  width: 18px;
+  height: 18px;
 }
-.signingText {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-.signingText strong {
-  font-family: var(--design-heading-font);
-  font-size: 18px;
-  font-weight: 500;
-  line-height: 1.3;
-}
-.signingText p {
+.bannerText {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  min-width: 12rem;
   margin: 0;
+}
+.bannerText strong {
+  font-weight: 600;
+}
+.bannerText span {
   color: var(--design-muted);
 }
-/* One row per signer: "Tenant · Name" with its Signed badge. */
-.signers {
-  display: grid;
-  gap: 6px;
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.signers li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 10px;
-}
-.signers :global(.badge) {
-  font-size: 12px;
-}
-.signingActions,
-.actionRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-}
-.signingActions {
-  justify-content: flex-end;
-}
+
 /* Section tabs: underline style, one row; phones swap "Documents" for "Docs". */
 .tabs {
   display: flex;
-  gap: 24px;
+  gap: 28px;
   overflow-x: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none;
   border-bottom: 1px solid var(--rr-border);
 }
 .tabs a {
@@ -129,11 +127,15 @@
   align-items: center;
   flex: none;
   min-height: 44px;
-  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
   color: var(--design-muted);
   font-size: 15px;
   font-weight: 500;
   text-decoration: none;
+}
+.tabs a:hover {
+  color: var(--design-text);
 }
 .tabs a[aria-current] {
   color: var(--design-primary);
@@ -148,95 +150,112 @@
 }
 .panel {
   display: grid;
-  gap: 16px;
+  gap: 20px;
   min-width: 0;
 }
-/* Reference "template 2:1": main content beside a column of cards. */
+
+/* Overview figures: four quiet tiles. */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+.tile {
+  min-width: 0;
+  padding: 16px 20px 18px;
+  border: 1px solid var(--rr-border);
+  border-radius: var(--rr-card-radius);
+  background: var(--design-surface);
+}
+.tile dt {
+  color: var(--design-muted);
+  font-size: 13px;
+}
+.tile dd {
+  display: grid;
+  gap: 2px;
+  margin: 6px 0 0;
+}
+.tileValue {
+  color: var(--design-text);
+  font: 500 26px/1.15 var(--design-heading-font);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.tileValue[data-tone='danger'] {
+  color: var(--design-danger);
+}
+.cents {
+  font-size: 0.62em;
+  opacity: 0.55;
+}
+.tileDetail {
+  color: var(--design-muted);
+  font-size: 13px;
+}
+
+/* Main content beside a quieter column. */
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  gap: 24px;
+  gap: 20px;
+  align-items: start;
+}
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 20px;
   align-items: start;
 }
 .mainCol,
 .sideCol {
   display: grid;
-  gap: 16px;
+  gap: 20px;
   min-width: 0;
 }
-/* Overview: ledger and premises/tenants in the wide column, cards spanning both rows. */
-.grid:has(.pairArea) {
-  grid-template-rows: auto 1fr;
-}
-.grid:has(.pairArea) > .sideCol {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-}
-.pairArea {
-  grid-column: 1;
-  grid-row: 2;
-  min-width: 0;
-}
-.lateLine {
-  margin: -4px 0 12px;
-  color: var(--design-danger);
-  font-weight: 600;
-}
-.phoneCaption {
-  display: none;
-  margin: 12px 0 0;
-  color: var(--design-muted);
-  font-size: 13px;
-}
-.pair {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  align-items: stretch;
-}
-.section {
+.card {
   min-width: 0;
   padding: var(--rr-card-pad);
   border: 1px solid var(--rr-border);
   border-radius: var(--rr-card-radius);
   background: var(--design-surface);
+  container-type: inline-size;
 }
-.section h2 {
-  margin: 0;
-  font-family: var(--design-heading-font);
-  font-size: var(--rr-h2);
-  font-weight: 500;
-  line-height: 1.25;
-}
-.section h3 {
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-.section :global(h3.eyebrow) {
-  margin: 16px 0 8px;
-}
-.sectionHeading {
+.cardHead {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 12px;
+  gap: 12px 16px;
+  min-height: 32px;
   margin-bottom: 16px;
 }
-.sectionHeading + :global(h3.eyebrow) {
-  margin-top: 0;
+.cardHead h2,
+.rowCard h2 {
+  margin: 0;
+  font-family: var(--design-heading-font);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.3;
 }
-.lede {
-  margin: -8px 0 12px;
+.headExtras {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
 }
 .goLink {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-height: 36px;
+  min-height: 32px;
   color: var(--design-primary);
+  font-size: 14px;
   font-weight: 600;
+  text-decoration: none;
+}
+.goLink:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -249,165 +268,238 @@
   padding-top: 12px;
   border-top: 1px solid var(--rr-border);
 }
-/* Terms: two quiet inset stats, then the plain facts. */
-.termStats {
+.lateLine {
+  margin: -4px 0 12px;
+  color: var(--design-danger);
+  font-weight: 600;
+}
+
+/* Label / value rows. */
+.facts {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+.facts > div {
+  display: grid;
+  grid-template-columns: minmax(84px, 0.7fr) minmax(0, 1.6fr);
   gap: 12px;
-  margin: 0 0 16px;
 }
-.termStats > div {
-  min-width: 0;
-  padding: 14px 16px;
-  border: 1px solid var(--rr-border);
-  border-radius: var(--rr-card-radius);
-  background: var(--design-background);
+.facts dt {
+  color: var(--design-muted);
+  font-size: 13px;
+  line-height: 1.6;
 }
-.termStats dt {
+.facts dd {
+  margin: 0;
+}
+/* Lease terms: label above value, in columns. */
+.factGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px 24px;
+  margin: 0;
+}
+.factGrid dt {
+  margin-bottom: 4px;
   color: var(--design-muted);
   font-size: 13px;
 }
-.termStats dd {
-  margin: 4px 0 2px;
-  font: 600 22px/1.15 var(--design-heading-font);
+.factGrid dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
-.termStats small {
+.factGrid dd small {
+  display: block;
+  margin-top: 2px;
   color: var(--design-muted);
   font-size: 13px;
+  font-weight: 400;
 }
-.compactFacts,
-.section :global(.kv) {
+.factGrid.twoUp {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@container (max-width: 560px) {
+  .factGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* The date range reads on one line. */
+  .factGrid:not(.twoUp) > div:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Overview side column: Terms, Tenants, Unit and Documents as one card. */
+.details {
   display: grid;
-  grid-template-columns: minmax(90px, 0.8fr) minmax(0, 1.4fr);
-  gap: 10px 16px;
-  margin: 0;
+  padding: 0;
 }
-.compactFacts dt,
-.section :global(.kv dt) {
-  color: var(--design-muted);
-  font-size: 13px;
+.details > section {
+  min-width: 0;
+  padding: 20px 24px;
 }
-.compactFacts dd,
-.section :global(.kv dd) {
-  margin: 0;
-  font-size: 14px;
+.details > section + section {
+  border-top: 1px solid var(--rr-border);
 }
-.section :global(.kv) {
-  max-width: 720px;
+.details .cardHead {
+  min-height: 28px;
+  margin-bottom: 12px;
 }
-/* Documents card lines: name + state on the left, one action on the right. */
-.plainList {
+.details .cardHead h2 {
+  font-size: 16px;
+}
+.people {
   display: grid;
+  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.docLine {
+.people li {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px 12px;
-  padding: 8px 0;
+  gap: 12px;
+  min-width: 0;
 }
-.plainList .docLine + .docLine {
-  border-top: 1px solid var(--rr-border);
+.person {
+  display: grid;
+  min-width: 0;
 }
-.docName {
+.personName {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 8px;
-  min-width: 0;
 }
-.docName strong {
+.personName a,
+.unitLine a {
+  color: var(--design-text);
   font-weight: 600;
 }
-.docName small {
-  flex-basis: 100%;
+.personName a:hover,
+.unitLine a:hover {
+  color: var(--design-primary);
+}
+.person small {
   color: var(--design-muted);
   font-size: 13px;
 }
-.premises {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
+.unitLine {
+  margin-bottom: 2px;
 }
-.premises > div {
-  min-width: 0;
+.docLine {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
 }
-.premises p {
-  margin-top: 4px;
-  font-size: 13px;
+.docLine a {
+  font-weight: 600;
 }
-.building {
+.agreementState {
+  margin: 0 0 12px;
+  color: var(--design-text);
+}
+.signers {
   display: grid;
-  place-items: center;
-  flex: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: var(--rr-primary-tint);
-  color: var(--design-primary);
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
 }
-.building svg {
-  width: 22px;
-  height: 22px;
+.signers li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
 }
-.section :global(.list-item) {
-  padding: 12px 0;
-  gap: 10px;
-}
-.section :global(.file-meta) {
-  min-width: 0;
-}
-.section :global(.file-meta strong) {
-  font-size: 14px;
-  font-weight: 500;
-}
-.section :global(.file-meta small) {
-  font-size: 13px;
-  line-height: 1.5;
-}
-.section :global(.avatar) {
-  flex: none;
-  width: 32px;
-  height: 32px;
+.signers :global(.badge) {
   font-size: 12px;
 }
-.section :global(.form) {
-  max-width: 720px;
-  gap: 14px;
+
+/* "Edit terms" / "Record notice": opening swaps the card's facts for the form. */
+.disclosure {
+  min-width: 0;
 }
-.section :global(.form) > button {
-  align-self: flex-start;
+.disclosure > summary {
+  list-style: none;
 }
-.section > :global(.stack) {
-  align-items: flex-start;
+.disclosure > summary::-webkit-details-marker {
+  display: none;
 }
-.section :global(form.row) {
-  flex-wrap: wrap;
+.disclosure[open] {
+  flex-basis: 100%;
 }
-.section :global(.field small[role='alert']) {
-  color: var(--design-danger);
+.cardHead:has(> .disclosure[open]) {
+  margin-bottom: 0;
 }
-.amendment {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.disclosure[open] > summary {
+  display: none;
+}
+.card:has(.disclosure[open]) > :is(.facts, .factGrid) {
+  display: none;
+}
+.disclosureBody :global(.form) {
   gap: 16px;
-  flex-wrap: wrap;
 }
-.amendment p {
-  margin-top: 8px;
+@container (max-width: 460px) {
+  .disclosureBody :global(.form-row) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.disclosureBody :global(.field small[role='alert']) {
+  color: var(--design-danger);
+  font-weight: 400;
+}
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rr-border);
+}
+/* "$" prefix and "days" suffix adornments inside the input. */
+.adorned {
+  position: relative;
+  display: block;
+}
+.prefix,
+.suffix {
+  position: absolute;
+  top: 50%;
+  color: var(--design-muted);
+  font-size: 15px;
+  font-weight: 400;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+.prefix {
+  left: 14px;
+}
+.suffix {
+  right: 14px;
+}
+:global(.field) .adorned:has(.prefix) > input:not([type='file']):not([type='checkbox']) {
+  padding-left: 30px;
+}
+:global(.field) .adorned:has(.suffix) > input:not([type='file']):not([type='checkbox']) {
+  padding-right: 56px;
+}
+
+/* Signing card: quiet disclosure for a new signing version. */
+.prepare {
+  margin-top: 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rr-border);
 }
 .prepare > summary,
-.editTerms > summary,
-.signedDetails > summary,
+.wording > summary,
 .documentMenu > summary,
 .rename > summary {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   min-height: 36px;
   color: var(--design-primary);
@@ -415,42 +507,192 @@
   font-weight: 600;
   cursor: pointer;
 }
-.editTerms,
-.signedDetails {
-  margin-top: 14px;
+.prepare[open] > summary {
+  margin-bottom: 8px;
+}
+
+/* Prepared lease terms: template line, then the wording as a paper document. */
+.templateLine {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.templateLine > span:last-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.templateLine small {
+  color: var(--design-muted);
+  font-size: 13px;
+}
+.templateName {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.templateName strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.docIcon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 48px;
+  border: 1px solid var(--rr-border);
+  border-radius: 8px;
+  background: var(--design-surface);
+  color: var(--design-primary);
+}
+.docIcon svg {
+  width: 20px;
+  height: 20px;
+}
+.wording {
+  margin-top: 16px;
   padding-top: 8px;
   border-top: 1px solid var(--rr-border);
 }
-.editTerms[open] > summary,
-.signedDetails[open] > summary {
-  margin-bottom: 12px;
+.wording > summary {
+  gap: 8px;
+  list-style: none;
 }
-.signedDetails {
-  margin-bottom: 12px;
+.wording > summary::-webkit-details-marker {
+  display: none;
 }
-.signedGrid {
-  display: grid;
-  gap: 12px;
-  margin: 12px 0;
-  max-width: 800px;
+.wording > summary::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  margin-top: -3px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform var(--rr-duration, 0.15s) ease;
 }
-.signedGrid article {
-  padding: 14px 16px;
+.wording[open] > summary::after {
+  margin-top: 3px;
+  transform: rotate(-135deg);
+}
+.wording:not([open]) .whenOpen,
+.wording[open] .whenClosed {
+  display: none;
+}
+.desk {
+  margin-top: 12px;
+  padding: 32px 24px;
   border-radius: 12px;
   background: var(--design-background);
 }
-.signedGrid h3 {
-  margin: 0 0 6px;
+.paper {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 56px 64px;
+  border: 1px solid var(--rr-border);
+  border-radius: 6px;
+  background: var(--design-surface);
+  color: var(--design-text);
+  font-size: 15px;
+  line-height: 1.6;
 }
-.signedGrid p {
+.paper section + section {
+  margin-top: 40px;
+}
+.paper h3 {
+  margin: 0 0 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rr-border);
+  font-family: var(--design-heading-font);
+  font-size: 20px;
+  font-weight: 500;
+}
+.paper ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: term;
+}
+.paper li {
+  counter-increment: term;
+}
+.paper h4 {
+  margin: 20px 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.paper h4::before {
+  content: counter(term) '. ';
   color: var(--design-muted);
-  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.paper p {
+  margin: 0;
   white-space: pre-wrap;
 }
-.signedGrid mark {
+.paper mark {
+  padding: 1px 6px;
+  border-radius: 6px;
   background: #fff1d9;
   color: #7a4206;
+  font-size: 0.9em;
+  font-weight: 500;
 }
+
+/* Slim card: heading and count on the left, one action on the right. */
+.rowCard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+}
+.rowCard > span {
+  display: grid;
+  gap: 2px;
+}
+.rowCard small {
+  color: var(--design-muted);
+  font-size: 13px;
+}
+
+/* Lease actions: what each does on the left, its button on the right. */
+.statusActions {
+  display: grid;
+}
+.statusActions :global(.alert) {
+  margin-top: 12px;
+}
+.statusAction {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 16px 0;
+  border-top: 1px solid var(--rr-border);
+}
+.actionsCard .cardHead + * > .statusAction:first-child,
+.actionsCard .cardHead + .statusAction {
+  padding-top: 0;
+  border-top: 0;
+}
+.statusAction:last-child {
+  padding-bottom: 0;
+}
+.statusAction strong {
+  font-weight: 600;
+}
+.statusAction p {
+  margin-top: 2px;
+  color: var(--design-muted);
+  font-size: 13px;
+}
+
 /* Lease documents: groups of file rows. */
 .documentGroups {
   display: grid;
@@ -569,6 +811,12 @@
 .uploader {
   margin-top: 16px;
 }
+.documentGroup :global(h3.eyebrow) {
+  margin: 20px 0 4px;
+}
+.documentGroup:first-child :global(h3.eyebrow) {
+  margin-top: 0;
+}
 .timeline {
   margin: 0;
   padding: 0;
@@ -577,50 +825,85 @@
 .event {
   position: relative;
   display: flex;
-  gap: 12px;
-  padding: 10px 0;
+  gap: 14px;
+  padding: 8px 0;
 }
 .event:not(:last-child)::before {
   position: absolute;
   content: '';
   width: 2px;
   background: var(--rr-border);
-  left: 5px;
-  top: 28px;
-  bottom: -10px;
+  left: 4px;
+  top: 26px;
+  bottom: -8px;
 }
 .eventDot {
   flex: none;
-  width: 12px;
-  height: 12px;
-  margin-top: 5px;
+  width: 10px;
+  height: 10px;
+  margin-top: 6px;
   border-radius: 50%;
   background: var(--design-primary);
+  box-shadow: 0 0 0 3px var(--rr-primary-tint);
 }
+.eventText {
+  display: grid;
+  min-width: 0;
+}
+.eventText strong {
+  font-weight: 500;
+}
+.eventText small {
+  color: var(--design-muted);
+  font-size: 13px;
+}
+
+/* The signing panel sits flush inside the E-signatures card instead of a card in a card. */
+.esign > [aria-label='Lease signing'] {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+.esign :global(p.muted) {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
 @media (max-width: 1023px) {
   .grid,
-  .grid:has(.pairArea) {
+  .split {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: none;
   }
-  .grid:has(.pairArea) > .sideCol,
-  .pairArea {
-    grid-column: 1;
-    grid-row: auto;
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 760px) {
-  .signing {
-    grid-template-columns: auto minmax(0, 1fr);
-    padding: 16px;
+  .workspace {
+    gap: 16px;
+    margin-top: 4px;
   }
-  .signingActions {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
+  .progress {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+  .meter {
+    flex: 1;
+    width: auto;
+    min-width: 120px;
+  }
+  .tiles {
+    gap: 12px;
+  }
+  .tile {
+    padding: 14px 16px;
+  }
+  .tileValue {
+    font-size: 22px;
   }
   /* "Docs" on phones; the full word stays the accessible name. */
   .tabs {
-    gap: 16px;
+    gap: 14px;
   }
   .tabs a {
     min-height: 48px;
@@ -637,27 +920,27 @@
   .tabShort {
     display: inline;
   }
-  .pair {
-    grid-template-columns: minmax(0, 1fr);
+  .card {
+    padding: 20px 16px;
   }
-  /* Phone reference: Terms fold into the Activity caption (full terms stay on Agreement). */
-  .foldTerms > .termsCard {
-    display: none;
+  .details {
+    padding: 0;
   }
-  .phoneCaption {
-    display: block;
+  .details > section {
+    padding: 18px 16px;
   }
-  .section {
-    padding: 16px;
-  }
-  .sectionHeading {
-    align-items: flex-start;
-    margin-bottom: 12px;
-  }
-  .compactFacts,
-  .section :global(.kv) {
+  .facts > div {
     grid-template-columns: 96px minmax(0, 1fr);
-    gap: 10px 12px;
+  }
+  .paper {
+    padding: 28px 20px;
+  }
+  .desk {
+    margin-inline: -8px;
+    padding: 8px;
+  }
+  .formActions :global(.btn) {
+    flex: 1;
   }
   .fileRow {
     grid-template-columns: auto minmax(0, 1fr);
@@ -673,15 +956,11 @@
     display: none;
   }
   .prepare > summary,
-  .editTerms > summary,
-  .signedDetails > summary,
+  .wording > summary,
   .documentMenu > summary,
   .rename > summary,
   .menuPanel > a,
   .goLink {
     min-height: 44px;
-  }
-  .section :global(.list-item) {
-    flex-wrap: nowrap;
   }
 }

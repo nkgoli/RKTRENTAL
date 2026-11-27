@@ -54,7 +54,7 @@ for (const width of [1280, 390]) {
     await expect(editForm.locator('[name=name]')).toHaveAttribute('aria-invalid', 'true');
     await editForm.getByRole('link', { name: 'Cancel', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Alex Rivera', exact: true })).toBeVisible();
-    await page.getByRole('link', { name: 'Back to tenants' }).click();
+    await page.getByRole('link', { name: 'Tenants', exact: true }).click();
     await expect(page).toHaveURL(/q=alex.rivera/);
     await page.getByRole('link', { name: 'Status', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Payment setup' })).toBeVisible();

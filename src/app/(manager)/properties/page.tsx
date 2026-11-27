@@ -78,7 +78,6 @@ export default async function PropertiesPage({
       {notice === 'property-archived' && <NoticeToast message="Property archived" />}
       <PageHeader
         title="Properties"
-        eyebrow="Portfolio"
         meta={`${properties.length} ${properties.length === 1 ? 'property' : 'properties'} · ${totals.units} ${totals.units === 1 ? 'unit' : 'units'}`}
         actions={[
           {
@@ -93,77 +92,60 @@ export default async function PropertiesPage({
         label="Properties in this view"
         eyebrow="Portfolio occupancy"
         value={`${occupancy}%`}
-        detail={`${totals.occupied} of ${totals.units} units occupied across ${properties.length} ${properties.length === 1 ? 'property' : 'properties'}`}
         progress={{
           label: `${totals.occupied} of ${totals.units} units occupied`,
           value: occupancy,
           tone: 'accent',
         }}
-        stats={[
-          {
-            label: 'Total units',
-            value: totals.units,
-            detail: `${properties.length} ${properties.length === 1 ? 'property' : 'properties'}`,
-          },
-          { label: 'Occupied', value: totals.occupied, detail: `${occupancy}% occupancy` },
-          {
-            label: 'Vacant',
-            value: totals.vacant,
-            detail: totals.vacant ? 'Ready to list or turn over' : 'Fully occupied',
-          },
-        ]}
+        stats={[{ label: 'Vacant units', value: totals.vacant, href: href('vacancies', q, view) }]}
       />
       <section className={styles.toolbar}>
         <SearchField defaultValue={q} placeholder="Search by name or address" />
-        <nav className={styles.filters} aria-label="Property filters">
-          {FILTERS.map(({ key, label }) => {
-            const count =
-              key === 'all' || key === 'multi' || key === 'single' || key === 'archived'
-                ? counts[key]
-                : undefined;
-            return (
+        {/* The page meta carries the count; the chips carry each filter's count. */}
+        <div className={styles.filterRow}>
+          <nav className={styles.filters} aria-label="Property filters">
+            {FILTERS.map(({ key, label }) => {
+              const count =
+                key === 'all' || key === 'multi' || key === 'single' || key === 'archived'
+                  ? counts[key]
+                  : undefined;
+              return (
+                <Link
+                  scroll={false}
+                  key={key}
+                  href={href(key, q, view)}
+                  aria-current={key === filter ? 'page' : undefined}
+                  className={styles.filterLink}
+                >
+                  {label}
+                  {count != null && (
+                    <>
+                      {' '}
+                      <span className={styles.count}>{count}</span>
+                    </>
+                  )}
+                </Link>
+              );
+            })}
+            {properties.length > 0 && (q || filter !== 'all') && (
+              <Link className={styles.clearLink} href="/properties" scroll={false}>
+                Clear filters
+              </Link>
+            )}
+          </nav>
+          <div className={styles.viewToggle} role="group" aria-label="View">
+            {(['grid', 'list'] as const).map((v) => (
               <Link
                 scroll={false}
-                key={key}
-                href={href(key, q, view)}
-                aria-current={key === filter ? 'page' : undefined}
-                className={styles.filterLink}
+                key={v}
+                href={href(filter, q, v)}
+                aria-current={v === view ? 'true' : undefined}
+                className={v === view ? styles.viewActive : undefined}
               >
-                {label}
-                {count != null && (
-                  <>
-                    {' '}
-                    <span className={styles.count}>{count}</span>
-                  </>
-                )}
+                {v === 'grid' ? 'Grid' : 'List'}
               </Link>
-            );
-          })}
-        </nav>
-        {properties.length > 0 && (q || filter !== 'all') && (
-          <Link href="/properties" scroll={false}>
-            Clear filters
-          </Link>
-        )}
-      </section>
-
-      <section className={styles.viewBar}>
-        <span className="muted">
-          {properties.length} {properties.length === 1 ? 'property' : 'properties'}
-          {q || filter !== 'all' ? ' in this view' : ''}
-        </span>
-        <div className={styles.viewToggle} role="group" aria-label="View">
-          {(['grid', 'list'] as const).map((v) => (
-            <Link
-              scroll={false}
-              key={v}
-              href={href(filter, q, v)}
-              aria-current={v === view ? 'true' : undefined}
-              className={v === view ? styles.viewActive : undefined}
-            >
-              {v === 'grid' ? 'Grid' : 'List'}
-            </Link>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
@@ -171,11 +153,6 @@ export default async function PropertiesPage({
         <section className={styles.empty}>
           <Icon name="properties" />
           <h2>{q || filter !== 'all' ? 'No properties match this view' : 'No properties yet'}</h2>
-          <p>
-            {q || filter !== 'all'
-              ? 'Clear the filters to see your full portfolio.'
-              : 'Add your first property to start tracking units and leases.'}
-          </p>
           <a
             className="btn btn-secondary"
             href={q || filter !== 'all' ? '/properties' : createHref}
@@ -241,11 +218,11 @@ export default async function PropertiesPage({
           <div
             className={styles.tableWrap}
             role="region"
-            aria-label="Property directory table; scroll horizontally on phone"
+            aria-label="Property directory table"
             tabIndex={0}
           >
             <Table aria-label="Properties">
-              <caption>Properties · {properties.length} properties · monthly rent in USD</caption>
+              <caption>Properties · monthly rent in USD</caption>
               <TableHead
                 columns={['Property', 'Address', 'Type', 'Units', 'Occupancy', 'Monthly rent']}
               />

@@ -1,70 +1,30 @@
-.metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding: 16px 0;
-  border-block: 1px solid var(--rr-border);
-  gap: 0;
-}
-.metric {
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  border-left: 1px solid var(--rr-border);
-  padding: 0 20px;
-}
-.metric:first-child {
-  border: 0;
-  padding-left: 0;
-}
-.metrics :global(.value) {
-  font-size: 28px;
-  font-weight: 600;
-  margin-top: 4px;
-}
-.metrics :global(.delta) {
-  display: block;
-  margin-top: 4px;
-  color: var(--design-muted);
-  font-size: 12px;
-  font-weight: 400;
-}
 .toolbar {
   display: grid;
   gap: 12px;
 }
-.searchForm {
+/* Filter chips on the left, Grid/List on the right of the same row. */
+.filterRow {
   display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  max-width: 550px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   min-width: 0;
-}
-.searchLabel {
-  display: grid;
-  gap: 6px;
-  flex: 1;
-  min-width: 0;
-  font-size: 12px;
-  font-weight: 600;
-}
-.searchLabel input {
-  width: 100%;
-  min-width: 0;
-  min-height: 36px;
-  border: 1px solid var(--rr-border-strong);
-  border-radius: 7px;
-  background: var(--design-surface);
-  color: var(--design-text);
-  padding: 8px 12px;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 400;
 }
 .filters {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 7px;
+  min-width: 0;
+}
+.clearLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 600;
 }
 .filterLink {
   display: inline-flex;
@@ -89,13 +49,6 @@
 .count {
   font-size: 11px;
   font-weight: 600;
-}
-.viewBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 12px;
 }
 .viewToggle {
   display: inline-flex;
@@ -252,12 +205,14 @@
   min-width: 820px;
   font-variant-numeric: tabular-nums;
 }
+/* The caption names the table for assistive tech only; the column headers say the rest. */
 .tableWrap caption {
-  text-align: left;
-  padding: 12px;
-  background: var(--design-background);
-  font-size: 12px;
-  color: var(--design-muted);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .tableWrap th,
 .tableWrap td {
@@ -283,37 +238,6 @@
 .rowLink > span {
   width: 40px;
   height: 40px;
-}
-.dialog {
-  width: min(640px, calc(100vw - 32px));
-  max-height: calc(100dvh - 32px);
-  padding: 20px;
-  border: 1px solid var(--rr-border);
-  border-radius: var(--design-radius, 12px);
-  background: var(--design-surface);
-  color: var(--design-text);
-  box-shadow: 0 16px 40px #17233a24;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-.dialog::backdrop {
-  background: #17233a66;
-}
-.dialogHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-.dialogHeader h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-}
-.dialogHeader button {
-  min-width: 44px;
-  min-height: 44px;
 }
 .propertyForm {
   display: grid;
@@ -343,16 +267,6 @@
   width: 100%;
   min-width: 0;
 }
-.formTitle {
-  font-size: 26px;
-  margin-bottom: 8px;
-}
-.backLink {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  margin-bottom: 16px;
-}
 .basicsSection,
 .formPage .roiDetails {
   background: var(--design-surface);
@@ -366,9 +280,6 @@
 }
 .basicsSection h2 {
   font-size: 20px;
-}
-.basicsSection p {
-  font-size: 13px;
 }
 .formPage .formActions {
   position: sticky;
@@ -416,13 +327,6 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   padding: 12px 0;
-}
-.roiEditor {
-  margin-top: 24px;
-  background: var(--design-surface);
-  border: 1px solid var(--rr-border);
-  border-radius: 12px;
-  padding: 20px;
 }
 .roiDetails {
   scroll-margin-top: 16px;
@@ -475,19 +379,6 @@
   .grid {
     grid-template-columns: minmax(0, 1fr);
   }
-  .metric {
-    padding: 0 12px;
-  }
-  .metric:first-child {
-    padding-left: 0;
-  }
-  .metrics :global(.label) {
-    font-size: 12px;
-  }
-  .searchForm {
-    max-width: none;
-  }
-  .searchLabel input,
   .propertyForm input,
   .propertyForm select {
     min-height: 44px;
@@ -497,12 +388,10 @@
     gap: 8px;
   }
   .filterLink,
+  .clearLink,
   .viewToggle a,
   .rowLink {
     min-height: 44px;
-  }
-  .dialog {
-    padding: 16px;
   }
   .roiGrid {
     grid-template-columns: minmax(0, 1fr);
@@ -531,44 +420,6 @@
     min-height: 44px;
   }
 }
-.metric {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-.metric :global(.stat) {
-  border: 0;
-  border-radius: 0;
-  padding: 0;
-  background: transparent;
-  box-shadow: none;
-  min-width: 0;
-}
-.metricIcon {
-  display: grid;
-  place-items: center;
-  padding: 8px;
-  border-radius: 9px;
-  background: var(--rr-primary-tint);
-  color: var(--design-primary);
-}
-.metricIcon svg {
-  width: 18px;
-  height: 18px;
-}
-.metricIcon.teal {
-  background: #f1fafc;
-  color: var(--design-accent);
-}
-@media (max-width: 640px) {
-  .metric {
-    display: block;
-  }
-  .metricIcon {
-    display: none;
-  }
-}
 .empty {
   padding: 28px 20px;
   text-align: center;
@@ -586,9 +437,4 @@
 }
 .empty h2 {
   font-size: 20px;
-}
-.empty p {
-  font-size: 13px;
-  color: var(--design-muted);
-  max-width: 340px;
 }

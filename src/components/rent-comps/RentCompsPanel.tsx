@@ -12,13 +12,7 @@ import {
   type CompsNavContext,
 } from '@/lib/comps/navigation';
 import { compsSettings, fetchComps, listPricingUnits, subjectFacts } from '@/lib/comps/service';
-import {
-  bedBath,
-  formatAddress,
-  formatDate,
-  formatMoney,
-  unitLabel,
-} from '@/lib/properties/format';
+import { bedBath, formatDate, formatMoney, unitLabel } from '@/lib/properties/format';
 import { CompsWorkbench } from '@/app/(manager)/rent-comps/CompsWorkbench';
 import { FilterBar, UnitPicker } from '@/app/(manager)/rent-comps/FilterBar';
 import { refreshCompsAction } from '@/app/(manager)/rent-comps/actions';
@@ -106,26 +100,14 @@ export async function RentCompsPanel({
 
   return (
     <div className={styles.panel}>
-      {result && (
-        <Alert tone="warning">
-          <div>
-            <strong>Demo comps · not live market data</strong>
-            <br />
-            Sandbox response · {result.fetchedAt.toLocaleString('en-US', { timeZone: 'UTC' })} UTC
-            {result.cached ? ' · cached for this unit' : ' · newly fetched'}
-          </div>
-        </Alert>
-      )}
       <Card>
         <div className={styles.subject}>
           <div>
-            <p className="eyebrow">{propertyLevel ? 'Property listing' : 'Unit listing'}</p>
             <h2>Rent comps</h2>
             <p className="muted">
-              {label} · {bedBath({ bedrooms: unit.bedrooms, bathrooms: subject.bathrooms })}
+              {bedBath({ bedrooms: unit.bedrooms, bathrooms: subject.bathrooms })}
               {unit.squareFeet ? ` · ${unit.squareFeet.toLocaleString('en-US')} sqft` : ''}
             </p>
-            <p className="muted">{formatAddress(unit.property)}</p>
             <div className={styles.subjectFacts}>
               <Badge tone={unit.status === 'VACANT' ? 'warning' : 'info'}>
                 {status ?? 'Archived'}
@@ -150,13 +132,19 @@ export async function RentCompsPanel({
                 units={pickerUnits}
               />
             )}
-            {
-              <form action={refreshCompsAction}>
-                <input type="hidden" name="unitId" value={unit.id} />
-                <button className="btn btn-ghost btn-sm">Refresh comps</button>
-              </form>
-            }
+            <form action={refreshCompsAction}>
+              <input type="hidden" name="unitId" value={unit.id} />
+              <button className="btn btn-ghost btn-sm">Refresh comps</button>
+            </form>
           </div>
+        </div>
+        <div className={styles.subjectFilters}>
+          <FilterBar
+            unitId={unit.id}
+            filters={filters}
+            action={formAction}
+            propertyId={formPropertyId}
+          />
         </div>
       </Card>
       {nav.surface === 'rent-analysis' && (
@@ -167,14 +155,6 @@ export async function RentCompsPanel({
           Open in Listing
         </Link>
       )}
-      <Card>
-        <FilterBar
-          unitId={unit.id}
-          filters={filters}
-          action={formAction}
-          propertyId={formPropertyId}
-        />
-      </Card>
       {failure || !result ? (
         <Alert tone="warning">
           <div>

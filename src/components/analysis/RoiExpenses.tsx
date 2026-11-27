@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { dollars, projectionRows, type ProjectionResult } from '@/lib/analysis/projections';
 import {
   capexCategory,
@@ -16,9 +16,10 @@ import {
   Figure,
   Icon,
   InfoTip,
+  Insight,
   MoreDetail,
   Tiles,
-  chartColors,
+  entityColors,
   useHorizon,
 } from './RoiChart';
 import chartStyles from './projections.module.css';
@@ -122,60 +123,25 @@ function Row({
     <li className={d.expense}>
       <div>
         <span className={d.name}>
-          <i style={{ background: color }} aria-hidden="true" />
           {name}
           <InfoTip label={name}>{about}</InfoTip>
         </span>
         <span className={d.amount}>
           {change != null && Math.round(change) !== 0 && (
-            <small data-tone={change > 0 ? 'red' : 'green'}>
-              <Icon name={change > 0 ? 'up' : 'down'} size={12} />
-              {signed(change)}
-            </small>
+            <small data-tone={change > 0 ? 'red' : undefined}>{signed(change)}</small>
           )}
           <b>{wholeDollars(value)}</b>
-          <em>({shareText})</em>
+          <em>{shareText}</em>
         </span>
       </div>
       <span className={d.track} aria-hidden="true">
-        <span style={{ width: `${width}%`, background: color }}>
-          {width > 40 && wholeDollars(value)}
-        </span>
+        <span style={{ width: `${width}%`, background: color }} />
       </span>
     </li>
   );
 }
 
-const advice: Record<string, (value: number) => ReactNode> = {
-  propertyTax: (v) => (
-    <>
-      {' '}
-      Appealing the assessment could save <Figure>{wholeDollars(v * 0.1)}</Figure>–
-      <Figure>{wholeDollars(v * 0.2)}</Figure>/year.
-    </>
-  ),
-  propertyManagement: (v) => (
-    <>
-      {' '}
-      Self-managing saves <Figure>{wholeDollars(v)}/year</Figure>, but requires 5–10 hrs/month.
-    </>
-  ),
-  insurance: (v) => (
-    <>
-      {' '}
-      Shopping around could save <Figure>{wholeDollars(v * 0.15)}</Figure>–
-      <Figure>{wholeDollars(v * 0.25)}</Figure>/year.
-    </>
-  ),
-  hoa: () => (
-    <> HOA fees are typically non-negotiable. Review the reserve fund health before buying.</>
-  ),
-  maintenance: () => (
-    <> Newer properties (built after 2000) often run 20–30% lower on maintenance.</>
-  ),
-};
-
-/** C10 · Operating Expenses (reference ExpenseBreakdownPanel). */
+/** C10 · Operating expenses by category, largest first. */
 function OperatingExpenses({ result }: { result: ProjectionResult }) {
   const rows = projectionRows(result);
   const [year, horizon] = useHorizon(rows.length, 'Operating expenses year', 1);
@@ -200,19 +166,15 @@ function OperatingExpenses({ result }: { result: ProjectionResult }) {
   const showChange = year > 1 && sort === 'change';
   return (
     <ChartCard
-      title="Operating Expenses"
+      title="Operating expenses"
       subtitle={
-        <>
-          Where the operating budget goes in year {year}, largest cost first.
-          {data.growth != null && Math.abs(data.growth) >= 0.005 && (
-            <b className={d.growth} data-tone={data.growth > 0 ? 'red' : 'teal'}>
-              ({data.growth > 0 ? '+' : ''}
-              {(data.growth * 100).toFixed(0)}% vs Y1)
-            </b>
-          )}
-        </>
+        data.growth != null && Math.abs(data.growth) >= 0.005 ? (
+          <b className={d.growth}>
+            ({data.growth > 0 ? '+' : ''}
+            {(data.growth * 100).toFixed(0)}% vs Y1)
+          </b>
+        ) : undefined
       }
-      basis={['Projected', 'USD per year', `Year ${year}`, 'Before tax']}
       controls={
         horizon && (
           <div>
@@ -227,46 +189,41 @@ function OperatingExpenses({ result }: { result: ProjectionResult }) {
       <Tiles
         items={[
           {
-            label: 'Operating Expenses',
+            label: 'Total',
             value: (
               <span data-simulated={simulating || undefined} className={d.total}>
                 {wholeDollars(total)}
               </span>
             ),
             note: `${wholeDollars(total / 12)}/mo`,
-            tone: 'muted',
             info: 'Total operating expenses for the selected year (excludes debt service and capital reserves)',
           },
           {
-            label: 'OpEx Ratio',
+            label: 'OpEx ratio',
             value: share(ratio, 1),
-            valueTone:
-              ratio == null ? undefined : ratio > 0.5 ? 'red' : ratio > 0.4 ? 'amber' : 'green',
+            negative: ratio != null && ratio > 0.5,
             note: 'Typical: 35–50%',
-            tone: 'blue',
             info: 'Operating Expenses ÷ Effective Gross Income. Lower is better. Reserves are not included.',
           },
           {
-            label: 'Top Driver',
+            label: 'Top driver',
             value: <span className={d.driver}>{top?.name ?? 'None'}</span>,
             note: top
               ? `${wholeDollars(top.value)} (${share(total > 0 ? top.value / total : null)})`
               : 'No operating costs',
-            tone: 'amber',
             info: 'The largest expense category — your biggest lever for cost reduction',
           },
           {
             label: 'Reserves',
             value: wholeDollars(data.reserves),
             note: `${share(data.total > 0 ? data.reserves / data.total : null)} of OpEx`,
-            tone: 'muted',
             info: 'CapEx reserve for major replacements. Deducted below NOI, so not included in operating expenses.',
           },
         ]}
       />
       <section className={d.panel} aria-labelledby="expense-breakdown-title">
         <header>
-          <h3 id="expense-breakdown-title">Expense Breakdown</h3>
+          <h3 id="expense-breakdown-title">By category</h3>
           <SortMenu value={sort} onChange={setSort} />
         </header>
         {sorted.length || data.reserves > 0 ? (
@@ -275,7 +232,7 @@ function OperatingExpenses({ result }: { result: ProjectionResult }) {
               <Row
                 key={c.key}
                 name={c.name}
-                color={c.color}
+                color={entityColors.expenses}
                 about={c.about}
                 value={c.value}
                 max={max}
@@ -290,7 +247,7 @@ function OperatingExpenses({ result }: { result: ProjectionResult }) {
                 </li>
                 <Row
                   name={capexCategory.name}
-                  color={capexCategory.color}
+                  color={entityColors.reserves}
                   about={capexCategory.about}
                   value={data.reserves}
                   max={max}
@@ -301,36 +258,25 @@ function OperatingExpenses({ result }: { result: ProjectionResult }) {
             )}
           </ul>
         ) : (
-          <p className={d.empty}>No operating expenses or reserves are entered for this year.</p>
+          <p className={d.empty}>No operating expenses or reserves for this year.</p>
         )}
       </section>
       <div className={d.insightRow}>
-        <p>
-          <strong>Insight:</strong>{' '}
+        <Insight>
           {simulating ? (
             <>
-              <b className={d.good}>Simulating 10% tax reduction</b> saves{' '}
-              <Figure>{wholeDollars(cut)}/year</Figure> (
-              <Figure>{wholeDollars(cut / 12)}/mo</Figure>
-              ). What-if only: saved assumptions are unchanged.
+              Simulating 10% tax reduction: saves <Figure>{wholeDollars(cut)}/year</Figure> (
+              {wholeDollars(cut / 12)}/mo); saved assumptions are unchanged.
             </>
           ) : byAmount[0] ? (
             <>
-              <b className={d.driverText}>{byAmount[0].name}</b> is your largest expense at{' '}
+              {byAmount[0].name} is the largest cost at{' '}
               <Figure>{wholeDollars(byAmount[0].value)}/year</Figure>.
-              {advice[byAmount[0].key]?.(byAmount[0].value)}
             </>
           ) : (
             <>No operating expenses are entered.</>
           )}
-          {!simulating && ratio != null && ratio > 0.5 && (
-            <>
-              {' '}
-              OpEx ratio of <Figure tone="red">{share(ratio)}</Figure> is high. Every 5% reduction
-              adds <Figure>{wholeDollars(data.effectiveIncome * 0.05)}</Figure> to NOI.
-            </>
-          )}
-        </p>
+        </Insight>
         {canSimulate && (
           <button
             type="button"
@@ -339,19 +285,11 @@ function OperatingExpenses({ result }: { result: ProjectionResult }) {
             data-active={simulating || undefined}
             onClick={() => setSimulate(!simulate)}
           >
-            <Icon name="sparkles" size={12} />
-            {simulating ? 'Reset' : 'Simulate −10% Tax'}
+            {simulating ? 'Reset' : 'Simulate −10% tax'}
           </button>
         )}
       </div>
-      <p className={d.note}>
-        <Icon name="pie" size={12} />
-        <span>
-          <b>Maintenance</b> = small/medium repairs. <b>CapEx</b> = major replacements (roof, HVAC).
-          Both are budgeted; CapEx is a reserve deducted below NOI.
-        </span>
-      </p>
-      <MoreDetail summary={`Exact amounts by category, year ${year}`}>
+      <MoreDetail summary="View exact amounts">
         <ExactTable
           caption={`Expense categories · year ${year} · USD per year`}
           headers={['Category', 'Amount', 'Share of operating expenses', 'Change vs year 1']}
@@ -388,12 +326,7 @@ export function Expenses({ result, onEdit }: { result: ProjectionResult; onEdit:
   return (
     <div className={chartStyles.stack}>
       <OperatingExpenses result={result} />
-      <ChartCard
-        title="Expense growth"
-        subtitle="Operating expenses (solid) and the capital reserve set aside below NOI (dashed), each year."
-        basis={['Projected', 'USD per year', 'Before tax']}
-        controls={horizon}
-      >
+      <ChartCard title="Expense growth" controls={horizon}>
         <ComboChart
           label="Operating expenses and capital reserves"
           years={visible.map((r) => r.year)}
@@ -401,26 +334,16 @@ export function Expenses({ result, onEdit }: { result: ProjectionResult; onEdit:
             {
               label: 'Operating expenses',
               values: visible.map((r) => r.operatingExpenses),
-              color: chartColors.primaryDark,
+              color: entityColors.expenses,
             },
             {
               label: 'Capital reserves',
               values: visible.map((r) => r.reserves),
-              color: chartColors.warn,
-              dashed: true,
+              color: entityColors.reserves,
             },
           ]}
         />
-        <MoreDetail summary="How expenses grow">
-          <p className={d.detailText}>
-            A fixed dollar input replaces its percentage. Year-one percentage-based dollar costs
-            grow at the expense-growth assumption; they are not recalculated from later rent.
-          </p>
-          <p className={d.detailText}>
-            NOI excludes capital reserves. Reserves reduce spendable cash after debt service.
-          </p>
-        </MoreDetail>
-        <MoreDetail summary={`Exact expense projections, all ${rows.length} years`}>
+        <MoreDetail summary="View exact amounts">
           <ExactTable
             caption="Expense projections · USD per year"
             headers={['Year', 'Effective income', 'Operating expenses', 'Capital reserves']}

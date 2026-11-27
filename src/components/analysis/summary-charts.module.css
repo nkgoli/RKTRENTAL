@@ -1,26 +1,35 @@
-/* Summary Outcome and Cash Flow & Equity Projections cards, in app KPI and table style. */
+/* Wealth created and milestone cards, and the Summary tables, in the shared chart style. */
 .big {
   margin: 0 !important;
   font-family: var(--design-heading-font);
-  font-size: 30px !important;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-size: 28px !important;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   line-height: 1.2;
   color: var(--design-text) !important;
 }
 .big[data-negative] {
-  color: var(--rr-bad) !important;
+  color: var(--design-danger) !important;
 }
 .outcomeRow {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 24px 32px;
   flex-wrap: wrap;
 }
+.outcomeTotal {
+  flex: 1 1 200px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
 .qualityBox {
-  flex: 1 1 160px;
+  flex: 1 1 200px;
   display: grid;
   gap: 6px;
+  min-width: 0;
+  padding-left: 24px;
+  border-left: 1px solid var(--rr-border);
 }
 .quality {
   display: grid;
@@ -31,7 +40,7 @@
 .qualityTitle {
   margin: 0;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--design-muted);
 }
 .quality > div {
@@ -44,77 +53,45 @@
 }
 .quality dd {
   margin: 0;
-  font-family: var(--design-font);
-  font-weight: 700;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--design-text);
 }
 .quality dd[data-tone='bad'] {
-  color: var(--rr-bad);
-}
-.quality dd[data-tone='good'] {
-  color: var(--rr-ok);
+  color: var(--design-danger);
 }
 .parts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 20px;
+  display: grid;
+  gap: 4px;
   list-style: none;
   margin: 0;
-  padding: 12px 0;
-  border-top: 1px solid var(--rr-subtle);
-  border-bottom: 1px solid var(--rr-subtle);
+  padding: 0;
   font-size: 13px;
   color: var(--design-muted);
 }
 .parts li {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
 }
 .parts i {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
 }
 .parts b {
-  font-family: var(--design-font);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--design-text);
 }
 .parts b[data-negative] {
-  color: var(--rr-bad);
+  color: var(--design-danger);
 }
 .note {
   margin: 0 !important;
-  font-size: 11px !important;
+  font-size: 12px !important;
   color: var(--design-muted);
-}
-.centered {
-  display: flex;
-  justify-content: center;
-}
-.tableControls {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-.key {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--design-muted);
-}
-.key i {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--design-primary);
-}
-.key i[data-tone='loss'] {
-  margin-left: 8px;
-  background: var(--rr-bad);
 }
 .scroll {
   overflow-x: auto;
@@ -129,10 +106,9 @@
 .table thead th {
   padding: 10px 8px;
   border-bottom: 1px solid var(--rr-border);
-  background: #f8fafc;
   text-align: right;
-  font-weight: 600;
-  color: var(--design-text);
+  font-weight: 500;
+  color: var(--design-muted);
   white-space: nowrap;
 }
 .table thead th:first-child {
@@ -168,25 +144,15 @@
 .table td > span {
   margin-right: 8px;
 }
-.table td[data-tone='gain'] {
-  color: var(--rr-ok);
-}
 .table td[data-tone='loss'] {
-  color: var(--rr-bad);
-}
-.table tr[data-strong] {
-  background: var(--rr-ok-bg);
+  color: var(--design-danger);
 }
 .table tr[data-strong] th,
 .table tr[data-strong] td {
-  font-weight: 700;
-  color: var(--rr-ok);
-}
-.table tr[data-strong] td[data-tone='loss'] {
-  color: var(--rr-bad);
+  font-weight: 600;
 }
 .section {
-  background: var(--design-background);
+  background: var(--rr-subtle);
 }
 .section th {
   padding: 0 !important;
@@ -209,14 +175,6 @@
 .section button:hover {
   background: var(--rr-subtle);
 }
-.icon {
-  display: inline-grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  color: white;
-}
 .chevron {
   display: inline-block;
   flex: none;
@@ -230,11 +188,6 @@
 .section button[aria-expanded='true'] .chevron {
   transform: rotate(45deg);
 }
-.foot {
-  margin: 0 !important;
-  font-size: 12px !important;
-  color: var(--design-muted);
-}
 .srOnly {
   position: absolute;
   width: 1px;
@@ -246,6 +199,12 @@
 @media (max-width: 640px) {
   .scroll {
     margin: 0 -12px;
+  }
+  .qualityBox {
+    flex-basis: 100%;
+    padding: 16px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--rr-border);
   }
 }
 /* In a narrow column (the Summary beside the assumptions form) the five
@@ -273,26 +232,6 @@
   }
 }
 
-.compact {
-  min-width: 0;
-  width: 100%;
-  font-size: 12px;
-}
-.compact th,
-.compact td {
-  padding: 10px 8px;
-  white-space: normal;
-}
-@media (max-width: 640px) {
-  .compact {
-    font-size: 12px;
-  }
-  .compact th,
-  .compact td {
-    padding: 8px 3px;
-  }
-}
-
 /* Summary cards in the shared Redisgn card and table look. */
 .plainCard {
   display: grid;
@@ -312,11 +251,6 @@
   font-size: var(--rr-h3, 20px);
   font-weight: 500;
 }
-p.caption {
-  margin: 2px 0 0;
-  font-size: 13px;
-  color: var(--design-muted);
-}
 .plainTable {
   width: 100%;
   font-variant-numeric: tabular-nums;
@@ -335,9 +269,4 @@ p.caption {
 .plainTable td[data-tone='loss'] {
   color: var(--design-danger);
   font-weight: 600;
-}
-p.yearsNote {
-  margin: 0;
-  font-size: 13px;
-  color: var(--design-muted);
 }

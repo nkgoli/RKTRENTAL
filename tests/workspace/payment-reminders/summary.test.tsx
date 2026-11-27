@@ -32,8 +32,8 @@ describe('overdue overview entry', () => {
     expect(html).toContain('all paid');
     expect(html).toContain('100% collected');
     expect(html).toContain('role="meter"');
-    expect(html).toContain('$850 overdue');
-    expect(html).toContain('includes older arrears and assessed fees');
+    expect(html).toContain('$850 overdue to date');
+    expect(html).not.toContain('includes older arrears and assessed fees');
     expect(html).toContain('href="/notifications?propertyId=property&amp;unitId=unit"');
     expect(html).toContain('Reminder history');
     expect(html).toContain('Send payment reminder');
@@ -54,7 +54,7 @@ describe('overdue overview entry', () => {
       />,
     );
     expect(html).toContain('No rent charges due this month');
-    expect(html).toContain('no overdue balance');
+    expect(html).not.toContain('overdue to date');
     expect(html).toContain('View payments');
     expect(html).toContain('Reminder history');
     expect(html).not.toContain('Send payment reminder');

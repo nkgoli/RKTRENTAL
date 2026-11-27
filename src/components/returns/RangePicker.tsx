@@ -49,50 +49,52 @@ export function RangePicker({
             {key === 'ALL' ? 'All' : key}
           </a>
         ))}
+        <details className={styles.customRange} open={period.key === 'CUSTOM'}>
+          <summary className={`chip${period.key === 'CUSTOM' ? ' active' : ''}`}>
+            Custom dates
+          </summary>
+          <form
+            onSubmit={(event) => event.preventDefault()}
+            onBlur={(event) => {
+              const form = event.currentTarget;
+              const data = new FormData(form);
+              const from = String(data.get('from') ?? '');
+              const to = String(data.get('to') ?? '');
+              if (!form.checkValidity() || !from || !to || from > to) return;
+              if (from === current.from && to === current.to) return;
+              router.replace(href({ period: 'CUSTOM', from, to }), { scroll: false });
+            }}
+            key={new URLSearchParams(current).toString()}
+            method="get"
+            action={basePath}
+            className={styles.custom}
+            aria-label="Custom range"
+          >
+            {Object.entries(extra).map(([name, value]) => (
+              <input key={name} type="hidden" name={name} value={value} />
+            ))}
+            <input type="hidden" name="period" value="CUSTOM" />
+            <Field label="From">
+              <Input
+                name="from"
+                type="month"
+                max={monthBucket(now)}
+                defaultValue={current.from ?? monthBucket(period.start)}
+                required
+              />
+            </Field>
+            <Field label="To">
+              <Input
+                name="to"
+                type="month"
+                max={monthBucket(now)}
+                defaultValue={current.to ?? lastMonth}
+                required
+              />
+            </Field>
+          </form>
+        </details>
       </div>
-      <details open={period.key === 'CUSTOM'}>
-        <summary className="chip">Custom dates</summary>
-        <form
-          onSubmit={(event) => event.preventDefault()}
-          onBlur={(event) => {
-            const form = event.currentTarget;
-            const data = new FormData(form);
-            const from = String(data.get('from') ?? '');
-            const to = String(data.get('to') ?? '');
-            if (!form.checkValidity() || !from || !to || from > to) return;
-            if (from === current.from && to === current.to) return;
-            router.replace(href({ period: 'CUSTOM', from, to }), { scroll: false });
-          }}
-          key={new URLSearchParams(current).toString()}
-          method="get"
-          action={basePath}
-          className={styles.custom}
-          aria-label="Custom range"
-        >
-          {Object.entries(extra).map(([name, value]) => (
-            <input key={name} type="hidden" name={name} value={value} />
-          ))}
-          <input type="hidden" name="period" value="CUSTOM" />
-          <Field label="From">
-            <Input
-              name="from"
-              type="month"
-              max={monthBucket(now)}
-              defaultValue={current.from ?? monthBucket(period.start)}
-              required
-            />
-          </Field>
-          <Field label="To">
-            <Input
-              name="to"
-              type="month"
-              max={monthBucket(now)}
-              defaultValue={current.to ?? lastMonth}
-              required
-            />
-          </Field>
-        </form>
-      </details>
       <span className={styles.period}>
         {period.label} · by {period.granularity}
       </span>

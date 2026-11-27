@@ -15,10 +15,7 @@ export const dynamic = 'force-dynamic';
 type SearchParams = Promise<{ notice?: string }>;
 
 const notices: Record<string, { tone: 'success' | 'warning' | 'error'; text: string }> = {
-  submitted: {
-    tone: 'success',
-    text: 'Repair request sent. Your manager will assign a vendor and confirm timing.',
-  },
+  submitted: { tone: 'success', text: 'Repair request sent.' },
   commented: { tone: 'success', text: 'Comment added.' },
   'comment-failed': { tone: 'error', text: 'Write a comment of up to 2000 characters.' },
   invalid: {
@@ -45,15 +42,10 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
   if (!view) {
     return (
       <div className={styles.repairs}>
-        <h1 style={{ fontSize: 'var(--rr-h1)' }}>
-          Repairs
-          <span className={styles.spark} aria-hidden="true">
-            {'\u2733'}
-          </span>
-        </h1>
+        <h1 style={{ fontSize: 'var(--rr-h1)' }}>Repairs</h1>
         <EmptyState
           title="No active lease"
-          description="There is no active lease on your account yet, so you cannot send a repair request."
+          description="You can request repairs once your lease is active."
           action="Check again"
           href="/repairs"
         />
@@ -70,17 +62,10 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
   return (
     <div className={styles.repairs}>
       <header className={styles.heading}>
-        <p className="eyebrow">Tenant portal / Repairs</p>
-        <h1 style={{ fontSize: 'var(--rr-h1)' }}>
-          Repairs
-          <span className={styles.spark} aria-hidden="true">
-            {'\u2733'}
-          </span>
-        </h1>
-        <p className="muted" style={{ fontSize: 13, marginTop: 2 }}>
+        <h1 style={{ fontSize: 'var(--rr-h1)' }}>Repairs</h1>
+        <p className="muted" style={{ fontSize: 13 }}>
           {view.propertyName}
-          {view.unitLabel ? ` · ${view.unitLabel}` : ''} · Your manager will assign a vendor and
-          confirm timing.
+          {view.unitLabel ? ` · ${view.unitLabel}` : ''}
         </p>
       </header>
 
@@ -107,17 +92,14 @@ export default async function TenantRepairsPage({ searchParams }: { searchParams
       <section id="your-requests" aria-labelledby="your-requests-title">
         <div className={styles.sectionHeader}>
           <h2 id="your-requests-title">Your requests</h2>
-          <span>
-            {view.requests.length} {view.requests.length === 1 ? 'request' : 'requests'}
-          </span>
+          {view.requests.length > 0 && (
+            <span>
+              {view.requests.length} {view.requests.length === 1 ? 'request' : 'requests'}
+            </span>
+          )}
         </div>
         <div className="stack" style={{ gap: 12 }}>
-          {view.requests.length === 0 && (
-            <p className="muted">
-              No repair requests yet. Describe what needs fixing above and your manager will follow
-              up.
-            </p>
-          )}
+          {view.requests.length === 0 && <p className="muted">No repair requests yet.</p>}
           {view.requests.map((request) => {
             const own = request.tenantId === session.tenantId;
             return (

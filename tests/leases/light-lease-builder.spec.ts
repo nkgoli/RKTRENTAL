@@ -32,6 +32,8 @@ test.beforeEach(async ({ page, request, baseURL }) => {
 async function createThroughTenants(page: Page) {
   await page.goto('/leases/new?unit=seed-unit-maple-7&fresh=1');
   await page.getByLabel(/^Start date/).fill('2037-01-15');
+  // The custom date field appears inside its card once Custom end date is chosen.
+  await page.getByRole('radio', { name: /Custom end date/ }).check();
   await page.locator('#custom-end-date').fill('2037-11-20');
   await page.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Rent, deposit & fees' })).toBeVisible();

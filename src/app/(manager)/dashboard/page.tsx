@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Icon } from '@/components/shell/Icons';
 import { loadDashboardView, initialsOf } from '@/components/dashboard/assemble';
-import { CollectionChart } from '@/components/dashboard/CollectionChart';
+import { CollectionChart, CollectionRangeChips } from '@/components/dashboard/CollectionChart';
 import { HomeHeader } from '@/components/dashboard/HomeHeader';
 import { Avatar, Badge, type BadgeTone } from '@/components/ui';
 import { SummaryBand } from '@/components/ui/SummaryBand';
@@ -66,7 +66,7 @@ export default async function DashboardPage({
   const appBreakdown = [
     apps.SUBMITTED && `${apps.SUBMITTED} awaiting consent`,
     apps.SCREENING && `${apps.SCREENING} screening`,
-    apps.REVIEW && `${apps.REVIEW} ready for decision`,
+    apps.REVIEW && `${apps.REVIEW} ready`,
   ].filter(Boolean);
   const urgentPlace = urgentRequest
     ? [urgentRequest.propertyName, urgentRequest.unitLabel].filter(Boolean).join(' ')
@@ -77,7 +77,6 @@ export default async function DashboardPage({
       <HomeHeader
         firstName={(session.name ?? '').split(/\s+/)[0] ?? ''}
         propertyCount={dashboard.propertyCount}
-        unitCount={dashboard.unitsTotal}
         needsCount={needsCount}
         actions={[
           { label: 'View reports', href: '/returns', icon: 'download' },
@@ -94,7 +93,7 @@ export default async function DashboardPage({
             : 'No rent is due this month'
         }
         progress={{
-          label: `${collectionPercent}% collected · month to date`,
+          label: `${collectionPercent}% collected`,
           value: collectionPercent,
           valueText: dashboard.rentDueCents
             ? `${formatUsd(dashboard.rentCollectedCents)} of ${formatUsd(dashboard.rentDueCents)} collected`
@@ -105,7 +104,7 @@ export default async function DashboardPage({
             {rentRoll.openCount ? (
               <span className="danger">
                 {wholeUsd(rentRoll.openCents)} open across {plural(rentRoll.openCount, 'lease')}
-                {rentRoll.lateCount ? ` · ${rentRoll.lateCount} late past grace` : ''}
+                {rentRoll.lateCount ? ` · ${rentRoll.lateCount} late` : ''}
               </span>
             ) : (
               <span className="muted">No open rent balances</span>
@@ -118,23 +117,21 @@ export default async function DashboardPage({
         }
         stats={[
           {
-            label: 'Portfolio occupancy',
+            label: 'Occupancy',
             value: `${dashboard.occupancyPercent}%`,
-            detail: `${dashboard.unitsOccupied} of ${dashboard.unitsTotal} units occupied`,
+            detail: `${dashboard.unitsOccupied} of ${dashboard.unitsTotal} units`,
             href: '/properties',
           },
           {
-            label: `Leases ending within ${EXPIRING_WINDOW_DAYS} days`,
+            label: `Expiring in ${EXPIRING_WINDOW_DAYS} days`,
             value: dashboard.expiringSoonCount,
-            detail: `${dashboard.endingWithin60Count} ${dashboard.endingWithin60Count === 1 ? 'ends' : 'end'} in the next 60 days`,
+            detail: `${dashboard.endingWithin60Count} within 60 days`,
             href: '/leases?tab=expiring',
           },
           {
             label: 'Open repairs',
             value: dashboard.openMaintenanceRequests,
-            detail: urgentRequest
-              ? `${dashboard.urgentMaintenanceRequests} urgent · ${urgentRequest.title}`
-              : `${dashboard.urgentMaintenanceRequests} urgent`,
+            detail: `${dashboard.urgentMaintenanceRequests} urgent`,
             href: '/maintenance',
           },
         ]}
@@ -147,17 +144,13 @@ export default async function DashboardPage({
             Needs you today
           </h2>
           <div className={styles.needItem}>
-            <p className={`eyebrow ${styles.danger}`}>Late · past grace</p>
+            <p className={`eyebrow ${rentRoll.lateCount ? styles.danger : ''}`}>Late rent</p>
             {rentRoll.lateCount ? (
               <>
                 <h3>
                   {plural(rentRoll.lateCount, 'lease')} late · {wholeUsd(rentRoll.lateCents)}
                 </h3>
-                <p className={styles.small}>
-                  {listNames(rentRoll.lateTenants)}. {wholeUsd(rentRoll.openCents)} is open across{' '}
-                  {plural(rentRoll.openCount, 'lease')} in all, including scheduled autopay. Review
-                  each ledger before any reminder goes out.
-                </p>
+                <p className={styles.small}>{listNames(rentRoll.lateTenants)}</p>
                 <Link className={styles.itemLink} href="/payments?filter=late">
                   Review late rent →
                 </Link>
@@ -167,8 +160,8 @@ export default async function DashboardPage({
                 <h3>No rent is late</h3>
                 <p className={styles.small}>
                   {rentRoll.openCount
-                    ? `${wholeUsd(rentRoll.openCents)} is open across ${plural(rentRoll.openCount, 'lease')}, none past grace.`
-                    : 'Every lease is paid up for this month.'}
+                    ? `${wholeUsd(rentRoll.openCents)} open, none past grace`
+                    : 'All paid up this month'}
                 </p>
                 <Link className={styles.itemLink} href="/payments">
                   Open rent roll →
@@ -194,11 +187,8 @@ export default async function DashboardPage({
                   {urgentRequest.title} · {urgentPlace}
                 </h3>
                 <p className={styles.small}>
-                  {urgentRequest.assigned ? 'Vendor assigned' : 'Unassigned'} since{' '}
-                  {shortDate(urgentRequest.createdAt)}
-                  {urgentRequest.photoCount
-                    ? ` · ${plural(urgentRequest.photoCount, 'photo')} attached`
-                    : ''}
+                  Opened {shortDate(urgentRequest.createdAt)} ·{' '}
+                  {urgentRequest.assigned ? 'vendor assigned' : 'unassigned'}
                 </p>
                 <Link
                   className={styles.itemLink}
@@ -224,15 +214,10 @@ export default async function DashboardPage({
         <div className={styles.sideColumn}>
           <section className="card" aria-labelledby="history-heading">
             <div className={styles.cardHead}>
-              <div>
-                <h2 id="history-heading">Collection history</h2>
-                <p className={styles.caption}>
-                  Collected against rent due · USD ·{' '}
-                  {dashboard.monthLabel.split(' ')[0]?.slice(0, 3)} is month to date
-                </p>
-              </div>
+              <h2 id="history-heading">Collection history</h2>
+              <CollectionRangeChips range={range} />
             </div>
-            <CollectionChart months={dashboard.collection} range={range} />
+            <CollectionChart months={dashboard.collection} />
           </section>
 
           <section className="card" aria-labelledby="occupancy-heading">
@@ -272,9 +257,7 @@ export default async function DashboardPage({
             )}
             {dashboard.properties.length > 0 && (
               <p className={styles.caption}>
-                {vacant
-                  ? `${plural(vacant, 'vacant unit')} ready to list or turn over`
-                  : 'Every unit is occupied'}
+                {vacant ? plural(vacant, 'vacant unit') : 'All units occupied'}
               </p>
             )}
           </section>
@@ -364,7 +347,7 @@ export default async function DashboardPage({
               })}
             </ul>
           ) : (
-            <p className={styles.empty}>New payments and lease updates will appear here.</p>
+            <p className={styles.empty}>No recent activity.</p>
           )}
         </section>
       </div>

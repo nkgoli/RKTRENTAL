@@ -22,7 +22,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return json({ error: 'Property and unit scope are required.' });
   try {
     const operation = value('operation');
-    let message = 'Request saved. All changes are up to date.';
+    let message = 'Request saved.';
     if (operation === 'save') {
       await saveMaintenanceEditor(
         session,

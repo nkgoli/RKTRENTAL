@@ -47,7 +47,7 @@ export function leaseNotice(
     return {
       kind: 'move-out',
       title: `Move-out ${formatDate(lease.moveOutDate)}`,
-      body: `${given}Your move-out date is ${formatDate(lease.moveOutDate)}. ${when}`,
+      body: `${given}${when}`,
       noticeGivenAt: lease.noticeGivenAt,
       moveOutDate: lease.moveOutDate,
     };
@@ -57,7 +57,7 @@ export function leaseNotice(
     return {
       kind: 'renewal',
       title: 'Renewal coming up',
-      body: `Your lease ends ${formatDate(lease.endDate)}. Tell ${managerName} if you want to renew and we will send terms and a new lease to sign here.`,
+      body: `Your lease ends ${formatDate(lease.endDate)}. Tell ${managerName} if you want to renew.`,
     };
   }
   return null;
@@ -84,29 +84,24 @@ export type ActivityItem = {
   date: Date;
 };
 
-/** Recent activity from the tenant's own ledger receipts, newest first. */
+const shortDate = (date: Date) =>
+  date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+
+/** Recent activity from the tenant's own ledger receipts, newest first: a title plus "$1,850 · Oct 1". */
 export function buildActivity(receipts: Receipt[], limit = 4): ActivityItem[] {
   return receipts.slice(0, limit).map((receipt, index) => {
-    const amount = formatUsd(receipt.amountCents);
-    const base = { id: receipt.paymentId ?? `receipt-${index}`, date: receipt.date };
+    const base = {
+      id: receipt.paymentId ?? `receipt-${index}`,
+      date: receipt.date,
+      detail: `${formatUsd(receipt.amountCents)} · ${shortDate(receipt.date)}`,
+    };
     if (receipt.status === 'SUCCEEDED')
-      return {
-        ...base,
-        title: `${receipt.label} received`,
-        detail: `Your ${formatDate(receipt.date)} payment of ${amount} is confirmed.`,
-        tone: 'success' as const,
-      };
+      return { ...base, title: `${receipt.label} received`, tone: 'success' as const };
     if (receipt.status === 'PENDING')
-      return {
-        ...base,
-        title: `${receipt.label} processing`,
-        detail: `Your ${amount} bank payment is waiting on your provider.`,
-        tone: 'info' as const,
-      };
+      return { ...base, title: `${receipt.label} processing`, tone: 'info' as const };
     return {
       ...base,
       title: `${receipt.label} ${receipt.statusLabel.toLowerCase()}`,
-      detail: `A ${amount} payment on ${formatDate(receipt.date)} was ${receipt.statusLabel.toLowerCase()}.`,
       tone: 'warning' as const,
     };
   });

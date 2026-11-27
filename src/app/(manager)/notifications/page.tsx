@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireManagerRole } from '@/lib/auth/access';
 import { loadWorkspaceScope, scopeFilterFrom, scopeQuery } from '@/lib/workspace/scope';
@@ -33,23 +32,16 @@ export default async function RemindersPage({
     : workspace
       ? `/properties/${workspace.propertyId}${workspace.unitId ? `?unit=${workspace.unitId}` : ''}`
       : '/payments';
+  const returnLabel = fromRentRoll
+    ? 'Rent roll'
+    : workspace
+      ? `${workspace.propertyName}${workspace.unitNumber ? ` · Unit ${workspace.unitNumber}` : ''}`
+      : 'Payments';
   return (
     <>
-      <nav className="breadcrumbs" aria-label="Reminder scope">
-        <Link href={returnHref}>
-          {fromRentRoll
-            ? 'Rent roll'
-            : workspace
-              ? `${workspace.propertyName}${workspace.unitNumber ? ` · Unit ${workspace.unitNumber}` : ''}`
-              : 'Payments'}
-        </Link>
-        <span aria-hidden="true"> / </span>
-        <span>Payment reminders</span>
-      </nav>
       <PageHeader
-        eyebrow="Collections"
         title="Payment reminders"
-        meta="Preview, edit and send · recorded recipient outcomes"
+        back={{ href: returnHref, label: returnLabel }}
         actions={[{ label: 'Payment reminder setup', href: '/integrations#payment-reminders' }]}
       />
       <ReminderWorkspace

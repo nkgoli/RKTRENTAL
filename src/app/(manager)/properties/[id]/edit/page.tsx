@@ -46,7 +46,6 @@ export default async function EditPropertyPage({
     <>
       <PageHeader
         title={roi ? 'Edit ROI assumptions' : 'Edit property'}
-        eyebrow={`Portfolio / ${property.name}`}
         back={{ href: cancelHref, label: roi ? 'Returns & ROI' : property.name }}
         actions={[]}
       />

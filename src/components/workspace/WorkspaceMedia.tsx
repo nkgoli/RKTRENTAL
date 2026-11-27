@@ -108,7 +108,6 @@ export function WorkspaceMedia({ target, photos, files }: { target: Target; phot
         kind="photo" target={target} max={max ?? undefined} showCounter={false}
         existingCount={photos.length} onUploaded={() => { toast.success('Photo uploaded'); router.refresh(); }}
       /> : <FileUploader kind="document" target={target} onUploaded={() => { toast.success('Document uploaded'); router.refresh(); }} />}
-      <p className={styles.note}>Repair photos stay on their maintenance requests and are not shown here.</p>
     </div>
     {error && <p role="alert" className={styles.error}>{error}</p>}
     <ConfirmDialog open={!!removing} onClose={() => { if (!pending) setRemoving(null); }} title={`Remove ${removing?.caption ?? removing?.name ?? 'photo'}?`} description={removing?.isCover ? 'This will permanently remove the cover photo from this property or unit.' : 'This will permanently remove this photo. It cannot be undone.'} confirmLabel={pending ? 'Removing…' : 'Remove photo'} pending={pending} onConfirm={async () => {

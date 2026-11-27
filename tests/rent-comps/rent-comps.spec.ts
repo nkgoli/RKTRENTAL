@@ -122,7 +122,7 @@ test('rejects an invalid rent and serves repeat views from the cache', async ({ 
   await expect(page.getByText('Enter a monthly rent between $1 and $100,000.')).toBeVisible();
 
   await open(page, `/rent-comps?unit=${unitId}&days=180`);
-  await expect(page.getByText(/cached for this unit/)).toBeVisible();
+  await expect(page.getByText(/· Cached/)).toBeVisible();
 });
 
 test('unit picker switches the subject unit', async ({ page }) => {

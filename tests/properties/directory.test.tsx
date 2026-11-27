@@ -56,7 +56,12 @@ describe('property directory presentation', () => {
     await page();
     expect(mocks.db).toHaveBeenCalledWith('fixture-org');
     expect(mocks.list).toHaveBeenCalledWith({ q: undefined, filter: 'all' });
-    expect(screen.getByText('75% occupancy')).toBeTruthy();
+    const hero = screen.getByRole('region', { name: 'Properties in this view' });
+    expect(within(hero).getByText('75%')).toBeTruthy();
+    expect(within(hero).getByText('3 of 4 units occupied')).toBeTruthy();
+    expect(within(hero).getByRole('link', { name: /Vacant units/ }).getAttribute('href')).toBe(
+      '/properties?filter=vacancies',
+    );
     expect(screen.getByText('3/4 occupied')).toBeTruthy();
     expect(screen.getByRole('link', { name: /Fixture Court/ }).getAttribute('href')).toBe(
       '/properties/fixture-property',
@@ -113,6 +118,8 @@ describe('property directory presentation', () => {
         .getByRole('link', { name: 'q' in params ? 'Clear filters' : 'Add a property' })
         .getAttribute('href'),
     ).toBe(destination);
-    expect(screen.getByText('0% occupancy')).toBeTruthy();
+    expect(
+      within(screen.getByRole('region', { name: 'Properties in this view' })).getByText('0%'),
+    ).toBeTruthy();
   });
 });

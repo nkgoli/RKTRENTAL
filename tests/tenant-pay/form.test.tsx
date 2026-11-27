@@ -211,9 +211,9 @@ describe('autopay feedback', () => {
         autopay={{ ...props, paymentMethodId: null }}
       />,
     );
-    expect(screen.getByText(/Turn on autopay with Bank ••••6789/)).toBeTruthy();
+    expect(screen.getByText(/Will pay from Bank ••••6789/)).toBeTruthy();
     await userEvent.click(screen.getByRole('radio', { name: /^Card/ }));
-    expect(screen.getByText(/Mock card ••••4242 is selected for this payment/)).toBeTruthy();
+    expect(screen.getByText(/Save Mock card ••••4242 to use it for autopay/)).toBeTruthy();
   });
   it('explains the missing method without submitting', async () => {
     render(<AutopayToggle {...props} paymentMethodId={null} />);

@@ -114,12 +114,15 @@ describe('RealROI chart adapters', () => {
     charts();
     const plot = screen.getByRole('img', { name: /Equity composition and loan balance/i });
     const labels = [...plot.querySelectorAll('text')].map((t) => t.textContent!);
-    // The uneven reference domain ($0k, $250k, $500k, $950k) is gone: equal steps from $0k.
-    const ticks = labels.filter((l) => /^\$\d+k$/.test(l)).map((l) => Number(l.slice(1, -1)));
+    // The uneven reference domain ($0k, $250k, $500k, $950k) is gone: rounded equal steps from $0.
+    const ticks = labels
+      .filter((l) => /^\$(0|\d+K)$/.test(l))
+      .map((l) => Number(l.replace(/[$K]/g, '')));
     expect(ticks[0]).toBe(0);
     expect(new Set(ticks.slice(1).map((v, i) => v - ticks[i])).size).toBe(1);
-    expect(labels).not.toContain('$950k');
-    expect(labels).toContain('USD, year-end');
+    expect(labels).not.toContain('$950K');
+    // Compact ticks carry the unit; no rotated axis title or mirrored debt axis.
+    expect(labels).not.toContain('USD, year-end');
     expect(labels).not.toContain('Debt');
   });
 
@@ -252,10 +255,10 @@ describe('RealROI cash-flow and equity charts', () => {
     const tabs = screen.getAllByRole('tab').map((t) => t.textContent);
     expect(tabs).toEqual([
       'Equity',
-      'Cash Flow',
+      'Cash flow',
       'Expenses',
       'Amortization',
-      'Exit Analysis',
+      'Exit',
       'Sensitivity',
     ]);
     const horizon = screen.getByRole('group', { name: 'Equity chart horizon' });
@@ -267,13 +270,14 @@ describe('RealROI cash-flow and equity charts', () => {
     const eq = equityYears(r);
     const crossover = equityLandmarks(eq, true, false).crossover!;
     expect(screen.getByText(`Equity gain exceeds debt in Year ${crossover.year}`)).toBeTruthy();
-    expect(screen.getByText('Mortgage paid off in Year 30')).toBeTruthy();
+    // Only the landmark that matters is named; the payoff year stays in the tooltip and table.
+    expect(screen.queryByText('Mortgage paid off in Year 30')).toBeNull();
     const plot = screen.getByRole('group', { name: /Equity composition and loan balance/ });
     expect(plot.textContent).toContain('Gain > Debt');
     fireEvent.keyDown(plot, { key: 'Home' });
     const y1 = eq[0];
     expect(live(plot)).toBe(
-      `Year 1: Property Value ${dollars(y1.propertyValue)}; − Mortgage Balance ${dollars(y1.loanBalance)}; = Equity ${dollars(y1.equity)}; Principal paid ${dollars(y1.principalEquity)}; Appreciation ${dollars(y1.appreciationEquity)}`,
+      `Year 1: Property value ${dollars(y1.propertyValue)}; − Mortgage balance ${dollars(y1.loanBalance)}; = Equity ${dollars(y1.equity)}; Principal paid ${dollars(y1.principalEquity)}; Appreciation ${dollars(y1.appreciationEquity)}`,
     );
     // Whole dollars in the visual tooltip; the down payment row only when included.
     expect(plot.textContent).toContain(wholeDollars(y1.equity));
@@ -288,12 +292,12 @@ describe('RealROI cash-flow and equity charts', () => {
   it('indexes the composition to Y1 = 100 and keeps dollar figures in the readout', () => {
     charts();
     fireEvent.click(screen.getByRole('button', { name: 'Indexed' }));
-    expect(screen.getByText(/Indexed view \(Y1 = 100\)/)).toBeTruthy();
+    expect(screen.getByText('Indexed, Year 1 = 100')).toBeTruthy();
     const plot = screen.getByRole('group', { name: /Equity composition and loan balance/ });
     fireEvent.keyDown(plot, { key: 'Home' });
     expect(live(plot)).toContain('Index (Y1 = 100): bars 100.0 · mortgage 100.0');
     expect(live(plot)).toContain(
-      `Property Value ${dollars(equityYears(sample())[0].propertyValue)}`,
+      `Property value ${dollars(equityYears(sample())[0].propertyValue)}`,
     );
     // Crossover shading and marker are dollar-only, as in the reference.
     expect(plot.textContent).not.toContain('Gain > Debt');
@@ -307,10 +311,10 @@ describe('RealROI cash-flow and equity charts', () => {
     fireEvent.keyDown(plot, { key: 'Home' });
     const loan = calculatePayload(p).base.summaryMetrics.loanAmount;
     expect(live(plot)).toBe(
-      `Start: Property Value ${dollars(380000)}; − Mortgage Balance ${dollars(loan)}; = Equity ${dollars(380000 - loan)}; Equity is ${(((380000 - loan) / 380000) * 100).toFixed(0)}% of property value`,
+      `Start: Property value ${dollars(380000)}; − Mortgage balance ${dollars(loan)}; = Equity ${dollars(380000 - loan)}; Equity is ${(((380000 - loan) / 380000) * 100).toFixed(0)}% of property value`,
     );
     fireEvent.keyDown(plot, { key: 'End' });
-    expect(live(plot)).toContain('End of Year 30');
+    expect(live(plot)).toContain('End of year 30');
     expect(live(plot)).toContain('Mortgage paid off — 100% equity');
     expect(container.textContent).toMatch(/Equity grew \+\$\d/);
   });
@@ -319,20 +323,20 @@ describe('RealROI cash-flow and equity charts', () => {
     const r = sample();
     const rows = projectionRows(r);
     const { container } = charts();
-    fireEvent.click(screen.getByRole('tab', { name: 'Cash Flow' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Cash flow' }));
     const panel = within(container.querySelector<HTMLElement>('#roi-chart-panel-cash-flow')!);
+    // One quiet landmark; best and worst years stay in the tooltip and the exact table.
     expect(panel.getByText('Breakeven: Year 5')).toBeTruthy();
-    expect(panel.getByText(`Worst: ${wholeDollars(rows[0].cashFlow)} (Year 1)`)).toBeTruthy();
-    expect(panel.getByText(`Best: ${wholeDollars(rows[9].cashFlow)} (Year 10)`)).toBeTruthy();
-    expect(
-      panel.getByText(`Cumulative at Year 10: ${wholeDollars(rows[9].cumulativeCashFlow)}`),
-    ).toBeTruthy();
+    expect(panel.queryByText(/^Worst: /)).toBeNull();
+    expect(panel.queryByText(/^Best: /)).toBeNull();
+    const cumulative = panel.getByText('Cumulative · year 10').closest('div')!;
+    expect(cumulative.textContent).toContain(wholeDollars(rows[9].cumulativeCashFlow));
     const plot = screen.getByRole('group', { name: /Annual and cumulative operating cash flow/ });
     expect(plot.textContent).toContain('Breakeven');
-    // Pre- and post-breakeven bands.
-    expect(plot.querySelectorAll('svg > rect')).toHaveLength(2);
-    // The insight and the recovered-cash tile agree at one decimal.
-    expect(panel.getAllByText('24.5%')).toHaveLength(2);
+    // The breakeven year is a reference line, not a shaded block.
+    expect(plot.querySelectorAll('svg > rect')).toHaveLength(0);
+    // The recovered-cash tile at one decimal.
+    expect(panel.getAllByText('24.5%')).toHaveLength(1);
     // Custom horizon down to Y4: never breaks even, so the whole range is pre-breakeven.
     const horizon = screen.getByRole('group', { name: 'Cash flow chart horizon' });
     fireEvent.click(within(horizon).getByRole('button', { name: 'Custom' }));
@@ -340,24 +344,24 @@ describe('RealROI cash-flow and equity charts', () => {
       target: { value: '4' },
     });
     expect(panel.getByText('No breakeven by Year 4')).toBeTruthy();
-    expect(plot.querySelectorAll('svg > rect')).toHaveLength(1);
-    expect(panel.getByText(/none of your initial investment/)).toBeTruthy();
+    expect(plot.textContent).not.toContain('Breakeven');
+    expect(panel.getByText('Still paying in at year 4')).toBeTruthy();
   });
 
   it('reconciles the income bridge to cash flow, including reserves below NOI', () => {
     const rows = projectionRows(sample());
     charts();
-    fireEvent.click(screen.getByRole('tab', { name: 'Cash Flow' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Cash flow' }));
     const plot = screen.getByRole('group', { name: /Income, NOI, debt service and cash flow/ });
     fireEvent.keyDown(plot, { key: 'End' });
     const r = rows[9];
     expect(live(plot)).toContain(
-      `Year 10: Gross Operating Income ${dollars(r.effectiveGrossIncome)}; − Operating Expenses ${dollars(r.operatingExpenses)}; = NOI ${dollars(r.noi)}; − Debt Service ${dollars(r.debtService)}; − Capital Reserves ${dollars(r.reserves)}; = Cash Flow ${dollars(r.cashFlow)}`,
+      `Year 10: Effective income ${dollars(r.effectiveGrossIncome)}; − Operating expenses ${dollars(r.operatingExpenses)}; = NOI ${dollars(r.noi)}; − Debt service ${dollars(r.debtService)}; − Capital reserves ${dollars(r.reserves)}; = Cash flow ${dollars(r.cashFlow)}`,
     );
     expect(r.noi - r.debtService - r.reserves).toBeCloseTo(r.cashFlow, 2);
-    expect(screen.getByText('GOI (Y1)')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'About OpEx Ratio' })).toBeTruthy();
-    expect(screen.getByText(/NOI exceeds Debt Service by/)).toBeTruthy();
+    // Year-1 income and NOI tiles repeated the Year 1 breakdown below; the takeaway stays.
+    expect(screen.queryByText('GOI (Y1)')).toBeNull();
+    expect(screen.getByText(/NOI exceeds debt service by/)).toBeTruthy();
   });
 });
 
@@ -376,11 +380,11 @@ describe('RealROI expense, amortization, exit and sensitivity charts', () => {
       'true',
     );
     const e = r.expenseBreakdown;
-    const names = within(p.getByRole('region', { name: 'Expense Breakdown' }))
+    const names = within(p.getByRole('region', { name: 'By category' }))
       .getAllByRole('button', { name: /^About / })
       .map((b) => b.getAttribute('aria-label')!.replace('About ', ''));
     // Reference order by amount; CapEx is listed last, below NOI.
-    expect(names.slice(0, 3)).toEqual(['Property Tax', 'Management', 'Insurance']);
+    expect(names.slice(0, 3)).toEqual(['Property tax', 'Management', 'Insurance']);
     expect(names.at(-1)).toBe('CapEx');
     expect(p.getByText(wholeDollars(rows[0].operatingExpenses))).toBeTruthy();
     expect(p.getByText('Below NOI')).toBeTruthy();
@@ -405,7 +409,7 @@ describe('RealROI expense, amortization, exit and sensitivity charts', () => {
     expect(p.getAllByText(`+${wholeDollars(taxChange)}`).length).toBeGreaterThan(0);
     // What-if: −10% tax lowers the total in the tile only.
     fireEvent.click(within(horizon).getByRole('button', { name: 'Y1' }));
-    fireEvent.click(p.getByRole('button', { name: 'Simulate −10% Tax' }));
+    fireEvent.click(p.getByRole('button', { name: 'Simulate −10% tax' }));
     const cut = e.propertyTax * (rows[0].operatingExpenses / e.total) * 0.1;
     expect(p.getByText(wholeDollars(rows[0].operatingExpenses - cut))).toBeTruthy();
     expect(p.getByText(/Simulating 10% tax reduction/)).toBeTruthy();
@@ -421,8 +425,9 @@ describe('RealROI expense, amortization, exit and sensitivity charts', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Amortization' }));
     const p = panel(container, 'amortization');
     const plot = p.getByRole('group', { name: /Loan balance and cumulative principal/ });
-    // Light fills under solid lines keep the three overlapping series readable.
-    expect(plot.querySelectorAll('path[fill-opacity="0.15"]')).toHaveLength(3);
+    // Three 2 px lines and no overlapping fills.
+    expect(plot.querySelectorAll('path[fill-opacity]')).toHaveLength(0);
+    expect(plot.querySelectorAll('path[stroke-width="2"]')).toHaveLength(3);
     expect(plot.textContent).toContain('Year 1');
     expect(plot.textContent).toContain('Year 3');
     const years = loanYears(r);
@@ -430,21 +435,16 @@ describe('RealROI expense, amortization, exit and sensitivity charts', () => {
     for (let i = 0; i < 8; i++) fireEvent.keyDown(plot, { key: 'ArrowRight' });
     const y9 = years[8];
     expect(live(plot)).toBe(
-      `Year 9: Remaining Balance: ${dollars(y9.balance)}; Principal Paid: ${dollars(y9.cumulativePrincipal)}; Interest Paid: ${dollars(y9.cumulativeInterest)}`,
+      `Year 9: Balance ${dollars(y9.balance)}; Principal paid ${dollars(y9.cumulativePrincipal)}; Interest paid ${dollars(y9.cumulativeInterest)}`,
     );
     const total = years.at(-1)!.cumulativeInterest;
     expect(loan).toBe(262500);
     expect(p.getByText(`${((total / loan) * 100).toFixed(0)}% of principal`)).toBeTruthy();
-    const principalShare = ((loan / (loan + total)) * 100).toFixed(0);
-    expect(
-      p.getByText(
-        `Principal: ${principalShare}% | Interest: ${(100 - Number(principalShare)).toFixed(0)}%`,
-        { exact: false },
-      ),
-    ).toBeTruthy();
+    expect(p.getByText(wholeDollars(loan + total))).toBeTruthy();
     const marks = loanMilestones(loanSummaries(years, loan));
     expect(p.getByText(`50% paid off by Y${marks.half}`)).toBeTruthy();
-    expect(p.getByText(`Principal > Interest from Y${marks.principalBeatsInterest}`)).toBeTruthy();
+    const crossover = within(p.getByText('Principal > interest').closest('div')!);
+    expect(crossover.getByText(`Y${marks.principalBeatsInterest}`)).toBeTruthy();
     // Detailed view expands monthly rows.
     const schedule = p.getByRole('region', { name: 'Loan schedule by year' });
     expect(within(schedule).queryByText('Month 1')).toBeNull();
@@ -452,15 +452,15 @@ describe('RealROI expense, amortization, exit and sensitivity charts', () => {
     fireEvent.click(p.getByRole('button', { name: 'Year 1 monthly payments' }));
     expect(within(schedule).getByText('Month 1')).toBeTruthy();
     expect(within(schedule).getByText('Month 12')).toBeTruthy();
-    fireEvent.click(p.getByRole('button', { name: 'Collapse All' }));
+    fireEvent.click(p.getByRole('button', { name: 'Collapse all' }));
     expect(within(schedule).queryByText('Month 1')).toBeNull();
     // Insight cards follow their selects.
     const first5 = years.slice(0, 5).reduce((s, y) => s + y.interest, 0);
     expect(p.getByText(wholeDollars(first5))).toBeTruthy();
     fireEvent.change(p.getByLabelText('Interest period'), { target: { value: '10' } });
-    expect(p.getByText('Interest (First 10y)')).toBeTruthy();
+    expect(p.getByText('Interest, first 10 years')).toBeTruthy();
     fireEvent.change(p.getByLabelText('Balance year'), { target: { value: '20' } });
-    const card = within(p.getByText('Balance at Y20').closest('div')!);
+    const card = within(p.getByText('Balance at year 20').closest('div')!);
     expect(card.getByText(wholeDollars(years[19].balance))).toBeTruthy();
     expect(card.getByText(wholeDollars(total - years[19].cumulativeInterest))).toBeTruthy();
     // Exact schedule stays.
@@ -470,13 +470,13 @@ describe('RealROI expense, amortization, exit and sensitivity charts', () => {
   it('compares exits with Year 10 selected, a reconciled waterfall and true IRR', () => {
     const p0 = realRoiSample();
     const { container } = charts(p0);
-    fireEvent.click(screen.getByRole('tab', { name: 'Exit Analysis' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Exit' }));
     const p = panel(container, 'exit');
     const rows = exitRows(calculateExits(p0, exitControls(p0)));
     expect(rows.map((r) => r.year)).toEqual([5, 10, 15, 20, 25, 30]);
-    expect(p.getByText('Year 10 Exit Summary')).toBeTruthy();
+    expect(p.getByText('Year 10 exit')).toBeTruthy();
     const marks = exitLandmarks(rows);
-    const best = p.getByRole('button', { name: /^Best IRR: Year/ });
+    const best = p.getByText(/has the highest IRR/);
     expect(best.textContent).toContain(`${((marks.bestIrr!.irr ?? 0) * 100).toFixed(2)}%`);
     const y10 = rows[1];
     // IRR is the engine's leveraged IRR for that exit year.
@@ -490,16 +490,16 @@ describe('RealROI expense, amortization, exit and sensitivity charts', () => {
     // Hover/keyboard tooltip still works while a year is selected (reference defect fixed).
     fireEvent.keyDown(plot, { key: 'End' });
     const y30 = rows.at(-1)!;
-    expect(live(plot)).toContain(`Year 30 Exit: Sale Price ${dollars(y30.salePrice)}`);
-    expect(live(plot)).toContain(`= Net Proceeds ${dollars(y30.netProceeds)}`);
+    expect(live(plot)).toContain(`Year 30: Sale price ${dollars(y30.salePrice)}`);
+    expect(live(plot)).toContain(`= Net proceeds ${dollars(y30.netProceeds)}`);
     expect(live(plot)).toContain(`= Profit ${dollars(y30.profit)}`);
     fireEvent.keyDown(plot, { key: 'Enter' });
-    expect(p.getByText('Year 30 Exit Summary')).toBeTruthy();
+    expect(p.getByText('Year 30 exit')).toBeTruthy();
     fireEvent.click(p.getByRole('button', { name: 'Clear' }));
-    expect(p.queryByText(/Exit Summary/)).toBeNull();
+    expect(p.queryByText(/^Year \d+ exit$/)).toBeNull();
     fireEvent.click(p.getByRole('button', { name: '15y' }));
-    expect(p.getByText('Year 15 Exit Summary')).toBeTruthy();
-    fireEvent.click(p.getByRole('button', { name: 'Total Cash Back' }));
+    expect(p.getByText('Year 15 exit')).toBeTruthy();
+    // The summary shows total cash back beside profit; the table repeats it per year.
     expect(p.getAllByText(wholeDollars(rows[2].totalCashBack)).length).toBeGreaterThan(1);
     // Exact horizon table keeps cents.
     expect(p.getByRole('table', { name: /Exit horizon comparison/ })).toBeTruthy();
@@ -520,7 +520,7 @@ describe('RealROI expense, amortization, exit and sensitivity charts', () => {
       engine.annualCashflows[2].cashFlow / engine.summaryMetrics.totalCashRequired,
       10,
     );
-    const map = p.getByRole('group', { name: /Cash-on-Cash by monthly rent and vacancy/ });
+    const map = p.getByRole('group', { name: /Cash-on-cash by monthly rent and vacancy/ });
     const cells = map.querySelectorAll('rect');
     expect(cells).toHaveLength(35);
     expect(map.querySelector('circle')).toBeTruthy();
@@ -529,9 +529,9 @@ describe('RealROI expense, amortization, exit and sensitivity charts', () => {
     fireEvent.keyDown(map, { key: 'ArrowRight' });
     const spoken = map.parentElement!.querySelector('[aria-live]')!.textContent!;
     expect(spoken).toBe(
-      `Monthly rent ${dollars(2800)}, vacancy 5%: Cash-on-Cash ${rate(base.cashOnCash)} (your assumptions)`,
+      `Monthly rent ${dollars(2800)}, vacancy 5%: Cash-on-cash ${rate(base.cashOnCash)} (your assumptions)`,
     );
-    expect(p.getByText('0% Break-even')).toBeTruthy();
+    expect(p.getByText('0% break-even')).toBeTruthy();
     // The table rounds for display only; the grid keeps engine precision.
     const table = p.getByRole('table', {
       name: 'Year 1 cash-on-cash · percentages rounded to one decimal place',
@@ -569,12 +569,12 @@ describe('RealROI Summary charts', () => {
     const plot = screen.getByRole('group', { name: /Net cash flow, years 1 to 5/ });
     expect(plot.textContent).toContain('Y1');
     expect(plot.textContent).toContain('Positive Y3');
-    expect(screen.getByText('Positive Cash Flow')).toBeTruthy();
-    expect(screen.getByText('Negative Cash Flow')).toBeTruthy();
+    expect(screen.getByText('Positive cash flow')).toBeTruthy();
+    expect(screen.getByText('Negative cash flow')).toBeTruthy();
     fireEvent.keyDown(plot, { key: 'Home' });
     const y = rows[0];
     expect(live(plot)).toBe(
-      `Year 1: Effective income ${dollars(y.effectiveGrossIncome)}; − Operating costs ${dollars(y.operatingExpenses)}; = NOI ${dollars(y.noi)}; − Debt service ${dollars(y.debtService)}; − Capital reserves ${dollars(y.reserves)}; = Cash Flow ${dollars(y.cashFlow)}`,
+      `Year 1: Effective income ${dollars(y.effectiveGrossIncome)}; − Operating costs ${dollars(y.operatingExpenses)}; = NOI ${dollars(y.noi)}; − Debt service ${dollars(y.debtService)}; − Capital reserves ${dollars(y.reserves)}; = Cash flow ${dollars(y.cashFlow)}`,
     );
     fireEvent.click(within(horizon).getByRole('button', { name: 'Y30' }));
     expect(screen.getByRole('group', { name: /years 1 to 30/ })).toBeTruthy();
@@ -588,10 +588,9 @@ describe('RealROI Summary charts', () => {
     expect(table.getAllByRole('row')).toHaveLength(6);
     const first = within(table.getByRole('row', { name: /^Year 1 / }));
     // Exact engine values, whole dollars; negative years are marked, never rounded to $0.
-    expect(first.getByText(wholeDollars(rows[0].cashFlow))).toBeTruthy();
-    expect(first.getByText('Below $0 · you add cash')).toBeTruthy();
+    expect(first.getByText(wholeDollars(rows[0].cashFlow)).dataset.tone).toBe('loss');
     expect(screen.getByText('Break-even Y3')).toBeTruthy();
-    fireEvent.click(screen.getByText(`Exact annual cash flow, all ${rows.length} years`));
+    fireEvent.click(screen.getByText(`View all ${rows.length} years`));
     expect(screen.getByRole('region', { name: 'Annual cash flow' })).toBeTruthy();
   });
 
@@ -600,15 +599,15 @@ describe('RealROI Summary charts', () => {
     const { container } = render(<OutcomeCard result={r} />);
     const w = wealthAt(r, 1)!;
     expect(screen.getByText(wholeDollars(w.total))).toBeTruthy();
-    expect(screen.getByText('Wealth Created (Year 1)', { exact: false })).toBeTruthy();
-    expect(screen.getByText(/Cash Flow -\$1,133 reduces the total/)).toBeTruthy();
+    expect(screen.getByText('By year 1')).toBeTruthy();
+    expect(screen.getByText(/Cash flow -\$1,133 reduces the total/)).toBeTruthy();
     // Negative cash flow is not a slice: two segments are drawn.
     expect(container.querySelectorAll('svg[role="img"] path')).toHaveLength(2);
     const quality = screen.getByLabelText('Deal quality');
     expect(within(quality).getByText('1.03')).toBeTruthy();
     expect(within(quality).getByText('0.80%')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Y30' }));
-    expect(screen.getByText('Wealth Created (Year 30)', { exact: false })).toBeTruthy();
+    expect(screen.getByText('By year 30')).toBeTruthy();
     expect(container.querySelectorAll('svg[role="img"] path')).toHaveLength(3);
   });
 
@@ -631,12 +630,13 @@ describe('RealROI Summary charts', () => {
     expect(within(table).getByText('-1.11%')).toBeTruthy();
     expect(within(table).queryByText('Scheduled rent')).toBeNull();
     expect(
-      screen.getByRole('button', { name: /Income Analysis/ }).getAttribute('aria-expanded'),
+      screen.getByRole('button', { name: 'Income' }).getAttribute('aria-expanded'),
     ).toBe('false');
-    fireEvent.click(screen.getByRole('button', { name: 'Full Table' }));
+    fireEvent.click(screen.getByRole('button', { name: 'All rows' }));
     expect(within(table).getByText('Scheduled rent')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Cash Flow' }));
-    expect(within(table).queryByText('Annual Cash Flow')).toBeNull();
+    expect(within(table).getByText('Annual cash flow')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Cash flow' }));
+    expect(within(table).queryByText('Annual cash flow')).toBeNull();
   });
 });
 
@@ -646,36 +646,32 @@ describe('Core chart presentation: basis, legends and disclosures', () => {
       (li) => li.textContent,
     );
 
-  it('names only what is drawn: no after-breakeven key on a range that never breaks even', () => {
+  it('names only what is drawn: no cash-flow key on a range with only negative years', () => {
     charts();
-    fireEvent.click(screen.getByRole('tab', { name: 'Cash Flow' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Cash flow' }));
     const plot = screen.getByRole('group', { name: /Annual and cumulative operating cash flow/ });
-    expect(legend(plot)).toEqual(
-      expect.arrayContaining(['Before breakeven', 'After breakeven', 'Negative year']),
-    );
+    expect(legend(plot)).toEqual(['Cash flow', 'Negative year', 'Cumulative']);
     const horizon = screen.getByRole('group', { name: 'Cash flow chart horizon' });
     fireEvent.click(within(horizon).getByRole('button', { name: 'Custom' }));
     fireEvent.change(screen.getByLabelText('Cash flow chart horizon: custom years'), {
       target: { value: '4' },
     });
-    expect(legend(plot)).toContain('Before breakeven');
-    expect(legend(plot)).not.toContain('After breakeven');
-    // Basis tags carry kind, unit and tax instead of a "·" list in the subtitle.
+    // No breakeven within four years, so no breakeven line is drawn.
+    expect(plot.textContent).not.toContain('Breakeven');
+    fireEvent.click(within(horizon).getByRole('button', { name: 'Y1' }));
+    expect(legend(plot)).toEqual(['Negative year', 'Cumulative']);
+    // The card header carries no basis tags; the Charts context line says it once.
     const card = plot.closest('section')!;
-    expect(
-      within(card.querySelector('header')!)
-        .getAllByRole('listitem')
-        .map((li) => li.textContent),
-    ).toEqual(['Projected', 'USD', 'After debt service and reserves', 'Before tax']);
+    expect(within(card.querySelector('header')!).queryAllByRole('listitem')).toHaveLength(0);
   });
 
   it('keeps exact tables to the cent one disclosure away under each group', () => {
     const { container } = charts();
     for (const [tab, table, summary] of [
-      ['Equity', /Exact year-end balances/, /Exact year-end balances, all 30 years/],
-      ['Cash Flow', /Projection amounts/, /Exact annual amounts, all 30 years/],
-      ['Expenses', /Expense projections/, /Exact expense projections, all 30 years/],
-      ['Amortization', /Annual loan payments/, /Exact annual payments, all 30 years/],
+      ['Equity', /Exact year-end balances/, /^View exact amounts$/],
+      ['Cash flow', /Projection amounts/, /^View exact amounts$/],
+      ['Expenses', /Expense projections/, /^View exact amounts$/],
+      ['Amortization', /Annual loan payments/, /^View annual payments$/],
     ] as const) {
       fireEvent.click(screen.getByRole('tab', { name: tab }));
       const details = screen.getByRole('table', { name: table }).closest('details')!;
@@ -691,13 +687,12 @@ describe('Core chart presentation: basis, legends and disclosures', () => {
   it('labels an exit probe against the saved exit, resets it and keeps exact figures one click away', () => {
     const p0 = realRoiSample();
     charts(p0);
-    fireEvent.click(screen.getByRole('tab', { name: 'Exit Analysis' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Exit' }));
     fireEvent.click(screen.getByText('Try another exit'));
     const probe = within(screen.getByRole('region', { name: 'Exit probe' }));
-    expect(probe.getAllByRole('listitem').map((li) => li.textContent)).toContain(
-      'Saved assumptions',
-    );
+    expect(probe.getByText('Saved:')).toBeTruthy();
     expect(probe.queryByText('Showing probe:')).toBeNull();
+    expect(screen.queryByText('Probe')).toBeNull();
     const year = probe.getByLabelText('Probe exit year', { exact: true });
     fireEvent.change(year, { target: { value: '12' } });
     // A pending edit hides results until it is applied, and says so next to the form.
@@ -709,16 +704,17 @@ describe('Core chart presentation: basis, legends and disclosures', () => {
     expect(probe.getByText('Showing probe:').parentElement!.textContent).toContain(
       'exit year 12 · selling costs',
     );
-    expect(probe.getAllByRole('listitem').map((li) => li.textContent)).toContain('Temporary probe');
+    // The comparison says its figures come from the probe, even with the probe form closed.
+    expect(screen.getByText('Probe')).toBeTruthy();
     // A $1 sale loses money in every year: the insight says so instead of calling a year optimal.
     expect(screen.getByText(/No compared exit year gets back the cash you put in/)).toBeTruthy();
     expect(screen.queryByText(/optimal/)).toBeNull();
     const table = screen.getByRole('table', { name: /Exit horizon comparison/ });
     expect(table.closest('details')!.open).toBe(false);
     expect(table.closest('details')!.querySelector('summary')!.textContent).toBe(
-      'Exact exit comparison, 3 exit years',
+      'View exact amounts',
     );
-    expect(screen.getByText('Exact sale statement, year 12')).toBeTruthy();
+    expect(screen.getByText('View sale statement, year 12')).toBeTruthy();
     fireEvent.click(probe.getByRole('button', { name: 'Reset to saved' }));
     expect((year as HTMLInputElement).value).toBe(exitControls(p0).years);
     expect(probe.queryByText('Showing probe:')).toBeNull();
@@ -731,39 +727,39 @@ describe('Core chart presentation: basis, legends and disclosures', () => {
     const table = screen.getByRole('table', { name: /Year 1 cash-on-cash · percentages rounded/ });
     expect(table.closest('details')!.open).toBe(false);
     expect(table.closest('details')!.querySelector('summary')!.textContent).toBe(
-      'Exact grid to one decimal, 5 rents × 7 vacancy rates',
+      'View exact grid',
     );
     expect(
       screen.getByText(/^Rent \$1,960–\$3,640\/mo \(5 values\) · vacancy 0%–15%/),
     ).toBeTruthy();
-    expect(screen.getByText('Default ranges')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Customize Ranges' }));
+    expect(screen.queryByText('Custom ranges')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Customize ranges' }));
     fireEvent.change(screen.getByLabelText('Minimum rent ($ / month)', { exact: true }), {
       target: { value: '3000' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Update sensitivity' }));
-    expect(screen.getByText('Temporary custom ranges')).toBeTruthy();
+    expect(screen.getByText('Custom ranges')).toBeTruthy();
     expect(screen.getByText(/saved rent or vacancy is outside these ranges/)).toBeTruthy();
     expect(screen.queryByText('Your saved assumptions')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /Reset to defaults/ }));
-    expect(screen.getByText('Default ranges')).toBeTruthy();
+    expect(screen.queryByText('Custom ranges')).toBeNull();
     expect(screen.getByText('Your saved assumptions')).toBeTruthy();
   });
 
   it('shows an all-cash purchase without a mortgage line, principal key or loan schedule', () => {
     const p = cashPayload();
     const { container } = charts(p);
-    expect(screen.getByRole('heading', { name: 'Equity Composition' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Equity build-up' })).toBeTruthy();
     const composition = screen.getByRole('group', { name: /Equity composition and loan balance/ });
     expect(legend(composition)).not.toContain('Mortgage balance');
     expect(legend(composition)).not.toContain('Principal paid');
-    expect(screen.getByRole('heading', { name: 'Property Value & Equity' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Property value' })).toBeTruthy();
     const value = screen.getByRole('group', { name: /Property value and mortgage balance/ });
-    expect(legend(value)).toEqual(['Property value', 'Equity (shaded)']);
+    expect(legend(value)).toEqual(['Property value', 'Equity']);
     fireEvent.keyDown(value, { key: 'Home' });
     // The spoken readout says "No loan" as the tooltip does, then keeps the exact $0.00.
     expect(value.textContent).toContain('No loan');
-    expect(live(value)).toContain('− Mortgage Balance No loan ($0.00)');
+    expect(live(value)).toContain('− Mortgage balance No loan ($0.00)');
     expect(value.textContent).toContain('Start');
     fireEvent.click(screen.getByRole('tab', { name: 'Amortization' }));
     expect(container.textContent).toMatch(/All-cash purchase · debt service \$0\.00/);

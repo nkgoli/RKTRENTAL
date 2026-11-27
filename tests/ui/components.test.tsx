@@ -109,7 +109,8 @@ describe('navigation', () => {
     expect(out).toMatch(
       /<a href="\/payments" class="active" aria-current="page">.*?<span>Payments<\/span>/,
     );
-    expect(out).toContain('<p class="eyebrow">Money</p><h1>Payments</h1>');
+    expect(out).toContain('<div><h1>Payments</h1></div>');
+    expect(out).not.toContain('<p class="eyebrow">Money</p>');
     expect(out).toContain('Jordan Mills');
   });
 
@@ -120,7 +121,7 @@ describe('navigation', () => {
     expect(labels).toEqual(['Portfolio', 'Leasing', 'Money', 'Operations', 'Analysis']);
     expect(out).not.toContain('Rent comps');
     expect(out).toContain('class="sidebar-integrations"');
-    expect(out).toContain('Owner payout setup · coming soon');
+    expect(out).not.toContain('coming soon');
     expect(out).not.toContain('class="scrim"');
     expect(out).not.toContain('aria-label="Open menu"');
     expect(out).toContain('aria-label="Sections"');

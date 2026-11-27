@@ -139,6 +139,14 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
   const payoutShare = Math.round(
     (paidOut / Math.max(1, paidOut + overview.payoutReadyCents)) * 100,
   );
+  const payoutRows = overview.payouts.filter((payout) => payout.collectedCents > 0);
+  const idlePayouts = overview.payouts.filter((payout) => payout.collectedCents === 0);
+  // One owner across every property: name them once in the header instead of on each row.
+  const owners = new Set(payoutRows.map((payout) => payout.ownerName));
+  const soleOwner = owners.size === 1 ? [...owners][0] : null;
+  const leases = (count: number) => `${count} ${count === 1 ? 'lease' : 'leases'}`;
+  const filterHref = (value: string) => `/payments?month=${month}&filter=${value}${scopeSuffix}`;
+  const isCurrentMonth = month === monthKey(now);
 
   return (
     <>
@@ -148,9 +156,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         activeTab="payments"
       />
       <PageHeader
-        eyebrow="Money"
         title="Payments"
-        meta={`Rent roll · ${overview.rows.length} active ${overview.rows.length === 1 ? 'lease' : 'leases'}`}
+        meta={`${overview.rows.length} active ${overview.rows.length === 1 ? 'lease' : 'leases'}`}
         actions={[
           { label: 'Payment reminders', href: `/notifications?${scopeQuery(scope)}` },
           { label: 'Payment settings', href: '/integrations' },
@@ -168,34 +175,22 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
 
       <SummaryBand
         label={`Payment totals for ${monthLabel(month)}`}
-        eyebrow={`${monthLabel(month)} · ${month === monthKey(now) ? 'Collected this month' : 'Collected'}`}
+        eyebrow={`Collected · ${monthLabel(month)}`}
         value={formatUsd(overview.collectedCents).replace(/\.00$/, '')}
-        detail={`of ${formatUsd(rentDueCents).replace(/\.00$/, '')} rent due · payments received in ${monthLabel(month).split(' ')[0]}`}
-        progress={{
-          label: `${collectedPercent}% collected${month === monthKey(now) ? ' · month to date' : ''}`,
-          value: collectedPercent,
-        }}
-        footer={
-          overview.openCount ? (
-            <span className="danger">
-              {formatUsd(overview.outstandingCents).replace(/\.00$/, '')} open across{' '}
-              {overview.openCount} {overview.openCount === 1 ? 'lease' : 'leases'}
-              {overview.lateCount ? ` · ${overview.lateCount} late past grace` : ''}
-            </span>
-          ) : (
-            <span className="muted">No open balances</span>
-          )
-        }
+        detail={`of ${formatUsd(rentDueCents).replace(/\.00$/, '')} rent due`}
+        progress={{ label: `${collectedPercent}% collected`, value: collectedPercent }}
         stats={[
           {
             label: 'Outstanding',
             value: formatUsd(overview.outstandingCents),
-            detail: `${overview.openCount} open balances · all charges due to date`,
+            detail: leases(overview.openCount),
+            href: overview.openCount ? filterHref('open') : undefined,
           },
           {
             label: 'Late',
             value: formatUsd(overview.lateCents),
-            detail: `${overview.lateCount} past grace · includes posted late fees`,
+            detail: `${leases(overview.lateCount)} past grace`,
+            href: overview.lateCount ? filterHref('late') : undefined,
           },
         ]}
       />
@@ -213,11 +208,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
               </Button>
             }
           />
-          {overview.rows.length === 0 && (
-            <p className="muted">
-              No leases in this month and scope. Choose another month or view leases.
-            </p>
-          )}
+          {overview.rows.length === 0 && <p className="muted">No active leases in this view.</p>}
           <form action={recordPaymentAction} className="form">
             {returnFields}
             <FormRow>
@@ -240,7 +231,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                   ))}
                 </Select>
               </Field>
-              <Field label="Amount" hint="Cash, check or money order received outside the app.">
+              <Field label="Amount" hint="Cash, check or money order">
                 <Input name="amount" inputMode="decimal" placeholder="1,850.00" required />
               </Field>
             </FormRow>
@@ -255,30 +246,30 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
 
       <section className="card flush">
         <div className="card-header">
-          <div>
-            <p className="eyebrow">{monthLabel(month)}</p>
-            <h3>Rent roll</h3>
-          </div>
+          <h3>Rent roll</h3>
           <nav className={styles.period} aria-label="Rent month">
+            {!isCurrentMonth && (
+              <a
+                className="chip"
+                href={`/payments?month=${monthKey(now)}${filterQuery}${scopeSuffix}`}
+              >
+                This month
+              </a>
+            )}
             <a
-              className="chip"
+              className={`chip ${styles.step}`}
               aria-label="Previous month"
               href={`/payments?month=${addMonths(month, -1)}${filterQuery}${scopeSuffix}`}
             >
-              ‹ Prev
+              ‹
             </a>
+            <span className={styles.month}>{monthLabel(month)}</span>
             <a
-              className="chip"
-              href={`/payments?month=${monthKey(now)}${filterQuery}${scopeSuffix}`}
-            >
-              This month
-            </a>
-            <a
-              className="chip"
+              className={`chip ${styles.step}`}
               aria-label="Next month"
               href={`/payments?month=${addMonths(month, 1)}${filterQuery}${scopeSuffix}`}
             >
-              Next ›
+              ›
             </a>
           </nav>
         </div>
@@ -289,10 +280,6 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
             {chip('open', 'Open')}
             {chip('late', 'Late')}
           </nav>
-          <p>
-            Late covers this month’s rent past grace, excluding autopay and covered pending
-            payments. Outstanding includes all charges due to date for these leases.
-          </p>
           <form action="/payments" method="get" className={styles.pageSize}>
             {returnFields}
             <label>
@@ -326,7 +313,6 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                   <td colSpan={5}>
                     <EmptyState
                       title="No rent charges in this view"
-                      description="Choose another status or create a lease to start collecting rent."
                       action="View leases"
                       href="/leases"
                     />
@@ -401,7 +387,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                             <ConfirmButton
                               label="Add late fee"
                               title={`Add late fee for ${row.tenantName}?`}
-                              description="The lease late fee will be added to the tenant ledger for this month."
+                              description="Adds the lease late fee to this month’s tenant ledger."
                               confirmLabel="Add late fee"
                               action={applyLateFeeAction}
                               fields={{
@@ -418,7 +404,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                             <ConfirmButton
                               label="Refund"
                               title={`Refund payment for ${row.tenantName}?`}
-                              description="This refunds the most recent settled payment in full and updates the tenant ledger. Review the payment in the ledger before continuing."
+                              description="Refunds the most recent settled payment in full and updates the tenant ledger."
                               confirmLabel="Refund payment"
                               action={refundPaymentAction}
                               fields={{
@@ -450,121 +436,85 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
         />
       </section>
 
-      <div className="grid-2">
-        <section className="card">
-          <div className="card-header">
-            <h3>Owner payouts</h3>
+      <section className="card" aria-labelledby="owner-payouts-heading">
+        <div className={`card-header ${styles.payoutHead}`}>
+          <div className={styles.payoutTitle}>
+            <h3 id="owner-payouts-heading">Owner payouts</h3>
             <Badge tone={overview.payoutReadyCents ? 'warning' : 'success'}>
               {overview.payoutReadyCents ? 'Ready to send' : 'On schedule'}
             </Badge>
           </div>
-          <div className="stack">
-            {overview.payouts
-              .filter((payout) => payout.collectedCents > 0)
-              .map((payout) => (
-                <div className="row between" key={payout.propertyId}>
-                  <div className="cell-main">
-                    <div>
-                      <strong>
-                        <Link
-                          href={`/properties/${payout.propertyId}`}
-                          style={{ color: 'inherit' }}
-                        >
-                          {payout.propertyName}
-                        </Link>
-                      </strong>
-                      <p className="muted">
-                        {payout.ownerName ?? 'No owner assigned'} ·{' '}
-                        {formatUsd(payout.collectedCents)} collected
-                      </p>
-                    </div>
-                  </div>
+          <ConfirmButton
+            label="Send payouts"
+            size="sm"
+            title="Send owner payouts?"
+            description={`Records ${formatUsd(overview.payoutReadyCents)} in owner payouts for ${monthLabel(month)}.`}
+            confirmLabel="Send payouts"
+            tone="primary"
+            disabled={overview.payoutReadyCents === 0}
+            action={runPayoutsAction}
+            fields={{ month, filter, propertyId: scope.propertyId, unitId: scope.unitId }}
+          />
+        </div>
+        <p className={styles.payoutTotal}>
+          {formatUsd(overview.payoutReadyCents)} ready
+          {paidOut > 0 && ` · ${formatUsd(paidOut)} sent`}
+          {soleOwner && ` · ${soleOwner}`}
+        </p>
+        {paidOut > 0 && <Progress value={payoutShare} label="Owner payout share" />}
+        {payoutRows.length > 0 && (
+          <ul className={styles.payouts} aria-label="Ready by property">
+            {payoutRows.map((payout) => {
+              const meta = [
+                soleOwner ? null : (payout.ownerName ?? 'No owner assigned'),
+                payout.paidOutCents > 0
+                  ? `${formatUsd(payout.collectedCents)} collected · ${formatUsd(payout.paidOutCents)} sent`
+                  : null,
+              ].filter(Boolean);
+              return (
+                <li key={payout.propertyId}>
+                  <span>
+                    <Link href={`/properties/${payout.propertyId}`}>{payout.propertyName}</Link>
+                    {meta.length > 0 && <small>{meta.join(' · ')}</small>}
+                  </span>
                   <strong>{formatUsd(payout.readyCents)}</strong>
-                </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {idlePayouts.length > 0 && (
+          <details className={styles.idle}>
+            <summary>
+              {idlePayouts.length} {idlePayouts.length === 1 ? 'property' : 'properties'} with
+              nothing to send
+            </summary>
+            <ul>
+              {idlePayouts.map((payout) => (
+                <li key={payout.propertyId}>
+                  <Link href={`/properties/${payout.propertyId}`}>{payout.propertyName}</Link>
+                </li>
               ))}
-            {overview.payouts.some((payout) => payout.collectedCents === 0) && (
-              <details>
-                <summary className="muted">
-                  {overview.payouts.filter((payout) => payout.collectedCents === 0).length}{' '}
-                  properties with nothing to send
-                </summary>
-                <ul>
-                  {overview.payouts
-                    .filter((payout) => payout.collectedCents === 0)
-                    .map((payout) => (
-                      <li key={payout.propertyId}>
-                        <Link href={`/properties/${payout.propertyId}`}>{payout.propertyName}</Link>
-                      </li>
-                    ))}
-                </ul>
-              </details>
-            )}
-            <Progress value={payoutShare} label="Owner payout share" />
-            <div className="row between">
-              <p className="muted">
-                {formatUsd(overview.payoutReadyCents)} ready to transfer · {formatUsd(paidOut)}{' '}
-                already sent
-              </p>
-              <ConfirmButton
-                label="Send payouts"
-                size="sm"
-                title="Send owner payouts?"
-                description={`${formatUsd(overview.payoutReadyCents)} is ready to transfer for ${monthLabel(month)}. This records the owner payouts for the selected month.`}
-                confirmLabel="Send payouts"
-                tone="primary"
-                disabled={overview.payoutReadyCents === 0}
-                action={runPayoutsAction}
-                fields={{ month, filter, propertyId: scope.propertyId, unitId: scope.unitId }}
-              />
-            </div>
-            {overview.recentPayouts.length > 0 && (
-              <div>
-                <h4>Last payouts</h4>
-                <ul className={styles.payoutHistory}>
-                  {overview.recentPayouts.slice(0, 3).map((payout) => (
-                    <li key={payout.id}>
-                      <time dateTime={payout.createdAt.toISOString()}>
-                        {shortDate(payout.createdAt)}
-                      </time>
-                      <span className="muted">{payout.status}</span>
-                      <strong>{formatUsd(payout.amountCents)}</strong>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            </ul>
+          </details>
+        )}
+        {overview.recentPayouts.length > 0 && (
+          <div className={styles.recent}>
+            <h4>Last payouts</h4>
+            <ul className={styles.payoutHistory}>
+              {overview.recentPayouts.slice(0, 3).map((payout) => (
+                <li key={payout.id}>
+                  <time dateTime={payout.createdAt.toISOString()}>
+                    {shortDate(payout.createdAt)}
+                  </time>
+                  <span className="muted">{payout.status}</span>
+                  <strong>{formatUsd(payout.amountCents)}</strong>
+                </li>
+              ))}
+            </ul>
           </div>
-        </section>
-        <section className="card">
-          <div className="card-header">
-            <h3>Collection tools</h3>
-          </div>
-          <div className="stack">
-            <div className="row between">
-              <div>
-                <strong>Late fees</strong>
-                <p className="muted">Review overdue rent before applying a fee.</p>
-              </div>
-              <Button size="sm" href={`/payments?month=${month}&filter=late${scopeSuffix}`}>
-                Review
-              </Button>
-            </div>
-            <div className="row between">
-              <div>
-                <strong>Record offline payment</strong>
-                <p className="muted">Keep the ledger current for checks or cash.</p>
-              </div>
-              <Button
-                size="sm"
-                href={`/payments?month=${month}&record=1${scopeSuffix}#record-payment`}
-              >
-                Record
-              </Button>
-            </div>
-            <p className="muted">Transactions, receipts, and refunds keep an audit trail.</p>
-          </div>
-        </section>
-      </div>
+        )}
+      </section>
     </>
   );
 }

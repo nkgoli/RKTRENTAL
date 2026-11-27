@@ -96,11 +96,12 @@ describe('property and unit workspace render', () => {
     expect(html).toContain('Cash flow');
     expect(html).not.toContain('Collected vs due');
     expect(html).toContain(`role="img" aria-label="Unit 4B: ${period.label}"`);
-    expect(html).toContain(`aria-label="Unit 4B: ${period.label} chart" tabindex="0"`);
+    expect(html).toContain('<strong>Oct ’26</strong>');
     expect(html).toContain(`aria-label="Unit 4B: ${period.label} amounts" tabindex="0"`);
     expect(html).toContain('<summary>View exact amounts</summary>');
     expect(html).toContain('Income, expenses and NOI · USD');
-    expect(html).toContain('Oct ’26: income $18,000.00, expenses $3,000.00');
+    expect(html).toContain('<span>Income</span><b>$18,000.00</b>');
+    expect(html).toContain('<span>Expenses</span><b>$3,000.00</b>');
     expect(html).toContain('<th scope="row">Oct ’26</th><td class="num">$18,000.00</td><td class="num">$3,000.00</td><td class="num">$15,000.00</td>');
     expect(html).toContain('Income statement');
     expect(html).not.toContain('Expense breakdown');
@@ -113,7 +114,8 @@ describe('property and unit workspace render', () => {
     // The workspace header owns the address and type; the details card does not repeat them.
     expect(html).not.toContain('<dt>Address</dt>');
     expect(html).not.toContain('<dt>Type</dt>');
-    expect(html).toContain('Next steps');
+    // Nothing is open on this property, so there is no Next steps card to show.
+    expect(html).not.toContain('Next steps');
     expect(html).not.toContain('Photos &amp; documents');
     expect(html).not.toContain('Property documents');
     expect(html).not.toContain('Lease timeline');
@@ -121,13 +123,15 @@ describe('property and unit workspace render', () => {
     expect(html).not.toContain('Payments by the numbers');
     expect(html).toContain('Property units');
     expect(html).toContain('Alex Rivera');
-    expect(html).toContain('Units &amp; lease terms');
+    expect(html).toContain('<h3>Units</h3>');
+    expect(html).not.toContain(' UTC');
     expect(html).toContain('Payments this month');
     expect(html).toContain('Occupancy');
     expect(html).toContain('1 of 1 unit · fully occupied');
     expect(html).toContain('Rent roll');
-    expect(html).toContain('All caught up');
-    expect(html).toContain('Moves Maple Court to the Archived filter on Properties. Asks for confirmation first.');
+    expect(html).not.toContain('All caught up');
+    expect(html).toContain('aria-label="Archive property"');
+    expect(html).not.toContain('Asks for confirmation first');
   });
 
   it('derives next steps from live repairs, expiring leases and vacancies', () => {
@@ -144,9 +148,9 @@ describe('property and unit workspace render', () => {
       applicants: { 'unit-2': { count: 1, first: { name: 'Rohan Das', appliedAt: new Date('2026-10-11T00:00:00.000Z'), status: 'SCREENING' } } },
     });
     expect(steps.map((step) => [step.eyebrow, step.heading, step.detail])).toEqual([
-      ['Maintenance', '2 repairs need attention', '1 urgent · Kitchen sink leak, Unit 4B'],
-      ['Renewals', '1 lease expiring soon', 'Alex Rivera, Unit 4B, ends on Nov 30'],
-      ['Vacancy', 'Unit 3A · $1,600 asking', 'Rohan Das applied Oct 11 · in screening'],
+      ['Maintenance', '2 open repairs', '1 urgent · Kitchen sink leak, Unit 4B'],
+      ['Renewals', '1 lease expiring soon', 'Alex Rivera, Unit 4B · Nov 30'],
+      ['Vacancy', 'Unit 3A · $1,600 asking', '1 applicant · in screening'],
     ]);
     expect(steps[2].href).toBe('/properties/property-1/applications?unit=unit-2');
     const soon = new Date(Date.now() + 20 * 86_400_000);

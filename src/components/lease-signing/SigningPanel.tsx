@@ -167,7 +167,6 @@ export function SigningPanel({
           <header className={styles.header}>
             <p className={styles.muted}>Agreement version {view.version}</p>
             <h2>{signingTitle(view)}</h2>
-            <p>Each person signs from their own account. You can leave and return to this page.</p>
           </header>
           <ul className={styles.roster} aria-label="Designated signing parties">
             {view.signers.map((party) => (
@@ -199,13 +198,10 @@ export function SigningPanel({
                 {view.archiveStatus === 'PDF_FAILED'
                   ? view.archiveError ||
                     'The document could not be stored. We will retry automatically.'
-                  : 'The final PDF is processing. This page checks automatically.'}
+                  : 'The final PDF is processing.'}
               </p>
               {view.archiveNextAttemptAt && (
-                <p>
-                  Next retry after {new Date(view.archiveNextAttemptAt).toLocaleString()}. Use Check
-                  status to retry when due.
-                </p>
+                <p>Next retry after {new Date(view.archiveNextAttemptAt).toLocaleString()}.</p>
               )}
             </div>
           )}
@@ -216,18 +212,17 @@ export function SigningPanel({
                 <strong>Signed lease agreement.pdf</strong>
                 <DocumentLinks id={view.archiveDocumentId} name="Signed lease agreement.pdf" />
               </div>
-              <p>Each addendum is available separately below.</p>
             </section>
           )}
           <AgreementContent snapshot={view.snapshot} />
           {me?.signedAt ? (
             <p className={styles.notice} role="status">
-              You have already signed this agreement. Your signature is saved.
+              You have already signed this agreement.
             </p>
           ) : !me ? (
             <p className={styles.notice}>
               You can review this agreement, but only the designated owner / lessor and tenants can
-              sign. Share this page link with them; no notification is sent automatically.
+              sign. Share this page link with them; no notification is sent.
             </p>
           ) : (
             <form
@@ -238,7 +233,7 @@ export function SigningPanel({
             >
               <h2>Your electronic signature</h2>
               <p>
-                Signing as {me.name} · {me.email}. Enter your own contact details.
+                Signing as {me.name} · {me.email}
               </p>
               <label className={styles.field}>
                 Full name

@@ -166,20 +166,6 @@
   margin-bottom: 0;
 }
 
-.recoverySteps {
-  display: grid;
-  gap: 16px;
-  margin: 0 0 22px;
-  padding-left: 20px;
-  color: var(--design-muted);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.recoverySteps strong {
-  color: var(--design-text);
-}
-
 .confirmation {
   display: grid;
   gap: 12px;

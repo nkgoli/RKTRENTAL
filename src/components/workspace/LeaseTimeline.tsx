@@ -161,7 +161,6 @@ export function LeaseTimeline({ timeline, propertyId, linkUnits = false, limit =
 
   return (
     <div className={styles.timeline} data-testid="lease-timeline">
-      <p className={styles.asOf}>As of {formatDate(timeline.today)}</p>
       {timeline.rows.length === 0 && <p className={styles.empty}>No units yet.</p>}
       <ul className={styles.rows}>{visible.map(renderRow)}</ul>
       {rest.length > 0 && (

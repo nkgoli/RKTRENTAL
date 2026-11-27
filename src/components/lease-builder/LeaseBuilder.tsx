@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition, type RefObject } from 'react';
 import {
   STEP,
   STEP_COUNT,
@@ -28,15 +28,14 @@ import {
 } from './steps';
 import styles from './lease-builder.module.css';
 import { TemplateTermsStep } from './TemplateTermsStep';
-import {
-  contextFromDraft,
-  resolveTerms,
-  type TemplateDefinition,
-} from '@/lib/lease-create/templates';
+import type { TemplateDefinition } from '@/lib/lease-create/templates';
 import { useBuilderShell } from './useBuilderShell';
 import { SigningPanel } from '@/components/lease-signing/SigningPanel';
 import { SendAgreementButton } from '@/components/lease-signing/SendAgreementButton';
 import { DeleteDraftButton } from '@/components/lease-create/DeleteDraftButton';
+import { Glyph } from './icons';
+import { SummaryRail } from './SummaryRail';
+import { blanksIn, cx, draftTerms, listText } from './summary';
 
 export type LeaseBuilderProps = {
   lessorSigner?: { name: string; email: string } | null;
@@ -63,22 +62,78 @@ export type LeaseBuilderProps = {
 };
 
 const SUBTITLES: Record<number, string> = {
-  [STEP.term]:
-    'Set move-in day and the lease term. The next step aligns rent to your chosen due day.',
-  [STEP.rent]:
-    'Choose the rent due day and review every move-in and recurring charge before sending.',
-  [STEP.tenants]: 'Choose every tenant who will sign the lease and identify the primary contact.',
-  [STEP.options]: 'Renewal notice, occupants and other options for this lease.',
-  [STEP.clauses]: 'Pick the clauses that belong in the agreement.',
-  [STEP.rules]: 'Set the house rules tenants agree to.',
-  [STEP.disclosures]: 'Include the disclosures this lease needs.',
-  [STEP.attachments]:
-    'Add documents to the lease packet. Assign a type to each file so tenants know what they are reviewing.',
-  [STEP.lessor]: 'Who the lessor is on the agreement.',
-  [STEP.review]: 'Check everything, then send the lease for e-signature.',
+  [STEP.term]: 'When the lease starts and ends.',
+  [STEP.rent]: 'Rent, deposit and move-in charges.',
+  [STEP.tenants]: 'Who signs this lease.',
+  [STEP.options]: 'Renewal notice, occupants and property features.',
+  [STEP.clauses]: 'The terms of the agreement.',
+  [STEP.rules]: 'House rules tenants agree to.',
+  [STEP.disclosures]: 'Disclosures included with the lease.',
+  [STEP.attachments]: 'Files that go out with the lease.',
+  [STEP.lessor]: 'Who the agreement names as lessor.',
+  [STEP.review]: 'Check the details, then send.',
 };
 
+const STEP_GROUPS = [
+  { label: 'Basics', steps: [STEP.term, STEP.rent, STEP.tenants] },
+  { label: 'Agreement', steps: [STEP.options, STEP.clauses, STEP.rules, STEP.disclosures] },
+  { label: 'Finish', steps: [STEP.attachments, STEP.lessor, STEP.review] },
+];
+
 const idle: WizardActionState = {};
+
+/** After sending: what happened, who signs next, and the live signing status below. */
+function CreatedPanel({
+  sent,
+  signers,
+  headingRef,
+}: {
+  sent: WizardActionState;
+  signers: string[];
+  headingRef: RefObject<HTMLHeadingElement | null>;
+}) {
+  const leaseId = sent.leaseId!;
+  const notSent = sent.esignStatus === 'NOT_SENT';
+  return (
+    <div className={styles.created}>
+      <div className={cx(styles.createdHero, notSent && styles.createdWarn)}>
+        <span className={styles.createdMark} aria-hidden="true">
+          <Glyph name={notSent ? 'alert' : 'check'} />
+        </span>
+        <h2 id="step-title" className={styles.createdTitle} tabIndex={-1} ref={headingRef}>
+          {notSent ? 'Lease activated, not sent' : 'Lease sent for e-signature'}
+        </h2>
+        {notSent ? (
+          <p className={styles.createdText}>{sent.message}</p>
+        ) : (
+          <>
+            {signers.length > 0 && (
+              <p className={styles.createdText}>{listText(signers)} sign next.</p>
+            )}
+            <p className={styles.createdNote}>No email or text was sent.</p>
+          </>
+        )}
+        <div className={styles.createdActions}>
+          <a className={cx(styles.btn, styles.btnPrimary)} href={`/leases/${leaseId}`}>
+            View lease
+          </a>
+          {!notSent && (
+            <a className={cx(styles.btn, styles.btnOutline)} href={`/sign/leases/${leaseId}`}>
+              Open signing page
+            </a>
+          )}
+        </div>
+      </div>
+      <div className={styles.createdDetail}>
+        {notSent ? (
+          <SendAgreementButton leaseId={leaseId} />
+        ) : (
+          <SigningPanel leaseId={leaseId} documentsHref={`/leases/${leaseId}?tab=documents`} />
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function LeaseBuilder(props: LeaseBuilderProps) {
   const { tenants } = props;
@@ -102,10 +157,27 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
     setDeleting(value);
   }, []);
   const busy = pending || deleting;
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const created = Boolean(sent.ok && sent.leaseId);
   const top = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const errorSummary = useRef<HTMLDivElement>(null);
+  const footer = useRef<HTMLElement>(null);
+  const [stuck, setStuck] = useState(false);
 
+  // The action bar sits 1px past the scroll edge while it is pinned, so a partial intersection
+  // means it floats over the step and earns its shadow.
+  useEffect(() => {
+    const element = footer.current;
+    if (!element || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(([entry]) => setStuck(entry.intersectionRatio < 1), {
+      threshold: [1],
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [step, created]);
+
+  // A new step, or the sent confirmation, takes focus so its title is announced.
   useEffect(() => {
     if (!hydrated) return;
     heading.current?.focus({ preventScroll: true });
@@ -113,7 +185,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
     top.current
       ?.querySelector('[aria-current="step"]')
       ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }, [step, hydrated]);
+  }, [step, hydrated, created]);
 
   useEffect(() => {
     if (message) errorSummary.current?.focus();
@@ -243,16 +315,39 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
     });
   }
 
-  const created = Boolean(sent.ok && sent.leaseId);
   const esignStatus = sent.esignStatus;
-  const unresolvedTerms = draft.template
-    ? resolveTerms(
-        draft.template,
-        contextFromDraft(draft),
-        draft.termOverrides,
-        draft.renewalTerms,
-      ).filter((item) => item.included && /\{\{[a-z_]+\}\}/.test(item.body))
-    : [];
+  const unresolvedTerms = draftTerms(draft).filter(
+    (item) => item.included && blanksIn(item.body).length > 0,
+  );
+  const saveState = created
+    ? esignStatus === 'NOT_SENT'
+      ? 'Active lease · not sent'
+      : 'Ready for signatures'
+    : deleting
+      ? 'Deleting draft…'
+      : pending
+        ? 'Saving…'
+        : dirty
+          ? 'Unsaved changes'
+          : leaseId
+            ? 'Draft saved'
+            : 'Not saved yet';
+  const saveTone = created
+    ? esignStatus === 'NOT_SENT'
+      ? 'warn'
+      : 'ok'
+    : deleting || pending
+      ? 'busy'
+      : dirty
+        ? 'warn'
+        : leaseId
+          ? 'ok'
+          : 'idle';
+  const signers = [
+    ...draft.tenantIds.flatMap((id) => tenants.filter((tenant) => tenant.id === id)),
+    ...(props.lessorSigner ? [props.lessorSigner] : []),
+  ].map((party) => party.name);
+  const wide = step === STEP.review || created;
   const body = [
     <TermStep key="term" draft={draft} update={update} errors={errors} />,
     <RentStep key="rent" draft={draft} update={update} errors={errors} />,
@@ -308,7 +403,13 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
         setAttachments((list) => list.map((f) => (f.id === id ? { ...f, kind } : f)))
       }
     />,
-    <LessorStep key="lessor" draft={draft} update={update} errors={errors} />,
+    <LessorStep
+      key="lessor"
+      draft={draft}
+      update={update}
+      errors={errors}
+      lessorSigner={props.lessorSigner}
+    />,
     <ReviewStep
       key="review"
       lessorSigner={props.lessorSigner}
@@ -317,6 +418,8 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
       unitLabel={props.placeLabel}
       tenants={tenants}
       attachments={attachments}
+      isRenewal={Boolean(props.renewId)}
+      onJump={jump}
     />,
   ][step];
 
@@ -324,279 +427,185 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
     <div className={styles.page} role="region" aria-label="Create lease" inert={!hydrated}>
       <header className={styles.topbar}>
         <Link className={styles.back} href={props.backHref} aria-label="Back to property leases">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-          </svg>
+          <Glyph name="back" />
         </Link>
-        <div className={styles.place}>
-          <span className={styles.topCaption}>
-            {props.renewId ? 'Renew a lease' : 'Create a lease'}
-          </span>
-          {props.placeLabel}
-          {props.renewId && <small>Renewal</small>}
-          <span className={styles.topProgress} aria-live="polite">
-            Step {step + 1} of {STEP_COUNT} · {WIZARD_STEPS[step]}
-          </span>
-        </div>
-        <span className={styles.saveStatus} role="status">
-          {created
-            ? esignStatus === 'NOT_SENT'
-              ? 'Active lease · not sent'
-              : 'Ready for signatures'
-            : deleting
-              ? 'Deleting draft…'
-              : pending
-                ? 'Saving…'
-                : dirty
-                  ? 'Unsaved changes'
-                  : leaseId
-                    ? 'Draft saved'
-                    : 'Not saved yet'}
+        <p className={styles.kind}>{props.renewId ? 'Renewal' : 'New lease'}</p>
+        <h1 className={styles.place}>{props.placeLabel}</h1>
+        <span className={styles.saveState} data-tone={saveTone} role="status">
+          {saveState}
         </span>
-        {leaseId && !created && (
-          <DeleteDraftButton
-            leaseId={leaseId}
-            placeLabel={props.placeLabel}
-            tenantName={tenants.find((tenant) => tenant.id === draft.primaryTenantId)?.name}
-            renewal={Boolean(props.renewId)}
-            fileCount={attachments.length}
-            className={styles.deleteDraft}
-            disabled={busy}
-            onPendingChange={onDeletePending}
-          />
-        )}
-        <button
-          type="button"
-          className={styles.exit}
-          onClick={saveAndExit}
-          disabled={busy || created}
-        >
-          Save and exit
-        </button>
+        <span className={styles.barActions}>
+          {leaseId && !created && (
+            <DeleteDraftButton
+              leaseId={leaseId}
+              placeLabel={props.placeLabel}
+              tenantName={tenants.find((tenant) => tenant.id === draft.primaryTenantId)?.name}
+              renewal={Boolean(props.renewId)}
+              fileCount={attachments.length}
+              className={styles.deleteDraft}
+              disabled={busy}
+              onPendingChange={onDeletePending}
+            />
+          )}
+          {!created && (
+            <button
+              type="button"
+              className={cx(styles.btn, styles.btnOutline, styles.exit)}
+              onClick={saveAndExit}
+              disabled={busy}
+            >
+              Save and exit
+            </button>
+          )}
+        </span>
       </header>
 
-      <div className={styles.layout} ref={top}>
-        <nav aria-label="Lease steps">
-          <p className={styles.progressNote}>
-            Step {step + 1} of {STEP_COUNT} · {WIZARD_STEPS[step]}
-          </p>
-          <p className={styles.progressHint}>
-            Next saves your progress. Return to any visited step.
-          </p>
+      <div className={cx(styles.layout, wide && styles.layoutWide)} ref={top}>
+        <nav className={styles.rail} aria-label="Lease steps">
+          <div className={styles.progress}>
+            <span className={styles.progressText}>
+              Step {step + 1} of {STEP_COUNT}
+            </span>
+            <span className={styles.progressTrack} aria-hidden="true">
+              <span style={{ transform: `scaleX(${(step + 1) / STEP_COUNT})` }} />
+            </span>
+          </div>
           <ol className={styles.steps} tabIndex={0} aria-label="All 10 lease creation steps">
-            {WIZARD_STEPS.map((label, index) => {
-              const done = index < furthest && index !== step;
-              const current = index === step;
-              const clickable = !created && !current && index <= furthest;
-              const marker = done ? (
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M5 12.5l4.5 4.5L19 7.5" />
-                </svg>
-              ) : (
-                index + 1
-              );
-              const className = [styles.step, done && styles.done, current && styles.current]
-                .filter(Boolean)
-                .join(' ');
-              return (
-                <li key={label} className={styles.stepItem}>
-                  {clickable ? (
-                    <button
-                      type="button"
-                      className={className}
-                      onClick={() => jump(index)}
-                      disabled={busy}
-                    >
-                      <span className={styles.marker}>{marker}</span>
-                      <span className={styles.stepLabel}>{label}</span>
-                    </button>
-                  ) : (
-                    <span className={className} aria-current={current ? 'step' : undefined}>
-                      <span className={styles.marker}>{marker}</span>
-                      <span className={styles.stepLabel}>{label}</span>
-                    </span>
-                  )}
-                </li>
-              );
-            })}
+            {STEP_GROUPS.map((group) => (
+              <li key={group.label} className={styles.stepGroup}>
+                <span className={styles.groupLabel}>{group.label}</span>
+                <ol className={styles.groupSteps}>
+                  {group.steps.map((index) => {
+                    const label = WIZARD_STEPS[index];
+                    const done = created || (index < furthest && index !== step);
+                    const current = !created && index === step;
+                    const clickable = !created && !current && index <= furthest;
+                    const className = cx(
+                      styles.step,
+                      done && styles.done,
+                      current && styles.current,
+                      clickable && styles.visited,
+                    );
+                    const content = (
+                      <>
+                        <span className={styles.marker}>
+                          {done ? <Glyph name="check" /> : index + 1}
+                        </span>
+                        <span>{label}</span>
+                        {done && <span className={styles.srOnly}>, completed</span>}
+                      </>
+                    );
+                    return (
+                      <li key={label} className={styles.stepItem}>
+                        {clickable ? (
+                          <button
+                            type="button"
+                            className={className}
+                            onClick={() => jump(index)}
+                            disabled={busy}
+                          >
+                            {content}
+                          </button>
+                        ) : (
+                          <span className={className} aria-current={current ? 'step' : undefined}>
+                            {content}
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ol>
+              </li>
+            ))}
           </ol>
-          <p className={styles.phoneHint}>Scroll to see all 10 steps.</p>
         </nav>
 
+        {!wide && (
+          <SummaryRail
+            draft={draft}
+            placeLabel={props.placeLabel}
+            tenants={tenants}
+            fileCount={attachments.length}
+            open={summaryOpen}
+            onToggle={() => setSummaryOpen((open) => !open)}
+          />
+        )}
+
         <section className={styles.card} aria-labelledby="step-title">
-          <div className={styles.cardBody}>
-            <div className={styles.cardHead}>
-              <div>
-                <p className={styles.kicker}>
-                  Step {String(step + 1).padStart(2, '0')} of {STEP_COUNT}
-                </p>
-                <h2 id="step-title" tabIndex={-1} ref={heading}>
+          {created ? (
+            <CreatedPanel sent={sent} signers={signers} headingRef={heading} />
+          ) : (
+            <>
+              <header className={styles.cardHead}>
+                <h2 id="step-title" className={styles.stepTitle} tabIndex={-1} ref={heading}>
                   {WIZARD_STEPS[step]}
                 </h2>
                 <p className={styles.sub}>{SUBTITLES[step]}</p>
-              </div>
-              <span className={styles.panelIcon} aria-hidden="true">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  focusable="false"
-                >
-                  <path d="M14 3H5v18h14V8zM14 3v5h5M9 13h6M9 17h4" />
-                </svg>
-              </span>
-            </div>
-
-            {message && !created && (
-              <div className={styles.alert} role="alert" tabIndex={-1} ref={errorSummary}>
-                <strong>{message}</strong>
-                {Object.keys(errors).length > 0 && (
-                  <ul>
-                    {Object.entries(errors).map(([field, error]) => (
-                      <li key={field}>{error}</li>
-                    ))}
-                  </ul>
-                )}
-                {step === STEP.review && Object.keys(errors).length > 0 && (
-                  <p>
-                    Use the lease steps to return to the fields above. Your draft stays saved as you
-                    go back.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {created ? (
-              <div>
-                <div
-                  className={`${styles.alert} ${esignStatus === 'NOT_SENT' ? '' : styles.success}`}
-                  role="status"
-                >
-                  {sent.message}
-                </div>
-                <div className={styles.created}>
-                  <a className={styles.link} href={`/leases/${sent.leaseId}`}>
-                    View lease detail
-                  </a>
-                </div>
-                {esignStatus === 'NOT_SENT' ? (
-                  <SendAgreementButton leaseId={sent.leaseId!} />
-                ) : (
-                  <SigningPanel
-                    leaseId={sent.leaseId!}
-                    documentsHref={`/leases/${sent.leaseId}?tab=documents`}
-                  />
-                )}
-              </div>
-            ) : (
-              <>
-                <fieldset
-                  className={styles.stepFields}
-                  disabled={busy}
-                  aria-label={WIZARD_STEPS[step]}
-                >
-                  {body}
-                  {step === STEP.review && unresolvedTerms.length > 0 && (
-                    <div className={styles.alert} role="alert">
-                      <strong>Complete the agreement before sending</strong>
-                      <ul>
-                        {unresolvedTerms.map((item) => (
-                          <li key={item.id}>
-                            {item.title}: fill the remaining blanks in{' '}
-                            {item.section === 'CLAUSE'
-                              ? 'Clauses'
-                              : item.section === 'RULE'
-                                ? 'Rules'
-                                : 'Disclosures'}
-                            .
-                          </li>
-                        ))}
-                      </ul>
+              </header>
+              <div className={styles.cardBody}>
+                {message && (
+                  <div className={styles.alert} role="alert" tabIndex={-1} ref={errorSummary}>
+                    <Glyph name="alert" className={styles.alertIcon} />
+                    <div>
+                      <strong>{message}</strong>
+                      {Object.keys(errors).length > 0 && (
+                        <ul>
+                          {Object.entries(errors).map(([field, error]) => (
+                            <li key={field}>{error}</li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
-                  )}
+                  </div>
+                )}
+                <fieldset className={styles.stepFields} disabled={busy}>
+                  {body}
                 </fieldset>
-                <div className={styles.footer}>
+              </div>
+              <footer className={cx(styles.footer, stuck && styles.footerStuck)} ref={footer}>
+                <button
+                  type="button"
+                  className={cx(styles.btn, styles.btnGhost)}
+                  disabled={step === 0 || busy}
+                  onClick={() => jump(step - 1)}
+                >
+                  <Glyph name="back" />
+                  Back
+                </button>
+                {step < STEP_COUNT - 1 ? (
                   <button
                     type="button"
-                    className={styles.btn}
-                    disabled={step === 0 || busy}
-                    onClick={() => jump(step - 1)}
+                    className={cx(styles.btn, styles.btnPrimary)}
+                    disabled={busy}
+                    onClick={next}
+                    data-next-step={step + 1}
+                    aria-busy={pending || undefined}
                   >
-                    Back
+                    {pending ? (
+                      <>
+                        <span className={styles.spinner} aria-hidden="true" />
+                        Saving…
+                      </>
+                    ) : (
+                      <>
+                        Next
+                        <Glyph name="next" />
+                      </>
+                    )}
                   </button>
-                  {step < STEP_COUNT - 1 ? (
-                    <button
-                      type="button"
-                      className={`${styles.btn} ${styles.primary}`}
-                      disabled={busy}
-                      onClick={next}
-                      data-next-step={step + 1}
-                      aria-busy={pending || undefined}
-                    >
-                      {pending ? (
-                        <>
-                          <span className={styles.spinner} aria-hidden="true" />
-                          Saving…
-                        </>
-                      ) : (
-                        <>
-                          Next
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.7"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                            focusable="false"
-                          >
-                            <path d="M5 12h14M14 7l5 5-5 5" />
-                          </svg>
-                        </>
-                      )}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className={`${styles.btn} ${styles.primary}`}
-                      disabled={busy || unresolvedTerms.length > 0}
-                      onClick={send}
-                    >
-                      {pending ? 'Sending…' : 'Send for e-signature'}
-                    </button>
-                  )}
-                </div>
-                {step < STEP_COUNT - 1 && (
-                  <p className={styles.nextHint}>Next: {WIZARD_STEPS[step + 1]}</p>
+                ) : (
+                  <button
+                    type="button"
+                    className={cx(styles.btn, styles.btnPrimary)}
+                    disabled={busy || unresolvedTerms.length > 0}
+                    onClick={send}
+                  >
+                    {pending ? 'Sending…' : 'Send for e-signature'}
+                  </button>
                 )}
-              </>
-            )}
-          </div>
-          <p className={styles.disclaimer}>
-            Lease templates and terms are provided for convenience and may not fit every
-            circumstance. Review applicable law and verify the agreement with your professional
-            advisors before sending.
-          </p>
+              </footer>
+            </>
+          )}
         </section>
       </div>
     </div>

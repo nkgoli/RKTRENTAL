@@ -157,7 +157,7 @@ describe('ROI assumptions in Edit Property', () => {
       '1000',
     );
     expect(screen.getByText(/You are editing draft revision 4/)).toBeTruthy();
-    expect(screen.getByText('Analysis value. Property details: 50.')).toBeTruthy();
+    expect(screen.getByText('Property details: 50')).toBeTruthy();
     expect(screen.getByRole('status').textContent).toMatch(/All required assumptions are complete/);
     expect(submitted()).toEqual({ version: 1, input: {}, options: {} });
     fireEvent.change(vacancy, { target: { value: '6.5' } });

@@ -62,9 +62,7 @@ export function CreateInvitationForm({
       }`
     : 'Choose a property and unit';
   const applicant =
-    name.trim() || address.trim()
-      ? [name.trim(), address.trim()].filter(Boolean).join(' · ')
-      : 'Name and email from step 1';
+    name.trim() || address.trim() ? [name.trim(), address.trim()].filter(Boolean).join(' · ') : '—';
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending.current) return;
@@ -95,7 +93,6 @@ export function CreateInvitationForm({
         aria-labelledby="invitation-create-title"
       >
         <div className={styles.cardHead}>
-          <p className={styles.eyebrow}>1 · Create</p>
           <h2 id="invitation-create-title">Applicant and home</h2>
         </div>
         <div className={styles.fields}>
@@ -168,10 +165,6 @@ export function CreateInvitationForm({
             </label>
           </div>
         </div>
-        <p className={styles.caption}>
-          One applicant per invitation. Creating an invitation does not send email. Review the
-          message next, then send it or copy the private link.
-        </p>
         {error && (
           <p className={styles.error} role="alert">
             {error}
@@ -181,25 +174,13 @@ export function CreateInvitationForm({
           <a href={cancelHref} className="btn btn-secondary">
             Cancel
           </a>
-          <button
-            className="btn btn-primary"
-            disabled={busy || disabled}
-            aria-describedby={disabled ? 'invitation-create-unavailable' : undefined}
-          >
+          <button className="btn btn-primary" disabled={busy || disabled}>
             {busy ? 'Creating invitation…' : 'Create invitation & preview'}
           </button>
         </div>
-        {disabled && (
-          <p className={styles.caption} id="invitation-create-unavailable">
-            {linksAvailable
-              ? 'Create invitation & preview · unavailable until an active property and unit exist'
-              : 'Create invitation & preview · unavailable until configured'}
-          </p>
-        )}
       </form>
       <aside className={`card ${styles.formCard}`} aria-labelledby="invitation-preview-title">
         <div className={styles.cardHead}>
-          <p className={styles.eyebrow}>2 · Review before sending</p>
           <h2 id="invitation-preview-title">Invitation preview</h2>
         </div>
         <dl className={styles.summaryList}>
@@ -213,26 +194,13 @@ export function CreateInvitationForm({
           </div>
           <div>
             <dt>Private link</dt>
-            <dd>
-              {linksAvailable
-                ? 'Not created yet · valid for seven days once created'
-                : 'Unavailable · not created'}
-            </dd>
+            <dd>{linksAvailable ? 'Not created yet · valid 7 days' : 'Unavailable'}</dd>
           </div>
           <div>
             <dt>Email status</dt>
             <dd>Not sent</dd>
           </div>
         </dl>
-        <p className={styles.muted}>
-          After creation, check the applicant, email and home before sending. A private link lasts
-          seven days. Provider acceptance does not confirm delivery.
-        </p>
-        <ul className={styles.unavailable} aria-label="Delivery actions">
-          <li>Send email · {linksAvailable ? 'after creation' : 'unavailable'}</li>
-          <li>Copy link · {linksAvailable ? 'after creation' : 'unavailable'}</li>
-          <li>No invitation has been created</li>
-        </ul>
       </aside>
     </>
   );
@@ -287,9 +255,7 @@ export function InvitationDelivery({
             value={link}
             onFocus={(e) => e.target.select()}
           />
-          <small>
-            Expires in seven days from creation or renewal. Share only with this applicant.
-          </small>
+          <small>Share only with this applicant.</small>
         </label>
       )}
       <div className={styles.actions}>
@@ -336,12 +302,11 @@ export function InvitationDelivery({
           </>
         )}
       </div>
-      {copied && <p role="status">Link copied. No email was sent by copying.</p>}
+      {copied && <p role="status">Link copied.</p>}
       {blocked && (
         <p className={styles.notice}>
-          The provider outcome is pending or unknown. Further email attempts are blocked to avoid
-          duplicates. Contact your administrator to reconcile the provider record. The active link
-          can still be copied.
+          Email outcome unknown, so retries are blocked to avoid duplicates. You can still copy the
+          link.
         </p>
       )}
       {error && (

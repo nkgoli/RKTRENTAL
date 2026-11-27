@@ -19,21 +19,11 @@ function RentHero({ view }: { view: TenantHomeView }) {
   const { pay } = view;
   const due = pay.amountDue;
   const settled = due.totalDueCents <= 0;
-  const autopay = pay.autopay.enabled
-    ? 'Autopay is on.'
-    : due.dueDate
-      ? `Autopay is off — pay by ${shortDate(due.dueDate)} to avoid a late fee.`
-      : 'Autopay is off.';
   return (
     <section className={styles.rentHero} aria-labelledby="rent-due">
-      <div className={styles.heroTop}>
-        <p id="rent-due" className="eyebrow">
-          {settled ? 'Rent' : `Rent due ${due.dueDate ? shortDate(due.dueDate) : ''}`}
-        </p>
-        <span>
-          <PortalIcon name="pay" />
-        </span>
-      </div>
+      <p id="rent-due" className="eyebrow">
+        {settled ? 'Rent' : `Rent due ${due.dueDate ? shortDate(due.dueDate) : ''}`}
+      </p>
       <div className={styles.paymentRow}>
         <div className={`amount ${settled ? styles.settled : ''}`}>
           {settled ? 'All paid up' : formatUsd(due.totalDueCents)}
@@ -49,15 +39,12 @@ function RentHero({ view }: { view: TenantHomeView }) {
           </Link>
         )}
       </div>
-      <p>
-        {view.premises} · {autopay}
+      <p className={styles.heroNote}>
+        {pay.autopay.enabled ? 'Autopay is on.' : 'Autopay is off.'}
       </p>
       {due.pendingCents > 0 && (
-        <p className={styles.pending}>
-          {formatUsd(due.pendingCents)} bank payment pending. Check Pay for its status.
-        </p>
+        <p className={styles.pending}>{formatUsd(due.pendingCents)} bank payment pending.</p>
       )}
-      <p className={styles.manager}>From {view.managerName}, your property manager</p>
     </section>
   );
 }
@@ -69,17 +56,10 @@ export default async function TenantHomePage() {
   if (!view) {
     return (
       <div className={styles.homeLease}>
-        <div>
-          <h1 style={{ fontSize: 'var(--rr-h1)' }}>
-            Welcome home
-            <span className={styles.spark} aria-hidden="true">
-              ✳
-            </span>
-          </h1>
-        </div>
+        <h1 style={{ fontSize: 'var(--rr-h1)' }}>Welcome home</h1>
         <EmptyState
           title="No active lease yet"
-          description="Your property manager will add it here once it is set up."
+          description="Your property manager will add it here."
           action="Check again"
           href="/home"
         />
@@ -92,15 +72,8 @@ export default async function TenantHomePage() {
   return (
     <div className={`${styles.homeLease} ${styles.homeGrid}`}>
       <div className={styles.homeHeading}>
-        <p className="muted" style={{ fontSize: 13 }}>
-          Hi {view.tenantName} · {view.premises}
-        </p>
-        <h1 style={{ fontSize: 'var(--rr-h1)', marginTop: 2 }}>
-          Welcome home
-          <span className={styles.spark} aria-hidden="true">
-            ✳
-          </span>
-        </h1>
+        <h1 style={{ fontSize: 'var(--rr-h1)' }}>Welcome home</h1>
+        <p className={styles.subline}>{view.premises}</p>
       </div>
 
       <div className={styles.homePrimary}>
@@ -116,27 +89,18 @@ export default async function TenantHomePage() {
                 <PortalIcon name="lease" />
               </span>
               My lease
-              <small className="muted" style={{ fontWeight: 400 }}>
-                Terms &amp; details
-              </small>
             </Link>
             <Link className="tile" href="/repairs">
               <span className="tile-icon">
                 <PortalIcon name="repair" />
               </span>
               Request repair
-              <small className="muted" style={{ fontWeight: 400 }}>
-                Photos &amp; priority
-              </small>
             </Link>
             <Link className="tile" href="/lease#documents">
               <span className="tile-icon">
                 <PortalIcon name="folder" />
               </span>
               Documents
-              <small className="muted" style={{ fontWeight: 400 }}>
-                Lease &amp; notices
-              </small>
             </Link>
           </div>
         </section>
@@ -178,19 +142,17 @@ export default async function TenantHomePage() {
             Announcements
           </h2>
           {view.activity.length === 0 ? (
-            <p className="muted">Payments and notices will show up here.</p>
+            <p className={styles.emptyNote}>No announcements yet.</p>
           ) : (
-            // Announcements are a short list, not a stack of coloured banners.
+            // One compact line per item: what happened, then amount and date.
             <ul className={styles.activity}>
               {view.activity.slice(0, 4).map((item) => (
-                <li key={item.id} className="list-item" style={{ padding: '8px 0' }}>
-                  <span className={styles.activityMark} aria-hidden="true">
+                <li key={item.id}>
+                  <span className={styles.activityMark} data-tone={item.tone} aria-hidden="true">
                     {item.tone === 'success' ? '\u2713' : item.tone === 'warning' ? '!' : '\u2026'}
                   </span>
-                  <span className="file-meta">
-                    <strong>{item.title}</strong>
-                    <small>{item.detail}</small>
-                  </span>
+                  <strong>{item.title}</strong>
+                  <span className={styles.activityDetail}>{item.detail}</span>
                 </li>
               ))}
             </ul>

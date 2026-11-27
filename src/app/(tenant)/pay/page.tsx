@@ -16,17 +16,11 @@ export const dynamic = 'force-dynamic';
 type SearchParams = Promise<{ notice?: string }>;
 
 const notices: Record<string, { tone: 'success' | 'warning' | 'error'; text: string }> = {
-  'review-required': {
-    tone: 'warning',
-    text: 'Review the amount and payment method, then confirm your payment.',
-  },
-  paid: {
-    tone: 'success',
-    text: 'Payment received. Your receipt is below and your balance is updated.',
-  },
+  'review-required': { tone: 'warning', text: 'Review and confirm your payment.' },
+  paid: { tone: 'success', text: 'Payment received.' },
   pending: {
     tone: 'success',
-    text: 'Bank payment started. It will show as Paid once your provider confirms it.',
+    text: 'Bank payment started. It shows as Paid once it clears.',
   },
   'payment-duplicate': { tone: 'success', text: 'That payment was already recorded.' },
   'payment-failed': {
@@ -45,19 +39,12 @@ const notices: Record<string, { tone: 'success' | 'warning' | 'error'; text: str
     tone: 'error',
     text: 'Choose bank transfer or card using the provider fields. Card and bank numbers are never entered here.',
   },
-  'method-added': { tone: 'success', text: 'Payment method added. You can now turn on autopay.' },
+  'method-added': { tone: 'success', text: 'Payment method added.' },
   'method-failed': { tone: 'error', text: 'That payment method could not be added.' },
 };
 
 const shortDate = (date: Date) =>
   date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-const fullDate = (date: Date) =>
-  date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
 
 export default async function TenantPayPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireTenantRole();
@@ -71,15 +58,11 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
     return (
       <>
         <header className={styles.heading}>
-          <p className="eyebrow">Tenant portal / Pay</p>
           <h1 style={{ fontSize: 'var(--rr-h1)' }}>Pay rent</h1>
-          <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-            {session.name}
-          </p>
         </header>
         <EmptyState
           title="No active lease"
-          description="There is no active lease on your account yet, so there is nothing to pay."
+          description="Nothing to pay yet."
           action="Check again"
           href="/pay"
         />
@@ -92,21 +75,21 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
   const headingMonth = dueDate ? monthLabel(dueDate) : monthLabel(new Date());
   const grace = dueDate ? graceEnd(dueDate, view.graceDays) : null;
   const autopayMethodId = view.autopay.paymentMethodId ?? view.methods[0]?.id ?? null;
+  // A lone, unpaid "{Month} rent" line just repeats the heading and the total, so it is listed
+  // only when there are several lines, a partial payment, or another kind of charge.
+  const [onlyLine] = amountDue.lines;
+  const itemized =
+    amountDue.lines.length > 1 ||
+    (onlyLine !== undefined &&
+      (onlyLine.paidCents > 0 || onlyLine.label !== `${headingMonth} rent`));
 
   return (
     <>
       <header className={styles.heading}>
-        <p className="eyebrow">Tenant portal / Pay</p>
-        <h1 style={{ fontSize: 'var(--rr-h1)' }}>
-          Pay {headingMonth} rent
-          <span className={styles.spark} aria-hidden="true">
-            ✳
-          </span>
-        </h1>
-        <p className="muted" style={{ fontSize: 13, marginTop: 2 }}>
+        <h1 style={{ fontSize: 'var(--rr-h1)' }}>Pay {headingMonth} rent</h1>
+        <p className="muted" style={{ fontSize: 13 }}>
           {view.propertyName}
           {view.unitLabel ? ` · Unit ${view.unitLabel}` : ''}
-          {dueDate ? ` · Due ${fullDate(dueDate)}` : ' · Nothing due right now'}
         </p>
       </header>
 
@@ -136,38 +119,38 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
         </div>
         {amountDue.lines.length > 0 ? (
           <>
-            <dl className={styles.breakdown}>
-              {amountDue.lines.map((line, index) => (
-                <div key={line.chargeId ?? index} style={{ display: 'contents' }}>
-                  <dt>
-                    {line.label}
-                    {line.paidCents > 0 ? ` (${formatUsd(line.paidCents)} already paid)` : ''}
-                  </dt>
-                  <dd>{formatUsd(line.outstandingCents)}</dd>
-                </div>
-              ))}
-            </dl>
+            {itemized && (
+              <dl className={styles.breakdown}>
+                {amountDue.lines.map((line, index) => (
+                  <div key={line.chargeId ?? index} style={{ display: 'contents' }}>
+                    <dt>
+                      {line.label}
+                      {line.paidCents > 0 ? ` (${formatUsd(line.paidCents)} already paid)` : ''}
+                    </dt>
+                    <dd>{formatUsd(line.outstandingCents)}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
 
             <div className={styles.totalRow}>
-              <strong>Total due{dueDate ? ` ${shortDate(dueDate)}` : ''}</strong>
+              {itemized && <strong>Total due</strong>}
               <strong className={`${portal.total} ${styles.total}`}>
                 {formatUsd(amountDue.totalDueCents)}
               </strong>
             </div>
             {amountDue.pendingCents > 0 && (
               <p className={`muted ${styles.note}`}>
-                {formatUsd(amountDue.pendingCents)} is on its way from your bank and will clear
-                shortly.
+                {formatUsd(amountDue.pendingCents)} is on its way from your bank.
               </p>
             )}
-            <p className={`muted ${styles.note}`}>
-              {grace && view.graceDays > 0 ? `No late fee if paid by ${shortDate(grace)}. ` : ''}
-              Your payment status and receipt will appear below.
-            </p>
+            {grace && view.graceDays > 0 && (
+              <p className={`muted ${styles.note}`}>No late fee if paid by {shortDate(grace)}.</p>
+            )}
           </>
         ) : (
           <p className="muted" style={{ fontSize: 13 }}>
-            You&rsquo;re all paid up. Thank you — your next rent will appear here when it is due.
+            You&rsquo;re all paid up.
           </p>
         )}
       </section>
@@ -186,12 +169,9 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
         />
       ) : (
         <section aria-labelledby="payment-method-title">
-          <h2 id="payment-method-title" style={{ fontSize: 'var(--rr-h3)', marginBottom: 4 }}>
+          <h2 id="payment-method-title" style={{ fontSize: 16 }}>
             Payment method
           </h2>
-          <p className="muted" style={{ fontSize: 13 }}>
-            Add a method now so paying next month takes one tap.
-          </p>
           <AddPaymentMethods />
         </section>
       )}
@@ -220,9 +200,6 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
           <ul className={styles.receiptList}>
             {view.receipts.map((receipt) => (
               <li className={styles.receipt} key={receipt.paymentId ?? receipt.label}>
-                <span className={styles.receiptIcon} aria-hidden="true">
-                  ✓
-                </span>
                 <span style={{ flex: 1 }}>
                   <strong style={{ display: 'block', fontSize: 14 }}>{receipt.label}</strong>
                   <small className="muted">{shortDate(receipt.date)}</small>
@@ -247,7 +224,7 @@ export default async function TenantPayPage({ searchParams }: { searchParams: Se
             ))}
           </ul>
         ) : (
-          <p className="muted">Your receipts will appear here after your first payment.</p>
+          <p className="muted">No receipts yet.</p>
         )}
       </section>
     </>

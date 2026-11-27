@@ -80,7 +80,7 @@ describe('Tenants step routes new people through Applications', () => {
     unmount();
     const empty = render(<LeaseBuilder {...props({ tenants: [], applicants: [] })} />);
     expect(empty.container.querySelector('a[href*="/tenants"]')).toBeNull();
-    expect(screen.getByText(/No tenants yet\. Tenants are added by approving/)).toBeTruthy();
+    expect(screen.getByText(/No tenants yet\. Promote an approved applicant/)).toBeTruthy();
   });
 
   it('scopes Applications links to the property and unit', () => {
@@ -100,7 +100,7 @@ describe('Tenants step routes new people through Applications', () => {
     // The promoted applicant is selectable; the unpromoted one has no checkbox.
     expect(screen.getByRole('checkbox', { name: 'Synthetic Tenant' })).toBeTruthy();
     expect(screen.queryByRole('checkbox', { name: /Pending Applicant/ })).toBeNull();
-    expect(screen.getByText(/Not a tenant yet/)).toBeTruthy();
+    expect(screen.getByText('Promote an approved applicant to add them.')).toBeTruthy();
     fireEvent.click(screen.getByRole('checkbox', { name: 'Synthetic Tenant' }));
     expect(screen.getByRole('button', { name: 'Remove Synthetic Tenant' })).toBeTruthy();
   });

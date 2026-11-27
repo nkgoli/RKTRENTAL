@@ -24,9 +24,7 @@ export function SendAgreementButton({ leaseId }: { leaseId: string }) {
         {pending ? 'Preparing…' : 'Send current agreement for signature'}
       </button>
       {message && <p role="alert">{message}</p>}
-      <p className="muted">
-        Creates a new signing version only if terms changed. No email or text notification is sent.
-      </p>
+      <p className="muted">No email or text notification is sent.</p>
     </div>
   );
 }

@@ -190,7 +190,7 @@ describe('ROI combo chart', () => {
       onEdit: () => {},
     });
     const { container, rerender } = render(<RoiProjections {...props(long)} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Cash Flow' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Cash flow' }));
     const cash = screen.getByRole('group', { name: /Annual and cumulative operating cash flow/ });
     const liveOf = (plot: HTMLElement) =>
       plot.parentElement!.querySelector('[aria-live]')!.textContent;
@@ -217,7 +217,7 @@ describe('ROI combo chart', () => {
     fireEvent.keyDown(equity, { key: 'End' });
     const rows = projectionRows(calculatePayload(short).base);
     expect(liveOf(equity)).toContain(`Year 4:`);
-    expect(liveOf(equity)).toContain(`Property Value ${dollars(rows[3].propertyValue)}`);
+    expect(liveOf(equity)).toContain(`Property value ${dollars(rows[3].propertyValue)}`);
   });
 
   it('matches the exact projection table for the final year and follows the horizon', () => {
@@ -234,13 +234,13 @@ describe('ROI combo chart', () => {
         onEdit={() => {}}
       />,
     );
-    fireEvent.click(screen.getByRole('tab', { name: 'Cash Flow' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Cash flow' }));
     const plot = screen.getByRole('group', { name: /Annual and cumulative operating cash flow/ });
     fireEvent.keyDown(plot, { key: 'End' });
     // The reference default horizon is Y10.
     const last = rows[9];
     const live = plot.parentElement!.querySelector('[aria-live]')!.textContent!;
-    expect(live).toContain(`Year 10: Annual Cash Flow ${dollars(last.cashFlow)}`);
+    expect(live).toContain(`Year 10: Cash flow ${dollars(last.cashFlow)}`);
     expect(live).toContain(`Cumulative ${dollars(last.cumulativeCashFlow)}`);
     const table = screen.getByRole('table', { name: /Projection amounts/ });
     expect(within(table).getAllByText(dollars(last.cumulativeCashFlow)).length).toBeGreaterThan(0);
@@ -252,9 +252,9 @@ describe('ROI combo chart', () => {
     );
     fireEvent.keyDown(plot, { key: 'End' });
     expect(plot.parentElement!.querySelector('[aria-live]')!.textContent).toContain(
-      `Year 5: Annual Cash Flow ${dollars(rows[4].cashFlow)}`,
+      `Year 5: Cash flow ${dollars(rows[4].cashFlow)}`,
     );
-    expect(screen.getByText(`Cumulative cash flow · year 5`)).toBeTruthy();
+    expect(screen.getByText(`Cumulative · year 5`)).toBeTruthy();
     // The exact table keeps every projected year regardless of the chart horizon.
     expect(within(table).getAllByRole('row')).toHaveLength(rows.length + 1);
   });

@@ -31,10 +31,6 @@
   text-transform: uppercase;
 }
 
-.error .eyebrow {
-  color: var(--design-danger);
-}
-
 .empty h1,
 .empty h2,
 .empty h3,

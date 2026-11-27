@@ -40,10 +40,7 @@ export function ApplicantList({
     >
       <div className={styles.listHeader}>
         <h2 id="applicants-title">Applicants</h2>
-        <p>
-          {count === total ? `${total} applications` : `${count} of ${total} applications`} · newest
-          first
-        </p>
+        <p>{count === total ? `${total} applications` : `${count} of ${total} applications`}</p>
       </div>
       {children}
     </section>

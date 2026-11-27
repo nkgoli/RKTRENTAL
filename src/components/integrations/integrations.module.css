@@ -19,7 +19,7 @@
   padding-top: 12px;
 }
 .section h2 {
-  font-size: 18px;
+  font-size: var(--rr-h3);
 }
 .provider {
   display: grid;
@@ -73,13 +73,6 @@
 .configure dd {
   overflow-wrap: anywhere;
 }
-.footer {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 14px;
-  margin-top: 16px;
-  border-top: 1px solid var(--rr-border);
-}
 .settings {
   min-width: 0;
   scroll-margin-top: 20px;
@@ -91,11 +84,9 @@
 .settings label {
   min-width: 0;
 }
-.hint {
-  margin: 0;
+.saveState {
   color: var(--design-muted);
   font-size: 13px;
-  line-height: 1.6;
 }
 @media (max-width: 560px) {
   .sync {

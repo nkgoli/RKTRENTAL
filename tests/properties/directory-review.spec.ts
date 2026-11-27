@@ -128,7 +128,11 @@ test('candidate seeded cards, filters, empty recovery and phone scrolling', asyn
     await expect(directory.getByRole('heading', { level: 3 })).toHaveText(
       records.map((record) => record.name),
     );
-    await expect(page.getByText(`${occupancy}% occupancy`, { exact: true })).toBeVisible();
+    await expect(
+      page
+        .getByRole('region', { name: 'Properties in this view' })
+        .getByText(`${occupancy}%`, { exact: true }),
+    ).toBeVisible();
     expect(await directory.locator('a > div[aria-hidden=true] > svg').count()).toBe(records.length);
     await expect(directory.locator('a > div[aria-hidden=true] > svg').first()).toBeVisible();
     await noPageOverflow(page);

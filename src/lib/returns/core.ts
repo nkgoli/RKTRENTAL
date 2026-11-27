@@ -162,5 +162,7 @@ export function computeReturns(input: ReturnsInput): ReturnsMetrics {
 /** Formats a ratio fraction as a one-decimal percent, or an em dash for null. */
 export function formatPercent(ratioValue: number | null | undefined): string {
   if (ratioValue == null || !Number.isFinite(ratioValue)) return '—';
-  return `${(ratioValue * 100).toFixed(1)}%`;
+  const text = (ratioValue * 100).toFixed(1);
+  // A tiny loss rounds to zero: show 0.0%, never "-0.0%".
+  return `${text === '-0.0' ? '0.0' : text}%`;
 }

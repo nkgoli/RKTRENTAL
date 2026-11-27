@@ -1,0 +1,214 @@
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--design-muted);
+  font-size: 13px;
+}
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend i,
+.tipRow i {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.legend .targetKey,
+.tipRow .targetKey {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--design-text);
+}
+
+/* Y axis | plot, then the x axis under the plot. */
+.frame {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-rows: var(--plot-height, 180px) auto;
+  column-gap: 12px;
+  row-gap: 8px;
+}
+.yAxis {
+  position: relative;
+  min-width: 4ch;
+  color: var(--chart-axis);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.yAxis span {
+  position: absolute;
+  right: 0;
+  transform: translateY(50%);
+  line-height: 1;
+  white-space: nowrap;
+}
+.plot {
+  position: relative;
+  min-width: 0;
+}
+.gridLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--chart-grid);
+}
+.gridLine:first-child {
+  background: #d9dee7;
+}
+.columns {
+  position: absolute;
+  inset: 0;
+  display: grid;
+}
+.column {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-width: 0;
+}
+/* Hover wash behind the column, so the reader sees which period the card describes. */
+.column::before {
+  content: '';
+  position: absolute;
+  inset: 0 2px;
+  border-radius: 6px;
+  background: transparent;
+  transition: background 120ms ease;
+}
+.column:hover::before {
+  background: rgb(62 79 229 / 0.06);
+}
+.bars {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  width: clamp(4px, 56%, 28px);
+  height: 100%;
+}
+.bars.grouped {
+  width: clamp(8px, 64%, 32px);
+}
+.bar {
+  display: block;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 28px;
+  border-radius: 4px 4px 0 0;
+}
+.column[data-partial] .bar {
+  opacity: 0.4;
+}
+.target {
+  position: absolute;
+  left: 50%;
+  width: clamp(10px, 70%, 40px);
+  height: 2px;
+  border-radius: 1px;
+  background: var(--design-text);
+  opacity: 0.7;
+  transform: translate(-50%, 50%);
+}
+
+.tip {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 5;
+  display: grid;
+  gap: 4px;
+  min-width: 168px;
+  padding: 10px 12px;
+  border: 1px solid var(--rr-border);
+  border-radius: 10px;
+  background: var(--design-surface);
+  box-shadow: 0 8px 24px rgb(23 35 58 / 0.12);
+  color: var(--design-text);
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -4px);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+.column[data-align='start'] .tip {
+  left: 0;
+  transform: translate(0, -4px);
+}
+.column[data-align='end'] .tip {
+  left: auto;
+  right: 0;
+  transform: translate(0, -4px);
+}
+.column:hover .tip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.column[data-align='start']:hover .tip,
+.column[data-align='end']:hover .tip {
+  transform: translate(0, 0);
+}
+.tip strong {
+  font-weight: 600;
+}
+.tipRow {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--design-muted);
+}
+.tipRow b {
+  color: var(--design-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.xAxis {
+  grid-column: 2;
+  display: grid;
+  color: var(--chart-axis);
+  font-size: 12px;
+}
+.xAxis span {
+  overflow: visible;
+  text-align: center;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .column::before,
+  .tip {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .bar {
+    background: CanvasText !important;
+  }
+  .column[data-partial] .bar {
+    background: GrayText !important;
+  }
+}

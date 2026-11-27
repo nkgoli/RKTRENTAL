@@ -55,8 +55,9 @@ it('presents a saved draft explicitly and preserves it when starting a separate 
       ]}
     />,
   );
-  expect(screen.getByRole('option', { name: /Draft in progress/ })).toBeTruthy();
-  await user.selectOptions(screen.getByRole('combobox'), 'unit');
+  expect(screen.getByText('Draft saved Oct 21')).toBeTruthy();
+  expect(screen.queryByRole('link', { name: 'Resume draft' })).toBeNull();
+  await user.click(screen.getByRole('radio', { name: 'Maple Court · Unit 3A' }));
   expect(screen.getByRole('link', { name: 'Resume draft' }).getAttribute('href')).toBe(
     '/leases/new?draft=draft',
   );
@@ -94,15 +95,24 @@ it('bounds directory search to eight results, surfaces unit applicants and keeps
   }
   render(<Tenants />);
   expect(screen.getAllByRole('checkbox')).toHaveLength(1);
-  expect(screen.getByRole('group', { name: 'Tenants' }).getAttribute('aria-describedby')).toBe(
+  expect(screen.getByRole('searchbox').getAttribute('aria-describedby')).toContain(
     'tenant-selection-error',
   );
   await user.type(screen.getByRole('searchbox'), 'Tenant');
   expect(screen.getAllByRole('checkbox')).toHaveLength(9);
+  expect(
+    screen.getByRole('group', { name: 'Matching tenants' }).getAttribute('aria-describedby'),
+  ).toBe('tenant-selection-error');
   await user.click(screen.getByRole('checkbox', { name: /Tenant 0/ }));
+  // A chosen result stays listed, checked, until the search is cleared.
+  expect((screen.getByRole('checkbox', { name: /Tenant 0/ }) as HTMLInputElement).checked).toBe(
+    true,
+  );
   await user.clear(screen.getByRole('searchbox'));
   expect(screen.getByRole('button', { name: 'Remove Tenant 0' })).toBeTruthy();
-  expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('t0');
+  expect(
+    (screen.getByRole('radio', { name: 'Primary tenant: Tenant 0' }) as HTMLInputElement).checked,
+  ).toBe(true);
 });
 
 it('keeps a fill-in editable after its first character and prevents sending unresolved wording', async () => {
@@ -121,12 +131,13 @@ it('keeps a fill-in editable after its first character and prevents sending unre
   }
   const { unmount } = render(<Terms />);
   expect(screen.queryByRole('combobox', { name: 'Lease template' })).toBeNull();
+  expect(screen.getByText('1 blank')).toBeTruthy();
   await user.click(screen.getByRole('button', { name: /Aquariums/ }));
   await user.type(screen.getByRole('textbox', { name: 'Fill aquarium gallons' }), '25');
   expect(
     (screen.getByRole('textbox', { name: 'Fill aquarium gallons' }) as HTMLInputElement).value,
   ).toBe('25');
-  expect(screen.queryByText(/terms have blanks to fill/)).toBeNull();
+  expect(screen.queryByText('1 blank')).toBeNull();
   unmount();
   render(
     <LeaseBuilder
@@ -146,5 +157,6 @@ it('keeps a fill-in editable after its first character and prevents sending unre
   expect(
     (screen.getByRole('button', { name: 'Send for e-signature' }) as HTMLButtonElement).disabled,
   ).toBe(true);
-  expect(screen.getByText('Complete the agreement before sending')).toBeTruthy();
+  expect(screen.getByText('1 blank to fill')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Fill blanks in rules' })).toBeTruthy();
 });

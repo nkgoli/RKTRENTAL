@@ -30,7 +30,7 @@ it('keeps the credential error and safe next destination on the sign-in page', a
   expect(html).toContain('Email or password was not recognized');
   expect(html).toContain('name="next" value="/lease"');
   expect(html).toContain('Welcome back');
-  expect(html).toContain('Sign in to manage your rental account.');
+  expect(html).not.toContain('Sign in to manage your rental account.');
 });
 
 it('shows signed-out feedback above the sign-in form', async () => {

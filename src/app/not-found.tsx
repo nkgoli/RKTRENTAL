@@ -30,7 +30,7 @@ export default async function NotFound() {
         <EmptyState
           headingLevel={1}
           title="Page not found"
-          description="This link may have changed or the page is no longer available."
+          description="This page may have moved or been removed."
           action={action}
           href={href}
           variant="primary"

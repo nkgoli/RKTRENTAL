@@ -57,7 +57,7 @@ it('renders live history, tenant-only comments and authorized photo routes', asy
   expect(html).toContain('aria-label="Repair stages"');
   expect(html).toContain('Scheduled');
   expect(html.match(/role="progressbar"/g)).toHaveLength(1);
-  expect(html).toContain('Tenant portal / Repairs');
+  expect(html).not.toContain('Tenant portal / Repairs');
   expect(html).not.toContain('Design reference');
 });
 it('renders no-lease and empty history recovery', async () => {

@@ -1,13 +1,11 @@
-/* Summary-tab panels of Returns & ROI in the shared Redisgn look: bordered white cards,
-   uppercase primary eyebrows, the shared table and quiet insets. */
+/* Summary-tab panels of Returns & ROI: bordered white cards and the shared table. */
 .card {
   display: grid;
   gap: 12px;
   align-content: start;
   min-width: 0;
 }
-.card.card h2,
-.inset.inset h2 {
+.card.card h2 {
   margin: 0;
   font-size: var(--rr-h3, 20px);
   font-weight: 500;
@@ -38,44 +36,82 @@ p.caption {
   line-height: 1.5;
   color: var(--design-muted);
 }
-.small,
-p.small {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--design-muted);
-}
 .period {
   min-width: 200px;
   margin: 0;
 }
-.gap {
+/* Coverage rows: what is recorded for each kind of record, and where to complete it. */
+.gaps {
   display: grid;
-  gap: 4px;
-  padding-top: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  container-type: inline-size;
+}
+/* In the narrow column beside the cash-flow table, each link sits under its figure. */
+@container (max-width: 420px) {
+  .gaps li {
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+.gaps li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 12px 0;
   border-top: 1px solid var(--rr-border);
 }
-.titleRow + .gap,
-.titleRow + p + .gap {
+.gaps li:first-child {
   padding-top: 0;
   border-top: 0;
 }
-.gap :global(.eyebrow) {
-  margin: 0;
+.gaps li:last-child {
+  padding-bottom: 0;
 }
-.gap h3 {
+.gaps li > div {
+  min-width: 0;
+}
+.gaps p.gapLabel {
   margin: 0;
-  font-size: 16px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--design-muted);
+}
+.gaps p.gapValue {
+  margin: 2px 0 0;
+  font-size: 15px;
   font-weight: 500;
+  line-height: 1.4;
+  color: var(--design-text);
+  font-variant-numeric: tabular-nums;
 }
-.gap a {
-  width: fit-content;
+.gaps li[data-status='none'] p.gapValue {
+  color: var(--design-danger);
+}
+.gapValue small {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--design-muted);
+}
+.gaps a {
+  flex: none;
+  font-size: 14px;
   font-weight: 500;
   color: var(--design-primary);
 }
-.dangerText,
-.gap :global(.eyebrow).dangerText {
-  color: var(--design-danger);
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .table {
   width: 100%;
@@ -91,6 +127,10 @@ p.small {
 .table th,
 .table td {
   white-space: nowrap;
+}
+/* Keeps the screen-reader reason inside its cell, so it never widens the scrolling region. */
+.table td {
+  position: relative;
 }
 /* On desktop the explanatory last column wraps so every column stays in view. */
 @media (min-width: 1024px) {
@@ -110,50 +150,6 @@ p.small {
 .table td[data-tone='gain'] {
   color: var(--design-accent);
   font-weight: 600;
-}
-.footRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-}
-/* "Estimates" sits on a white bordered surface, not a card, as in the design. */
-.inset {
-  display: grid;
-  gap: 12px;
-  align-content: start;
-  min-width: 0;
-  padding: 24px;
-  background: var(--design-surface);
-  border: 1px solid var(--rr-border);
-  border-radius: var(--rr-card-radius);
-}
-.inset :global(.eyebrow) {
-  margin: 0;
-}
-.sources {
-  margin: 0;
-  padding-left: 18px;
-  display: grid;
-  gap: 6px;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--design-muted);
-}
-.sources strong {
-  color: var(--design-text);
-  font-weight: 600;
-}
-.inputs > summary {
-  font-weight: 600;
-}
-.summaryNote {
-  display: block;
-  margin-top: 2px;
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--design-muted);
 }
 .inputGroup h3 {
   margin: 0 0 8px;
@@ -187,20 +183,9 @@ p.small {
   font-weight: 400;
   color: var(--rr-warn);
 }
-.inputActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
 @media (max-width: 640px) {
-  .inset {
-    padding: 16px;
-  }
   .period {
     min-width: 0;
-    width: 100%;
-  }
-  .footRow > :global(.btn) {
     width: 100%;
   }
 }

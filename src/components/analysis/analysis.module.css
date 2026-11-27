@@ -25,9 +25,6 @@
   color: var(--design-muted);
   line-height: 1.6;
 }
-.eyebrow {
-  margin: 0 0 4px;
-}
 .heading {
   display: flex;
   justify-content: space-between;
@@ -79,14 +76,6 @@
   color: var(--design-muted);
   box-shadow: none;
 }
-/* With a property open, the heading is one band: title, property context and actions. */
-.headingCompact {
-  align-items: center;
-  margin-bottom: 8px;
-}
-.headingCompact h1 {
-  font-size: 22px;
-}
 .workspace p.context {
   display: flex;
   flex-wrap: wrap;
@@ -95,11 +84,7 @@
   font-size: 13px;
   line-height: 1.4;
 }
-.context strong {
-  color: var(--design-text);
-}
-.context span + span::before,
-.context strong + span::before {
+.context span + span::before {
   content: '·';
   margin-right: 8px;
 }
@@ -119,20 +104,28 @@
 .menu {
   position: relative;
 }
+/* Menu triggers match the header's small pill buttons. */
 .menu > summary {
   list-style: none;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  min-height: 40px;
+  min-height: 32px;
   border: 1px solid var(--design-primary);
   background: var(--design-surface);
   border-radius: 999px;
-  padding: 0 20px;
+  padding: 0 14px;
   color: var(--design-primary);
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
   white-space: nowrap;
+  cursor: pointer;
+}
+@media (pointer: coarse) {
+  .menu > summary {
+    min-height: 44px;
+  }
 }
 /* Save analysis is the header's primary pill. */
 .saveMenu > summary {
@@ -150,6 +143,19 @@
 }
 .menu > summary:hover {
   background: var(--rr-primary-tint);
+}
+/* More actions is an icon-only trigger. */
+.moreMenu > summary {
+  width: 32px;
+  padding: 0;
+}
+.moreMenu > summary::after {
+  content: none;
+}
+@media (pointer: coarse) {
+  .moreMenu > summary {
+    width: 44px;
+  }
 }
 .menu > div {
   position: absolute;
@@ -171,24 +177,45 @@
   border-radius: 999px;
   color: var(--design-text);
 }
+/* Property chooser: one search field over a grid of plain property cards. */
+.search {
+  max-width: 360px;
+}
 .properties {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 12px;
-  margin: 16px 0;
+  margin: 16px 0 0;
 }
-.properties button {
+.workspace .properties button {
+  display: grid;
+  gap: 4px;
+  align-content: start;
   text-align: left;
-  padding: 20px;
+  padding: 16px 18px;
   border-color: var(--rr-border);
   border-radius: var(--rr-card-radius);
   color: var(--design-text);
+  font-weight: 600;
+  font-size: 15px;
+}
+.workspace .properties button:hover:not(:disabled) {
+  border-color: var(--design-primary);
+  background: var(--design-surface);
+}
+.properties strong {
+  font-weight: 600;
 }
 .properties span,
 .properties small {
   display: block;
-  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
   color: var(--design-muted);
+}
+.properties + p {
+  margin: 16px 0 0;
 }
 .actions {
   display: flex;
@@ -200,136 +227,9 @@
   display: grid;
   gap: var(--rr-gap);
 }
-/* Two compact cards share a row on wide screens; charts and tables keep the full width. */
-.pair {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
-  gap: var(--rr-gap);
-  align-items: stretch;
-}
-.summary {
-  margin: 0 0 12px;
-  padding-top: 10px;
-  padding-bottom: 10px;
-}
-.summary h2 {
-  margin: 0;
-  font-size: 15px;
-}
-.summary p {
-  margin: 8px 0 0;
-  line-height: 1.45;
-}
-.summaryHead {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 12px;
-}
-.summarySource,
-.summaryState {
-  font-size: 13px;
-  color: var(--design-muted);
-}
-.summaryActions {
-  display: flex;
-  gap: 8px;
-  margin-left: auto;
-}
-.workspace a.editLink {
-  color: var(--design-text);
-  text-decoration: none;
-  white-space: nowrap;
-}
-.summaryGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 12px 20px;
-  margin: 12px 0 0;
-}
-.summaryGrid div {
-  min-width: 0;
-}
-.summaryGrid dt {
-  font-size: 12px;
-  color: var(--design-muted);
-}
-.summaryGrid dd {
-  margin: 2px 0 0;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-.summaryGrid dd.missingValue {
-  color: var(--rr-warn);
-  font-weight: 500;
-}
-.summary p.missing {
-  padding: 10px 12px;
-  background: var(--rr-warn-bg);
-  color: var(--rr-warn);
-  border: 1px solid var(--rr-warn);
-  border-radius: 8px;
-}
-.summary p.missing a {
-  color: inherit;
-  font-weight: 600;
-}
-.summary p.demo {
-  font-size: 13px;
-}
 .stack {
   display: grid;
   gap: var(--rr-gap);
-}
-/* Card title with its data-basis tags (shared ROI pattern, see RoiChart Basis). */
-.cardHead {
-  margin-bottom: 16px;
-}
-.workspace .cardHead h2 {
-  margin: 0;
-}
-.metrics {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px 24px;
-}
-.metrics > div {
-  min-width: 0;
-}
-.metrics strong {
-  display: block;
-  font-family: var(--design-heading-font);
-  font-size: var(--rr-kpi);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
-  margin-top: 4px;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-.metrics strong[data-tone='bad'] {
-  color: var(--rr-bad);
-}
-.metrics strong[data-missing] {
-  font-family: var(--design-font);
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: 0;
-  color: var(--design-muted);
-}
-.metrics small {
-  color: var(--design-muted);
-  font-size: var(--rr-label, 12px);
-  font-weight: 600;
-}
-.metrics span {
-  display: block;
-  margin-top: 2px;
-  font-size: 12px;
-  color: var(--design-muted);
-}
-.metrics + details {
-  margin-top: 16px;
 }
 .statement {
   margin: 0;
@@ -409,8 +309,8 @@
 .workspace .details h2 {
   margin-bottom: 4px;
 }
-.details > details:first-of-type {
-  border-top: 0;
+.details > details + details {
+  border-top: 1px solid var(--rr-border);
 }
 .details p {
   font-size: 13px;
@@ -495,32 +395,6 @@
 .field [aria-invalid='true'] {
   border-color: var(--rr-bad);
 }
-.chart {
-  height: 155px;
-  display: flex;
-  gap: 4px;
-  align-items: flex-end;
-  overflow-x: auto;
-  margin: 16px 0;
-}
-.chart > div {
-  flex: 1;
-  min-width: 14px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 6px;
-}
-.chart i {
-  display: block;
-  width: 70%;
-  border-radius: 3px 3px 0 0;
-}
-.chart small {
-  font-size: 12px;
-  color: var(--design-muted);
-}
 .table {
   overflow: auto;
   margin-top: 12px;
@@ -576,21 +450,6 @@
     font-size: 16px;
     min-height: 44px;
   }
-  .metrics {
-    gap: 20px 12px;
-  }
-  .metrics strong {
-    font-size: 24px;
-  }
-  .headingCompact h1 {
-    font-size: 20px;
-  }
-  .context strong {
-    flex-basis: 100%;
-  }
-  .context strong + span::before {
-    content: none;
-  }
   .headingCompact .actions {
     width: 100%;
   }
@@ -600,22 +459,6 @@
   .menu > div {
     right: auto;
     left: 0;
-  }
-  .summaryActions {
-    margin-left: 0;
-    width: 100%;
-  }
-  .summaryActions > * {
-    flex: 1;
-    justify-content: center;
-  }
-  .workspace a.editLink {
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-  }
-  .summaryGrid {
-    grid-template-columns: 1fr 1fr;
   }
   .card {
     padding: 16px;
@@ -675,35 +518,51 @@
   color: var(--design-muted);
 }
 .workspace .assumptionsLink p.context {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.5;
 }
+/* One slim line: the count and the action. */
 .workspace p.missingNote {
-  margin: 0;
-  padding: 10px 14px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 2px 0 0;
+  padding: 6px 12px;
   border: 1px solid var(--rr-warn);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--rr-warn-bg);
   color: var(--rr-warn);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
 }
 .missingNote a {
   color: inherit;
   font-weight: 600;
 }
+/* Title block on the left, one row of actions on the right; the row wraps under the title
+   as a whole when the title needs the space. */
 .headingCompact {
-  align-items: flex-end;
-  margin-bottom: 24px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  row-gap: 12px;
+  margin-bottom: 20px;
+}
+.headingCompact .titleBlock {
+  flex: 1 1 360px;
 }
 .headingCompact .actions {
+  flex: none;
+  flex-wrap: nowrap;
   justify-content: flex-end;
+  margin-top: 4px;
 }
-/* Tabs and the scope select share one row, as in the design. */
+.phoneOnlyText {
+  display: none;
+}
+/* Tabs and the scope select share one row. */
 .viewRow {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 12px 24px;
   margin-bottom: 24px;
@@ -722,7 +581,7 @@
   min-width: 0;
 }
 .viewSelect {
-  min-width: 220px;
+  min-width: 200px;
 }
 .phoneOnly {
   display: none;
@@ -748,18 +607,8 @@
 }
 .workspace a.vacantLink {
   width: fit-content;
+  font-size: 14px;
   font-weight: 500;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.deeper {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-/* Eyebrows keep the shared primary colour inside the workspace's muted paragraphs. */
-.workspace p:global(.eyebrow) {
-  color: var(--design-primary);
 }
 /* Every control in the workspace uses the shared field and pill look. */
 .workspace
@@ -808,6 +657,9 @@
     gap: 16px;
     margin-bottom: 16px;
   }
+  .headingCompact .titleBlock {
+    flex: none;
+  }
   .workspace .titleRow h1 {
     font-size: 24px;
   }
@@ -816,9 +668,13 @@
   }
   .headingCompact .actions {
     justify-content: stretch;
+    margin-top: 0;
   }
   .headingCompact .actions > :global(.btn) {
     flex: 1 1 auto;
+  }
+  .phoneOnlyText {
+    display: inline;
   }
   .saveMenu {
     position: fixed;
@@ -863,9 +719,6 @@
   }
   .viewSelect {
     min-width: 0;
-  }
-  .deeper {
-    flex-direction: column;
   }
 }
 @media (min-width: 1024px) {

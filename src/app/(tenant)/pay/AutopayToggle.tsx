@@ -33,7 +33,7 @@ export function AutopayToggle({
     if (!hasMethod && next) {
       setError(
         paymentMethodLabel
-          ? `Save ${paymentMethodLabel} using Add a payment method before turning on autopay.`
+          ? `Save ${paymentMethodLabel} before turning on autopay.`
           : 'Add a payment method before turning on autopay.',
       );
       return;
@@ -64,15 +64,15 @@ export function AutopayToggle({
             Autopay
           </h2>
           <small className="muted">
-            Currently {on ? 'on' : 'off'} · Pay {formatUsd(monthlyRentCents)} on the {rentDueDay}
-            {[1, 21].includes(rentDueDay)
+            Currently {on ? 'on' : 'off'} · {formatUsd(monthlyRentCents)} on the {rentDueDay}
+            {[1, 21, 31].includes(rentDueDay)
               ? 'st'
               : [2, 22].includes(rentDueDay)
                 ? 'nd'
                 : [3, 23].includes(rentDueDay)
                   ? 'rd'
                   : 'th'}{' '}
-            each month
+            of each month
           </small>
         </span>
         <button
@@ -96,12 +96,12 @@ export function AutopayToggle({
           : error
             ? error
             : on
-              ? `Autopay is on${paymentMethodLabel ? ` with ${paymentMethodLabel}` : ''}. You can pause anytime before the due date.`
+              ? `${paymentMethodLabel ? `Pays from ${paymentMethodLabel}. ` : ''}Pause anytime before the due date.`
               : hasMethod
-                ? `Turn on autopay${paymentMethodLabel ? ` with ${paymentMethodLabel}` : ''}. You can pause anytime before the due date.`
+                ? `${paymentMethodLabel ? `Will pay from ${paymentMethodLabel}. ` : ''}Pause anytime before the due date.`
                 : paymentMethodLabel
-                  ? `${paymentMethodLabel} is selected for this payment. Save it using Add a payment method to use it for autopay.`
-                  : 'Save a payment method above to use it for autopay.'}
+                  ? `Save ${paymentMethodLabel} to use it for autopay.`
+                  : 'Save a payment method to use autopay.'}
       </p>
     </section>
   );

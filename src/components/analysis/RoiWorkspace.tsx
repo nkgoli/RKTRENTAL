@@ -68,12 +68,10 @@ import {
   ActualVsProjectedSummary,
   ActualsToComplete,
   EstimatesPanel,
-  HowCalculated,
   OptionalInputs,
 } from './RoiReturnsSummary';
 import { buildCompsHref, rentAnalysisContext } from '@/lib/comps/navigation';
 import { DealSnapshot } from './RoiDealPanels';
-import { MoreDetail } from './RoiChart';
 import { AssumptionsSummary, isBaselinePath } from './AssumptionsSummary';
 import {
   assumptionsEditPath,
@@ -134,6 +132,7 @@ const SlidersIcon = () =>
   glyph('M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6');
 const WhatIfIcon = () => glyph('M3 17l6-6 4 4 8-8M14 7h7v7');
 const BookmarkIcon = () => glyph('m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z');
+const MoreIcon = () => glyph('M5 12h.01M12 12h.01M19 12h.01');
 
 export function RoiWorkspace({
   selection,
@@ -790,15 +789,9 @@ export function RoiWorkspace({
             aria-describedby={error ? `${f.path}-error` : undefined}
           />
         )}
-        <small>
-          {values[f.path] !== valuesFrom(payload!)[f.path]
-            ? 'Manager assumption'
-            : evidence?.demo
-              ? 'Fictional demo value - not a recorded actual'
-              : evidence
-                ? `${evidence.source} source - review for forecast`
-                : 'Manager assumption'}
-        </small>
+        {evidence?.demo && values[f.path] === valuesFrom(payload!)[f.path] && (
+          <small>Demo value</small>
+        )}
         {error && (
           <small id={`${f.path}-error`} className={styles.error}>
             {error.message}
@@ -828,6 +821,23 @@ export function RoiWorkspace({
         ? `Saved analysis, revision ${revision}`
         : 'Saved property details (analysis not yet saved)';
   const vacantUnit = property?.units.find((unit) => unit.status === 'VACANT');
+  // Where each recorded assumption came from, once per field and source.
+  const sources = payload
+    ? [
+        ...new Map(
+          payload.evidence
+            .filter((e) => e.source !== 'manager')
+            .map((e) => [
+              `${e.path}:${e.source}`,
+              {
+                key: `${e.path}:${e.source}`,
+                label: fieldLabel(e.path),
+                source: e.demo ? `${e.source} · demo` : e.source,
+              },
+            ]),
+        ).values(),
+      ]
+    : [];
   const shown = opening ? urlProperty : selected;
   const shownProperty = properties.find((p) => p.id === shown);
   return (
@@ -861,7 +871,6 @@ export function RoiWorkspace({
         )}
         <div className={`${styles.heading} ${shown ? styles.headingCompact : ''}`}>
           <div className={styles.titleBlock}>
-            <p className={`eyebrow ${styles.eyebrow}`}>Returns &amp; ROI</p>
             <div className={styles.titleRow}>
               <h1>
                 {shown ? (shownProperty?.name ?? 'Unavailable property') : 'Choose a property'}
@@ -872,60 +881,32 @@ export function RoiWorkspace({
                     ? 'Unsaved changes'
                     : revision > 0
                       ? `Saved · ${savedStatus === 'READY' ? 'ready' : savedStatus === 'DRAFT' ? 'draft' : 'analysis'}`
-                      : 'Draft · not saved'}
+                      : 'Not saved'}
                 </span>
               )}
             </div>
-            {shown ? (
-              payload && !loading ? (
-                <AssumptionsSummary
-                  payload={calculatedPayload ?? applyValues(payload, values, tax)}
-                  result={result}
-                  stale={stale}
-                  missing={baselineErrors}
-                  incomplete={missingData(applyValues(payload, values, tax)).some((e) =>
-                    isBaselinePath(e.path),
-                  )}
-                  demoCount={demoFields.length}
-                  demoLabel={demoFields[0]?.demo}
-                  source={
-                    revision > 0
-                      ? `Saved ${savedStatus === 'READY' ? 'ready' : savedStatus === 'DRAFT' ? 'draft' : 'analysis'} · revision ${revision}`
-                      : 'From property details · not saved yet'
-                  }
-                  editHref={editHref()}
-                  completeHref={editHref(baselineErrors[0]?.path)}
-                  onEdit={(event, path) => {
-                    if (!dirty) return;
-                    event.preventDefault();
-                    editAssumptions(path);
-                  }}
-                  meta={
-                    <>
-                      {shownProperty && (
-                        <span>
-                          {shownProperty.units.length}{' '}
-                          {shownProperty.units.length === 1 ? 'unit' : 'units'}
-                        </span>
-                      )}
-                      <span>
-                        {revision > 0
-                          ? `Saved ${savedStatus?.toLowerCase() ?? 'analysis'} · revision ${revision}`
-                          : `Revision ${revision}`}
-                      </span>
-                    </>
-                  }
-                />
-              ) : (
-                <p className={styles.context}>
-                  <span>Whole property</span>
-                </p>
-              )
-            ) : (
-              <p>
-                Compare recorded rent and expenses with projected returns from assumptions you
-                control.
-              </p>
+            {shown && payload && !loading && (
+              <AssumptionsSummary
+                missing={baselineErrors}
+                incomplete={missingData(applyValues(payload, values, tax)).some((e) =>
+                  isBaselinePath(e.path),
+                )}
+                demoCount={demoFields.length}
+                completeHref={editHref(baselineErrors[0]?.path)}
+                onEdit={(event, path) => {
+                  if (!dirty) return;
+                  event.preventDefault();
+                  editAssumptions(path);
+                }}
+                meta={[
+                  ...(shownProperty?.units.length
+                    ? [
+                        `${shownProperty.units.length} ${shownProperty.units.length === 1 ? 'unit' : 'units'}`,
+                      ]
+                    : []),
+                  ...(revision > 0 ? [`Revision ${revision}`] : []),
+                ]}
+              />
             )}
           </div>
           {shown && (
@@ -935,7 +916,7 @@ export function RoiWorkspace({
                   <button
                     type="button"
                     id={TRIGGER_ID}
-                    className={`btn btn-secondary ${w.trigger}`}
+                    className={`btn btn-secondary btn-sm ${w.trigger}`}
                     aria-haspopup="dialog"
                     aria-expanded={whatIfOpen}
                     data-active={simulating || undefined}
@@ -950,7 +931,7 @@ export function RoiWorkspace({
                     )}
                   </button>
                   <a
-                    className="btn btn-secondary"
+                    className="btn btn-secondary btn-sm"
                     href={editHref()}
                     onClick={(event) => {
                       if (!dirty) return;
@@ -964,7 +945,13 @@ export function RoiWorkspace({
                   <details className={`${styles.menu} ${styles.saveMenu}`}>
                     <summary aria-label="Save analysis">
                       <BookmarkIcon />
-                      {saving ? 'Saving...' : 'Save analysis'}
+                      {saving ? (
+                        'Saving...'
+                      ) : (
+                        <span>
+                          Save<span className={styles.phoneOnlyText}> analysis</span>
+                        </span>
+                      )}
                     </summary>
                     <div role="group" aria-label="Save analysis options">
                       <button disabled={saving || conflict} onClick={() => save('DRAFT')}>
@@ -978,7 +965,7 @@ export function RoiWorkspace({
                 </>
               )}
               <details
-                className={styles.menu}
+                className={`${styles.menu} ${styles.moreMenu}`}
                 ref={menu}
                 onKeyDown={(event) => {
                   if (event.key !== 'Escape' || !menu.current?.open) return;
@@ -986,7 +973,9 @@ export function RoiWorkspace({
                   menu.current.querySelector('summary')?.focus();
                 }}
               >
-                <summary aria-label="More actions">More</summary>
+                <summary aria-label="More actions" title="More actions">
+                  <MoreIcon />
+                </summary>
                 <div role="group" aria-label="More actions">
                   {payload && !loading && (
                     <>
@@ -1011,23 +1000,7 @@ export function RoiWorkspace({
         </div>
         {!selection.ok && <p role="alert">{failure(selection.code)}</p>}
         {!shown ? (
-          <>
-            <PropertySelector properties={properties} onSelect={choose} />
-            <section className={styles.card}>
-              <h2>What you’ll need</h2>
-              <p>
-                Saved property details fill your new ROI analysis automatically. Purchase and loan
-                terms, whole-property rent, operating budgets, reserves and growth assumptions
-                support the calculation. Add or change them in the property’s ROI assumptions;
-                Returns &amp; ROI links straight there.
-              </p>
-              <p>
-                Actual results come from the rent payments and expenses you record. Open a property
-                and choose <strong>Actual vs projected</strong> to compare them for any period, or
-                see every property in <a href="/returns">Portfolio returns</a>.
-              </p>
-            </section>
-          </>
+          <PropertySelector properties={properties} onSelect={choose} />
         ) : (
           <>
             <p className={styles.srOnly} role="status">
@@ -1036,7 +1009,6 @@ export function RoiWorkspace({
             {loading || opening ? (
               <section className={`${styles.card} ${styles.loadingCard}`} role="status">
                 <h2>Loading analysis…</h2>
-                <p>Saved assumptions, projections and recorded actuals for this property.</p>
                 <div className={styles.skeleton} aria-hidden="true">
                   <span />
                   <span />
@@ -1101,7 +1073,7 @@ export function RoiWorkspace({
                   </div>
                   <div className={styles.viewSelects}>
                     <label className={`field ${styles.viewSelect}`}>
-                      Scope
+                      <span className={styles.srOnly}>Scope</span>
                       <select
                         value=""
                         onChange={(event) => {
@@ -1121,12 +1093,11 @@ export function RoiWorkspace({
                         ))}
                       </select>
                       <span id="roi-scope-note" className={styles.srOnly}>
-                        Projections cover the whole property. Choosing a unit opens its recorded
-                        returns.
+                        Projections cover the whole property. A unit opens its recorded returns.
                       </span>
                     </label>
                     <label className={`field ${styles.viewSelect} ${styles.phoneOnly}`}>
-                      View
+                      <span className={styles.srOnly}>View</span>
                       <select value={view} onChange={(event) => changeView(event.target.value)}>
                         {SECTIONS.map((section) => (
                           <option key={section.id} value={section.id}>
@@ -1277,9 +1248,8 @@ export function RoiWorkspace({
                             <h2>No projection yet</h2>
                             <p>
                               {baselineErrors.length
-                                ? 'Complete the assumptions listed above to see projected returns. Nothing is estimated for missing inputs.'
-                                : 'Review the highlighted entries to calculate projected returns.'}{' '}
-                              Recorded actuals below are unaffected.
+                                ? 'Complete the assumptions to see projected returns.'
+                                : 'Fix the highlighted entries to see projected returns.'}
                             </p>
                           </section>
                         )}
@@ -1290,16 +1260,6 @@ export function RoiWorkspace({
                             payload={shownPayload}
                             baseline={simulated ? result : null}
                             onCompare={() => changeView('actual')}
-                            howHref="#roi-how"
-                            onHow={(event) => {
-                              event.preventDefault();
-                              const how = document.getElementById('roi-how');
-                              if (how instanceof HTMLDetailsElement) {
-                                how.open = true;
-                                how.scrollIntoView?.({ block: 'start' });
-                                how.querySelector('summary')?.focus();
-                              }
-                            }}
                           />
                         )}
                         <div className={styles.twoOne}>
@@ -1314,7 +1274,6 @@ export function RoiWorkspace({
                           stale={stale}
                           window={range}
                           choice={period}
-                          projectionBasis={projectionBasis}
                           onPeriod={changePeriod}
                           onOpen={() => changeView('actual')}
                         />
@@ -1322,118 +1281,100 @@ export function RoiWorkspace({
                           <EstimatesPanel state={actuals} />
                           {shownResult ? <SummaryMilestones result={shownResult} /> : null}
                         </div>
-                        <OptionalInputs
-                          values={values}
-                          demoPaths={demoFields.map((f) => f.path)}
-                          editHref={editHref()}
-                          onEdit={(event) => {
-                            if (!dirty) return;
-                            event.preventDefault();
-                            editAssumptions();
-                          }}
-                          onTax={() => {
-                            changeView('summary');
-                            setTimeout(() => {
-                              const tax = Array.from(
-                                document.querySelectorAll<HTMLElement>(
-                                  '#roi-section-panel-summary summary',
-                                ),
-                              ).find((s) => /^Optional tax estimate/.test(s.textContent ?? ''));
-                              if (tax?.parentElement instanceof HTMLDetailsElement)
-                                tax.parentElement.open = true;
-                              tax?.focus();
-                            }, 0);
-                          }}
-                        />
-                        <HowCalculated id="roi-how" />
-                        <section className={`${styles.card} ${styles.details}`}>
-                          <h2>Analysis details</h2>
+                        <section
+                          className={`${styles.card} ${styles.details}`}
+                          aria-labelledby="roi-details-title"
+                        >
+                          <h2 id="roi-details-title">Details</h2>
+                          <OptionalInputs
+                            values={values}
+                            demoPaths={demoFields.map((f) => f.path)}
+                            editHref={editHref()}
+                            onEdit={(event) => {
+                              if (!dirty) return;
+                              event.preventDefault();
+                              editAssumptions();
+                            }}
+                          />
                           {shownResult && (
-                            <MoreDetail
-                              summary={`Advanced metrics & warnings${simulated ? ' · what if' : ''}`}
-                            >
-                              <dl className={styles.statement}>
-                                <div>
-                                  <dt>
-                                    NPV - discount {percent(shownResult.assumptions.discountRate)}
-                                  </dt>
-                                  <dd>{money(metrics?.npv)}</dd>
-                                </div>
-                                <div>
-                                  <dt>Debt coverage (DSCR)</dt>
-                                  <dd>{metrics?.dscr?.toFixed(2) ?? 'Unavailable'}</dd>
-                                </div>
-                                <div>
-                                  <dt>After-tax IRR - simplified estimate</dt>
-                                  <dd>{percent(metrics?.afterTaxIrr)}</dd>
-                                </div>
-                              </dl>
-                              {shownResult.warnings.map((warning, i) => (
-                                <p key={i}>{warning.message}</p>
-                              ))}
-                            </MoreDetail>
+                            <details className="disclosure plain">
+                              <summary>Advanced metrics{simulated ? ' · what if' : ''}</summary>
+                              <div className="disclosure-body">
+                                <dl className={styles.statement}>
+                                  <div>
+                                    <dt>NPV at {percent(shownResult.assumptions.discountRate)}</dt>
+                                    <dd>{money(metrics?.npv)}</dd>
+                                  </div>
+                                  <div>
+                                    <dt>After-tax IRR</dt>
+                                    <dd>{percent(metrics?.afterTaxIrr)}</dd>
+                                  </div>
+                                </dl>
+                                {shownResult.warnings.map((warning, i) => (
+                                  <p key={i}>{warning.message}</p>
+                                ))}
+                              </div>
+                            </details>
                           )}
-                          <MoreDetail summary={`Optional tax estimate${tax ? ' · on' : ''}`}>
-                            <p>
-                              Tax assumptions belong to this analysis and are saved with it. Leave
-                              them off for before-tax results.
-                            </p>
-                            <fieldset disabled={saving}>
-                              <label className={styles.check}>
-                                <input
-                                  type="checkbox"
-                                  checked={tax}
-                                  onChange={(e) => {
-                                    setTax(e.target.checked);
-                                    setDirty(true);
-                                    setErrors([]);
-                                    setCalculationVersion((v) => v + 1);
-                                  }}
-                                />
-                                Include explicit tax assumptions
-                              </label>
-                              {tax && (
-                                <div className={styles.fields}>{taxFields.map(renderField)}</div>
-                              )}
-                            </fieldset>
-                          </MoreDetail>
+                          <details className="disclosure plain">
+                            <summary>Optional tax estimate{tax ? ' · on' : ''}</summary>
+                            <div className="disclosure-body">
+                              <fieldset disabled={saving}>
+                                <label className={styles.check}>
+                                  <input
+                                    type="checkbox"
+                                    checked={tax}
+                                    onChange={(e) => {
+                                      setTax(e.target.checked);
+                                      setDirty(true);
+                                      setErrors([]);
+                                      setCalculationVersion((v) => v + 1);
+                                    }}
+                                  />
+                                  Include explicit tax assumptions
+                                </label>
+                                {tax && (
+                                  <div className={styles.fields}>{taxFields.map(renderField)}</div>
+                                )}
+                              </fieldset>
+                            </div>
+                          </details>
                           {facts && (
-                            <MoreDetail summary="Recorded source facts">
-                              <dl className={styles.statement}>
-                                <div>
-                                  <dt>Recorded annual debt service</dt>
-                                  <dd>{money(facts.annualDebtService)}</dd>
-                                </div>
-                                <div>
-                                  <dt>Recorded down payment</dt>
-                                  <dd>{money(facts.downPayment)}</dd>
-                                </div>
-                                <div>
-                                  <dt>Scheduled monthly lease rent</dt>
-                                  <dd>{money(facts.scheduledMonthlyRent)}</dd>
-                                </div>
-                                <div>
-                                  <dt>Dated expense observations</dt>
-                                  <dd>
-                                    {facts.expenses.length}
-                                    {facts.expenseHistoryTruncated ? ' (history truncated)' : ''}
-                                  </dd>
-                                </div>
-                              </dl>
-                              <p>
-                                The forecast uses the loan terms you enter, and dated expenses are
-                                not annual budgets.
-                              </p>
-                              <ul className={styles.sources}>
-                                {payload.evidence
-                                  .filter((e) => e.source !== 'manager')
-                                  .map((e, i) => (
-                                    <li key={i}>
-                                      <strong>{fieldLabel(e.path)}</strong> - {e.source} - {e.note}
-                                    </li>
-                                  ))}
-                              </ul>
-                            </MoreDetail>
+                            <details className="disclosure plain">
+                              <summary>Recorded source facts</summary>
+                              <div className="disclosure-body">
+                                <dl className={styles.statement}>
+                                  <div>
+                                    <dt>Annual debt service</dt>
+                                    <dd>{money(facts.annualDebtService)}</dd>
+                                  </div>
+                                  <div>
+                                    <dt>Down payment</dt>
+                                    <dd>{money(facts.downPayment)}</dd>
+                                  </div>
+                                  <div>
+                                    <dt>Scheduled lease rent / month</dt>
+                                    <dd>{money(facts.scheduledMonthlyRent)}</dd>
+                                  </div>
+                                  <div>
+                                    <dt>Dated expenses</dt>
+                                    <dd>
+                                      {facts.expenses.length}
+                                      {facts.expenseHistoryTruncated ? ' (history truncated)' : ''}
+                                    </dd>
+                                  </div>
+                                </dl>
+                                {sources.length > 0 && (
+                                  <ul className={styles.sources} aria-label="Assumption sources">
+                                    {sources.map((s) => (
+                                      <li key={s.key}>
+                                        <strong>{s.label}</strong> · {s.source}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            </details>
                           )}
                         </section>
                         {vacantUnit && (
@@ -1441,36 +1382,9 @@ export function RoiWorkspace({
                             className={styles.vacantLink}
                             href={buildCompsHref(rentAnalysisContext(selected, vacantUnit.id))}
                           >
-                            Unit {vacantUnit.number} is vacant · check its rent in Rent analysis →
+                            Unit {vacantUnit.number} is vacant · check its rent →
                           </a>
                         )}
-                        <nav className={styles.deeper} aria-label="Explore analysis">
-                          <button onClick={() => changeView('actual')}>
-                            Actual vs projected →
-                          </button>
-                          <button
-                            onClick={() => {
-                              changeView('compare');
-                              setTimeout(
-                                () =>
-                                  document
-                                    .getElementById('roi-saved-cases')
-                                    ?.scrollIntoView?.({ block: 'start' }),
-                                0,
-                              );
-                            }}
-                          >
-                            Compare saved cases →
-                          </button>
-                          <button
-                            onClick={() => {
-                              changeView('charts');
-                              changeChart('exit');
-                            }}
-                          >
-                            Exit analysis →
-                          </button>
-                        </nav>
                       </div>
                     </div>
                   </div>
@@ -1531,7 +1445,7 @@ export function RoiWorkspace({
         >
           <div className={styles.card}>
             <h2>Keep your changes?</h2>
-            <p>Save a draft before leaving, or discard these edits and load the saved workspace.</p>
+            <p>Save a draft first, or discard your edits.</p>
             <p role="status">{message}</p>
             {!!localErrors.length && (
               <button

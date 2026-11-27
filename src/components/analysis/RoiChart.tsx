@@ -2,16 +2,14 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import {
-  fixedDomainScale,
+  axisDollars,
   horizonChoices,
   miniBarWidth,
   monotonePath,
   niceScale,
-  referenceScale,
   referenceTickIndexes,
   segments,
   stackExtents,
-  thousands,
   wholeDollars,
   xTickIndexes,
   type ChartValue,
@@ -83,11 +81,18 @@ export function Statement({ rows }: { rows: [string, ReactNode][] }) {
 }
 
 /**
- * Series colours from the app tokens in `src/styles/globals.css` (primary, accent/ok,
- * danger, coral, navy, muted). SVG attributes cannot read CSS variables, so the
- * values are repeated here. Bars get a darker outline for 3:1 edges.
+ * Colours from `src/styles/globals.css`. SVG attributes cannot read CSS variables, so the
+ * values are repeated here. Charts use the `--chart-*` palette in its fixed order; the app
+ * tokens below it stay for other panels.
  */
 export const chartColors = {
+  indigo: '#3e4fe5', // --chart-1
+  teal: '#0e9384', // --chart-2
+  orange: '#d9732f', // --chart-3
+  violet: '#a855c7', // --chart-4
+  negative: '#b4233f', // --chart-negative
+  grid: '#eceff4', // --chart-grid
+  axis: '#6b778a', // --chart-axis
   primary: '#3e4fe5', // --design-primary
   primaryDark: '#2c39b3', // --rr-primary-active
   primaryMid: '#6383e6',
@@ -106,43 +111,52 @@ export const chartColors = {
   warm: '#cf8a68', // --rr-warm
   plum: '#9d174d',
 } as const;
-/** Line colours for multi-series charts; each passes 3:1 against white. */
+/** The categorical order for series that have no entity colour of their own. */
 export const seriesPalette = [
-  chartColors.primaryDark,
-  chartColors.muted,
-  chartColors.warn,
-  chartColors.plum,
+  chartColors.indigo,
+  chartColors.teal,
+  chartColors.orange,
+  chartColors.violet,
 ];
 
-const outline: Record<string, string> = {
-  [chartColors.primary]: chartColors.primaryDark,
-  [chartColors.bad]: '#8f1c31',
-  [chartColors.primaryLight]: chartColors.primaryMid,
-  [chartColors.border]: '#c5cfdc',
-};
+/**
+ * One colour per entity across every ROI chart: cash flow is always indigo, principal teal,
+ * interest orange, appreciation violet; loan balances are a neutral context line, and running
+ * totals a dark neutral line so they never pass for another series.
+ */
+export const entityColors = {
+  cashFlow: chartColors.indigo,
+  cumulative: chartColors.ink,
+  principal: chartColors.teal,
+  interest: chartColors.orange,
+  appreciation: chartColors.violet,
+  balance: chartColors.mutedMid,
+  purchaseEquity: '#cdd3dd',
+  propertyValue: chartColors.indigo,
+  income: chartColors.violet,
+  noi: chartColors.teal,
+  debtService: chartColors.orange,
+  netProceeds: chartColors.teal,
+  expenses: chartColors.indigo,
+  reserves: chartColors.teal,
+  negative: chartColors.negative,
+} as const;
 
 export type ChartSeries = {
   label: string;
   values: ChartValue[];
   color: string;
   kind?: 'bar' | 'line';
-  dashed?: boolean;
   /** Bars with `stack` share one column: positive parts up, negative parts down. */
   stack?: boolean;
   /** Bar colour for negative values; the legend then names negative years. */
   negativeColor?: string;
-  /** Bar outline; defaults to a darker shade of known palette colours. */
-  stroke?: string;
   opacity?: number;
-  /** Line width (default 2.5) and dot radius (default 2.5; 0 hides dots). */
+  /** Line width (default 2) and dot radius (default 0: dots only on the active year). */
   width?: number;
   dot?: number;
-  dash?: string;
   /** Leave the series out of the legend (a custom legend names it). */
   hideLegend?: boolean;
-  /** Fill and outline of the emphasised (selected) bar. */
-  activeColor?: string;
-  activeStroke?: string;
   /** Per-index bar fills (one bar per asset, coloured by asset). */
   colors?: string[];
 };
@@ -150,25 +164,25 @@ export type ChartSeries = {
 export type ChartMarker = {
   index: number;
   label: string;
+  /** Fill of the reference dot. */
   color?: string;
-  /** Draw a 6 px reference dot at this value on the marker line. */
+  /** Draw a reference dot at this value on the marker line. */
   dot?: number;
-  /** `end` puts the label left of the line (Recharts `insideTopRight`); `center` above it. */
+  /** `end` puts the label left of the line; `center` above it. */
   align?: 'start' | 'end' | 'center';
 };
-export type ChartBand = { from: number; to: number; color: string; opacity?: number };
-/** Fill between two series: the 0.4 → 0.1 gradient, or a flat fill at `opacity`. */
+/** Fill between two series: a soft gradient, or a flat fill at `opacity`. */
 export type ChartArea = {
   upper: ChartValue[];
   lower: ChartValue[];
   color: string;
   opacity?: number;
 };
-/** Horizontal reference line (e.g. "Initial: $102,000"), labelled at the right end. */
-export type ChartRefLine = { value: number; label: string; color: string; dash?: string };
+/** Dashed horizontal reference line (e.g. "Initial: $102,000"), labelled at the right end. */
+export type ChartRefLine = { value: number; label: string; color?: string };
 export type LegendItem = {
   label: string;
-  kind: 'bar' | 'line' | 'dashed' | 'band' | 'area' | 'dotLine';
+  kind: 'bar' | 'line' | 'area' | 'dashed';
   color: string;
 };
 type Sign = '−' | '+' | '=';
@@ -181,9 +195,8 @@ export type TipRow =
       op?: Sign;
       /** A dollar amount on an indexed chart. */
       money?: boolean;
-      tone?: 'auto' | 'teal' | 'red' | 'muted';
-      /** Explicit value colour (e.g. the amortization series colours). */
-      color?: string;
+      /** `auto` and `red` colour negative values; `muted` dims a deducted line. */
+      tone?: 'auto' | 'red' | 'muted';
       total?: boolean;
       swatch?: { color: string; kind?: 'bar' | 'line' };
     }
@@ -192,14 +205,13 @@ export type TipRow =
 export type ChartTip = { title: string; rows: TipRow[] };
 
 /**
- * App card with a bordered header: title, one plain-language subtitle, basis tags and
- * right-aligned controls. `basis` names what the figures are (projected or recorded,
- * unit, period, tax) as short tags, so subtitles stay one readable sentence.
+ * App card for a chart: a sentence-case title, an optional short subtitle and one quiet tag,
+ * with the controls on the right.
  */
 export function ChartCard({
   title,
   subtitle,
-  basis,
+  tag,
   controls,
   children,
   className,
@@ -207,7 +219,8 @@ export function ChartCard({
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
-  basis?: string[];
+  /** One quiet marker beside the title, such as "Hypothetical" or "Custom ranges". */
+  tag?: string;
   controls?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -218,9 +231,11 @@ export function ChartCard({
     <section className={`${styles.card} ${c.card} ${className ?? ''}`} aria-label={label}>
       <header className={c.head}>
         <div>
-          <h2>{title}</h2>
+          <div className={c.title}>
+            <h2>{title}</h2>
+            {tag && <span className={c.tag}>{tag}</span>}
+          </div>
           {subtitle && <p>{subtitle}</p>}
-          {!!basis?.length && <Basis items={basis} />}
         </div>
         {controls && <div className={c.controls}>{controls}</div>}
       </header>
@@ -329,43 +344,29 @@ export function InfoTip({ label, children }: { label: string; children: ReactNod
   );
 }
 
-/** Semantic tones: `teal` = positive/ok, `red` = negative, `amber` = caution (app tokens). */
-type Tone = 'teal' | 'tealSoft' | 'slate' | 'red' | 'amber' | 'blue' | 'muted' | 'card';
-
-/** Metric tiles in the app KPI style: muted label over a Outfit value. */
+/** A row of figures above a chart: muted label over the value, no boxes. */
 export function Tiles({
   items,
-  size = 'lg',
 }: {
   items: {
     label: string;
     value: ReactNode;
     note?: ReactNode;
-    /** `card` is the bordered white KPI card of the amortization schedule. */
-    tone?: Tone;
     info?: ReactNode;
-    /** Value colour when it differs from the tone (e.g. a red loss on a teal tile). */
-    valueTone?: 'teal' | 'red' | 'slate' | 'green' | 'amber';
-    /** Small icon chip before the label. */
-    icon?: { name: IconName; tone?: 'slate' | 'teal' | 'amber' };
+    /** A loss or shortfall: the value turns red. */
+    negative?: boolean;
   }[];
-  size?: 'lg' | 'sm';
 }) {
   return (
-    <dl className={c.tiles} data-size={size}>
+    <dl className={c.tiles}>
       {items.map((item) => (
-        <div key={item.label} data-tone={item.tone ?? 'teal'}>
+        <div key={item.label}>
           <dt>
-            {item.icon && (
-              <span className={c.iconChip} data-tone={item.icon.tone ?? 'slate'} aria-hidden="true">
-                <Icon name={item.icon.name} size={12} />
-              </span>
-            )}
             {item.label}
             {item.info && <InfoTip label={item.label}>{item.info}</InfoTip>}
           </dt>
           <dd>
-            <strong data-tone={item.valueTone}>{item.value}</strong>
+            <strong data-negative={item.negative || undefined}>{item.value}</strong>
             {item.note && <small>{item.note}</small>}
           </dd>
         </div>
@@ -392,14 +393,8 @@ export function Check({
   );
 }
 
-/** Figure inside prose (Insight rows), in the ok or bad tone. */
-export function Figure({
-  children,
-  tone = 'teal',
-}: {
-  children: ReactNode;
-  tone?: 'teal' | 'red';
-}) {
+/** The key number inside a takeaway sentence; red for a loss. */
+export function Figure({ children, tone }: { children: ReactNode; tone?: 'red' }) {
   return (
     <b className={c.figure} data-tone={tone}>
       {children}
@@ -407,13 +402,9 @@ export function Figure({
   );
 }
 
-/** Plain-language reading of the chart, led by "Insight:". */
+/** One quiet sentence under a chart: the takeaway, or the landmark that matters. */
 export function Insight({ children }: { children: ReactNode }) {
-  return (
-    <p className={c.insight}>
-      <strong>Insight:</strong> {children}
-    </p>
-  );
+  return <p className={c.insight}>{children}</p>;
 }
 
 type HorizonValue = number | 'custom';
@@ -471,13 +462,6 @@ export function useHorizon(length: number, label: string, preferred = 30) {
 
 /** Lucide icon outlines used on the chart cards. */
 const iconPaths = {
-  target: (
-    <>
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="6" />
-      <circle cx="12" cy="12" r="2" />
-    </>
-  ),
   down: (
     <>
       <path d="M22 17 13.5 8.5 8.5 13.5 2 7" />
@@ -490,49 +474,11 @@ const iconPaths = {
       <path d="M16 7h6v6" />
     </>
   ),
-  zap: (
-    <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" />
-  ),
-  dollar: (
-    <>
-      <path d="M12 2v20" />
-      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-    </>
-  ),
-  clock: (
-    <>
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 6v6l4 2" />
-    </>
-  ),
-  calendar: (
-    <>
-      <rect width="18" height="18" x="3" y="4" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </>
-  ),
-  percent: (
-    <>
-      <path d="M19 5 5 19" />
-      <circle cx="6.5" cy="6.5" r="2.5" />
-      <circle cx="17.5" cy="17.5" r="2.5" />
-    </>
-  ),
-  piggy: (
-    <>
-      <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z" />
-      <path d="M2 9v1c0 1.1.9 2 2 2h1" />
-      <path d="M16 11h.01" />
-    </>
-  ),
   eye: (
     <>
       <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
       <circle cx="12" cy="12" r="3" />
     </>
-  ),
-  sparkles: (
-    <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
   ),
   settings: (
     <>
@@ -549,12 +495,6 @@ const iconPaths = {
   ),
   chevronDown: <path d="m6 9 6 6 6-6" />,
   chevronRight: <path d="m9 18 6-6-6-6" />,
-  pie: (
-    <>
-      <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
-      <path d="M22 12A10 10 0 0 0 12 2v10z" />
-    </>
-  ),
 };
 export type IconName = keyof typeof iconPaths;
 
@@ -571,60 +511,6 @@ export function Icon({ name, size = 14 }: { name: IconName; size?: number }) {
         {iconPaths[name]}
       </g>
     </svg>
-  );
-}
-
-/**
- * Landmark chips summarising the chart in words, with a lucide-style icon or a dot.
- * Chips with `onClick` are toggle buttons (the Exit "Best IRR" chips).
- */
-export function Chips({
-  items,
-  size,
-  label,
-}: {
-  items: {
-    text: ReactNode;
-    tone?: Tone;
-    icon?: IconName;
-    info?: ReactNode;
-    infoLabel?: string;
-    onClick?: () => void;
-    pressed?: boolean;
-  }[];
-  /** `sm` is the 10 px bordered chip of the amortization milestones. */
-  size?: 'sm';
-  label?: string;
-}) {
-  if (!items.length) return null;
-  return (
-    <ul className={c.chips} data-size={size} aria-label={label}>
-      {items.map((item, index) => {
-        const body = (
-          <>
-            {item.icon && <Icon name={item.icon} size={size === 'sm' ? 12 : 14} />}
-            {item.text}
-          </>
-        );
-        return (
-          <li
-            key={index}
-            data-tone={item.tone ?? 'slate'}
-            data-icon={item.icon ? true : undefined}
-            data-button={item.onClick ? true : undefined}
-          >
-            {item.onClick ? (
-              <button type="button" aria-pressed={!!item.pressed} onClick={item.onClick}>
-                {body}
-              </button>
-            ) : (
-              body
-            )}
-            {item.info && <InfoTip label={item.infoLabel ?? 'this landmark'}>{item.info}</InfoTip>}
-          </li>
-        );
-      })}
-    </ul>
   );
 }
 
@@ -728,27 +614,30 @@ export function Donut({
   );
 }
 
-/** A bar from `base` to `end` with the far end rounded (both ends with `both`). */
-function barPath(x: number, w: number, base: number, end: number, r: number, both: boolean) {
+/** A bar from `base` to `end`: the data end is rounded, the baseline end stays square. */
+function barPath(x: number, w: number, base: number, end: number, r: number) {
   const top = Math.min(base, end);
   const bottom = Math.max(top + 1, Math.max(base, end));
-  const rr = Math.max(0, Math.min(r, w / 2, (bottom - top) / (both ? 2 : 1)));
+  const rr = Math.max(0, Math.min(r, w / 2, bottom - top));
   const upward = end <= base;
-  const t = upward || both ? rr : 0;
-  const b = !upward || both ? rr : 0;
+  const t = upward ? rr : 0;
+  const b = upward ? 0 : rr;
   return (
     `M${x},${top + t}Q${x},${top} ${x + t},${top}H${x + w - t}Q${x + w},${top} ${x + w},${top + t}` +
     `V${bottom - b}Q${x + w},${bottom} ${x + w - b},${bottom}H${x + b}Q${x},${bottom} ${x},${bottom - b}Z`
   );
 }
 
-const kindOf = (s: ChartSeries): LegendItem['kind'] =>
-  s.kind === 'bar' ? 'bar' : s.dashed ? 'dashed' : 'line';
+/** Surface gap between touching bars and stacked segments, in px. */
+const GAP = 2;
+/** Widest bar, in px. */
+const BAR_MAX = 28;
 
 /**
- * Bars, lines, bands and areas on one shared zero baseline, in the app chart style
- * (horizontal grid, monotone lines, rounded bar ends, equation tooltips). Hover, touch or arrow keys read a year; the live region
- * reads exact values, and `null` values leave a gap that reads "Unavailable".
+ * Bars and lines on one zero baseline in the shared chart style: thin bars with rounded data
+ * ends, 2 px lines, a hairline grid with rounded ticks and a hover card. Hover, touch or arrow
+ * keys read a year; the live region reads exact values, and `null` values leave a gap that
+ * reads "Unavailable".
  */
 export function ComboChart({
   label,
@@ -757,16 +646,12 @@ export function ComboChart({
   unit = 'USD',
   height,
   markers = [],
-  bands = [],
   areas = [],
   details,
   tooltip,
   legend,
   xLabel = 'Year',
-  axisTitle,
-  axes,
   xFormat = String,
-  barRadius = 'top',
   format,
   refLines = [],
   emphasis = null,
@@ -774,7 +659,6 @@ export function ComboChart({
   onSelect,
   xTicks,
   tickFormat,
-  domainMax,
 }: {
   label: string;
   years: (number | string)[];
@@ -783,27 +667,20 @@ export function ComboChart({
   unit?: 'USD' | 'Index' | 'Percent';
   height?: number;
   markers?: ChartMarker[];
-  /** Shaded x ranges (inclusive indexes), such as pre- and post-breakeven. */
-  bands?: ChartBand[];
-  /** Gradient fill between two series (e.g. value over loan = equity). */
+  /** Soft fill between two series (e.g. value over loan = equity). */
   areas?: ChartArea[];
   /** Extra tooltip rows for the active index, such as an equity equation. */
   details?: (index: number) => [string, string][];
-  /** Full reference-style tooltip for an index; replaces the series rows. */
+  /** Full tooltip for an index; replaces the series rows. */
   tooltip?: (index: number) => ChartTip;
-  /** Legend override in the reference order. */
+  /** Legend override; an empty list leaves the naming to a legend outside the chart. */
   legend?: LegendItem[];
   xLabel?: string;
-  /** Optional x-axis title beside the year labels (the reference has none). */
-  axisTitle?: string;
-  /** Rotated y-axis titles; `right` mirrors the shared domain on a right axis. */
-  axes?: { left?: string; right?: string; leftColor?: string; rightColor?: string };
   xFormat?: (year: number | string) => string;
-  barRadius?: 'top' | 'all';
   /** Exact formatter matching the adjacent table; defaults to cents or 4-dp index. */
   format?: (value: number) => string;
   refLines?: ChartRefLine[];
-  /** Index whose bars are emphasised; the other bars drop to half opacity. */
+  /** Index whose bars are emphasised; the other bars fade. */
   emphasis?: number | null;
   /** Emphasise the hovered index too when nothing is selected. */
   emphasizeHover?: boolean;
@@ -811,10 +688,8 @@ export function ComboChart({
   onSelect?: (index: number) => void;
   /** Year-label indexes when the chart has its own tick set. */
   xTicks?: number[];
-  /** Y tick text override (e.g. `10.5%`); defaults to `$Nk` or the index. */
+  /** Y tick text override (e.g. `10.5%`); defaults to compact dollars or the index. */
   tickFormat?: (value: number, step: number) => string;
-  /** Explicit `[0, max]` domain from the largest plotted value (C6's rule); auto otherwise. */
-  domainMax?: (largest: number) => number;
 }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(660);
@@ -838,7 +713,7 @@ export function ComboChart({
   }, []);
 
   const narrow = width < 480;
-  const h = height ?? (narrow ? 240 : 320);
+  const h = height ?? (narrow ? 220 : 260);
   const stacked = series.filter((s) => s.kind === 'bar' && s.stack);
   const loose = series.filter((s) => s.kind === 'bar' && !s.stack);
   const lines = series.filter((s) => s.kind !== 'bar');
@@ -851,48 +726,33 @@ export function ComboChart({
     ...extents.bottom,
     ...refLines.map((r) => r.value),
   ].filter((v): v is number => v != null && Number.isFinite(v));
-  const largest = Math.max(0, ...plotted);
-  // The reference's Recharts domains: automatic nice ticks, or an explicit [0, max] rule
-  // when it never clips the data. Ticks whose labels would repeat fall back to plain steps.
-  const fixedTop = domainMax && Math.min(0, ...plotted) >= 0 ? domainMax(largest) : 0;
-  const preferred =
-    fixedTop >= largest && fixedTop > 0 ? fixedDomainScale(0, fixedTop) : referenceScale(plotted);
-  const stepOf = (ticks: number[]) => (ticks.length > 1 ? ticks[1] - ticks[0] : 1);
-  const tickText = (v: number, s: number) =>
+  // Rounded steps (1, 2, 2.5 or 5 × 10^k) that always include zero, as in the shared ColumnChart.
+  const scale = niceScale(plotted, 5);
+  const step = scale.ticks.length > 1 ? scale.ticks[1] - scale.ticks[0] : 1;
+  const compact = Math.max(...scale.ticks.map((t) => Math.abs(t))) >= 10000;
+  const axis = (v: number) =>
     tickFormat
-      ? tickFormat(v, s)
+      ? tickFormat(v, step)
       : unit === 'USD'
-        ? thousands(v, s)
+        ? axisDollars(v, step, compact)
         : unit === 'Percent'
-          ? `${v.toFixed(s < 1 ? 1 : 0)}%`
-          : v.toFixed(0);
-  const distinct =
-    new Set(preferred.ticks.map((t) => tickText(t, stepOf(preferred.ticks)))).size ===
-    preferred.ticks.length;
-  const scale = distinct ? preferred : niceScale(plotted, 5);
-  const step = stepOf(scale.ticks);
-  const axis = (v: number) => tickText(v, step);
-  // Margins fit the widest tick label so rotated axis titles never overlap it.
-  // On desktop the label band is at least Recharts' default 60 px y-axis width, as in the reference.
-  const fitted = Math.max(...scale.ticks.map((t) => axis(t).length)) * (narrow ? 6 : 6.6) + 10;
-  const labelW = narrow ? fitted : Math.max(fitted, 60);
-  const m = {
-    top: 20,
-    right: axes?.right ? labelW + 22 : narrow ? 8 : 16,
-    bottom: 26,
-    left: labelW + (axes?.left ? 18 : 0),
-  };
+          ? `${v.toFixed(step < 1 ? 1 : 0)}%`
+          : v.toFixed(step < 1 ? 1 : 0);
+  const labelW = Math.max(...scale.ticks.map((t) => axis(t).length)) * (narrow ? 6.4 : 7);
+  const m = { top: 18, right: narrow ? 4 : 8, bottom: 28, left: Math.ceil(labelW) + 10 };
   const innerW = Math.max(1, width - m.left - m.right);
   const innerH = h - m.top - m.bottom;
   const band = innerW / Math.max(1, n);
   const cx = (i: number) => m.left + band * (i + 0.5);
   const y = (v: number) => m.top + innerH - ((v - scale.min) / (scale.max - scale.min)) * innerH;
   const groups = (stacked.length ? 1 : 0) + loose.length;
+  const slot = band * (groups > 1 ? 0.7 : 0.56);
   const barW = Math.max(
     2,
-    Math.min(n <= 5 ? 110 : 48, (band * (n <= 5 ? 0.8 : 0.78)) / Math.max(1, groups)),
+    Math.min(BAR_MAX, (slot - GAP * (groups - 1)) / Math.max(1, groups)),
   );
-  const groupX = (i: number, g: number) => cx(i) - (barW * groups) / 2 + g * barW;
+  const groupW = barW * groups + GAP * Math.max(0, groups - 1);
+  const groupX = (i: number, g: number) => cx(i) - groupW / 2 + g * (barW + GAP);
   const exact = (v: ChartValue | undefined) =>
     v == null || !Number.isFinite(v)
       ? 'Unavailable'
@@ -920,27 +780,27 @@ export function ComboChart({
   const fit = xTickIndexes(n, innerW, Math.max(narrow ? 34 : 40, longest * 7 + 8));
   const ticks = reference.length <= fit.length ? reference : fit;
   const emphasised = emphasis ?? (emphasizeHover ? active : null);
-  // Bar paint for one index: the emphasised bar darkens, the others fade.
-  const paint = (s: ChartSeries, i: number, fill: string) =>
-    emphasised == null
-      ? { fill, fillOpacity: s.opacity, stroke: s.stroke ?? outline[fill], style: undefined }
-      : i === emphasised
-        ? {
-            fill: s.activeColor ?? fill,
-            fillOpacity: s.opacity,
-            stroke: s.activeStroke ?? s.stroke ?? outline[fill],
-            style: { strokeWidth: 2 },
-          }
-        : {
-            fill,
-            fillOpacity: (s.opacity ?? 1) * 0.5,
-            stroke: s.stroke ?? outline[fill],
-            style: { strokeOpacity: 0.5 },
-          };
+  const fade = (i: number) => (emphasised != null && i !== emphasised ? 0.35 : 1);
   const hasGap = series.some((s) => s.values.slice(0, n).some((v) => v == null));
   const hasNegativeBar = series.some(
     (s) => s.kind === 'bar' && s.negativeColor && s.values.some((v) => v != null && v < 0),
   );
+  // Columns whose bars reach above a value: a reference label never sits on them.
+  const tallAt = (value: number) =>
+    years.flatMap((_, i) => {
+      const top = Math.max(
+        extents.top[i] ?? 0,
+        ...loose.map((s) => (Number.isFinite(s.values[i]) ? (s.values[i] as number) : 0)),
+      );
+      return groups && top > value ? [[groupX(i, 0) - 6, groupX(i, 0) + groupW + 6]] : [];
+    });
+  const refRight = (r: ChartRefLine) => {
+    const w = r.label.length * 6.6;
+    let right = width - m.right - 2;
+    for (const [from, to] of [...tallAt(r.value)].reverse())
+      if (right - w < to && right > from) right = from;
+    return Math.max(m.left + w, right);
+  };
 
   function pick(clientX: number, clientY: number) {
     const box = wrap.current?.querySelector('svg')?.getBoundingClientRect();
@@ -983,20 +843,38 @@ export function ComboChart({
   const legendItems: LegendItem[] = legend ?? [
     ...series
       .filter((s) => !s.hideLegend)
-      .map((s) => ({
-        label: s.label + (s.dashed ? ' (dashed)' : ''),
-        kind: kindOf(s),
-        color: s.color,
-      })),
+      .map(
+        (s): LegendItem => ({
+          label: s.label,
+          kind: s.kind === 'bar' ? 'bar' : 'line',
+          color: s.color,
+        }),
+      ),
     ...(hasNegativeBar
-      ? [{ label: 'Negative year', kind: 'bar' as const, color: chartColors.bad }]
+      ? [{ label: 'Negative year', kind: 'bar' as const, color: chartColors.negative }]
       : []),
   ];
-  const leftColor = axes?.leftColor ?? chartColors.mutedLight;
-  const rightColor = axes?.rightColor ?? chartColors.mutedLight;
+  // A legend names two or more things; a single series is named by the card title.
+  const showLegend = legendItems.length + (hasGap ? 1 : 0) >= 2;
 
   return (
     <div className={c.chart}>
+      {showLegend && (
+        <ul className={c.legend} aria-label={`${label} legend`}>
+          {legendItems.map((item) => (
+            <li key={item.label}>
+              <i data-kind={item.kind} style={{ color: item.color }} />
+              {item.label}
+            </li>
+          ))}
+          {hasGap && (
+            <li>
+              <i data-kind="gap" />
+              Gap = unavailable, not {unit === 'USD' ? '$0' : 'zero'}
+            </li>
+          )}
+        </ul>
+      )}
       <div
         ref={wrap}
         className={c.plot}
@@ -1059,46 +937,21 @@ export function ComboChart({
           <defs>
             {areas.map((a, k) => (
               <linearGradient key={k} id={`${id}-area-${k}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={a.color} stopOpacity={0.4} />
-                <stop offset="100%" stopColor={a.color} stopOpacity={0.1} />
+                <stop offset="0%" stopColor={a.color} stopOpacity={0.16} />
+                <stop offset="100%" stopColor={a.color} stopOpacity={0.04} />
               </linearGradient>
             ))}
           </defs>
-          {bands.map((b, k) => {
-            const from = Math.max(0, b.from);
-            const to = Math.min(n - 1, b.to);
-            if (to < from) return null;
-            return (
-              <rect
-                key={`band-${k}`}
-                x={m.left + band * from}
-                width={band * (to - from + 1)}
-                y={m.top}
-                height={innerH}
-                fill={b.color}
-                opacity={b.opacity ?? 0.06}
-              />
-            );
-          })}
           {active != null && (
             <rect
               className={c.hover}
-              x={cx(active) - band / 2}
+              x={cx(active) - band / 2 + 1}
               y={m.top}
-              width={band}
+              width={Math.max(0, band - 2)}
               height={innerH}
+              rx={6}
             />
           )}
-          {ticks.map((i) => (
-            <line
-              key={`v-${i}`}
-              className={c.vgrid}
-              x1={cx(i)}
-              x2={cx(i)}
-              y1={m.top}
-              y2={m.top + innerH}
-            />
-          ))}
           {scale.ticks.map((tick) => (
             <g key={tick} className={c.grid}>
               <line
@@ -1106,79 +959,13 @@ export function ComboChart({
                 x2={width - m.right}
                 y1={y(tick)}
                 y2={y(tick)}
-                strokeDasharray={tick === 0 ? undefined : '3 3'}
                 data-zero={tick === 0 || undefined}
               />
-              <text
-                x={m.left - 8}
-                y={y(tick) + 4}
-                textAnchor="end"
-                style={{ fill: axes?.leftColor }}
-              >
+              <text x={m.left - 8} y={y(tick) + 4} textAnchor="end">
                 {axis(tick)}
               </text>
-              {axes?.right && (
-                <text
-                  x={width - m.right + 8}
-                  y={y(tick) + 4}
-                  textAnchor="start"
-                  style={{ fill: rightColor }}
-                >
-                  {axis(tick)}
-                </text>
-              )}
             </g>
           ))}
-          <line
-            className={c.axis}
-            x1={m.left}
-            x2={m.left}
-            y1={m.top}
-            y2={m.top + innerH}
-            style={{ stroke: leftColor }}
-          />
-          {axes?.right && (
-            <line
-              className={c.axis}
-              x1={width - m.right}
-              x2={width - m.right}
-              y1={m.top}
-              y2={m.top + innerH}
-              style={{ stroke: rightColor }}
-            />
-          )}
-          <line
-            className={c.axis}
-            x1={m.left}
-            x2={width - m.right}
-            y1={m.top + innerH}
-            y2={m.top + innerH}
-          />
-          {axes?.left && (
-            <text
-              className={c.ytitle}
-              transform={`translate(12 ${m.top + innerH / 2}) rotate(-90)`}
-              textAnchor="middle"
-              style={{ fill: leftColor }}
-            >
-              {axes.left}
-            </text>
-          )}
-          {axes?.right && (
-            <text
-              className={c.ytitle}
-              transform={`translate(${width - 12} ${m.top + innerH / 2}) rotate(90)`}
-              textAnchor="middle"
-              style={{ fill: rightColor }}
-            >
-              {axes.right}
-            </text>
-          )}
-          {axisTitle && (
-            <text className={c.xtitle} x={m.left - 8} y={h - 6} textAnchor="end">
-              {axisTitle}
-            </text>
-          )}
           {ticks.map((i) => {
             const text = xFormat(years[i]);
             // Long edge labels ("Year 30") are anchored inside the chart, never clipped.
@@ -1189,7 +976,7 @@ export function ComboChart({
                 key={i}
                 className={c.xtick}
                 x={anchor === 'end' ? width - 1 : anchor === 'start' ? 1 : cx(i)}
-                y={h - 6}
+                y={h - 8}
                 textAnchor={anchor}
               >
                 {text}
@@ -1223,6 +1010,9 @@ export function ComboChart({
               years.map((_, i) => {
                 let up = 0;
                 let down = 0;
+                // Pixel edge of the last part drawn on each side of zero.
+                let upEdge: number | null = null;
+                let downEdge: number | null = null;
                 const parts = stacked.map((s) => s.values[i]);
                 const lastUp = parts.findLastIndex((v) => v != null && Number.isFinite(v) && v > 0);
                 const lastDown = parts.findLastIndex(
@@ -1231,10 +1021,20 @@ export function ComboChart({
                 return stacked.map((s, k) => {
                   const v = s.values[i];
                   if (v == null || !Number.isFinite(v) || v === 0) return null;
-                  const from = v >= 0 ? up : down;
+                  const from = v > 0 ? up : down;
                   const to = from + v;
-                  if (v >= 0) up = to;
-                  else down = to;
+                  const edge = v > 0 ? upEdge : downEdge;
+                  // Touching parts are separated by the surface gap, never by an outline.
+                  const base = edge == null ? y(from) : v > 0 ? edge - GAP : edge + GAP;
+                  const end = y(to);
+                  if (v > 0) {
+                    up = to;
+                    upEdge = end;
+                  } else {
+                    down = to;
+                    downEdge = end;
+                  }
+                  if (v > 0 ? end >= base : end <= base) return null;
                   const fill = v < 0 && s.negativeColor ? s.negativeColor : s.color;
                   return (
                     <path
@@ -1243,12 +1043,12 @@ export function ComboChart({
                       d={barPath(
                         groupX(i, 0),
                         barW,
-                        y(from),
-                        y(to),
+                        base,
+                        end,
                         k === (v > 0 ? lastUp : lastDown) ? 4 : 0,
-                        false,
                       )}
-                      {...paint(s, i, fill)}
+                      fill={fill}
+                      fillOpacity={(s.opacity ?? 1) * fade(i)}
                     />
                   );
                 });
@@ -1262,63 +1062,62 @@ export function ComboChart({
                   <path
                     key={`${s.label}-${i}`}
                     className={c.bar}
-                    d={barPath(
-                      groupX(i, g + (stacked.length ? 1 : 0)),
-                      barW,
-                      y(0),
-                      y(v),
-                      4,
-                      barRadius === 'all',
-                    )}
-                    {...paint(s, i, fill)}
+                    d={barPath(groupX(i, g + (stacked.length ? 1 : 0)), barW, y(0), y(v), 4)}
+                    fill={fill}
+                    fillOpacity={(s.opacity ?? 1) * fade(i)}
                   />
                 );
               }),
             )}
-            {lines.map((s) => (
-              <g key={s.label} opacity={s.opacity} className={c.series}>
-                {segments(s.values.slice(0, n)).map((run) => (
-                  <path
-                    key={run.start}
-                    d={monotonePath(
-                      run.values.map((v, k): [number, number] => [cx(run.start + k), y(v)]),
-                    )}
-                    fill="none"
-                    stroke={s.color}
-                    strokeWidth={s.width ?? 2.5}
-                    strokeLinejoin="round"
-                    strokeLinecap="round"
-                    strokeDasharray={s.dash ?? (s.dashed ? '6 4' : undefined)}
-                  />
-                ))}
-                {s.values
-                  .slice(0, n)
-                  .map((v, i) =>
-                    v == null || !Number.isFinite(v) || (!(s.dot ?? 2.5) && active !== i) ? null : (
+            {lines.map((s) => {
+              const has = (i: number) => {
+                const v = s.values[i];
+                return i >= 0 && i < n && v != null && Number.isFinite(v);
+              };
+              return (
+                <g key={s.label} opacity={s.opacity} className={c.series}>
+                  {segments(s.values.slice(0, n)).map((run) => (
+                    <path
+                      key={run.start}
+                      d={monotonePath(
+                        run.values.map((v, k): [number, number] => [cx(run.start + k), y(v)]),
+                      )}
+                      fill="none"
+                      stroke={s.color}
+                      strokeWidth={s.width ?? 2}
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                    />
+                  ))}
+                  {s.values.slice(0, n).map((v, i) => {
+                    if (!has(i)) return null;
+                    // The active year, and a year with no neighbour to join, get a ringed dot.
+                    const r =
+                      active === i ? 4.5 : s.dot ? s.dot : !has(i - 1) && !has(i + 1) ? 4 : 0;
+                    return r ? (
                       <circle
                         key={i}
                         cx={cx(i)}
-                        cy={y(v)}
-                        r={active === i ? 6 : (s.dot ?? 2.5)}
+                        cy={y(v as number)}
+                        r={r}
                         fill={s.color}
-                        stroke={active === i ? 'white' : undefined}
-                        strokeWidth={active === i ? 2 : undefined}
+                        stroke="#fff"
+                        strokeWidth={2}
                       />
-                    ),
-                  )}
-              </g>
-            ))}
+                    ) : null;
+                  })}
+                </g>
+              );
+            })}
           </g>
           {refLines.map((r) => (
-            <g key={`ref-${r.label}`} className={c.refLine} style={{ color: r.color }}>
-              <line
-                x1={m.left}
-                x2={width - m.right}
-                y1={y(r.value)}
-                y2={y(r.value)}
-                strokeDasharray={r.dash ?? '6 4'}
-              />
-              <text x={width - m.right - 4} y={y(r.value) - 6} textAnchor="end">
+            <g
+              key={`ref-${r.label}`}
+              className={c.refLine}
+              style={r.color ? { color: r.color } : undefined}
+            >
+              <line x1={m.left} x2={width - m.right} y1={y(r.value)} y2={y(r.value)} />
+              <text x={refRight(r)} y={y(r.value) - 6} textAnchor="end">
                 {r.label}
               </text>
             </g>
@@ -1329,15 +1128,14 @@ export function ComboChart({
               const x = cx(marker.index);
               const flip = marker.align === 'end' ? x - m.left > 90 : x > width - m.right - 90;
               return (
-                <g
-                  key={`${marker.index}-${marker.label}`}
-                  className={c.marker}
-                  style={{ color: marker.color }}
-                >
-                  <line x1={x} x2={x} y1={m.top} y2={m.top + innerH} />
+                <g key={`${marker.index}-${marker.label}`} className={c.marker}>
+                  {/* A label over its column needs no line through the bar. */}
+                  {marker.align !== 'center' && (
+                    <line x1={x} x2={x} y1={m.top} y2={m.top + innerH} />
+                  )}
                   {marker.label && (
                     <text
-                      x={marker.align === 'center' ? x : x + (flip ? -5 : 5)}
+                      x={marker.align === 'center' ? x : x + (flip ? -6 : 6)}
                       y={marker.align === 'center' ? m.top - 6 : m.top + 10}
                       textAnchor={marker.align === 'center' ? 'middle' : flip ? 'end' : 'start'}
                     >
@@ -1348,9 +1146,9 @@ export function ComboChart({
                     <circle
                       cx={x}
                       cy={y(marker.dot)}
-                      r={6}
-                      fill="currentColor"
-                      stroke="white"
+                      r={4.5}
+                      fill={marker.color ?? chartColors.ink}
+                      stroke="#fff"
                       strokeWidth={2}
                     />
                   )}
@@ -1392,13 +1190,13 @@ export function ComboChart({
                   </em>
                   <b
                     data-tone={
-                      row.tone === 'auto'
-                        ? row.value != null && row.value < 0
+                      row.tone === 'muted'
+                        ? 'muted'
+                        : row.tone === 'red' ||
+                            (row.tone === 'auto' && row.value != null && row.value < 0)
                           ? 'red'
-                          : 'teal'
-                        : row.tone
+                          : undefined
                     }
-                    style={row.color ? { color: row.color } : undefined}
                   >
                     {row.text ?? shown(row.value, row.money)}
                   </b>
@@ -1411,20 +1209,6 @@ export function ComboChart({
       <p className={c.srOnly} aria-live="polite">
         {spoken}
       </p>
-      <ul className={c.legend} aria-label={`${label} legend`}>
-        {legendItems.map((item) => (
-          <li key={item.label}>
-            <i data-kind={item.kind} style={{ color: item.color }} />
-            {item.label}
-          </li>
-        ))}
-        {hasGap && (
-          <li>
-            <i data-kind="gap" />
-            Gap = unavailable, not {unit === 'USD' ? '$0' : 'zero'}
-          </li>
-        )}
-      </ul>
     </div>
   );
 }

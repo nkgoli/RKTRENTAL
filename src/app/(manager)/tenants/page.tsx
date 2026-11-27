@@ -85,9 +85,7 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
   return (
     <div className={styles.scope}>
       <PageHeader
-        eyebrow="People"
         title="Tenant directory"
-        meta={`${stats.activeTenants} active ${stats.activeTenants === 1 ? 'tenant' : 'tenants'}`}
         actions={[
           {
             label: 'Review applications',
@@ -129,33 +127,29 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
         <>
           <SummaryBand
             label="Tenant balances"
-            eyebrow="Tenant balances · all charges due to date"
+            eyebrow="Tenant balances"
             value={formatMoney(stats.outstandingCents / 100)}
-            detail={`open across ${stats.lateTenants} ${stats.lateTenants === 1 ? 'tenant' : 'tenants'} · review the ledger before any reminder goes out`}
+            detail={`open across ${stats.lateTenants} ${stats.lateTenants === 1 ? 'tenant' : 'tenants'}`}
             footer={
               <Link className="btn btn-secondary btn-sm" href="/payments?filter=open">
                 Review open balances →
               </Link>
             }
             stats={[
-              { label: 'Active tenants', value: stats.activeTenants, detail: 'Portfolio total' },
-              { label: 'Move-ins (30 days)', value: stats.moveIns30, detail: 'Leases started' },
+              { label: 'Active tenants', value: stats.activeTenants },
+              { label: 'Move-ins (30 days)', value: stats.moveIns30 },
               {
                 label: 'Leases ending in 60 days',
                 value: stats.endingSoon,
-                detail: 'Renewals to review',
                 href: '/leases?tab=expiring',
               },
             ]}
           />
           <Card className={styles.pad}>
             <div className={styles.sectionHead}>
-              <div>
-                <h2>Directory</h2>
-                <p>
-                  {total} {total === 1 ? 'tenant' : 'tenants'} in this view · Portfolio totals above
-                </p>
-              </div>
+              <h2>
+                {total} {total === 1 ? 'tenant' : 'tenants'}
+              </h2>
               {filtered && (
                 <Link className="btn btn-ghost btn-sm" href={href({})}>
                   Clear filters
@@ -206,11 +200,7 @@ export default async function TenantsPage({ searchParams }: { searchParams: Sear
               <div className={styles.empty}>
                 <Icon name="tenants" />
                 <h3>{filtered ? 'No tenants match this view' : 'No tenants yet'}</h3>
-                <p>
-                  {filtered
-                    ? 'Clear the filters to see all tenants.'
-                    : 'Tenants appear here when you promote an approved applicant. Lease setup and move-in are separate steps.'}
-                </p>
+                {!filtered && <p>Tenants appear here when you promote an approved applicant.</p>}
                 <Link
                   className="btn btn-secondary"
                   href={filtered ? href({}) : applicationsHref(property)}

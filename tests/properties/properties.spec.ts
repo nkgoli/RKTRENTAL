@@ -158,7 +158,7 @@ test('seeded Maple Court shows its units and the 4B lease', async ({ page }) => 
     'href',
     /\/leases\//,
   );
-  await expect(page.getByRole('link', { name: '1 open maintenance request' })).toBeVisible();
+  await expect(page.getByText('1 open repair', { exact: true })).toBeVisible();
   // A unit with linked records (lease, requests) cannot be deleted.
   await expect(page.locator('#unit-facts').getByRole('button', { name: 'Delete' })).toBeDisabled();
   await expect(page.getByText('A unit with linked records cannot be deleted.')).toBeVisible();

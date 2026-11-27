@@ -21,8 +21,8 @@ export default async function ResetPasswordPage({
   if (!user)
     return (
       <RecoveryCard
-        title="Request a new link"
-        description="This reset link has expired or has already been used. For your security, each link works only once."
+        title="Link expired"
+        description="This reset link has expired or was already used."
       >
         <Button href="/recover" variant="primary" block>
           Request a new reset link
@@ -32,7 +32,7 @@ export default async function ResetPasswordPage({
   return (
     <RecoveryCard
       title="Choose a new password"
-      description="You’ll use this password the next time you sign in. This will sign you out on all devices."
+      description="Changing it signs you out on all devices."
     >
       <ResetPasswordForm token={token} />
     </RecoveryCard>

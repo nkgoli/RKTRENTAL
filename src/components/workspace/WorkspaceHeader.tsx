@@ -8,17 +8,8 @@ import type { WorkspaceScope, WorkspaceUnit } from './Workspace';
 import { UnitSwitcher } from './UnitSwitcher';
 import styles from './Workspace.module.css';
 
-function propertyTypeLabel(scope: WorkspaceScope) {
-  return scope.activeUnitCount === 1 || scope.propertyType === 'SINGLE_UNIT'
-    ? 'Single-family'
-    : 'Multi-unit';
-}
-
-/** "Multi-unit · 12 units" or "Single-family". */
-export function headerEyebrow(scope: WorkspaceScope) {
-  const type = propertyTypeLabel(scope);
-  if (type === 'Single-family' || scope.activeUnitCount == null) return type;
-  return `${type} · ${scope.activeUnitCount} unit${scope.activeUnitCount === 1 ? '' : 's'}`;
+function isMultiUnit(scope: WorkspaceScope) {
+  return scope.activeUnitCount !== 1 && scope.propertyType !== 'SINGLE_UNIT';
 }
 
 function statusLabel(scope: WorkspaceScope) {
@@ -89,7 +80,7 @@ export function WorkspaceHeader({
     ? `${current.propertyName} · Unit ${current.unitNumber}`
     : current.propertyName;
   const status = statusLabel(current);
-  const multiUnit = propertyTypeLabel(scope) === 'Multi-unit';
+  const multiUnit = isMultiUnit(scope);
 
   return (
     <header className={styles.header} data-workspace-header="true">
@@ -113,12 +104,11 @@ export function WorkspaceHeader({
             />
           </div>
           <div className={styles.headerCopy}>
-            <p className={`eyebrow ${styles.eyebrow}`}>{headerEyebrow(scope)}</p>
             <div className={styles.titleLine}>
               <h1>{title}</h1>
               <Badge tone={statusTone[status] ?? 'neutral'}>{status}</Badge>
             </div>
-            {/* The address and type live here once; overview cards do not repeat them. */}
+            {/* The address lives here once; overview cards do not repeat it. */}
             {scope.propertyAddress && (
               <p className={styles.address}>
                 <MapPin />

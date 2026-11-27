@@ -8,7 +8,7 @@
 }
 .heading {
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 .heading h1 {
   font-size: 32px;
@@ -17,15 +17,6 @@
 }
 .heading p {
   margin: 0;
-}
-.spark {
-  display: inline-block;
-  margin-left: 8px;
-  transform: rotate(-12deg);
-  color: var(--design-primary);
-  font:
-    30px Georgia,
-    serif;
 }
 .repairs :global(.card) {
   padding: 20px;
@@ -63,6 +54,16 @@
   margin: 0;
   min-width: 0;
 }
+/* Group labels match the field labels above and below them. */
+.entry legend,
+.upload h3 {
+  padding: 0;
+  font: 500 14px var(--design-font);
+  color: var(--design-text);
+}
+.entry legend {
+  margin-bottom: 8px;
+}
 .option {
   display: flex;
   align-items: center;
@@ -97,9 +98,6 @@
   display: grid;
   gap: 12px;
   min-width: 0;
-}
-.upload h3 {
-  font-size: 16px;
 }
 /* Scope presentation to the repair uploader; its shared selection/validation API is unchanged. */
 .upload [role='group'] {

@@ -183,17 +183,6 @@ export function PayForm({
           })}
         </fieldset>
 
-        {/* The method above already names the account; this only explains who holds the details. */}
-        <p
-          className="muted"
-          role="note"
-          aria-label="Provider hosted payment field"
-          style={{ fontSize: 12 }}
-        >
-          Account details are entered with your payment provider; RocketRental never sees or stores
-          them.
-        </p>
-
         <label className="field">
           Amount
           <input
@@ -202,7 +191,11 @@ export function PayForm({
             inputMode="decimal"
             aria-label="Amount"
             aria-invalid={!amountValid}
-            aria-describedby={!amountValid ? 'amount-error amount-total' : 'amount-total'}
+            aria-describedby={
+              [!amountValid && 'amount-error', feeCents > 0 && 'amount-total']
+                .filter(Boolean)
+                .join(' ') || undefined
+            }
             value={amount}
             onKeyDown={(event) => {
               if (event.key === 'Enter') {
@@ -222,11 +215,12 @@ export function PayForm({
               decimal places.
             </span>
           )}
-          <span className="hint" id="amount-total">
-            {feeCents > 0
-              ? `Card fee ${formatUsd(feeCents)} (2.9%) · Total charged ${formatUsd(chargedCents)}`
-              : `Total charged ${formatUsd(chargedCents)}`}
-          </span>
+          {/* Only when the card fee (shown on the option above) makes the charge differ. */}
+          {feeCents > 0 && (
+            <span className="hint" id="amount-total">
+              Total charged {formatUsd(chargedCents)}
+            </span>
+          )}
         </label>
 
         <label className="check">
@@ -273,7 +267,7 @@ export function PayForm({
           </dl>
         </Dialog>
         <p className="muted" style={{ fontSize: 12, textAlign: 'center' }}>
-          Secured by your payment provider · No card data is stored by RocketRental.
+          Card and bank details stay with your payment provider.
         </p>
       </form>
 
@@ -310,7 +304,7 @@ export function AddPaymentMethods() {
         open={open}
         onClose={() => setOpen(false)}
         title="Add a payment method"
-        description="Choose bank transfer or card. Your provider securely stores the account details."
+        description="Card and bank details stay with your payment provider."
         size="sm"
         className={styles.confirmation}
       >

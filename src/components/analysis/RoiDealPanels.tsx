@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type { AnalysisPayload } from '@/lib/analysis/contract';
 import { projectionRows, type ProjectionResult } from '@/lib/analysis/projections';
 import { firstPositiveAfterNegative, wholeDollars } from '@/lib/analysis/chart-data';
@@ -95,8 +95,6 @@ export function DealSnapshot({
   result,
   payload,
   onCompare,
-  howHref,
-  onHow,
   baseline,
 }: {
   result: ProjectionResult;
@@ -105,9 +103,6 @@ export function DealSnapshot({
   baseline?: ProjectionResult | null;
   /** Opens the actual-versus-projected comparison. */
   onCompare?: () => void;
-  /** Where "How returns are calculated" points (an in-page method note). */
-  howHref?: string;
-  onHow?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const [annual, setAnnual] = useState(false);
   const m = result.summaryMetrics;
@@ -128,13 +123,13 @@ export function DealSnapshot({
           : `stays below $0 through Year ${rows.length}`;
   const debt =
     m.loanAmount > 0
-      ? `Projected cash flow after ${wholeDollars(m.annualDebtService)} debt service`
-      : 'Projected cash flow with no debt service';
+      ? `After ${wholeDollars(m.annualDebtService)} debt service`
+      : 'No debt service';
   return (
     <section className={`summary-band ${d.band}`} aria-label="Deal Snapshot">
       <div className="summary-band-main">
         <div className={d.bandHead}>
-          <p className="eyebrow">Year 1 · Projected estimate · before tax · USD</p>
+          <p className="eyebrow">Projected cash flow · Year 1</p>
           <div className={d.darkToggle} role="group" aria-label="Snapshot timeframe">
             {['Monthly', 'Annual'].map((t) => (
               <button
@@ -174,7 +169,8 @@ export function DealSnapshot({
           />
         )}
         <p className="summary-band-detail">
-          {debt} · {wholeDollars(m.annualCashFlow)} for Year 1{outlook ? ` · ${outlook}` : ''}
+          {debt}
+          {outlook ? ` · ${outlook}` : ''}
         </p>
         {score != null && level && (
           <div className={d.meter}>
@@ -194,26 +190,19 @@ export function DealSnapshot({
             </span>
           </div>
         )}
-        <div className="summary-band-foot">
-          {onCompare && (
+        {onCompare && (
+          <div className="summary-band-foot">
             <button type="button" className="btn btn-secondary btn-sm" onClick={onCompare}>
               Compare with actuals →
             </button>
-          )}
-          {howHref && (
-            <a className={d.how} href={howHref} onClick={onHow}>
-              How returns are calculated →
-            </a>
-          )}
-        </div>
+          </div>
+        )}
         <details className={d.riskDisclosure}>
           <summary>
             What drives the risk score
             {score == null ? ' · unavailable' : ''}
           </summary>
-          <p className={d.muted}>
-            Weighted heuristic, not advice. Higher means riskier; missing inputs are excluded.
-          </p>
+          <p className={d.muted}>Heuristic, not advice. Higher is riskier.</p>
           {factors.map((f) => (
             <div key={f.name} className={d.factor}>
               <span>{f.name}</span>
@@ -229,11 +218,10 @@ export function DealSnapshot({
           title="Cash-on-cash return"
           trigger={
             <>
-              <span className="summary-stat-label">Cash-on-cash · Year 1</span>
+              <span className="summary-stat-label">Cash-on-cash</span>
               <strong data-tone={(m.cashOnCash ?? 0) < 0 ? 'red' : undefined}>
                 {pct(m.cashOnCash)}
               </strong>
-              <small>Projected cash flow ÷ cash invested</small>
               {b && <DeltaNote kind="percent" baseline={b.cashOnCash} simulated={m.cashOnCash} />}
             </>
           }
@@ -247,9 +235,8 @@ export function DealSnapshot({
           title="Capitalization rate"
           trigger={
             <>
-              <span className="summary-stat-label">Cap rate · Year 1</span>
+              <span className="summary-stat-label">Cap rate</span>
               <strong>{pct(m.capRate)}</strong>
-              <small>Projected NOI {wholeDollars(m.noi)} ÷ purchase price</small>
               {b && <DeltaNote kind="percent" baseline={b.capRate} simulated={m.capRate} />}
             </>
           }
@@ -265,11 +252,6 @@ export function DealSnapshot({
             <>
               <span className="summary-stat-label">Debt service coverage</span>
               <strong>{m.loanAmount > 0 ? ratio(m.dscr) : 'No debt'}</strong>
-              <small>
-                {m.loanAmount > 0
-                  ? 'Year 1 NOI ÷ debt service · lenders look for 1.20×+'
-                  : 'No loan in these assumptions'}
-              </small>
               {b && m.loanAmount > 0 && b.loanAmount > 0 && (
                 <DeltaNote kind="ratio" baseline={b.dscr} simulated={m.dscr} />
               )}
@@ -279,6 +261,7 @@ export function DealSnapshot({
           <Row label="Net operating income" value={wholeDollars(m.noi)} />
           <Row label="Annual debt service" value={wholeDollars(m.annualDebtService)} />
           <Row label="DSCR" value={m.loanAmount > 0 ? ratio(m.dscr) : 'No debt'} total />
+          {m.loanAmount > 0 && <p className={d.popNote}>Lenders typically look for 1.20× or more.</p>}
         </Popover>
       </div>
     </section>

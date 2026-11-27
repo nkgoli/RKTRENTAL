@@ -152,10 +152,7 @@ export function MaintenanceIssueForm({
       {!result.requestId && (
         <fieldset disabled={pending} className={styles.fields}>
           {request ? (
-            <div>
-              <p className={styles.location}>{request.location}</p>
-              <p className={styles.caption}>The property and unit stay with this request.</p>
-            </div>
+            <p className={styles.location}>{request.location}</p>
           ) : (
             <div className={styles.pair}>
               <label className="field">

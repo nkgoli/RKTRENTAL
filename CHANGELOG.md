@@ -2,7 +2,15 @@
 
 All notable changes to RocketRental. This project uses semantic versioning.
 
-## [Unreleased] — 2026-10-21
+## [Unreleased] — 2026-11-27
+
+### UX cleanup and modern charts
+
+- Removed explanatory paragraphs, restated stat details, method footnotes, "Insight" boxes and metadata chips across the manager app, tenant portal, sign-in and public pages; kept data, errors, validation, consent and legal text.
+- Shell: no section eyebrow above page titles, a quieter sidebar without the "coming soon" note, sentence-case table headers, soft-tint notices, a borderless phone tab bar and phone card tables sized to their text.
+- Charts: one validated palette (`--chart-1…4`, grid and axis tokens) and a shared `ColumnChart` (thin rounded columns, hairline grid, rounded ticks, hover cards) for Collection history and Income vs expenses; ROI charts restyled with sentence-case titles, stable series colours and no basis chips; Benchmarks market cards and risk-vs-return labels fixed.
+- Leasing: the Applications applicant column no longer spills under the detail panel; the invitation explainer, status glossary and duplicated promotion copy are gone.
+- Leases: lease detail with one meta line, term progress, a single-row signature banner and stat tiles; the Agreement tab edits terms inline; templates list as cards with contents, usage and property defaults; template editor with section navigation, field chips for blanks and a sticky save bar; redesigned lease builder.
 
 ### Individual lease signing
 

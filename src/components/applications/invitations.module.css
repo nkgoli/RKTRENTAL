@@ -53,7 +53,7 @@
 }
 .card h2,
 .cardHead h2,
-.guide h2 {
+.listHead h2 {
   margin: 0;
   font-family: var(--design-heading-font);
   font-size: 20px;
@@ -69,6 +69,14 @@
 .cardHead {
   display: grid;
   gap: 4px;
+}
+/* Invitations card title with its one action beside it. */
+.listHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
 }
 .caption,
 .muted,
@@ -162,17 +170,6 @@
   flex: 0 0 20px;
   margin-top: 2px;
 }
-.stepsWrap {
-  min-width: 0;
-}
-/* Four or five steps wrap into rows instead of overflowing a narrow card or phone. */
-.stepsWrap :global(.steps) {
-  flex-wrap: wrap;
-}
-.stepsWrap :global(.steps li) {
-  flex: 1 1 150px;
-  min-width: 0;
-}
 .summaryList {
   display: grid;
   margin: 0;
@@ -198,17 +195,6 @@
   margin: 0;
   font-weight: 500;
   overflow-wrap: anywhere;
-}
-.unavailable {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px 16px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  color: var(--design-muted);
-  font-size: 13px;
 }
 .rows {
   list-style: none;
@@ -245,67 +231,10 @@
 .row :global(.badge) {
   flex: none;
 }
-.emptyLine,
-.cardFoot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.emptyLine p {
-  margin: 0;
-}
-.cardFoot > a:first-child {
+.viewAll {
+  justify-self: start;
   color: var(--design-primary);
   font-weight: 500;
-}
-.guide {
-  display: grid;
-  gap: 16px;
-  align-content: start;
-  min-width: 0;
-  padding: 24px;
-  border: 1px solid var(--rr-border);
-  border-radius: var(--design-radius);
-  background: var(--design-surface);
-}
-.accordion {
-  display: grid;
-}
-.accordion details {
-  border-top: 1px solid var(--rr-border);
-}
-.accordion details:last-child {
-  border-bottom: 1px solid var(--rr-border);
-}
-.accordion summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 44px;
-  padding: 10px 0;
-  font-weight: 500;
-  cursor: pointer;
-  list-style: none;
-}
-.accordion summary::-webkit-details-marker {
-  display: none;
-}
-.accordion summary::after {
-  content: '+';
-  color: var(--design-primary);
-  font-size: 20px;
-  line-height: 1;
-}
-.accordion details[open] summary::after {
-  content: '\2212';
-}
-.accordion p {
-  margin: 0 0 12px;
-  color: var(--design-muted);
-  font-size: 14px;
 }
 .history {
   padding-left: 20px;
@@ -323,8 +252,7 @@
   margin: 0;
 }
 @media (min-width: 1024px) {
-  .card,
-  .guide {
+  .card {
     padding: 32px;
   }
 }
@@ -338,8 +266,7 @@
   .public {
     padding: 24px 16px;
   }
-  .card,
-  .guide {
+  .card {
     padding: 20px 16px;
   }
   .title {
@@ -362,11 +289,6 @@
   }
   .actions > * {
     flex: 1 1 auto;
-    justify-content: center;
-  }
-  .emptyLine > :global(.btn),
-  .cardFoot > :global(.btn) {
-    width: 100%;
     justify-content: center;
   }
 }

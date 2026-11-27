@@ -1,6 +1,16 @@
 ﻿'use client';
 
-import { useActionState, useEffect, useId, useRef, useState } from 'react';
+import {
+  createContext,
+  useActionState,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from 'react';
 import { Alert, Button } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { saveLeaseAction, type LeaseFormState } from './actions';
@@ -11,8 +21,91 @@ import {
   terminateDetailLeaseAction,
 } from './[id]/actions';
 import { leaseResultMessages, type LeaseReturnScope } from './[id]/feedback';
+import styles from './[id]/lease-detail.module.css';
 
 const initial: LeaseFormState = {};
+
+/** Closes the surrounding FormDisclosure; null when a form is rendered on its own. */
+const DisclosureClose = createContext<(() => void) | null>(null);
+
+/**
+ * A card's "Edit terms" / "Record notice" button: opening it swaps the card's facts for the form
+ * (the card hides its facts while open). It is a native disclosure, so it works before hydration.
+ */
+export function FormDisclosure({
+  label,
+  open = false,
+  children,
+}: {
+  label: string;
+  open?: boolean;
+  children: ReactNode;
+}) {
+  const details = useRef<HTMLDetailsElement>(null);
+  const summary = useRef<HTMLElement>(null);
+  const userOpened = useRef(false);
+  const close = () => {
+    if (details.current) details.current.open = false;
+    summary.current?.focus();
+  };
+  return (
+    <details
+      ref={details}
+      className={styles.disclosure}
+      open={open}
+      onToggle={(event) => {
+        // The summary hides while open, so move focus into the form the manager just opened.
+        if (!event.currentTarget.open || !userOpened.current) return;
+        userOpened.current = false;
+        event.currentTarget
+          .querySelector<HTMLElement>('input:not([type="hidden"]), select, textarea')
+          ?.focus();
+      }}
+    >
+      <summary
+        ref={summary}
+        className="btn btn-secondary btn-sm"
+        onClick={() => (userOpened.current = true)}
+      >
+        {label}
+      </summary>
+      <div className={styles.disclosureBody}>
+        <DisclosureClose.Provider value={close}>{children}</DisclosureClose.Provider>
+      </div>
+    </details>
+  );
+}
+
+/** Cancel (or Done after a save) for a form inside a FormDisclosure. */
+function CloseButton({ done, disabled, onClose }: { done: boolean; disabled: boolean; onClose: () => void }) {
+  const close = useContext(DisclosureClose);
+  if (!close) return null;
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      disabled={disabled}
+      onClick={() => {
+        onClose();
+        close();
+      }}
+    >
+      {done ? 'Done' : 'Cancel'}
+    </Button>
+  );
+}
+
+/** A money input with a "$" adornment; the symbol is decorative, the value stays as typed. */
+function MoneyInput(props: InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <span className={styles.adorned}>
+      <span className={styles.prefix} aria-hidden="true">
+        $
+      </span>
+      <input inputMode="decimal" {...props} />
+    </span>
+  );
+}
 
 function FormFeedback({ state }: { state: LeaseFormState }) {
   const feedback = useRef<HTMLDivElement>(null);
@@ -87,9 +180,8 @@ export function TermFields({
       <div className="form-row">
         <label className="field">
           Monthly rent
-          <input
+          <MoneyInput
             name="monthlyRent"
-            inputMode="decimal"
             value={draft.monthlyRent}
             onChange={(event) => setDraft({ ...draft, monthlyRent: event.target.value })}
             required
@@ -104,9 +196,8 @@ export function TermFields({
         </label>
         <label className="field">
           Security deposit
-          <input
+          <MoneyInput
             name="deposit"
-            inputMode="decimal"
             value={draft.deposit}
             onChange={(event) => setDraft({ ...draft, deposit: event.target.value })}
             required
@@ -123,9 +214,8 @@ export function TermFields({
       <div className="form-row">
         <label className="field">
           Late fee
-          <input
+          <MoneyInput
             name="lateFee"
-            inputMode="decimal"
             value={draft.lateFee}
             onChange={(event) => setDraft({ ...draft, lateFee: event.target.value })}
             aria-invalid={!!errors.lateFee}
@@ -138,17 +228,24 @@ export function TermFields({
           )}
         </label>
         <label className="field">
-          Grace period (days)
-          <input
-            name="graceDays"
-            type="number"
-            min="0"
-            max="31"
-            value={draft.graceDays}
-            onChange={(event) => setDraft({ ...draft, graceDays: Number(event.target.value) })}
-            aria-invalid={!!errors.graceDays}
-            aria-describedby={errors.graceDays ? fieldId + '-graceDays-error' : undefined}
-          />
+          <span>
+            Grace period<span className={styles.srOnly}> (days)</span>
+          </span>
+          <span className={styles.adorned}>
+            <input
+              name="graceDays"
+              type="number"
+              min="0"
+              max="31"
+              value={draft.graceDays}
+              onChange={(event) => setDraft({ ...draft, graceDays: Number(event.target.value) })}
+              aria-invalid={!!errors.graceDays}
+              aria-describedby={errors.graceDays ? fieldId + '-graceDays-error' : undefined}
+            />
+            <span className={styles.suffix} aria-hidden="true">
+              days
+            </span>
+          </span>
           {errors.graceDays && (
             <small id={fieldId + '-graceDays-error'} role="alert">
               {errors.graceDays}
@@ -238,16 +335,51 @@ export function EditTermsForm({
     editDetailTermsAction,
     saved ? { ok: true, message: leaseResultMessages.terms } : initial,
   );
+  // Cancel restores the saved values and clears the last result.
+  const [round, setRound] = useState(0);
+  const [cleared, setCleared] = useState<LeaseFormState | null>(null);
+  const shown = state === cleared ? initial : state;
   return (
     <form className="form" action={action} noValidate id="edit-terms" aria-label="Edit lease terms">
       <input type="hidden" name="leaseId" value={leaseId} />
       <input type="hidden" name="returnScope" value={returnScope ?? ''} />
-      <FormFeedback state={state} />
-      <TermFields values={values} errors={state.errors} />
-      <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
-        {pending ? 'Saving…' : 'Save terms'}
-      </Button>
+      <FormFeedback state={shown} />
+      <TermFields key={round} values={values} errors={shown.errors} />
+      <div className={styles.formActions}>
+        <CloseButton
+          done={Boolean(shown.ok)}
+          disabled={pending}
+          onClose={() => {
+            setRound((value) => value + 1);
+            setCleared(state);
+          }}
+        />
+        <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
+          {pending ? 'Saving…' : 'Save terms'}
+        </Button>
+      </div>
     </form>
+  );
+}
+
+/** One lease status action: what it does on the left, its button on the right. */
+function StatusAction({
+  title,
+  consequence,
+  children,
+}: {
+  title: string;
+  consequence: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={styles.statusAction}>
+      <div>
+        <strong>{title}</strong>
+        <p>{consequence}</p>
+      </div>
+      {children}
+    </div>
   );
 }
 
@@ -269,18 +401,23 @@ export function LeaseStatusActions({
     if (endState.message) setConfirming(false);
   }, [endState]);
   return (
-    <div className="stack" style={{ gap: 8 }}>
+    <div className={styles.statusActions}>
       {status === 'DRAFT' && (
-        <form action={activate}>
-          <input type="hidden" name="leaseId" value={leaseId} />
-          <input type="hidden" name="returnScope" value={returnScope ?? ''} />
-          <Button type="submit" variant="primary" disabled={activating} aria-busy={activating}>
-            {activating ? 'Activating…' : 'Activate lease'}
-          </Button>
-        </form>
+        <StatusAction
+          title="Activate lease"
+          consequence="Marks the unit occupied and adds move-in charges."
+        >
+          <form action={activate}>
+            <input type="hidden" name="leaseId" value={leaseId} />
+            <input type="hidden" name="returnScope" value={returnScope ?? ''} />
+            <Button type="submit" variant="secondary" disabled={activating} aria-busy={activating}>
+              {activating ? 'Activating…' : 'Activate lease'}
+            </Button>
+          </form>
+        </StatusAction>
       )}
       {status === 'ACTIVE' && (
-        <>
+        <StatusAction title="Terminate lease" consequence="Ends the lease and frees the unit.">
           <Button type="button" variant="danger" onClick={() => setConfirming(true)}>
             Terminate
           </Button>
@@ -294,7 +431,7 @@ export function LeaseStatusActions({
             action={terminate}
             fields={{ leaseId, returnScope: returnScope ?? '' }}
           />
-        </>
+        </StatusAction>
       )}
       {activeState.message && (
         <Alert tone={activeState.ok ? 'success' : 'error'}>{activeState.message}</Alert>
@@ -326,6 +463,9 @@ export function NoticeForm({
   const fieldId = useId();
   const [dates, setDates] = useState({ noticeGivenAt, moveOutDate });
   useEffect(() => setDates({ noticeGivenAt, moveOutDate }), [noticeGivenAt, moveOutDate]);
+  // Cancel restores the recorded dates and clears the last result.
+  const [cleared, setCleared] = useState<LeaseFormState | null>(null);
+  const shown = state === cleared ? initial : state;
   return (
     <form
       className="form"
@@ -336,7 +476,7 @@ export function NoticeForm({
     >
       <input type="hidden" name="leaseId" value={leaseId} />
       <input type="hidden" name="returnScope" value={returnScope ?? ''} />
-      <FormFeedback state={state} />
+      <FormFeedback state={shown} />
       <div className="form-row">
         <label className="field">
           Notice given
@@ -346,12 +486,12 @@ export function NoticeForm({
             value={dates.noticeGivenAt}
             onChange={(event) => setDates({ ...dates, noticeGivenAt: event.target.value })}
             required
-            aria-invalid={!!state.errors?.noticeGivenAt}
-            aria-describedby={state.errors?.noticeGivenAt ? fieldId + '-notice-error' : undefined}
+            aria-invalid={!!shown.errors?.noticeGivenAt}
+            aria-describedby={shown.errors?.noticeGivenAt ? fieldId + '-notice-error' : undefined}
           />
-          {state.errors?.noticeGivenAt && (
+          {shown.errors?.noticeGivenAt && (
             <small id={fieldId + '-notice-error'} role="alert">
-              {state.errors.noticeGivenAt}
+              {shown.errors.noticeGivenAt}
             </small>
           )}
         </label>
@@ -362,19 +502,29 @@ export function NoticeForm({
             type="date"
             value={dates.moveOutDate}
             onChange={(event) => setDates({ ...dates, moveOutDate: event.target.value })}
-            aria-invalid={!!state.errors?.moveOutDate}
-            aria-describedby={state.errors?.moveOutDate ? fieldId + '-moveout-error' : undefined}
+            aria-invalid={!!shown.errors?.moveOutDate}
+            aria-describedby={shown.errors?.moveOutDate ? fieldId + '-moveout-error' : undefined}
           />
-          {state.errors?.moveOutDate && (
+          {shown.errors?.moveOutDate && (
             <small id={fieldId + '-moveout-error'} role="alert">
-              {state.errors.moveOutDate}
+              {shown.errors.moveOutDate}
             </small>
           )}
         </label>
       </div>
-      <Button type="submit" variant="secondary" disabled={pending} aria-busy={pending}>
-        {pending ? 'Saving…' : 'Record notice'}
-      </Button>
+      <div className={styles.formActions}>
+        <CloseButton
+          done={Boolean(shown.ok)}
+          disabled={pending}
+          onClose={() => {
+            setDates({ noticeGivenAt, moveOutDate });
+            setCleared(state);
+          }}
+        />
+        <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
+          {pending ? 'Saving…' : 'Save notice'}
+        </Button>
+      </div>
     </form>
   );
 }

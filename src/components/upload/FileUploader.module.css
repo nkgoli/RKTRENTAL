@@ -30,17 +30,21 @@
   color: var(--design-muted, #58677d);
   font-size: 12px;
 }
+/* An outline pill: the step or form around the drop zone keeps the one primary action. */
 .browseButton {
-  background: var(--design-primary, #3e4fe5);
-  color: #fff;
-  border: 0;
-  border-radius: 7px;
+  background: var(--design-surface, #fff);
+  color: var(--design-primary, #3e4fe5);
+  border: 1px solid var(--design-primary, #3e4fe5);
+  border-radius: 999px;
   padding: 8px 18px;
   min-height: 36px;
-  font-size: 13px;
+  font: inherit;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  font: inherit;
+}
+.browseButton:hover {
+  background: var(--rr-primary-tint, #eef0fd);
 }
 .input {
   position: absolute;

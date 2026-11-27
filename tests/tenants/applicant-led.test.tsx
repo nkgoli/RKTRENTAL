@@ -69,7 +69,7 @@ describe('applicant-led tenant directory', () => {
     );
     expect(screen.getByRole('heading', { name: 'No tenants yet' })).toBeTruthy();
     expect(screen.getByText(/promote an approved applicant/)).toBeTruthy();
-    expect(screen.getByText(/Lease setup and move-in are separate steps/)).toBeTruthy();
+    expect(screen.queryByText(/Lease setup and move-in are separate steps/)).toBeNull();
     expect(screen.getByRole('link', { name: 'Review applications' }).getAttribute('href')).toBe(
       '/applications',
     );

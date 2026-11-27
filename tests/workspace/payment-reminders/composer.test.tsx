@@ -306,7 +306,7 @@ describe('payment reminder composer (synthetic recipients only)', () => {
     expect(actions.previewReminder).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Preview reminder' }));
     await screen.findByRole('heading', { name: /^Confirm (sandbox )?reminder$/ });
-    expect(screen.getByText('Step 4 of 4 · Confirm')).toBeTruthy();
+    expect(screen.queryByText('Step 4 of 4 · Confirm')).toBeNull();
     expect(within(steps).getByText('Confirm').getAttribute('aria-current')).toBe('step');
     // Nothing is sent until the confirm button.
     expect(actions.dispatchReminder).not.toHaveBeenCalled();

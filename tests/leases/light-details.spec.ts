@@ -345,7 +345,7 @@ test('draft activation restrictions, ended restrictions and fixture termination 
   await page.goto(route('blocked'));
   await expect(page.getByRole('button', { name: 'Activate lease' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Terminate', exact: true })).toHaveCount(0);
-  await expect(page.getByText('Record notice or move-out', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Record notice', { exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Activate lease' }).click();
   await expect(
     page.getByRole('alert').filter({ hasText: 'This unit already has an active lease' }),
@@ -356,7 +356,7 @@ test('draft activation restrictions, ended restrictions and fixture termination 
   await expect(page.getByLabel('Lease summary').getByText('Active', { exact: true })).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: 'Lease activated.' })).toBeVisible();
   await page.goto(route('ended'));
-  for (const name of ['Edit terms', 'Record notice or move-out', 'Activate lease', 'Terminate'])
+  for (const name of ['Edit terms', 'Record notice', 'Activate lease', 'Terminate'])
     await expect(page.getByText(name, { exact: true })).toHaveCount(0);
   // An ended lease without saved terms simply has no "Prepared lease terms" section.
   await expect(page.getByRole('heading', { name: 'Prepared lease terms' })).toHaveCount(0);

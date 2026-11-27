@@ -77,19 +77,15 @@ export default async function LeaseLedgerPage({
   return (
     <>
       <PageHeader
-        eyebrow="Rent ledger"
         title={tenantNames ? `${title} · ${tenantNames}` : title}
         back={{ href: unitPayments, label: 'Payments' }}
         // The Leases section's "Create lease" shortcut does not belong on a ledger.
         actions={[]}
         meta={[
-          tenantNames,
           lease.eSignStatus === 'SIGNED' ? 'Signed lease' : 'Lease not fully signed',
-          `${termLabel(lease.startDate, lease.endDate)} · ${lease.graceDays}-day grace period`,
-          `Online payments ${providerName ? 'on' : 'off'}`,
-        ]
-          .filter(Boolean)
-          .join(' · ')}
+          termLabel(lease.startDate, lease.endDate),
+          `${lease.graceDays}-day grace period`,
+        ].join(' · ')}
       />
       <div className={styles.page}>
         <div className={styles.scopeBar}>
@@ -133,28 +129,25 @@ export default async function LeaseLedgerPage({
         </div>
 
         <SummaryBand
-          eyebrow={`Balance due · as of ${summary.asOfLabel} UTC`}
+          eyebrow={`Balance due · ${summary.asOfLabel}`}
           value={formatMoney(summary.balanceDueCents)}
           detail={
             <>
               {summary.lateCount > 0 ? (
                 <span className={styles.danger}>
                   {summary.lateCount} late {summary.lateCount === 1 ? 'charge' : 'charges'} ·{' '}
-                  {formatMoney(summary.lateCents)} past the {lease.graceDays}-day grace period
+                  {formatMoney(summary.lateCents)} past grace
                 </span>
               ) : summary.openCount > 0 ? (
                 <span>
                   {summary.openCount} open {summary.openCount === 1 ? 'charge' : 'charges'} ·{' '}
-                  {formatMoney(summary.openCents)} due, within the grace period
+                  {formatMoney(summary.openCents)} due, within grace
                 </span>
               ) : (
                 <span>No open charges</span>
               )}
               {summary.pendingCents > 0 && (
-                <span>
-                  {' '}
-                  · {formatMoney(summary.pendingCents)} pending payment, not yet settled or deducted
-                </span>
+                <span> · {formatMoney(summary.pendingCents)} pending, not deducted</span>
               )}
             </>
           }
@@ -163,7 +156,7 @@ export default async function LeaseLedgerPage({
               <span>
                 {autopayCount > 0
                   ? `Autopay on for ${autopayCount} ${autopayCount === 1 ? 'tenant' : 'tenants'}`
-                  : 'Autopay off · tenants pay online or you record payments'}
+                  : 'Autopay off'}
               </span>
               {lease.status === 'ACTIVE' && (
                 <a
@@ -182,30 +175,16 @@ export default async function LeaseLedgerPage({
               value: lastPayment ? formatMoney(lastPayment.amountCents) : 'None yet',
               detail: lastPayment ? `Received ${lastPayment.dateLabel}` : undefined,
             },
-            {
-              label: 'Credit on account',
-              value: formatMoney(summary.creditCents),
-              detail: 'Overpayments show here, never as balance due',
-            },
+            { label: 'Credit on account', value: formatMoney(summary.creditCents) },
           ]}
         />
 
         <section className={styles.card} aria-labelledby="charge-ledger">
           <div className={styles.cardHead}>
-            <div>
-              <h2 id="charge-ledger">Charge ledger</h2>
-              <p className={styles.muted}>
-                This lease only · {period} · {rows.length}{' '}
-                {rows.length === 1 ? 'charge' : 'charges'}
-              </p>
-            </div>
+            <h2 id="charge-ledger">Charge ledger</h2>
             <span className={styles.headLinks}>
               <a className={styles.goLink} href={leaseHref}>
                 Lease workspace <span aria-hidden="true">→</span>
-              </a>
-              <a className={styles.goLink} href={unitPayments}>
-                {lease.unit.isImplicit ? 'Property payments' : 'Unit payments'}{' '}
-                <span aria-hidden="true">→</span>
               </a>
             </span>
           </div>
@@ -226,8 +205,7 @@ export default async function LeaseLedgerPage({
           />
           <p className={styles.caption}>
             Term to date · {formatMoney(ledger.chargedCents)} charged ·{' '}
-            {formatMoney(ledger.paidCents)} paid · Late means unpaid after the {lease.graceDays}
-            -day grace period
+            {formatMoney(ledger.paidCents)} paid
           </p>
         </section>
 
@@ -247,9 +225,7 @@ export default async function LeaseLedgerPage({
               storageKey={`payment-reminder:${session.organizationId}:${session.subjectId}`}
             />
           ) : (
-            <p className={styles.muted}>
-              Reminders open once the lease is active. Draft leases have no balance to remind.
-            </p>
+            <p className={styles.muted}>Reminders are available once the lease is active.</p>
           )}
         </section>
       </div>

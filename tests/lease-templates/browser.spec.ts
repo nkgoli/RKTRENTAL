@@ -97,7 +97,7 @@ for (const width of [1440, 390]) {
     await page.locator(`a[href="/leases/templates/${comparisonId}"]:visible`).click();
     await expect(page.getByRole('button', { name: 'Expand all' })).toBeVisible();
     if (!baseline) {
-      const preview = page.locator('article p[class*="lt-item-preview"]').first();
+      const preview = page.locator('article [class*="itemPreview"]').first();
       const metrics = await preview.evaluate((el) => {
         const style = getComputedStyle(el);
         return {
@@ -114,7 +114,7 @@ for (const width of [1440, 390]) {
     await page.getByRole('button', { name: 'Expand all' }).click();
     await capture(page, `editor-expanded-${width}`);
     if (!baseline) {
-      await expect(page.locator('article p[class*="lt-item-preview"]')).toHaveCount(0);
+      await expect(page.locator('article [class*="itemPreview"]')).toHaveCount(0);
       const title = page.getByLabel('Residential use and complete agreement wording title');
       await expect(title.locator('..')).toContainText(
         'Residential use and complete agreement wording title',

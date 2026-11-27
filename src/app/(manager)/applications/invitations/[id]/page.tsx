@@ -13,9 +13,8 @@ import {
 import { invitationDeliveryState } from '@/lib/applications/pipeline';
 import { reminderTransport } from '@/lib/notifications/reminder-transport';
 import { PageHeader } from '@/components/shell/PageHeader';
-import { Alert, Badge, Steps } from '@/components/ui';
+import { Alert, Badge } from '@/components/ui';
 import { InvitationDelivery } from '@/components/applications/InvitationForms';
-import { INVITATION_STEPS } from '@/components/applications/InvitationList';
 import styles from '@/components/applications/invitations.module.css';
 
 function utc(value: Date) {
@@ -43,38 +42,28 @@ export default async function InvitationPage({ params }: { params: Promise<{ id:
     } catch (e) {
       configurationError = e instanceof Error ? e.message : 'Application link unavailable.';
     }
-  let readiness =
-    'Email unavailable. Configure an organization email provider, or copy the private link.';
+  let readiness: string | undefined = 'Email isn’t set up. Copy the private link instead.';
   try {
     const transport = await reminderTransport(session.organizationId, 'EMAIL', db);
-    readiness =
-      transport.name === 'mock'
-        ? 'Sandbox mode: sending records a test attempt. No email leaves the application.'
-        : 'Email is configured. Sending requests provider acceptance; inbox delivery is not confirmed.';
+    readiness = transport.name === 'mock' ? 'Sandbox · sending records a test attempt' : undefined;
   } catch {
     /* Unconfigured transport is an expected product state. */
   }
   const scope = new URLSearchParams({ propertyId: row.unit.propertyId, unitId: row.unitId });
   const home = `${row.unit.property.name} · ${row.unit.isImplicit ? 'Whole property' : `Unit ${row.unit.number}`}`;
-  const step = row.submittedAt ? 3 : expired ? 0 : 1;
   const emailStatus = latest
     ? (deliveryLabels[latest.status] ?? 'Email status unavailable')
     : 'No email attempt for this link';
   return (
     <section className={styles.page} aria-label="Application invitation">
       <PageHeader
-        eyebrow="Leasing · Application invitation"
         title={row.applicantName}
         meta={`${row.applicantEmail} · ${home}`}
         back={{ href: `/applications?${scope}`, label: 'Applications' }}
       />
-      <div className={styles.stepsWrap}>
-        <Steps steps={INVITATION_STEPS} current={step} />
-      </div>
       <div className={styles.grid}>
         <section className={`card ${styles.formCard}`} aria-labelledby="invitation-status-title">
           <div className={styles.cardHead}>
-            <p className={styles.eyebrow}>Invitation</p>
             <h2 id="invitation-status-title">{invitationStatus(row, now)}</h2>
             <p className={styles.caption}>
               {row.submittedAt
@@ -87,10 +76,7 @@ export default async function InvitationPage({ params }: { params: Promise<{ id:
           </p>
           {row.applicationId && (
             <>
-              <p>
-                The completed application is available for review. Screening has not been authorized
-                by submitting this form.
-              </p>
+              <p className={styles.caption}>Submitting does not authorize screening.</p>
               <div className={styles.actions}>
                 <Link
                   className="btn btn-primary"
@@ -101,18 +87,8 @@ export default async function InvitationPage({ params }: { params: Promise<{ id:
               </div>
             </>
           )}
-          {!row.submittedAt && <p className={styles.notice}>{readiness}</p>}
-          <p role="status">
-            <strong>{emailStatus}</strong>
-          </p>
-          {configurationError && (
-            <Alert tone="error">
-              <div>
-                <strong>Secure application links are unavailable</strong>
-                <p>{configurationError}</p>
-              </div>
-            </Alert>
-          )}
+          {!row.submittedAt && readiness && <p className={styles.notice}>{readiness}</p>}
+          {configurationError && <Alert tone="error">{configurationError}</Alert>}
           <InvitationDelivery
             id={row.id}
             generation={row.generation}
@@ -140,7 +116,6 @@ export default async function InvitationPage({ params }: { params: Promise<{ id:
         </section>
         <aside className={`card ${styles.formCard}`} aria-labelledby="invitation-preview-title">
           <div className={styles.cardHead}>
-            <p className={styles.eyebrow}>Review before sending</p>
             <h2 id="invitation-preview-title">Invitation preview</h2>
           </div>
           <dl className={styles.summaryList}>
@@ -160,10 +135,10 @@ export default async function InvitationPage({ params }: { params: Promise<{ id:
                 {row.submittedAt
                   ? 'Used · application submitted'
                   : expired
-                    ? 'Expired · renew to issue a new seven-day link'
+                    ? 'Expired'
                     : link
                       ? `Active until ${utc(row.expiresAt)}`
-                      : 'Unavailable · check invitation configuration'}
+                      : 'Unavailable'}
               </dd>
             </div>
             <div>
@@ -178,17 +153,14 @@ export default async function InvitationPage({ params }: { params: Promise<{ id:
               <p className={styles.preview}>{preview.body}</p>
             </>
           ) : (
-            <p className={styles.muted}>
-              {row.submittedAt
-                ? 'This application is already submitted. No further invitation email is needed.'
-                : configurationError
-                  ? 'The email preview appears once secure application links are available.'
-                  : 'Renew an expired link to preview its email.'}
-            </p>
+            !row.submittedAt && (
+              <p className={styles.muted}>
+                {configurationError
+                  ? 'No preview until secure links are set up.'
+                  : 'Renew the link to preview its email.'}
+              </p>
+            )
           )}
-          <p className={styles.caption}>
-            A private link lasts seven days. Provider acceptance does not confirm delivery.
-          </p>
         </aside>
       </div>
     </section>

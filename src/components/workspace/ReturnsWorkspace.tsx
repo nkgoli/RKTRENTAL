@@ -33,10 +33,9 @@ export function ReturnsWorkspace({
       />
       <SummaryBand
         label={`${title} returns`}
-        eyebrow={`${returns.period.label} · Recorded · ${returns.unitId ? 'Unit allocation' : 'Whole property'} · USD`}
+        eyebrow="Net operating income"
         value={moneyCents(returns.metrics.noiCents)}
         danger={returns.metrics.noiCents < 0}
-        detail={`Net operating income: ${moneyCents(returns.metrics.incomeCents)} rent collected less ${moneyCents(returns.metrics.expensesCents)} operating expenses`}
         footer={
           <>
             <a
@@ -45,43 +44,31 @@ export function ReturnsWorkspace({
             >
               Compare {propertyName} with projections
             </a>
-            <span className={styles.footNote}>
-              {returns.unitId
-                ? 'Unit income follows settled payments. Property expenses, debt and value are allocated by scheduled or listed rent; equally when no rent is set.'
-                : 'Income follows settled payments. Expenses and debt service cover the selected period.'}
-              {returns.unitId && ' Projections cover the whole property.'}
-            </span>
+            {returns.unitId && (
+              <span className={styles.footNote}>
+                Unit income follows settled payments; property costs are shared by rent. Projections
+                cover the whole property.
+              </span>
+            )}
           </>
         }
         stats={[
-          {
-            label: 'Cash flow',
-            value: moneyCents(returns.metrics.cashFlowCents),
-            detail: 'After debt service',
-          },
+          { label: 'Cash flow', value: moneyCents(returns.metrics.cashFlowCents) },
           {
             label: 'Cap rate',
             value: percent(returns.metrics.capRate),
             detail:
-              returns.metrics.capRate === null
-                ? 'Add property value to calculate'
-                : 'Period NOI on property value',
+              returns.metrics.capRate === null ? 'Add property value to calculate' : undefined,
           },
         ]}
       />
       <div className={styles.contentGrid}>
         <Card>
-          <CardHeader
-            title="Income vs expenses"
-            action={<span className="muted">{returns.period.label}</span>}
-          />
+          <CardHeader title="Income vs expenses" />
           <IncomeExpenseChart rows={returns.monthly} label={`${title}: ${returns.period.label}`} />
         </Card>
         <Card>
-          <CardHeader
-            title="Income statement"
-            action={<span className="muted">{returns.period.label}</span>}
-          />
+          <CardHeader title="Income statement" />
           <dl className={styles.statement}>
             <dt>Rent collected</dt>
             <dd>{moneyCents(returns.metrics.incomeCents)}</dd>
@@ -121,10 +108,7 @@ export function ReturnsWorkspace({
       </div>
       {returns.yearly.length > 1 && (
         <Card>
-          <CardHeader
-            title="Year over year"
-            action={<span className="muted">{returns.period.label}</span>}
-          />
+          <CardHeader title="Year over year" />
           <YearOverYear rows={returns.yearly} />
         </Card>
       )}

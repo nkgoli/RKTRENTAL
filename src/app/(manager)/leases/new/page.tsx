@@ -112,6 +112,8 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
           .map((u) => ({
             id: u.id,
             label: unitLabel(u.property, u),
+            property: u.property.name,
+            name: u.isImplicit ? 'Entire home' : `Unit ${u.number}`,
             status: u.status,
             draft: (() => {
               const saved =
@@ -278,7 +280,7 @@ export default async function NewLeasePage({ searchParams }: { searchParams: Pro
       }
       notice={
         applicant && !applicantTenant
-          ? `${applicant.applicantName} (${applicant.applicantEmail}) needs an approved application and explicit promotion before you can select them as a tenant.`
+          ? `${applicant.applicantName} (${applicant.applicantEmail}) isn’t a tenant yet. Approve and promote their application first.`
           : undefined
       }
       noticeApplicantId={applicant && !applicantTenant ? applicant.id : undefined}

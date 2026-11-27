@@ -201,14 +201,13 @@ describe('Benchmarks and Compare presentation (C19–C24)', () => {
     );
   it('labels the data basis and keeps the method one click away', () => {
     view({ compare: false });
+    // One quiet marker: the market figures beside the property's own are hypothetical.
     const tags = screen.getAllByRole('list', { name: 'Data basis' });
-    expect(tags[0].textContent).toContain('Projected property');
-    expect(tags[0].textContent).toContain('Hypothetical markets');
-    // Hypothetical figures are tinted apart from the property's own projected figures.
+    expect(tags).toHaveLength(1);
+    expect(tags[0].textContent).toBe('Hypothetical markets');
     expect(within(tags[0]).getByText('Hypothetical markets').dataset.kind).toBe('hypothetical');
-    expect(within(tags[0]).getByText('Projected property').dataset.kind).toBe('projected');
     expect(screen.getByText(/not live or verified data/)).toBeTruthy();
-    const method = screen.getByText(/Where the market figures come from/).closest('details')!;
+    const method = screen.getByText('Sources and method').closest('details')!;
     expect(method.open).toBe(false);
     expect(within(method).getByRole('region', { name: 'Benchmark provenance' })).toBeTruthy();
     // Every market card states its volatility; none reads "null%".
@@ -268,10 +267,9 @@ describe('Rental Distribution (C25) presentation', () => {
         rangeHigh={1950}
       />,
     );
-    const card = screen.getByRole('region', { name: 'Rental Distribution' });
-    expect(within(card).getByRole('list', { name: 'Data basis' }).textContent).toContain(
-      'USD per month',
-    );
+    const card = screen.getByRole('region', { name: 'Rent distribution' });
+    // No metadata chips: the stats, legend and note carry the basis.
+    expect(within(card).queryByRole('list', { name: 'Data basis' })).toBeNull();
     expect(within(card).getByText('Yours vs average').nextSibling!.textContent).toBe('−$250');
     expect(card.textContent).toContain('Suggested range $1,750–$1,950');
     expect(card.textContent).toContain('standard deviation ($112)');

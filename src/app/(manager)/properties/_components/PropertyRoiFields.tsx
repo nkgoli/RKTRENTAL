@@ -115,7 +115,8 @@ export function PropertyRoiFields({
         {baseline ? (
           <>
             <p className="muted">
-              Update your property’s ROI assumptions here. Blank means unknown; enter 0 only when it applies.
+              {saved ? `You are editing ${saved}. ` : ''}Leave blank if unknown; enter 0 only when
+              it applies.
             </p>
             {needed.length ? (
               <div className={styles.roiNeeded} role="status">
@@ -123,8 +124,7 @@ export function PropertyRoiFields({
                   <strong>
                     {needed.length} {needed.length === 1 ? 'input' : 'inputs'} needed to calculate
                     ROI.
-                  </strong>{' '}
-                  You can save now and finish later.
+                  </strong>
                 </p>
                 <ul>
                   {needed.map((issue) => (
@@ -144,25 +144,22 @@ export function PropertyRoiFields({
               </div>
             ) : (
               <p className={styles.roiReady} role="status">
-                All required assumptions are complete. Save to recalculate your ROI.
+                All required assumptions are complete.
               </p>
             )}
           </>
         ) : (
-          <p className="muted">
-            Enter only what you know. Blank means unknown; enter 0 only when it applies.
-          </p>
+          <p className="muted">Leave blank if unknown; enter 0 only when it applies.</p>
         )}
         {demoCount > 0 && (
           <p className="muted" data-demo-assumptions={demoCount}>
-            Sample data: {demoCount} value{demoCount === 1 ? ' is a' : 's are'} fictional demo
-            {demoCount === 1 ? ' assumption' : ' assumptions'} ({demo!.label}), not recorded
-            actuals. Replace a value with your own to use it.
+            Sample data: {demoCount} fictional demo value{demoCount === 1 ? '' : 's'} (
+            {demo!.label}).
           </p>
         )}
         {!!found.length && (
           <div role="alert">
-            <p>Review these optional details, or leave a new field blank to add it later.</p>
+            <p>Check these fields:</p>
             <ul>
               {found.map((issue) => (
                 <li key={issue.path}>
@@ -185,35 +182,21 @@ export function PropertyRoiFields({
           <details key={group.title} className={styles.roiGroup} open>
             <summary>{group.title}</summary>
             {index === 0 && (
-              <>
-                <p className="muted">
-                  Financing a purchase? Enter the loan amount or down payment and the loan terms
-                  below. Paying in cash? Choose no loan; loan-only terms will not be needed.
-                </p>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() =>
-                    onChange({
-                      ...values,
-                      'input.financing.loanAmount': '0',
-                    })
-                  }
-                >
-                  Pay in cash · No loan
-                </button>
-                <p className="muted">
-                  A $0 loan means no debt payments or lender costs. Interest rate, loan term and
-                  loan type are not needed. Any saved loan details stay available if your plans
-                  change.
-                </p>
-              </>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() =>
+                  onChange({
+                    ...values,
+                    'input.financing.loanAmount': '0',
+                  })
+                }
+              >
+                Pay in cash · No loan
+              </button>
             )}
             {group.title === 'Expenses & reserves' && (
-              <p className="muted">
-                Fixed annual maintenance, capital reserves and management replace their percentages,
-                including an explicit $0. Enter either the fixed annual cost or its percentage.
-              </p>
+              <p className="muted">A fixed annual cost, even $0, overrides its percentage.</p>
             )}
             <div className={styles.roiGrid}>
               {group.fields.map((field) => {
@@ -256,18 +239,14 @@ export function PropertyRoiFields({
                         </span>
                       )
                     )}
-                    {isDemo(field.path) && (
-                      <span className="muted">Fictional demo value - not a recorded actual.</span>
-                    )}
+                    {isDemo(field.path) && <span className="muted">Demo value</span>}
                     {original?.[field.path] && !values[field.path] && (
                       <span className="muted">Will be cleared on save.</span>
                     )}
                     {propertyValues &&
                       values[field.path] === original?.[field.path] &&
                       onProperty !== (original?.[field.path] ?? '') && (
-                        <span className="muted">
-                          Analysis value. Property details: {onProperty || 'blank'}.
-                        </span>
+                        <span className="muted">Property details: {onProperty || 'blank'}</span>
                       )}
                   </Field>
                 );
@@ -275,16 +254,6 @@ export function PropertyRoiFields({
             </div>
           </details>
         ))}
-        <details className={styles.roiGroup}>
-          <summary>How ROI details are used</summary>
-          <p className="muted">
-            Saved details fill a new ROI analysis automatically. Income is for the whole property,
-            across all units. Clear a saved field to mark it unknown; unchanged fields keep their
-            latest saved values. Changes update the property and its saved ROI analysis while
-            preserving other assumptions, scenarios and comparisons.
-            {saved ? ` You are editing ${saved}.` : ''}
-          </p>
-        </details>
       </details>
     </div>
   );

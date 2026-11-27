@@ -141,14 +141,11 @@
 .homeLease h1 {
   letter-spacing: -0.04em;
 }
-.spark {
-  color: var(--design-primary);
-  font:
-    26px Georgia,
-    serif;
-  display: inline-block;
-  margin-left: 7px;
-  transform: rotate(-12deg);
+/* One muted context line under a page title (premises, manager). */
+.subline {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--design-muted);
 }
 .rentHero {
   border: 1px solid var(--rr-border);
@@ -157,22 +154,6 @@
   padding: 16px 20px;
   display: grid;
   gap: 10px;
-}
-.heroTop {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.heroTop > span {
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--rr-border);
-  border-radius: 8px;
-  background: var(--design-surface);
-  color: var(--design-primary);
 }
 .paymentRow {
   display: grid;
@@ -186,8 +167,7 @@
   font-size: 13px;
   margin: 0;
 }
-.rentHero .manager {
-  font-size: 12px;
+.rentHero .heroNote {
   color: var(--design-muted);
 }
 .rentHero .pending {
@@ -217,9 +197,6 @@
 .homeLease .quickActions :global(.tile) {
   font-size: 13px;
   padding: 10px;
-}
-.homeLease .quickActions small {
-  font-size: 11px;
 }
 @media (min-width: 900px) {
   .homeGrid {
@@ -258,10 +235,6 @@
   background: var(--rr-ok-bg);
   color: var(--design-accent);
 }
-.quickActions small {
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
 .homeLease :global(.alert) {
   padding: 14px 16px;
   border-radius: 0 8px 8px 0;
@@ -297,69 +270,55 @@
   border: 1px solid var(--rr-border);
   border-radius: var(--design-radius);
 }
+/* One compact row per item: mark, title, then amount · date at the end (wraps under on phones). */
 .activity li {
   display: flex;
-  gap: 12px;
-  padding: 13px 0 !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 12px 0;
   font-size: 13px;
+  border-bottom: 1px solid var(--rr-border);
+}
+.activity li:last-child {
+  border-bottom: 0;
+}
+.activity li strong {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.activityDetail {
+  margin-left: auto;
+  color: var(--design-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .activityMark {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   display: grid;
   place-items: center;
   flex: none;
-  border: 1px solid var(--rr-border);
   border-radius: 50%;
+  font-size: 12px;
   color: var(--design-accent);
   background: var(--rr-ok-bg);
 }
-.homeLease .currentLease {
-  padding: 0;
-  overflow: hidden;
+.activityMark[data-tone='warning'] {
+  color: var(--rr-warn);
+  background: var(--rr-warn-bg);
 }
-.currentHeader {
-  padding: 18px 20px;
-  background: var(--rr-primary-tint);
-  border-bottom: 1px solid var(--rr-border);
-}
-.currentHeader :global(.card-header) {
-  margin-bottom: 0;
-}
-.property {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 14px;
-}
-.property strong,
-.property small {
-  display: block;
-}
-.property small {
-  font-size: 12px;
+.activityMark[data-tone='info'] {
   color: var(--design-muted);
+  background: var(--rr-subtle);
 }
-.property strong {
-  font-size: 14px;
-}
-.building {
-  width: 44px;
-  height: 44px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--rr-border);
-  border-radius: 8px;
-  background: var(--design-surface);
-  color: var(--design-primary);
-}
-.building svg {
-  width: 30px;
-  height: 30px;
+.homeLease .currentLease {
+  padding: 18px 20px;
 }
 .homeLease .currentLease :global(.kv) {
-  padding: 18px 20px;
   margin: 0;
   gap: 10px 14px;
   font-size: 13px;
@@ -371,12 +330,21 @@
   margin-block: -10px;
 }
 .homeLease .documents {
-  padding: 18px 20px 4px;
+  padding: 18px 20px;
 }
 .documents .document {
   border-top: 1px solid var(--rr-border);
   border-bottom: 0;
   padding-block: 14px;
+}
+.documents .document:last-child {
+  padding-bottom: 0;
+}
+/* One-line empty state inside or under a section heading. */
+.emptyNote {
+  margin: 0;
+  font-size: 14px;
+  color: var(--design-muted);
 }
 .documents :global(.file-meta) {
   font-size: 13px;
@@ -433,19 +401,10 @@
   .homeLease {
     --rr-h1: 28px;
   }
-  .rentHero,
-  .currentHeader {
-    padding: 16px;
-  }
-  /* Compact rent hero on phones: tighter rhythm, smaller icon chip, same content and 44px
-     Pay now target. */
+  /* Compact rent hero on phones: tighter rhythm, same content and 44px Pay now target. */
   .rentHero {
     gap: 8px;
     padding: 14px 16px;
-  }
-  .heroTop > span {
-    width: 32px;
-    height: 32px;
   }
   .paymentRow {
     gap: 10px;
@@ -453,13 +412,15 @@
   .homeLease .rentHero :global(.amount) {
     font-size: 36px;
   }
-  .homeLease .currentLease :global(.kv) {
+  .homeLease .currentLease {
     padding: 16px;
+  }
+  .homeLease .currentLease :global(.kv) {
     grid-template-columns: 76px minmax(0, 1fr) !important;
     gap: 10px 12px;
   }
   .homeLease .documents {
-    padding: 16px 16px 2px;
+    padding: 16px;
   }
   .sectionLinks {
     gap: 14px;

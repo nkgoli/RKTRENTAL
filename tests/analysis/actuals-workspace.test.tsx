@@ -148,16 +148,15 @@ describe('actual versus projected in the ROI workspace', () => {
     ).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Actual vs projected' }));
     expect(window.location.search).toBe('?property=a&view=actual');
-    // Concise basis up front; the full method stays one click away.
+    // One short provenance line; the method prose is gone.
     expect(panel().getByText(/^Projection source: /)).toBeTruthy();
-    expect(
-      panel().getByText('How actual and projected are compared').closest('details')!.open,
-    ).toBe(false);
+    expect(panel().queryByText('How actual and projected are compared')).toBeNull();
     const table = await panel().findByRole('table');
     const income = within(table).getByRole('row', { name: /Operating income/ });
     expect(within(income).getByText('$1,234')).toBeTruthy();
-    expect(within(income).getByText('Recorded')).toBeTruthy();
-    expect(within(income).getAllByText('Projected').length).toBeGreaterThan(0);
+    // Actual and projected amounts sit side by side without per-cell status labels.
+    expect(within(income).getAllByText(/^\$[\d,]+$/).length).toBeGreaterThan(1);
+    expect(within(income).queryByText('Recorded')).toBeNull();
     // Expenses were never recorded: unavailable, not $0, with a way to add them.
     const expenses = within(table).getByRole('row', { name: /Operating expenses/ });
     expect(within(expenses).getByText('Not recorded')).toBeTruthy();
@@ -189,7 +188,8 @@ describe('actual versus projected in the ROI workspace', () => {
       screen.getByRole('tab', { name: 'Actual vs projected' }).getAttribute('aria-selected'),
     ).toBe('true');
     await waitFor(() => expect(lastRequest()).toMatchObject({ propertyId: 'b', from: qtdFrom }));
-    expect(await panel().findByText(/Property b · Whole property/)).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Property b', level: 1 })).toBeTruthy();
+    expect(await panel().findByText(/^Whole property · /)).toBeTruthy();
   });
 
   it('shows missing actuals and missing assumptions as needed inputs, each side independently', async () => {
@@ -209,7 +209,7 @@ describe('actual versus projected in the ROI workspace', () => {
         within(within(table).getByRole('row', { name })).getByText('Not recorded'),
       ).toBeTruthy();
     expect(within(table).getAllByText('No projection').length).toBe(5);
-    expect(within(table).queryByText('Projected')).toBeNull();
+    expect(within(table).queryByText('Projected', { selector: 'tbody *' })).toBeNull();
     expect(panel().getByRole('link', { name: 'Add a lease' }).getAttribute('href')).toBe(
       '/properties/a/leases',
     );
@@ -279,7 +279,7 @@ describe('actual versus projected in the ROI workspace', () => {
     const table = await panel().findByRole('table');
     expect(within(table).getByRole('row', { name: /Operating income/ })).toBeTruthy();
     fireEvent.click(panel().getByText('Sources and coverage'));
-    fireEvent.click(panel().getByRole('button', { name: 'Export this comparison (CSV)' }));
+    fireEvent.click(panel().getByRole('button', { name: 'Export CSV' }));
     expect(create).toHaveBeenCalledTimes(1);
     const csv = await blob!.text();
     expect(csv).toContain('Property,Property a');

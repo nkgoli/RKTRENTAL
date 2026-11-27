@@ -20,13 +20,11 @@ function partOfDay(hour: number) {
 export function HomeHeader({
   firstName,
   propertyCount,
-  unitCount,
   needsCount,
   actions,
 }: {
   firstName: string;
   propertyCount: number;
-  unitCount: number;
   needsCount: number;
   actions: ManagerAction[];
 }) {
@@ -39,17 +37,12 @@ export function HomeHeader({
   const needs = needsCount
     ? `${plural(needsCount, 'thing')} ${needsCount === 1 ? 'needs' : 'need'} you today`
     : 'Nothing needs you today';
-  const meta = [
-    date,
-    plural(propertyCount, 'property', 'properties'),
-    plural(unitCount, 'unit'),
-    needs,
-  ]
+  // Three items at most: units are in the occupancy stat below.
+  const meta = [date, plural(propertyCount, 'property', 'properties'), needs]
     .filter(Boolean)
     .join(' · ');
   return (
     <PageHeader
-      eyebrow="Home"
       title={firstName ? `${greeting}, ${firstName}` : greeting}
       meta={meta}
       actions={actions}

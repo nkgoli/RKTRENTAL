@@ -3,15 +3,9 @@ import { db } from '@/lib/db/client';
 import { invitationStatus } from '@/lib/applications/invitation-policy';
 import { invitationDeliveryState } from '@/lib/applications/pipeline';
 import { unitScopeWhere, type ScopeFilter } from '@/lib/workspace/scope';
-import { Alert, Badge, Button, Steps } from '@/components/ui';
+import { Alert, Badge, Button } from '@/components/ui';
 import styles from './invitations.module.css';
 
-export const INVITATION_STEPS = [
-  'Create & review',
-  'Send or copy link',
-  'Applicant submits',
-  'You review',
-];
 const SHOWN = 6;
 
 function shortDate(value: Date) {
@@ -58,31 +52,18 @@ export async function InvitationList({
       aria-labelledby="invitations-title"
       id="invitations"
     >
-      <div className={styles.cardHead}>
+      <div className={styles.listHead}>
         <h2 id="invitations-title">Invitations · {open ? `${open} open` : 'none open'}</h2>
-        <p className={styles.caption}>
-          Invitations and saved drafts appear here. Submitted applications appear in the review list
-          below.
-        </p>
+        <Button href={sendHref} variant="secondary" size="sm" icon="arrow-right">
+          Send application
+        </Button>
       </div>
       {linksUnavailable && (
         <Alert tone="warning">
-          <div>
-            <strong>Secure application links are unavailable</strong>
-            <p>
-              Ask your administrator to configure application invitations. You can still prepare an
-              invitation; nothing is emailed until you review and send it.
-            </p>
-          </div>
+          Secure application links are unavailable. Ask your administrator to set them up.
         </Alert>
       )}
-      <div className={styles.stepsWrap}>
-        <Steps steps={INVITATION_STEPS} current={0} />
-      </div>
-      <p className={styles.caption}>
-        The private link stays valid for seven days. Email status is tracked separately.
-      </p>
-      {invitations.length ? (
+      {invitations.length > 0 && (
         <ul className={styles.rows}>
           {invitations.map((row) => {
             const delivery = invitationDeliveryState(row, row.attempts[0], now);
@@ -108,66 +89,15 @@ export async function InvitationList({
             );
           })}
         </ul>
-      ) : (
-        <div className={styles.emptyLine}>
-          <p className={styles.muted}>No invitations yet. Invite an applicant to get started.</p>
-          <Button href={sendHref} variant="secondary" size="sm" icon="arrow-right">
-            Send application
-          </Button>
-        </div>
       )}
       {invitations.length > 0 && (
-        <div className={styles.cardFoot}>
-          <Link href={`/applications/invitations${query.size ? `?${query}` : ''}`}>
-            {open > invitations.length
-              ? `View all ${open} open invitations`
-              : 'View all invitations'}
-          </Link>
-          <Button href={sendHref} variant="secondary" size="sm" icon="arrow-right">
-            Send application
-          </Button>
-        </div>
+        <Link
+          className={styles.viewAll}
+          href={`/applications/invitations${query.size ? `?${query}` : ''}`}
+        >
+          {open > invitations.length ? `View all ${open} open invitations` : 'View all invitations'}
+        </Link>
       )}
-    </section>
-  );
-}
-
-const GUIDE = [
-  {
-    title: 'Invitation · not sent yet',
-    body: 'A private link exists; no email attempted. Copying the link doesn’t change this.',
-  },
-  {
-    title: 'Invitation · accepted by provider',
-    body: 'Email handed off; delivery is unconfirmed.',
-  },
-  {
-    title: 'Invitation · uncertain or failed',
-    body: 'Failed can be retried. Uncertain blocks retry to prevent duplicate mail.',
-  },
-  {
-    title: 'Invitation · link expired',
-    body: 'Renew to issue a new 7-day link; the old one stops working.',
-  },
-  {
-    title: 'Application · submitted',
-    body: 'Moves into review below. Screening still needs FCRA consent.',
-  },
-];
-
-/** Explains the invitation and application states shown on this screen. */
-export function InvitationGuide() {
-  return (
-    <section className={styles.guide} aria-labelledby="invitation-guide-title">
-      <h2 id="invitation-guide-title">Invitation or application?</h2>
-      <div className={styles.accordion}>
-        {GUIDE.map((item) => (
-          <details key={item.title}>
-            <summary>{item.title}</summary>
-            <p>{item.body}</p>
-          </details>
-        ))}
-      </div>
     </section>
   );
 }

@@ -146,9 +146,6 @@ export function PropertyForm({
         {state.message && !state.ok && <Alert tone="warning">{state.message}</Alert>}
         <section className={styles.basicsSection} aria-labelledby={`${formId}-basics`}>
           <h2 id={`${formId}-basics`}>Property details</h2>
-          <p className="muted">
-            Start with the name, address and property type. Financial details below are optional.
-          </p>
           <FormRow>
             <Field label="Property name">
               <Input
@@ -219,11 +216,11 @@ export function PropertyForm({
           </FormRow>
           <FormRow columns={3}>
             {initial ? (
-              <Field label="Units" hint="Add or rename units from the property overview.">
+              <Field label="Units">
                 <Input value={initial.unitCount} readOnly />
               </Field>
             ) : type === 'MULTI_UNIT' ? (
-              <Field label="Number of units" hint="You can add or rename units later.">
+              <Field label="Number of units">
                 <Input
                   {...inputProps('unitCount')}
                   type="number"
@@ -236,7 +233,7 @@ export function PropertyForm({
                 <FieldError id={`${formId}-unitCount-error`} message={e.unitCount} />
               </Field>
             ) : (
-              <Field label="Units" hint="A single-unit home has one unit.">
+              <Field label="Units">
                 <Input value="1" disabled readOnly />
               </Field>
             )}
@@ -279,9 +276,6 @@ export function PropertyForm({
           saved={roi?.saved}
           propertyValues={roi && initial ? valuesFrom(initial.roiInputs) : undefined}
         />
-        <p className="muted" style={{ fontSize: 13 }}>
-          Add cover photos from the property page after saving.
-        </p>
         <div className={styles.formActions}>
           <Button type="submit" variant="primary" disabled={saving}>
             {saving ? 'Saving…' : roi ? 'Save and return to ROI' : 'Save property'}
@@ -327,7 +321,7 @@ export function ArchiveButton({ propertyId, archived, propertyName = 'property',
       <Button type="button" onClick={() => setOpen(true)} variant={archived ? 'secondary' : 'danger'} size={compact ? 'sm' : 'md'} disabled={pending}>
         {archived ? 'Restore property' : 'Archive property'}
       </Button>
-      <ConfirmDialog open={open} onClose={() => setOpen(false)} title={`${archived ? 'Restore' : 'Archive'} ${propertyName}?`} description={archived ? 'Return this property to your active portfolio.' : 'This property will leave your active portfolio. Its records stay saved and you can restore it later.'} confirmLabel={pending ? 'Saving…' : archived ? 'Restore property' : 'Archive property'} tone={archived ? 'primary' : 'danger'} pending={pending} action={action} fields={{ propertyId, archived: String(!archived) }}>
+      <ConfirmDialog open={open} onClose={() => setOpen(false)} title={`${archived ? 'Restore' : 'Archive'} ${propertyName}?`} description={archived ? 'It returns to your active portfolio.' : 'It leaves your active portfolio. Its records stay saved and you can restore it later.'} confirmLabel={pending ? 'Saving…' : archived ? 'Restore property' : 'Archive property'} tone={archived ? 'primary' : 'danger'} pending={pending} action={action} fields={{ propertyId, archived: String(!archived) }}>
         {state.message && !state.ok && <FieldError message={state.message} />}
       </ConfirmDialog>
     </div>

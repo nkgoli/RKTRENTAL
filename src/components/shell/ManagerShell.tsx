@@ -32,7 +32,6 @@ export function ManagerShell({
     pathname === '/leases/new';
   const current = findManagerItem(pathname);
   const [override, setOverride] = useState<PageHeaderConfig | null>(null);
-  const eyebrow = override?.eyebrow ?? current?.group.label ?? 'RocketRental';
   const title =
     override?.title ?? (current ? (current.item.title ?? current.item.label) : 'RocketRental');
   const actions = override?.actions ?? current?.item.actions;
@@ -71,7 +70,7 @@ export function ManagerShell({
                         className={cx(active && 'active')}
                         aria-current={active ? 'page' : undefined}
                       >
-                        <Icon name={active ? 'check' : item.icon} />
+                        <Icon name={item.icon} />
                         {item.label}
                       </a>
                     );
@@ -94,10 +93,7 @@ export function ManagerShell({
                     aria-current={active ? 'page' : undefined}
                   >
                     <Icon name={item.icon} />
-                    <span>
-                      {item.label}
-                      <small>Owner payout setup · coming soon</small>
-                    </span>
+                    <span>{item.label}</span>
                   </a>
                 );
               })}
@@ -131,18 +127,14 @@ export function ManagerShell({
           >
             {!workspaceRoute && (
               <div>
-                <p className="eyebrow">
-                  {back ? (
-                    <>
-                      <a className="topbar-back" href={back.href}>
-                        <Icon name="arrow-left" />
-                        {back.label}
-                      </a>
-                      <span aria-hidden="true"> / </span>
-                    </>
-                  ) : null}
-                  {eyebrow}
-                </p>
+                {back && (
+                  <p className="eyebrow">
+                    <a className="topbar-back" href={back.href}>
+                      <Icon name="arrow-left" />
+                      {back.label}
+                    </a>
+                  </p>
+                )}
                 <h1>{title}</h1>
                 {meta && <p className="topbar-sub">{meta}</p>}
               </div>

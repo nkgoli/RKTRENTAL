@@ -5,19 +5,19 @@
       "height": 241,
       "nextTop": 411,
       "gap": 24,
-      "text": ["Rent collection", "Open rent roll", "Portfolio occupancy", "Open repairs"]
+      "text": ["Rent collection", "Open rent roll", "Occupancy", "Open repairs"]
     },
     "/dashboard @tablet": {
       "height": 320,
       "nextTop": 550,
       "gap": 24,
-      "text": ["Rent collection", "Open rent roll", "Portfolio occupancy", "Open repairs"]
+      "text": ["Rent collection", "Open rent roll", "Occupancy", "Open repairs"]
     },
     "/dashboard @mobile": {
       "height": 416,
       "nextTop": 690,
       "gap": 24,
-      "text": ["Rent collection", "Open rent roll", "Portfolio occupancy", "Open repairs"]
+      "text": ["Rent collection", "Open rent roll", "Occupancy", "Open repairs"]
     },
     "/properties @desktop": {
       "height": 241,

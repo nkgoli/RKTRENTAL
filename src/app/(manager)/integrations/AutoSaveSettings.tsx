@@ -13,7 +13,8 @@ export function AutoSaveSettings({
 }: {
   group: string;
   title: string;
-  description: string;
+  /** Optional one-line scope note under the title. */
+  description?: string;
   children: ReactNode;
 }) {
   const [state, action, pending] = useActionState(saveSettingsInlineAction, null);
@@ -39,15 +40,15 @@ export function AutoSaveSettings({
       <div className="card-header">
         <div>
           <h3>{title}</h3>
-          <p className="muted">{description} Changes save automatically.</p>
+          {description && <p className="muted">{description}</p>}
         </div>
+        <span className={styles.saveState} role="status">
+          {pending ? 'Saving…' : state?.ok ? 'Saved' : ''}
+        </span>
       </div>
       <fieldset style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }} className="form">
         {children}
       </fieldset>
-      <span className="muted" role="status">
-        {pending ? 'Saving…' : state?.ok ? 'Saved' : ''}
-      </span>
     </form>
   );
 }

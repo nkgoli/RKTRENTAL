@@ -122,7 +122,6 @@ export function SavedCases({
               inputMode={spec.kind === 'date' ? undefined : 'decimal'}
               value={draft.values[path] ?? ''}
               disabled={locked}
-              placeholder={`Baseline ${baseText(base, path)}`}
               aria-invalid={!!error}
               aria-describedby={error ? `${id}-error` : undefined}
               onChange={(e) => setValues({ ...draft.values, [path]: e.target.value })}
@@ -216,12 +215,8 @@ export function SavedCases({
           </details>
           {draft.options && (
             <details className={w.more}>
-              <summary>Explicit scenario calculation options</summary>
+              <summary>Calculation options</summary>
               <CalculationAssumptions options={draft.options} />
-              <p className={w.hint}>
-                These saved assumptions apply only to this case. Use base calculation options to
-                inherit the dates, discount rate and tax assumptions from the analysis.
-              </p>
               <button
                 type="button"
                 disabled={locked}
@@ -248,8 +243,7 @@ export function SavedCases({
         <div>
           <h3 id="roi-case-editor-title">Saved cases</h3>
           <p className={w.hint}>
-            {drafts.length} of {MAX_CASES} · blank fields inherit the baseline. Cases are kept with
-            the analysis when you save it.
+            {drafts.length} of {MAX_CASES}
           </p>
         </div>
         <button

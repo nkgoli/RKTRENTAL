@@ -5,7 +5,7 @@ import { KpiCard } from '@/components/dashboard/KpiCard';
 import { trendOf } from '@/components/dashboard/trend';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader } from '@/components/ui/Card';
-import { Alert, Progress } from '@/components/ui/Feedback';
+import { Alert } from '@/components/ui/Feedback';
 import { Field, FormRow, Input, Select } from '@/components/ui/Forms';
 import { requireManagerRole } from '@/lib/auth/access';
 import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS } from '@/lib/expenses';
@@ -38,7 +38,7 @@ type SearchParams = Promise<{
 }>;
 
 const notices: Record<string, { tone: 'success' | 'warning'; text: string }> = {
-  'expense-added': { tone: 'success', text: 'Expense added. The returns below now include it.' },
+  'expense-added': { tone: 'success', text: 'Expense added.' },
   'expense-invalid': {
     tone: 'warning',
     text: 'Check the expense details: choose a property and category, enter an amount above zero and a valid date.',
@@ -50,7 +50,6 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
   const params = await searchParams;
   const now = new Date();
   const period = await resolveReturnsPeriod(session.organizationId, params, now);
-  const periodKey = period.key;
   const range = periodParams(period);
   const overview = await loadReturnsOverview(session.organizationId, period);
   const selected = overview.properties.find((p) => p.propertyId === params.property) ?? null;
@@ -81,6 +80,11 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
   const occupancy =
     (scope?.units ?? 0) > 0 ? Math.round(((scope?.occupied ?? 0) / (scope?.units ?? 1)) * 100) : 0;
   const maxNoi = Math.max(1, ...shownProperties.map((p) => Math.abs(p.metrics.noiCents)));
+  // Largest NOI first, so the bars read as a ranking; properties at $0 fold into one line.
+  const noiRanking = shownProperties
+    .filter((p) => p.metrics.noiCents !== 0)
+    .sort((a, b) => b.metrics.noiCents - a.metrics.noiCents);
+  const zeroNoi = shownProperties.length - noiRanking.length;
   const noiSeries = monthly.map((m) => m.incomeCents - m.expensesCents);
   const expenseSeries = monthly.map((m) => m.expensesCents);
   const noiTrend = selected ? null : trendOf(noiSeries);
@@ -90,7 +94,6 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
   return (
     <>
       <PageHeader
-        eyebrow="Returns & ROI"
         title="Portfolio returns"
         actions={[
           { label: 'Owner payouts', href: '/payments' },
@@ -115,10 +118,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
       {params.period === 'CUSTOM' &&
         (period.key !== 'CUSTOM' || params.from !== range.from || params.to !== range.to) && (
           <Alert tone="warning">
-            <p>
-              The date range was adjusted to valid months through the current month. Review the
-              displayed range before exporting.
-            </p>
+            <p>Date range adjusted to valid months through this month.</p>
           </Alert>
         )}
       <section className={styles.toolbar} aria-label="Report filters">
@@ -150,16 +150,6 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
         </form>
       </section>
 
-      <details className={styles.method}>
-        <summary>How returns are calculated · includes estimates</summary>
-        <p>
-          These portfolio figures are month-based summaries, not recorded-only results. Cash flow
-          and cash-on-cash subtract scheduled debt service (loan payments are not recorded), ROI
-          adds 3%/yr assumed appreciation, yield uses scheduled rent, and a month without expense
-          records counts as $0 here. For recorded actuals with coverage, open a property&rsquo;s{' '}
-          <strong>Actual vs projected</strong>.
-        </p>
-      </details>
       {overview.properties.length === 0 && (
         <EmptyState
           title="No properties to report"
@@ -173,7 +163,6 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           <KpiCard
             label="Net operating income"
             value={formatUsd(metrics.noiCents)}
-            note="Income less expenses"
             trend={noiTrend?.label}
             trendWarm={noiTrend?.warm}
             spark={
@@ -187,33 +176,32 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
           <KpiCard
             label="Cash flow"
             value={formatUsd(metrics.cashFlowCents)}
-            note={`Estimate: after ${formatUsd(metrics.debtServiceCents)} scheduled debt service, not recorded loan payments`}
+            note={`After ${formatUsd(metrics.debtServiceCents)} scheduled debt`}
           />
           <KpiCard
             label="Cap rate"
             value={formatPercent(metrics.capRate)}
-            note={
-              metrics.capRate === null
-                ? 'Add property value to calculate'
-                : 'Period NOI on property value'
-            }
+            note={metrics.capRate === null ? 'Add property value to calculate' : undefined}
           />
           <KpiCard
             label="Cash-on-cash return"
             value={formatPercent(metrics.cashOnCash)}
-            note={`Estimate on ${metrics.cashInvestedCents ? formatUsd(metrics.cashInvestedCents) : '—'} invested · scheduled debt`}
+            note={
+              metrics.cashInvestedCents
+                ? `On ${formatUsd(metrics.cashInvestedCents)} invested`
+                : undefined
+            }
           />
           <KpiCard
             label="Occupancy"
             value={`${occupancy}%`}
-            note={`${scope?.occupied ?? 0} of ${scope?.units ?? 0} units · current occupancy`}
+            note={`${scope?.occupied ?? 0} of ${scope?.units ?? 0} units`}
             ring={occupancy}
             ringLabel={`${occupancy}% occupied`}
           />
           <KpiCard
             label="Expense ratio"
             value={formatPercent(metrics.expenseRatio)}
-            note="Of income"
             trend={expenseTrend?.label}
             trendWarm={expenseTrend?.warm}
             spark={
@@ -227,64 +215,52 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
         </section>
       )}
 
-      <section className="split">
+      {/* One selected property: the chart takes the row; a one-bar NOI ranking adds nothing. */}
+      <section className={selected ? undefined : 'split'}>
         <Card>
-          <div className="card-header">
-            <div>
-              <h3>Income vs expenses</h3>
-              <p className="muted" style={{ fontSize: 13, marginTop: 2 }}>
-                {period.granularity === 'quarter' ? 'Quarterly' : 'Monthly'},{' '}
-                {selected ? selected.propertyName : 'portfolio total'}
-              </p>
-            </div>
-          </div>
+          <CardHeader title="Income vs expenses" />
           <IncomeExpenseChart
             rows={monthly}
             label={`${selected?.propertyName ?? 'Portfolio'}: ${period.label}`}
+            height={240}
           />
         </Card>
-        <Card>
-          <div className="card-header">
-            <div>
-              <h3>NOI by property</h3>
-              <p className="muted" style={{ fontSize: 13, marginTop: 2 }}>
-                {period.label}
-              </p>
-            </div>
-          </div>
-          <ul className={styles.barList} aria-label="Net operating income by property">
-            {shownProperties.map((property) => (
-              <li key={property.propertyId}>
-                <Link href={returnsHref(property.propertyId)}>{property.propertyName}</Link>
-                <strong>{formatUsd(property.metrics.noiCents)}</strong>
-                <span className={styles.track}>
+        {!selected && (
+          <Card>
+            <CardHeader title="NOI by property" />
+            <ul className={styles.barList} aria-label="Net operating income by property">
+              {noiRanking.map((property) => (
+                <li key={property.propertyId}>
+                  <Link href={returnsHref(property.propertyId)}>{property.propertyName}</Link>
+                  <strong>{formatUsd(property.metrics.noiCents)}</strong>
                   <span
-                    className={styles.fill}
+                    className={styles.bar}
+                    data-negative={property.metrics.noiCents < 0 ? 'true' : undefined}
                     style={{ width: `${(Math.abs(property.metrics.noiCents) / maxNoi) * 100}%` }}
+                    aria-hidden="true"
                   />
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
+                </li>
+              ))}
+            </ul>
+            {zeroNoi > 0 && (
+              <p className={styles.barNote}>
+                {zeroNoi} {zeroNoi === 1 ? 'property' : 'properties'} at {formatUsd(0)}
+              </p>
+            )}
+          </Card>
+        )}
       </section>
 
       {yearly.length > 1 && (
         <Card>
-          <CardHeader
-            title="Year over year"
-            action={<span className="muted">{period.label}</span>}
-          />
+          <CardHeader title="Year over year" />
           <YearOverYear rows={yearly} />
         </Card>
       )}
 
       <section className="card flush">
         <div className="card-header">
-          <div>
-            <p className="eyebrow">{period.label}</p>
-            <h3>Returns by property</h3>
-          </div>
+          <h3>Returns by property</h3>
         </div>
         <div
           className={styles.tableScroll}
@@ -308,14 +284,14 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
                 <th scope="col" className="num">
                   Cap rate
                 </th>
-                <th scope="col" className="num" title="Uses scheduled debt service">
-                  Cash-on-cash (est.)
+                <th scope="col" className="num" title="Estimate: uses scheduled debt service">
+                  Cash-on-cash
                 </th>
-                <th scope="col" className="num" title="Includes assumed 3% annual appreciation">
-                  ROI (est.)
+                <th scope="col" className="num" title="Estimate: includes 3% yearly appreciation">
+                  ROI
                 </th>
                 <th scope="col" className="num" title="Scheduled rent divided by property value">
-                  Yield (sched.)
+                  Yield
                 </th>
               </tr>
             </thead>
@@ -388,83 +364,51 @@ export default async function ReturnsPage({ searchParams }: { searchParams: Sear
             </tbody>
           </table>
         </div>
+        <p className={styles.footnote}>
+          Estimates: cash-on-cash and ROI use scheduled debt service, ROI adds 3% yearly
+          appreciation and yield uses scheduled rent.
+        </p>
       </section>
 
-      <section className="grid-2">
-        <Card>
-          <CardHeader
-            title="Expense breakdown"
-            action={
-              <span className="muted" style={{ fontSize: 13 }}>
-                {formatUsd(totalExpenses)} total
-              </span>
-            }
-          />
-          <div className="stack" style={{ gap: 14 }}>
-            {expenseBreakdown.length === 0 && (
-              <EmptyState
-                title="No expenses this period"
-                description="Record an expense to include it in your returns."
-              />
-            )}
-            {expenseBreakdown.map((entry) => (
-              <div key={entry.category}>
-                <div className="row between">
-                  <strong>{entry.label}</strong>
-                  <span>
+      <Card>
+        <div className={`card-header ${styles.expenseHead}`}>
+          <div className={styles.headTitle}>
+            <h3>Expense breakdown</h3>
+            <span className="muted">{formatUsd(totalExpenses)} total</span>
+          </div>
+          <a className="btn btn-secondary btn-sm" href={addHref}>
+            + Add expense
+          </a>
+        </div>
+        {expenseBreakdown.length === 0 ? (
+          <p className="muted">No expenses this period.</p>
+        ) : (
+          <ul
+            className={`${styles.barList} ${styles.twoColumns}`}
+            aria-label="Expenses by category"
+          >
+            {expenseBreakdown.map((entry) => {
+              const share = totalExpenses > 0 ? (entry.amountCents / totalExpenses) * 100 : 0;
+              return (
+                <li key={entry.category}>
+                  <span>{entry.label}</span>
+                  <strong>
                     {formatUsd(entry.amountCents)}{' '}
-                    <span className="muted">
-                      ·{' '}
-                      {totalExpenses > 0
-                        ? `${((entry.amountCents / totalExpenses) * 100).toFixed(1)}%`
-                        : '—'}
-                    </span>
-                  </span>
-                </div>
-                <Progress
-                  value={totalExpenses > 0 ? (entry.amountCents / totalExpenses) * 100 : 0}
-                  label={`${entry.label} share of expenses`}
-                  style={{ marginTop: 6 }}
-                />
-              </div>
-            ))}
-          </div>
-          <div style={{ marginTop: 16 }}>
-            <a className="btn btn-secondary btn-sm" href={addHref}>
-              + Add expense
-            </a>
-          </div>
-        </Card>
-        <Card>
-          <CardHeader title="Export report" />
-          <div className="stack">
-            <p className="muted">
-              Download the returns summary with income and expense totals for the selected period
-              and properties.
-            </p>
-            <dl className="kv" style={{ gridTemplateColumns: '100px 1fr' }}>
-              <dt>Period</dt>
-              <dd>
-                {periodKey} · {period.label}
-              </dd>
-              <dt>Scope</dt>
-              <dd>
-                {selected
-                  ? selected.propertyName
-                  : `All properties (${overview.properties.length})`}
-              </dd>
-              <dt>Includes</dt>
-              <dd>
-                NOI and cap rate from recorded income and expenses; cash flow, cash-on-cash, ROI and
-                yield as labelled estimates (scheduled debt, assumed appreciation, scheduled rent)
-              </dd>
-            </dl>
-            <Button href={exportHref} variant="primary">
-              Export report (CSV)
-            </Button>
-          </div>
-        </Card>
-      </section>
+                    <span className="muted">· {share.toFixed(1)}%</span>
+                  </strong>
+                  {share > 0 && (
+                    <span
+                      className={`${styles.bar} ${styles.expenseBar}`}
+                      style={{ width: `${share}%` }}
+                      aria-hidden="true"
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Card>
 
       {adding && (
         <Card id="add-expense">

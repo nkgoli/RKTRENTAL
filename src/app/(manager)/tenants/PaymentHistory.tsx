@@ -16,7 +16,7 @@ export function PaymentHistory({ children, count }: { children: ReactNode; count
           onClick={() => setExpanded(!expanded)}
           aria-expanded={expanded}
         >
-          {expanded ? 'Show latest 3' : `Show all ${count} on this page`}
+          {expanded ? 'Show latest 3' : `Show all ${count}`}
         </Button>
       )}
     </div>

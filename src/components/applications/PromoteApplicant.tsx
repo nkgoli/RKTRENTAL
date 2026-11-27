@@ -66,14 +66,12 @@ export function PromoteApplicant({
   );
   return (
     <section className={styles.promotion} aria-label="Tenant promotion">
-      <h4>{promotedId ? 'Tenant linked' : 'Promote to tenant'}</h4>
       {promotedId ? (
-        <>
+        <div className={styles.row}>
           <p role="status">
             {reused
-              ? 'Existing tenant linked. Their details are unchanged.'
-              : 'This approved application is linked to a tenant.'}{' '}
-            Lease setup is a separate step.
+              ? 'Linked to an existing tenant. Their details are unchanged.'
+              : 'Tenant linked.'}
           </p>
           <div className={styles.actions}>
             <Button href={`/tenants/${encodeURIComponent(promotedId)}`} variant="secondary">
@@ -86,23 +84,16 @@ export function PromoteApplicant({
               Create lease
             </Button>
           </div>
-        </>
+        </div>
       ) : (
-        <>
-          <p>
-            Promote to tenant links this approved applicant to a tenant record. It carries the
-            applicant’s name and email into Tenants and does not start a lease or move them in.
-          </p>
+        <div className={styles.row}>
+          <p>Approved · not linked to a tenant</p>
           <div className={styles.actions}>
             <Button disabled={pending} onClick={() => promote()} variant="primary" icon="check">
               {pending && !match ? 'Promoting…' : 'Promote to tenant'}
             </Button>
           </div>
-          <p className={styles.caption}>
-            With no matching contact, Promote to tenant creates one tenant. Several matches stop
-            with a duplicate-contact message; nothing is merged.
-          </p>
-        </>
+        </div>
       )}
       {!match && errorMessage}
       <Dialog
@@ -132,24 +123,16 @@ export function PromoteApplicant({
             <Alert tone="warning">
               <div>
                 <strong>This email already belongs to a tenant</strong>
-                <p>
-                  Confirm it is the same person. Their saved name, phone, preferences and history
-                  are kept, never overwritten.
-                </p>
+                <p>Confirm it is the same person. Their saved details are kept as they are.</p>
               </div>
             </Alert>
             <div className={styles.contact}>
               <strong>{match.email}</strong>
               <span>{match.name}</span>
               {match.phone && <span>{match.phone}</span>}
-              <small>Matches 1 saved tenant contact · name, email and phone as saved</small>
               <Link href={`/tenants/${encodeURIComponent(match.id)}`}>Review existing tenant</Link>
             </div>
             {errorMessage}
-            <p className={styles.caption}>
-              Several matches stop here with a duplicate-contact message; nothing is merged. With no
-              match, Promote to tenant creates one tenant.
-            </p>
           </div>
         )}
       </Dialog>

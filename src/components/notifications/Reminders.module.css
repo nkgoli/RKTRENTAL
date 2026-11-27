@@ -33,6 +33,60 @@
   outline: 3px solid var(--design-primary);
   outline-offset: 3px;
 }
+/* Integrations: reminder channels as quiet rows with one status badge each. */
+.setup {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  scroll-margin-top: 20px;
+}
+.setup h2 {
+  margin: 0;
+  font: 500 var(--rr-h3, 17px) / 1.35 var(--design-heading-font);
+}
+.channelList {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.channelList li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rr-border);
+  font-size: 14px;
+}
+.channelList li:first-child {
+  padding-top: 0;
+}
+.channelList strong {
+  font-weight: 500;
+}
+.channelError {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--design-danger);
+  font-size: 13px;
+}
+.setupSteps {
+  color: var(--design-muted);
+  font-size: 13px;
+}
+.setupSteps summary {
+  width: fit-content;
+  min-height: 28px;
+  cursor: pointer;
+}
+.setupSteps ol {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding-left: 20px;
+  line-height: 1.5;
+}
 .selection {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
@@ -87,9 +141,6 @@
 }
 .confirmActions {
   justify-content: flex-start;
-}
-.dangerEyebrow {
-  color: var(--design-danger) !important;
 }
 .quoted > summary {
   min-height: 36px;

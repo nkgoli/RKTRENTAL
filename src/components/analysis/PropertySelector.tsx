@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import type { PropertySelectionResult } from '@/lib/analysis';
+import { Icon } from '@/components/shell/Icons';
 import styles from './analysis.module.css';
 export type PropertyChoice = Extract<PropertySelectionResult, { ok: true }>['data'][number];
 export function PropertySelector({
@@ -18,16 +19,16 @@ export function PropertySelector({
   );
   return (
     <section className={styles.card} aria-label="Your properties">
-      <h2>Your properties</h2>
-      <label className={styles.field}>
-        Search properties
+      <div className={`search ${styles.search}`}>
+        <Icon name="search" />
         <input
           type="search"
+          aria-label="Search properties"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Name, address or postal code"
+          placeholder="Search properties"
         />
-      </label>
+      </div>
       <div className={styles.properties}>
         {filtered.map((p) => (
           <button disabled={disabled} key={p.id} onClick={() => onSelect(p.id)}>
@@ -35,12 +36,16 @@ export function PropertySelector({
             <span>
               {p.street}, {p.city}, {p.state} {p.postalCode}
             </span>
-            <small>{p.units.length} active units · Open ROI Analysis →</small>
+            {p.units.length > 0 && (
+              <small>
+                {p.units.length} {p.units.length === 1 ? 'unit' : 'units'}
+              </small>
+            )}
           </button>
         ))}
       </div>
       {!properties.length ? (
-        <p>No properties available. Add an active property to begin.</p>
+        <p>No active properties yet.</p>
       ) : !filtered.length ? (
         <p>No properties match your search.</p>
       ) : null}

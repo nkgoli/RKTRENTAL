@@ -32,9 +32,10 @@ describe('returns presentation', () => {
       root = hydrateRoot(container, chart, { onRecoverableError: (error) => errors.push(error) });
     });
     expect(errors).toEqual([]);
-    expect(container.querySelector('svg title')?.textContent).toContain(
-      'income $100.01, expenses $23.45',
-    );
+    const plot = container.querySelector('[role="img"]')!;
+    expect(plot.getAttribute('aria-label')).toBe('October report');
+    expect(plot.textContent).toContain('Income$100.01');
+    expect(plot.textContent).toContain('Expenses$23.45');
     await act(async () => root.unmount());
     container.remove();
   });

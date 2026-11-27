@@ -249,7 +249,7 @@ export function neededInputs(
   if (missingAssumptions > 0)
     out.push({
       id: 'assumptions',
-      text: `Complete ${missingAssumptions} ROI assumption${missingAssumptions === 1 ? '' : 's'} to show the projection beside your actuals.`,
+      text: `Complete ${missingAssumptions} ROI assumption${missingAssumptions === 1 ? '' : 's'} to see the projection.`,
       action: 'assumptions',
       linkLabel: 'Review assumptions',
     });
@@ -264,20 +264,20 @@ export function neededInputs(
       !rent.coverage.hasHistory
         ? {
             id: 'rent',
-            text: 'No lease, rent charge or payment is recorded for this property, so actual rent is unavailable.',
+            text: 'No rent is recorded for this property.',
             href: `${base}/leases`,
             linkLabel: 'Add a lease',
           }
         : rent.coverage.status === 'none'
           ? {
               id: 'rent',
-              text: 'No lease term with a recorded rent charge covers this period, so actual rent is unavailable, not $0. Older records do not count for later periods.',
+              text: 'No rent charge covers this period, so rent is unavailable, not $0.',
               href: `${base}/leases`,
               linkLabel: 'Review leases',
             }
           : {
               id: 'rent',
-              text: `Rent records evidence only ${days(rent.coverage)} and no rent receipt is recorded in them; the rest is unverified, so rent is unavailable, not $0.`,
+              text: `Rent records cover only ${days(rent.coverage)}, with no receipts, so rent is unavailable, not $0.`,
               href: `${base}/payments`,
               linkLabel: 'Record rent payments',
             },
@@ -285,14 +285,14 @@ export function neededInputs(
   else if (unclassified > 0)
     out.push({
       id: 'unclassified',
-      text: `${unclassified} receipt(s) could not be classified as rent. Generate the matching rent charges so they count as income.`,
+      text: `${unclassified} ${unclassified === 1 ? 'receipt is' : 'receipts are'} not matched to a rent charge.`,
       href: `${base}/payments`,
       linkLabel: 'Review payments',
     });
   else if (rent.coverage.status !== 'complete')
     out.push({
       id: 'rent-window',
-      text: `Rent records evidence ${days(rent.coverage)} of this period. ${rent.coverage.gaps.join(' ')}`,
+      text: `Rent records cover ${days(rent.coverage)} of this period.`,
       href: actual.income.excluded.undatedCount ? `${base}/payments` : `${base}/leases`,
       linkLabel: actual.income.excluded.undatedCount ? 'Review payments' : 'Review leases',
     });
@@ -302,15 +302,15 @@ export function neededInputs(
     out.push({
       id: 'expenses',
       text: !expenses.coverage.hasHistory
-        ? 'No expenses have ever been recorded for this property; actual expenses and NOI are unavailable, not $0.'
-        : 'No expenses are recorded in this period; actual expenses and NOI are unavailable, not $0.',
+        ? 'No expenses are recorded for this property.'
+        : 'No expenses are recorded in this period.',
       href: addExpense,
       linkLabel: 'Add expense',
     });
   else if (expenses.coverage.status !== 'complete')
     out.push({
       id: 'expense-window',
-      text: `Expenses are recorded in months covering ${days(expenses.coverage)}; months without a recorded expense are unverified, not $0. ${expenses.coverage.gaps.join(' ')}`,
+      text: `Expenses cover ${days(expenses.coverage)}; other months are unverified, not $0.`,
       href: addExpense,
       linkLabel: 'Add expense',
     });
@@ -319,13 +319,13 @@ export function neededInputs(
       actual.scheduled.debtService.status === 'unavailable'
         ? {
             id: 'financing',
-            text: 'Financing is unknown. Enter the loan amount (0 for a cash purchase) and annual debt service on the property.',
+            text: 'Financing is unknown. Enter the loan amount, or 0 for a cash purchase.',
             href: `${base}/edit`,
             linkLabel: 'Edit property',
           }
         : {
             id: 'loan-payments',
-            text: 'Loan payments are not recorded, so actual cash flow is unavailable. The estimate below uses scheduled debt service.',
+            text: 'Loan payments are not recorded, so actual cash flow is unavailable.',
             href: `${base}/edit`,
             linkLabel: 'Review financing',
           },

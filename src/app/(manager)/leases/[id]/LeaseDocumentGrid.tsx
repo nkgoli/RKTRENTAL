@@ -237,10 +237,11 @@ export function LeaseDocumentGrid({
     setItems((current) => [item, ...current.filter((entry) => entry.id !== item.id)]);
     toast.success(`${item.name} uploaded.`);
   }
+  // Only groups that hold files; an empty lease shows one line instead of empty sections.
   const groups = DOCUMENT_GROUPS.map((group) => ({
     ...group,
     files: items.filter((item) => documentGroup(item.kind, item.signed) === group.key),
-  })).filter((group) => group.files.length > 0 || group.key !== 'other');
+  })).filter((group) => group.files.length > 0);
   return (
     <>
       {message && (
@@ -248,7 +249,7 @@ export function LeaseDocumentGrid({
           <Alert tone="success">{message}</Alert>
         </div>
       )}
-      {!items.length && <p className="muted">No lease documents yet.</p>}
+      {!items.length && <p className={styles.emptyGroup}>No lease documents yet.</p>}
       <div className={styles.documentGroups} aria-label="Lease documents">
         {groups.map((group) => (
           <section
@@ -259,35 +260,23 @@ export function LeaseDocumentGrid({
             <h3 className="eyebrow">
               {group.title} <span className={styles.count}>{group.files.length}</span>
             </h3>
-            {group.files.length ? (
-              group.files.map((document) => (
-                <DocumentRow
-                  key={document.id}
-                  leaseId={leaseId}
-                  document={document}
-                  onRenamed={(name) =>
-                    setItems((current) =>
-                      current.map((entry) =>
-                        entry.id === document.id ? { ...entry, name } : entry,
-                      ),
-                    )
-                  }
-                  onRemoved={(name) => {
-                    setMessage(`${name} deleted.`);
-                    toast.success(`${name} deleted.`);
-                    setItems((current) => current.filter((entry) => entry.id !== document.id));
-                  }}
-                />
-              ))
-            ) : (
-              <p className={styles.emptyGroup}>
-                {group.key === 'signed'
-                  ? 'No signed agreement stored on this lease.'
-                  : group.key === 'addendums'
-                    ? 'No addendums yet.'
-                    : 'No inspections or IDs yet.'}
-              </p>
-            )}
+            {group.files.map((document) => (
+              <DocumentRow
+                key={document.id}
+                leaseId={leaseId}
+                document={document}
+                onRenamed={(name) =>
+                  setItems((current) =>
+                    current.map((entry) => (entry.id === document.id ? { ...entry, name } : entry)),
+                  )
+                }
+                onRemoved={(name) => {
+                  setMessage(`${name} deleted.`);
+                  toast.success(`${name} deleted.`);
+                  setItems((current) => current.filter((entry) => entry.id !== document.id));
+                }}
+              />
+            ))}
           </section>
         ))}
       </div>

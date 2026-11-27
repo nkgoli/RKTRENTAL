@@ -44,11 +44,7 @@ export function RepairForm() {
       </label>
       <Field
         label="What needs fixing?"
-        error={
-          error ? (
-            <span id="repair-error">Describe what needs fixing so the vendor can prepare.</span>
-          ) : undefined
-        }
+        error={error ? <span id="repair-error">Describe what needs fixing.</span> : undefined}
       >
         <textarea
           id="repair-description"
@@ -62,7 +58,7 @@ export function RepairForm() {
           placeholder="e.g. Kitchen faucet leaks under the sink…"
         />
         <span className="hint" id="repair-hint">
-          Add where it is and when it started, so the vendor brings the right parts.
+          Include where it is and when it started.
         </span>
       </Field>
       <section className={styles.upload} aria-labelledby="repair-photos-title">
@@ -77,7 +73,7 @@ export function RepairForm() {
         />
       </section>
       <fieldset className={styles.entry}>
-        <legend style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Entry permission</legend>
+        <legend>Entry permission</legend>
         <div className="stack" style={{ gap: 8 }}>
           {Object.entries(ENTRY_OPTIONS).map(([value, label], index) => (
             <label className={styles.option} key={value}>
@@ -102,7 +98,7 @@ export function RepairForm() {
           ))}
         </select>
         <span className={`hint ${styles.emergency}`} id="urgency-help">
-          For emergencies (burst pipe, no heat) also call your property manager.
+          For emergencies (burst pipe, no heat), also call your property manager.
         </span>
       </div>
       <button className="btn btn-primary btn-block" type="submit" disabled={pending}>

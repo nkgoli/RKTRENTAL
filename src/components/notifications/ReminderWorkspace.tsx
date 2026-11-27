@@ -59,16 +59,17 @@ function ChargeSummary({ snapshot }: { snapshot: ReminderSnapshot }) {
     <section className={styles.balance} aria-label="Overdue charges">
       <div className={styles.balanceHead}>
         <div>
-          <p className={styles.balanceLabel}>Overdue · all dates</p>
+          <p className={styles.balanceLabel}>Overdue</p>
           <strong>{money(snapshot.amountCents)}</strong>
         </div>
         <span className={styles.muted}>As of {snapshot.asOf} UTC</span>
       </div>
-      <p>
-        Remaining rent and other charges {money(snapshot.amountCents - fees)}{' '}
-        <span>· Assessed late fees {money(fees)}</span>
-      </p>
-      <p className={styles.muted}>Shared lease balance. No new fees are added by this reminder.</p>
+      {fees > 0 && (
+        <p>
+          Rent and other charges {money(snapshot.amountCents - fees)}{' '}
+          <span>· Assessed late fees {money(fees)}</span>
+        </p>
+      )}
       {snapshot.pendingCents > 0 && (
         <p className={styles.warning}>
           {money(snapshot.pendingCents)} pending payment · not yet settled or deducted.
@@ -363,14 +364,7 @@ export function ReminderWorkspace({
       )}
       {!lockedLeaseId && (
         <section className={`card ${styles.selection}`}>
-          <div>
-            <p className="eyebrow">Payment reminders</p>
-            <h2>Choose a lease</h2>
-            <p className={styles.muted}>
-              Review the balance and choose who receives a reminder. Each message uses the shared
-              lease balance.
-            </p>
-          </div>
+          <h2>Choose a lease</h2>
           <label className={styles.field}>
             Lease
             <select
@@ -403,8 +397,8 @@ export function ReminderWorkspace({
           </label>
           {initialMissing && (
             <p className={styles.warning} role="alert">
-              The lease you opened is no longer available for reminders in this scope. Nothing was
-              selected or sent; choose a lease to continue.
+              The lease you opened is no longer available for reminders. Nothing was sent; choose
+              another lease.
             </p>
           )}
           {fromRentRoll && lease && leaseId === initialLeaseId && (
@@ -413,20 +407,10 @@ export function ReminderWorkspace({
               {initialTenantId && lease.tenants.some((t) => t.id === initialTenantId)
                 ? ` for ${lease.tenants.find((t) => t.id === initialTenantId)!.name}`
                 : ''}
-              . Balance and contacts below are current; nothing is sent until you confirm.
+              .
             </p>
           )}
-          {!leaseId && (
-            <p className={styles.muted}>
-              Select one lease to compose a reminder or inspect its history. No recipient is
-              selected across leases.
-            </p>
-          )}
-          {!overdue.length && (
-            <p className={styles.good}>
-              No overdue balances in this scope. You can still inspect previous reminders.
-            </p>
-          )}
+          {!overdue.length && <p className={styles.good}>No overdue balances in this scope.</p>}
         </section>
       )}
 
@@ -443,10 +427,7 @@ export function ReminderWorkspace({
       {pending && (
         <section className={`card ${styles.recovery}`} aria-label="Original send recovery">
           <h3>Check the original send</h3>
-          <p>
-            Your original send is retained to prevent duplicates. Refresh history or request the
-            same operation’s result.
-          </p>
+          <p>Your original send is kept to prevent duplicates.</p>
           <div className={styles.actions}>
             <button
               className="btn btn-primary"
@@ -471,31 +452,23 @@ export function ReminderWorkspace({
           <div className={styles.summaryArea}>
             {hasBalance ? (
               <section className="card" aria-labelledby="reminder-balance-heading">
-                <p className={`eyebrow ${styles.dangerEyebrow}`}>
-                  Late-rent reminder · step {step + 1} of 4
-                </p>
                 <h2 id="reminder-balance-heading">
                   Remind {lease.tenants.map((t) => t.name).join(' & ') || 'tenants'} about{' '}
                   {money(snapshot.amountCents)}
                 </h2>
-                <p className={styles.muted}>
-                  {lease.label}. Review the balance first; nothing is sent until you confirm.
-                </p>
+                <p className={styles.muted}>{lease.label}</p>
                 <ChargeSummary snapshot={snapshot} />
               </section>
             ) : (
               <section className="card">
                 <h2>All caught up</h2>
-                <p>No overdue balance for this lease. A reminder cannot be sent.</p>
+                <p>No overdue balance for this lease.</p>
                 {fromRentRoll && leaseId === initialLeaseId && (
                   <p>
-                    The rent roll showed this lease as late, but the current ledger has no overdue
-                    balance — it may have been paid since the rent roll loaded.
+                    The rent roll showed it as late; it may have been paid since the rent roll
+                    loaded.
                   </p>
                 )}
-                <p className={styles.muted}>
-                  History remains available, including sandbox tests and previous send outcomes.
-                </p>
               </section>
             )}
           </div>
@@ -536,7 +509,7 @@ export function ReminderWorkspace({
                           ? 'Channel unavailable'
                           : 'Live channel'}
                     </strong>
-                    <p>{channelState.message}</p>
+                    {channelState.mode !== 'sandbox' && <p>{channelState.message}</p>}
                     {channelState.mode === 'unavailable' && (
                       <Link href="/integrations#payment-reminders">
                         Open payment reminder setup
@@ -544,13 +517,11 @@ export function ReminderWorkspace({
                     )}
                   </div>
                   <fieldset className={styles.recipients} disabled={blocked}>
-                    <legend>
-                      Recipients {snapshot.recipients.length > 1 ? '· choose explicitly' : ''}
-                    </legend>
+                    <legend>Recipients</legend>
                     {!snapshot.recipients.length && (
                       <p>
-                        No eligible contacts. Choose another channel, correct the tenant’s contact
-                        information, or ask the tenant to review their reminder preferences.
+                        No eligible contacts. Choose another channel or update the tenant’s contact
+                        details.
                       </p>
                     )}
                     {snapshot.recipients.map((r) => (
@@ -675,16 +646,13 @@ export function ReminderWorkspace({
                     >
                       Cancel
                     </button>
-                    <small className={styles.muted}>Preview first, then confirm the send.</small>
                   </div>
                 </section>
                 {preview && (
                   <section className={`card ${styles.review}`} aria-labelledby="review-heading">
-                    <p className="eyebrow">Step 4 of 4 · Confirm</p>
                     <h2 ref={reviewHeading} tabIndex={-1} id="review-heading">
                       Confirm {channelState.mode === 'sandbox' ? 'sandbox ' : ''}reminder
                     </h2>
-                    <Steps steps={STEPS} current={3} />
                     <dl className={styles.recap}>
                       <div>
                         <dt>Recipient</dt>
@@ -704,8 +672,7 @@ export function ReminderWorkspace({
                       </div>
                     </dl>
                     <p className={styles.muted}>
-                      Expires {new Date(preview.expiresAt).toLocaleString()} · edits require a new
-                      preview.
+                      Preview expires {new Date(preview.expiresAt).toLocaleString()}
                     </p>
                     {preview.snapshot.recipients.map((r) => (
                       <article className={styles.messagePreview} key={r.tenantId}>
@@ -726,8 +693,8 @@ export function ReminderWorkspace({
                       className={`alert ${channelState.mode === 'sandbox' ? 'warning' : ''} ${styles.channelNote}`}
                     >
                       {channelState.mode === 'sandbox'
-                        ? 'Sandbox · this only records a test attempt. No recipient will be contacted.'
-                        : 'Confirm the recipients, channel and content. A submitted message may be impossible to recall.'}
+                        ? 'Sandbox · no recipient will be contacted.'
+                        : 'A sent message may be impossible to recall.'}
                     </div>
                     <div className={`${styles.actions} ${styles.confirmActions}`}>
                       <button className="btn btn-primary" disabled={blocked} onClick={() => send()}>
@@ -768,12 +735,9 @@ export function ReminderWorkspace({
             aria-labelledby="history-heading"
           >
             <div className={styles.historyHead}>
-              <div>
-                <p className="eyebrow">Persistent record</p>
-                <h2 ref={historyHeading} tabIndex={-1} id="history-heading">
-                  Reminder history
-                </h2>
-              </div>
+              <h2 ref={historyHeading} tabIndex={-1} id="history-heading">
+                Reminder history
+              </h2>
               <button
                 className="btn btn-secondary btn-sm"
                 disabled={historyLoading || Boolean(busy)}
@@ -782,9 +746,6 @@ export function ReminderWorkspace({
                 {historyLoading ? 'Loading…' : 'Refresh history'}
               </button>
             </div>
-            <p className={styles.muted}>
-              Latest 100 sends for the selected lease. Times use your device’s time zone.
-            </p>
             {historyError ? (
               <p role="alert" className={styles.warning}>
                 {historyError}
@@ -805,7 +766,7 @@ export function ReminderWorkspace({
                   <circle cx="12" cy="12" r="9" />
                   <path d="M12 7v5l3 2" />
                 </svg>
-                No reminders submitted for this lease.
+                No reminders yet.
               </p>
             ) : (
               <ol className={styles.historyList}>

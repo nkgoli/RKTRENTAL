@@ -12,7 +12,7 @@ export default async function RentCompsPage({ searchParams }: { searchParams: Pr
   const units = await listPricingUnits(session.organizationId);
   const unit = units.find((candidate) => candidate.id === first(query.unit)) ?? units[0];
   if (!unit) return <>
-    <PageHeader title="Rent comps" eyebrow="Pricing" />
+    <PageHeader title="Rent comps" />
     <EmptyState title="No units to compare yet" description="Add a property and unit to compare it with nearby rentals." action="Go to properties" href="/properties" />
   </>;
 

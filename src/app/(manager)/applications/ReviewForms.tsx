@@ -14,7 +14,16 @@ const reasons = [
   { value: 'application-incomplete', label: 'Application information incomplete' },
 ];
 
-export function ScreeningSubmit({ disabled, again }: { disabled: boolean; again: boolean }) {
+export function ScreeningSubmit({
+  disabled,
+  again,
+  describedBy,
+}: {
+  disabled: boolean;
+  again: boolean;
+  /** Id of the line that explains why screening is unavailable. */
+  describedBy?: string;
+}) {
   const { pending } = useFormStatus();
   return (
     <Button
@@ -22,7 +31,7 @@ export function ScreeningSubmit({ disabled, again }: { disabled: boolean; again:
       variant="secondary"
       size="sm"
       disabled={disabled || pending}
-      aria-describedby="screening-help"
+      aria-describedby={describedBy}
     >
       {pending ? 'Requesting screening…' : again ? 'Run screening again' : 'Run screening'}
     </Button>
@@ -112,8 +121,7 @@ export function ReviewDecisionForm({
               'Select a written screening reason'}
           </small>
           <small id={`${id}-help`}>
-            Choose “Meets written screening criteria” to approve, or a specific reason to decline.
-            After approval, Promote to tenant appears here.
+            Approve with “Meets written screening criteria”; decline with a specific reason.
           </small>
         </label>
         <DecisionButtons
@@ -126,7 +134,7 @@ export function ReviewDecisionForm({
         open={confirmDecline}
         onClose={() => setConfirmDecline(false)}
         title="Decline this application?"
-        description="This records the selected screening reason and declines the application. Review the applicant’s report and written criteria before continuing."
+        description="Declines the application with the selected screening reason."
         confirmLabel="Decline application"
         action={action}
         fields={{ applicationId, propertyId, unitId, reason, decision: 'DECLINED' }}

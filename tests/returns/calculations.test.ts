@@ -151,6 +151,7 @@ describe('computeReturns', () => {
     expect(formatPercent(0.053)).toBe('5.3%');
     expect(formatPercent(null)).toBe('—');
     expect(formatPercent(-0.2)).toBe('-20.0%');
+    expect(formatPercent(-0.0002)).toBe('0.0%');
   });
 });
 

@@ -1,4 +1,4 @@
-/* New repair request (Designs/redisgn): a 2:1 grid of the request card and "What happens next". */
+/* Repair request form: one column, then two thirds of the width on desktop. */
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -132,46 +132,6 @@
 .success {
   color: #1f6b43;
   background: #e3f3ea;
-}
-
-/* "What happens next": a quiet bordered panel of three explanations. */
-.next {
-  display: grid;
-  gap: 12px;
-  min-width: 0;
-  padding: 24px;
-  border: 1px solid var(--rr-border);
-  border-radius: var(--design-radius);
-  background: var(--design-surface);
-}
-
-.next h2 {
-  margin: 0;
-  font-family: var(--design-heading-font);
-  font-size: var(--rr-h2, 20px);
-  font-weight: 500;
-}
-
-.next ul {
-  display: grid;
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.next li {
-  display: grid;
-  gap: 2px;
-}
-
-.next li strong {
-  font-weight: 500;
-}
-
-.next li span {
-  color: var(--design-muted);
-  font-size: 14px;
 }
 
 @media (min-width: 1024px) {

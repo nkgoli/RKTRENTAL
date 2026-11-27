@@ -175,7 +175,6 @@ describe('light application review preserves eligibility and context', () => {
     expect(
       within(band).getByText('1 ready for decision · 0 in screening · 1 awaiting consent'),
     ).toBeTruthy();
-    expect(within(band).getByRole('meter').getAttribute('aria-valuenow')).toBe('50');
     expect(screen.getByRole('heading', { name: 'Invitations · none open' })).toBeTruthy();
   });
 

@@ -46,6 +46,7 @@ export async function LeaseAgreementList({
       {!leases.length && <p>No agreements yet.</p>}
       {leases.map((lease) => {
         const agreement = lease.agreements[0];
+        const documentsLink = tenantPortal && lease.id !== currentLeaseId;
         return (
           <div className={styles.file} key={lease.id}>
             <div>
@@ -86,25 +87,27 @@ export async function LeaseAgreementList({
                   </div>
                 ))}
             </div>
-            <div className={styles.actions}>
-              {tenantPortal && lease.id !== currentLeaseId && (
-                <a className={styles.quietLink} href={`/lease?lease=${lease.id}#documents`}>
-                  View documents
-                </a>
-              )}
-              {agreement && (
-                <a
-                  className={
-                    !agreement.signedAt && !agreement.supersededAt
-                      ? 'btn btn-primary'
-                      : 'btn btn-secondary'
-                  }
-                  href={`/sign/leases/${lease.id}`}
-                >
-                  Review &amp; sign
-                </a>
-              )}
-            </div>
+            {(documentsLink || agreement) && (
+              <div className={styles.actions}>
+                {documentsLink && (
+                  <a className={styles.quietLink} href={`/lease?lease=${lease.id}#documents`}>
+                    View documents
+                  </a>
+                )}
+                {agreement && (
+                  <a
+                    className={
+                      !agreement.signedAt && !agreement.supersededAt
+                        ? 'btn btn-primary'
+                        : 'btn btn-secondary'
+                    }
+                    href={`/sign/leases/${lease.id}`}
+                  >
+                    Review &amp; sign
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         );
       })}

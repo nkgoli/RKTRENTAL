@@ -2730,6 +2730,8 @@ h4 {
     display: block;
     min-width: 0;
     min-height: 0;
+    /* Desktop rows fix cells at 44px; a phone card cell is only as tall as its text. */
+    height: auto;
     padding: 0;
     border: 0;
     text-align: left;

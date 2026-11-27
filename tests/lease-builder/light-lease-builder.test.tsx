@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { emptyDraft } from '@/lib/lease-create/types';
 import { withResolvedEnd } from '@/lib/lease-create/validation';
 import { STANDARD_FEES, STANDARD_ITEMS } from '@/lib/lease-create/templates';
@@ -56,13 +56,38 @@ describe('light Term and Rent steps', () => {
     expect(screen.getByText('Scheduled charges preview')).toBeTruthy();
   });
 
+  it('totals everything due at move-in, including a first rent that falls on the start date', () => {
+    const { unmount } = render(<RentStep draft={draft} update={vi.fn()} errors={{}} />);
+    const prorated = screen.getByTestId('charges-preview');
+    expect(prorated.textContent).toContain('Prorated rent · January');
+    expect(within(prorated).getByText('Due at move-in').parentElement?.textContent).toContain(
+      '$2,477.42',
+    );
+    unmount();
+    const onDueDay = withResolvedEnd({ ...draft, startDate: '2035-02-01' });
+    render(<RentStep draft={onDueDay} update={vi.fn()} errors={{}} />);
+    const receipt = screen.getByTestId('charges-preview');
+    expect(receipt.textContent).toContain('February rent');
+    expect(within(receipt).getByText('Due at move-in').parentElement?.textContent).toContain(
+      '$3,200.00',
+    );
+    expect(receipt.textContent).toContain('repeats on the 1st through Jan 2036');
+  });
+
   it('links the custom end-date error to its control and shows the preview disclosure', () => {
     const errors = { endDate: 'End date must be on or after start date.' };
-    const { unmount } = render(<TermStep draft={draft} update={vi.fn()} errors={errors} />);
-    const custom = document.getElementById('custom-end-date') as HTMLInputElement;
-    expect(custom).toBeTruthy();
-    expect(custom.getAttribute('aria-invalid')).toBe('true');
-    const describedBy = custom.getAttribute('aria-describedby');
+    // The custom date field appears inside the Custom end date card once that card is chosen.
+    const { unmount: unmountFullYear } = render(
+      <TermStep draft={draft} update={vi.fn()} errors={errors} />,
+    );
+    expect(document.getElementById('custom-end-date')).toBeNull();
+    unmountFullYear();
+    const custom = { ...draft, endOption: 'custom' as const, customEndDate: '2034-12-01' };
+    const { unmount } = render(<TermStep draft={custom} update={vi.fn()} errors={errors} />);
+    const field = document.getElementById('custom-end-date') as HTMLInputElement;
+    expect(field).toBeTruthy();
+    expect(field.getAttribute('aria-invalid')).toBe('true');
+    const describedBy = field.getAttribute('aria-describedby');
     expect(describedBy).toBeTruthy();
     expect(document.getElementById(describedBy as string)?.textContent).toContain(
       'End date must be on or after start date.',
@@ -106,7 +131,7 @@ describe('light Term and Rent steps', () => {
       fireEvent.click(field);
       expect(update).not.toHaveBeenCalled();
     }
-    fireEvent.click(screen.getByRole('checkbox', { name: /Move-in fee/ }));
+    fireEvent.click(screen.getByRole('switch', { name: /Move-in fee/ }));
     expect(update).toHaveBeenCalledWith({ moveInFeeEnabled: false });
   });
 
@@ -128,6 +153,10 @@ describe('light Term and Rent steps', () => {
     );
     expect(screen.getByRole('list', { name: 'All 10 lease creation steps' })).toBeTruthy();
     expect(screen.getByRole('status').textContent).toBe('Not saved yet');
+    const summary = screen.getByRole('complementary', { name: 'Lease summary' });
+    expect(summary.textContent).toContain('Maple Court · Unit 3A');
+    expect(summary.textContent).toContain('Jan 15, 2035 – Jan 14, 2036');
+    expect(summary.textContent).toContain('$2,477.42');
     const next = screen.getByRole('button', { name: /Next/ });
     expect(next.getAttribute('data-next-step')).toBe('1');
     expect(screen.getByRole('button', { name: 'Back' }).hasAttribute('disabled')).toBe(true);

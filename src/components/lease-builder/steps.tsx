@@ -24,8 +24,8 @@ import { endOptionDates, validateReview } from '@/lib/lease-create/validation';
 import { parseLeaseDate } from '@/lib/leases/core';
 import { prorateFirstMonth } from '@/lib/ledger/lease-setup';
 import { formatMoney } from '@/lib/ledger/statement';
-import { Badge } from '@/components/ui/Badge';
 import { Glyph } from './icons';
+import { StatusTag } from './StatusTag';
 import styles from './lease-builder.module.css';
 import {
   blanksIn,
@@ -450,7 +450,9 @@ export function ChargesPreview({ draft }: { draft: WizardDraft }) {
     return (
       <div className={styles.receipt}>
         <h3 className={styles.receiptTitle}>Scheduled charges preview</h3>
-        <p className={styles.receiptEmpty}>Enter the rent and lease dates to preview the charges.</p>
+        <p className={styles.receiptEmpty}>
+          Enter the rent and lease dates to preview the charges.
+        </p>
       </div>
     );
   const moveIn = splitMoveIn(preview, term.start);
@@ -622,7 +624,7 @@ export function RentStep({ draft, update, errors }: StepProps) {
                     errorId={`${id}late-error`}
                   />
                   <span>after</span>
-                  <span className={styles.amount}>
+                  <span>
                     <label className={styles.srOnly} htmlFor={`${id}grace`}>
                       Late fee grace period (days)
                     </label>
@@ -830,7 +832,7 @@ export function TenantsStep({
         </span>
         <span id="tenant-search-help" className={styles.help}>
           {query.length < 2
-            ? tenants.length
+            ? query.length === 1
               ? 'Type at least 2 characters.'
               : ''
             : matches.length > 8
@@ -867,7 +869,9 @@ export function TenantsStep({
           </div>
         )}
         {!tenants.length && (
-          <p className={styles.emptyRow}>No tenants yet. Promote an approved applicant to add one.</p>
+          <p className={styles.emptyRow}>
+            No tenants yet. Promote an approved applicant to add one.
+          </p>
         )}
         {errors.tenantIds && (
           <small id="tenant-selection-error" className={styles.error}>
@@ -899,9 +903,9 @@ export function TenantsStep({
                 ) : (
                   <span className={styles.applicantName}>{applicant.name}</span>
                 )}
-                <Badge tone={applicant.status === 'Approved' ? 'success' : 'info'}>
+                <StatusTag tone={applicant.status === 'Approved' ? 'ok' : 'info'}>
                   {applicant.status}
-                </Badge>
+                </StatusTag>
                 {!applicant.tenantId && (
                   <span className={styles.applicantAction}>
                     {reviewLink(
@@ -1235,8 +1239,12 @@ function AgreementPaper({
 }) {
   const ordered = SECTIONS.flatMap(({ section }) => included.filter((t) => t.section === section));
   const extras = [
-    ...OPTION_CHOICES.filter((c) => draft.options.includes(c.id)).map((c) => ['option', c] as const),
-    ...CLAUSE_OPTIONS.filter((c) => draft.clauses.includes(c.id)).map((c) => ['clause', c] as const),
+    ...OPTION_CHOICES.filter((c) => draft.options.includes(c.id)).map(
+      (c) => ['option', c] as const,
+    ),
+    ...CLAUSE_OPTIONS.filter((c) => draft.clauses.includes(c.id)).map(
+      (c) => ['clause', c] as const,
+    ),
     ...RULE_OPTIONS.filter((c) => draft.rules.includes(c.id)).map((c) => ['rule', c] as const),
     ...DISCLOSURE_OPTIONS.filter((c) => draft.disclosures.includes(c.id)).map(
       (c) => ['disclosure', c] as const,
@@ -1323,7 +1331,12 @@ export function ReviewStep({
           blanks: items.reduce((sum, t) => sum + blanksIn(t.body).length, 0),
         };
       })
-    : LEGACY.map(({ label, titles }) => ({ label, step: STEP.clauses, titles: titles(draft), blanks: 0 }));
+    : LEGACY.map(({ label, titles }) => ({
+        label,
+        step: STEP.clauses,
+        titles: titles(draft),
+        blanks: 0,
+      }));
   const blanks = groups.reduce((sum, group) => sum + group.blanks, 0);
   const firstBlank = groups.find((group) => group.blanks > 0);
   const options = optionLabels(draft.options);
@@ -1372,7 +1385,9 @@ export function ReviewStep({
               'disclosures',
               'documentNames',
             ),
-        step: firstBlank?.step ?? (issue('renewalNoticeDays', 'options', 'occupants') ? STEP.options : STEP.clauses),
+        step:
+          firstBlank?.step ??
+          (issue('renewalNoticeDays', 'options', 'occupants') ? STEP.options : STEP.clauses),
         action: firstBlank ? `Fill blanks in ${firstBlank.label.toLowerCase()}` : 'Edit agreement',
         verb: firstBlank ? 'Fill blanks' : undefined,
       },
@@ -1397,8 +1412,8 @@ export function ReviewStep({
           {unitLabel}
         </h3>
         <p className={styles.reviewMeta}>
-          {term ? `${term.range} · ${term.length}` : 'Dates not set'} ·{' '}
-          {draft.renewalNoticeDays}-day renewal notice
+          {term ? `${term.range} · ${term.length}` : 'Dates not set'} · {draft.renewalNoticeDays}
+          -day renewal notice
         </p>
         <dl className={styles.stats}>
           <div className={styles.stat}>
@@ -1446,125 +1461,134 @@ export function ReviewStep({
         </ul>
       </section>
 
-      <ChargesPreview draft={draft} />
-
-      <section className={styles.reviewBlock} aria-labelledby={`${id}agreement`}>
-        <div className={styles.blockHead}>
-          <h3 className={styles.blockTitle} id={`${id}agreement`}>
-            Agreement
-          </h3>
-          {draft.template && (
-            <span className={styles.blockMeta}>
-              {draft.template.name} · v{draft.template.version}
-            </span>
-          )}
+      <div className={styles.reviewSplit}>
+        <div className={styles.reviewAside}>
+          <ChargesPreview draft={draft} />
         </div>
-        <div className={styles.disclosures}>
-          {groups.map((group) => (
-            <details key={group.label} className={styles.disclosure}>
-              <summary>
-                <span className={styles.disclosureLabel}>{group.label}</span>
-                {group.blanks > 0 && (
-                  <span className={styles.blankBadge}>{count(group.blanks, 'blank')}</span>
-                )}
-                <span className={styles.disclosureCount}>{group.titles.length}</span>
-                <Glyph name="chevron" className={styles.chevron} />
-              </summary>
-              {group.titles.length ? (
-                <ol className={styles.titleList}>
-                  {group.titles.map((title, index) => (
-                    <li key={`${index}-${title}`}>{title}</li>
-                  ))}
-                </ol>
-              ) : (
-                <p className={styles.emptyRow}>None</p>
-              )}
-            </details>
-          ))}
-          {options.length > 0 && (
-            <details className={styles.disclosure}>
-              <summary>
-                <span className={styles.disclosureLabel}>Lease options</span>
-                <span className={styles.disclosureCount}>{options.length}</span>
-                <Glyph name="chevron" className={styles.chevron} />
-              </summary>
-              <ul className={styles.titleList}>
-                {options.map((option) => (
-                  <li key={option}>{option}</li>
-                ))}
-              </ul>
-            </details>
-          )}
-          <details className={styles.disclosure}>
-            <summary>
-              <span className={styles.disclosureLabel}>Attachments</span>
-              <span className={styles.disclosureCount}>{attachments.length}</span>
-              <Glyph name="chevron" className={styles.chevron} />
-            </summary>
-            {attachments.length ? (
-              <ul className={styles.files}>
-                {attachments.map((file) => (
-                  <li key={file.id} className={styles.fileRow}>
-                    <Glyph name="doc" className={styles.fileIcon} />
-                    <span className={styles.personText}>
-                      <span className={styles.personName}>{file.name}</span>
-                      <span className={styles.personMeta}>
-                        {file.kind === 'ADDENDUM' ? 'Signed with the lease' : 'Supporting document'}
-                      </span>
-                    </span>
-                    <a href={`/api/files/${file.id}/preview`} target="_blank" rel="noreferrer">
-                      Preview
-                    </a>
-                    <a href={`/api/files/${file.id}/download`}>Download</a>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className={styles.emptyRow}>None</p>
-            )}
-          </details>
-        </div>
-      </section>
-
-      <section className={styles.reviewBlock} aria-labelledby={`${id}signers`}>
-        <h3 className={styles.blockTitle} id={`${id}signers`}>
-          Signers
-        </h3>
-        <ul className={styles.people}>
-          {selected.map((tenant) => (
-            <li key={tenant.id} className={styles.person}>
-              <span className={styles.avatar} aria-hidden="true">
-                {initials(tenant.name)}
-              </span>
-              <span className={styles.personText}>
-                <span className={styles.personName}>{tenant.name}</span>
-                <span className={styles.personMeta}>
-                  Tenant{tenant.id === draft.primaryTenantId ? ' · Primary' : ''}
+        <div className={styles.reviewMain}>
+          <section className={styles.reviewBlock} aria-labelledby={`${id}agreement`}>
+            <div className={styles.blockHead}>
+              <h3 className={styles.blockTitle} id={`${id}agreement`}>
+                Agreement
+              </h3>
+              {draft.template && (
+                <span className={styles.blockMeta}>
+                  {draft.template.name} · v{draft.template.version}
                 </span>
-              </span>
-              <span className={cx(styles.personEmail, !tenant.email && styles.warnText)}>
-                {tenant.email || 'Email required'}
-              </span>
-            </li>
-          ))}
-          <li className={styles.person}>
-            <span className={styles.avatar} aria-hidden="true">
-              {lessorSigner ? initials(lessorSigner.name) : '?'}
-            </span>
-            <span className={styles.personText}>
-              <span className={styles.personName}>{lessorSigner?.name ?? 'No owner account'}</span>
-              <span className={styles.personMeta}>Owner / lessor</span>
-            </span>
-            <span className={cx(styles.personEmail, !lessorSigner && styles.warnText)}>
-              {lessorSigner?.email ?? 'Assign before sending'}
-            </span>
-          </li>
-        </ul>
-        <p className={styles.footNote}>
-          Lessor on the agreement: {draft.lessorName || '—'}
-          {draft.lessorAddress ? ` · ${draft.lessorAddress}` : ''}
-        </p>
-      </section>
+              )}
+            </div>
+            <div className={styles.disclosures}>
+              {groups.map((group) => (
+                <details key={group.label} className={styles.disclosure}>
+                  <summary>
+                    <span className={styles.disclosureLabel}>{group.label}</span>
+                    {group.blanks > 0 && (
+                      <span className={styles.blankBadge}>{count(group.blanks, 'blank')}</span>
+                    )}
+                    <span className={styles.disclosureCount}>{group.titles.length}</span>
+                    <Glyph name="chevron" className={styles.chevron} />
+                  </summary>
+                  {group.titles.length ? (
+                    <ol className={styles.titleList}>
+                      {group.titles.map((title, index) => (
+                        <li key={`${index}-${title}`}>{title}</li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className={styles.emptyRow}>None</p>
+                  )}
+                </details>
+              ))}
+              {options.length > 0 && (
+                <details className={styles.disclosure}>
+                  <summary>
+                    <span className={styles.disclosureLabel}>Lease options</span>
+                    <span className={styles.disclosureCount}>{options.length}</span>
+                    <Glyph name="chevron" className={styles.chevron} />
+                  </summary>
+                  <ul className={styles.titleList}>
+                    {options.map((option) => (
+                      <li key={option}>{option}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              <details className={styles.disclosure}>
+                <summary>
+                  <span className={styles.disclosureLabel}>Attachments</span>
+                  <span className={styles.disclosureCount}>{attachments.length}</span>
+                  <Glyph name="chevron" className={styles.chevron} />
+                </summary>
+                {attachments.length ? (
+                  <ul className={styles.files}>
+                    {attachments.map((file) => (
+                      <li key={file.id} className={styles.fileRow}>
+                        <Glyph name="doc" className={styles.fileIcon} />
+                        <span className={styles.personText}>
+                          <span className={styles.personName}>{file.name}</span>
+                          <span className={styles.personMeta}>
+                            {file.kind === 'ADDENDUM'
+                              ? 'Signed with the lease'
+                              : 'Supporting document'}
+                          </span>
+                        </span>
+                        <a href={`/api/files/${file.id}/preview`} target="_blank" rel="noreferrer">
+                          Preview
+                        </a>
+                        <a href={`/api/files/${file.id}/download`}>Download</a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className={styles.emptyRow}>None</p>
+                )}
+              </details>
+            </div>
+          </section>
+
+          <section className={styles.reviewBlock} aria-labelledby={`${id}signers`}>
+            <h3 className={styles.blockTitle} id={`${id}signers`}>
+              Signers
+            </h3>
+            <ul className={styles.people}>
+              {selected.map((tenant) => (
+                <li key={tenant.id} className={styles.person}>
+                  <span className={styles.avatar} aria-hidden="true">
+                    {initials(tenant.name)}
+                  </span>
+                  <span className={styles.personText}>
+                    <span className={styles.personName}>{tenant.name}</span>
+                    <span className={styles.personMeta}>
+                      Tenant{tenant.id === draft.primaryTenantId ? ' · Primary' : ''}
+                    </span>
+                  </span>
+                  <span className={cx(styles.personEmail, !tenant.email && styles.warnText)}>
+                    {tenant.email || 'Email required'}
+                  </span>
+                </li>
+              ))}
+              <li className={styles.person}>
+                <span className={styles.avatar} aria-hidden="true">
+                  {lessorSigner ? initials(lessorSigner.name) : '?'}
+                </span>
+                <span className={styles.personText}>
+                  <span className={styles.personName}>
+                    {lessorSigner?.name ?? 'No owner account'}
+                  </span>
+                  <span className={styles.personMeta}>Owner / lessor</span>
+                </span>
+                <span className={cx(styles.personEmail, !lessorSigner && styles.warnText)}>
+                  {lessorSigner?.email ?? 'Assign before sending'}
+                </span>
+              </li>
+            </ul>
+            <p className={styles.footNote}>
+              Lessor on the agreement: {draft.lessorName || '—'}
+              {draft.lessorAddress ? ` · ${draft.lessorAddress}` : ''}
+            </p>
+          </section>
+        </div>
+      </div>
 
       <details className={styles.wording}>
         <summary>

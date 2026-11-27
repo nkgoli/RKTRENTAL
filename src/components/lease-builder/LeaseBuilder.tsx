@@ -1,14 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  useTransition,
-  type RefObject,
-} from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition, type RefObject } from 'react';
 import {
   STEP,
   STEP_COUNT,
@@ -169,6 +162,20 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
   const top = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const errorSummary = useRef<HTMLDivElement>(null);
+  const footer = useRef<HTMLElement>(null);
+  const [stuck, setStuck] = useState(false);
+
+  // The action bar sits 1px past the scroll edge while it is pinned, so a partial intersection
+  // means it floats over the step and earns its shadow.
+  useEffect(() => {
+    const element = footer.current;
+    if (!element || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(([entry]) => setStuck(entry.intersectionRatio < 1), {
+      threshold: [1],
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [step, created]);
 
   // A new step, or the sent confirmation, takes focus so its title is announced.
   useEffect(() => {
@@ -470,8 +477,8 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
                 <ol className={styles.groupSteps}>
                   {group.steps.map((index) => {
                     const label = WIZARD_STEPS[index];
-                    const done = index < furthest && index !== step;
-                    const current = index === step;
+                    const done = created || (index < furthest && index !== step);
+                    const current = !created && index === step;
                     const clickable = !created && !current && index <= furthest;
                     const className = cx(
                       styles.step,
@@ -555,7 +562,7 @@ export function LeaseBuilder(props: LeaseBuilderProps) {
                   {body}
                 </fieldset>
               </div>
-              <footer className={styles.footer}>
+              <footer className={cx(styles.footer, stuck && styles.footerStuck)} ref={footer}>
                 <button
                   type="button"
                   className={cx(styles.btn, styles.btnGhost)}

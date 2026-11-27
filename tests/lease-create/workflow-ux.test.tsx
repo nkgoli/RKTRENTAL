@@ -197,7 +197,7 @@ describe('template editing', () => {
     await user.click(screen.getByRole('button', { name: 'Save template' }));
     await waitFor(() => {
       expect(screen.getByText('Saved version 3.')).toBeTruthy();
-      expect(screen.getByText('Version 3')).toBeTruthy();
+      expect(screen.getByText(/^Version 3 · editing creates version 4$/)).toBeTruthy();
       expect(
         (screen.getByRole('button', { name: 'Save template' }) as HTMLButtonElement).disabled,
       ).toBe(true);

@@ -11,7 +11,6 @@ import {
   type TermOverride,
 } from '@/lib/lease-create/templates';
 import { saveTemplateFromDraftAction } from '@/app/(manager)/leases/new/actions';
-import { RowMenu } from '@/components/ui/RowMenu';
 import { Glyph } from './icons';
 import { blanksIn, cx, fieldName } from './summary';
 import styles from './lease-builder.module.css';
@@ -170,7 +169,9 @@ export function TemplateTermsStep({
             <span className={styles.termNumber}>{number > 0 ? number : '–'}</span>
             <span className={styles.termMain}>
               <span className={styles.termTitleRow}>
-                <strong className={styles.termTitle}>{item.title || `Untitled ${nouns[section]}`}</strong>
+                <strong className={styles.termTitle}>
+                  {item.title || `Untitled ${nouns[section]}`}
+                </strong>
                 {!open &&
                   tags.map((tag) => (
                     <span key={tag} className={styles.tag}>
@@ -200,7 +201,10 @@ export function TemplateTermsStep({
                   <label key={key} className={styles.field}>
                     <span className={styles.label}>{sentence(fieldName(key))}</span>
                     <input
-                      className={cx(styles.input, !draft.placeholderValues[key] && styles.inputTodo)}
+                      className={cx(
+                        styles.input,
+                        !draft.placeholderValues[key] && styles.inputTodo,
+                      )}
                       aria-label={`Fill ${fieldName(key)}`}
                       value={draft.placeholderValues[key] ?? ''}
                       onChange={(e) =>
@@ -287,14 +291,23 @@ export function TemplateTermsStep({
                   </option>
                 ))}
               </select>
-              <RowMenu label="Template actions" className={styles.templateMenu}>
-                <button type="button" onClick={() => update({ termOverrides: {} })}>
+              <span className={styles.templateActions}>
+                <button
+                  type="button"
+                  className={styles.textButton}
+                  onClick={() => update({ termOverrides: {} })}
+                >
                   Reset to template
                 </button>
-                <button type="button" onClick={saveAsTemplate} disabled={saving}>
+                <button
+                  type="button"
+                  className={styles.textButton}
+                  onClick={saveAsTemplate}
+                  disabled={saving}
+                >
                   Save as new template
                 </button>
-              </RowMenu>
+              </span>
             </>
           ) : (
             <>

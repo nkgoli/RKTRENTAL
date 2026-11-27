@@ -94,10 +94,18 @@ export type MoveIn = { rows: PreviewRow[]; totalCents: number; recurring: Previe
  * then the rent that repeats after it. Regroups the ledger preview rows; amounts are unchanged.
  */
 export function splitMoveIn(preview: ChargesPreview, startDate: Date): MoveIn {
-  const start = Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate());
+  const start = Date.UTC(
+    startDate.getUTCFullYear(),
+    startDate.getUTCMonth(),
+    startDate.getUTCDate(),
+  );
   const [first, ...rest] = preview.monthly;
   if (!first || first.date.getTime() !== start)
-    return { rows: preview.moveIn, totalCents: preview.moveInTotalCents, recurring: preview.monthly };
+    return {
+      rows: preview.moveIn,
+      totalCents: preview.moveInTotalCents,
+      recurring: preview.monthly,
+    };
   return {
     rows: [...preview.moveIn, { ...first, label: `${monthName(first.date)} rent` }],
     totalCents: preview.moveInTotalCents + first.amountCents,

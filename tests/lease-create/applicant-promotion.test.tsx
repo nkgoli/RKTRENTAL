@@ -136,7 +136,7 @@ describe('applicant-derived lease tenant identity', () => {
       const props = await page({ applicant: 'app' });
       expect(props.draft.tenantIds).toEqual([]);
       expect(props.applicants?.[0].tenantId).toBeUndefined();
-      expect(props.notice).toContain('explicit promotion');
+      expect(props.notice).toContain('isn’t a tenant yet');
       const onReviewApplicants = vi.fn();
       render(
         <TenantsStep

@@ -12,7 +12,9 @@ const paths = {
     </>
   ),
   doc: <path d="M14 3H6v18h12V7zM14 3v4h4M9 12h6M9 16h4" />,
-  alert: <path d="M12 8v5M12 16.5v.5M10.3 3.9 2.5 17.5A2 2 0 0 0 4.2 20.5h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />,
+  alert: (
+    <path d="M12 8v5M12 16.5v.5M10.3 3.9 2.5 17.5A2 2 0 0 0 4.2 20.5h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+  ),
   close: <path d="M6 6l12 12M18 6 6 18" />,
   plus: <path d="M12 5v14M5 12h14" />,
 } satisfies Record<string, ReactNode>;
